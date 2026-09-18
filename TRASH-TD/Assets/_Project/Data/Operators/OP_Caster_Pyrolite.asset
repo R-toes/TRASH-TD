@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
+  m_Name: OP_Caster_Pyrolite
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
+  operatorName: Pyrolite
+  operatorClass: 3
+  baseRarity: 2
+  position: 1
+  roleTags: []
+  baseHP: 95
+  baseATK: 80
+  baseDEF: 10
+  baseRES: 20
+  blockCount: 0
+  attackRange: 2
+  attackInterval: 1.6
+  rangePattern:
+  - {x: 1, y: 0}
+  - {x: 2, y: 0}
+  - {x: 0, y: 1}
+  - {x: 1, y: 1}
+  - {x: 0, y: -1}
+  - {x: 1, y: -1}
+  damageType: 1
+  dpCost: 15
+  redeployCooldown: 60
+  portrait: {fileID: 21300000, guid: a1111111111111111111111111111104, type: 3}
+  operatorPrefab: {fileID: 1724151342938439338, guid: 7ffdf18cb6e1fae44b90e034f2c16a3f, type: 3}

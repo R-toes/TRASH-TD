@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
+  m_Name: OP_Sniper_Deadeye
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
+  operatorName: Deadeye
+  operatorClass: 2
+  baseRarity: 1
+  position: 1
+  roleTags: []
+  baseHP: 85
+  baseATK: 90
+  baseDEF: 8
+  baseRES: 0
+  blockCount: 0
+  attackRange: 3
+  attackInterval: 1
+  rangePattern:
+  - {x: 1, y: 0}
+  - {x: 2, y: 0}
+  - {x: 3, y: 0}
+  - {x: 1, y: 1}
+  - {x: 2, y: 1}
+  - {x: 1, y: -1}
+  - {x: 2, y: -1}
+  damageType: 0
+  dpCost: 11
+  redeployCooldown: 60
+  portrait: {fileID: 21300000, guid: a1111111111111111111111111111103, type: 3}
+  operatorPrefab: {fileID: 685036189517171224, guid: 846c8d9bd7234ad48b2072d83a43c67f, type: 3}

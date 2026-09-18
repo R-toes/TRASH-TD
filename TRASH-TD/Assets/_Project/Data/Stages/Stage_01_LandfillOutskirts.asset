@@ -1,0 +1,89 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0d1f336f3983b94c9ec7ed405acc69f, type: 3}
+  m_Name: Stage_01_LandfillOutskirts
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.StageData
+  stageId: STAGE_01
+  mapName: Landfill Outskirts
+  gridWidth: 8
+  gridHeight: 6
+  tileLayout: 010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000000000000000000000000000000000000000000000000000000000000000000040000000300000003000000030000000300000003000000030000000500000000000000000000000000000000000000000000000000000000000000000000000100000001000000010000000100000001000000010000000100000001000000i
+  spawnPoints:
+  - {x: 0, y: 3}
+  exitPoints:
+  - {x: 7, y: 3}
+  enemyPaths: []
+  lifePointsEasy: 10
+  lifePointsNormal: 5
+  lifePointsHard: 1
+  squadSizeLimit: 8
+  wavesEasy:
+  - waveName: 'Wave 1: Scouts'
+    preWaveDelay: 2
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 3
+      startDelay: 0
+      spawnPointIndex: 0
+  wavesNormal:
+  - waveName: 'Wave 1: Sludge Scouts'
+    preWaveDelay: 2
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 2.5
+      startDelay: 0
+      spawnPointIndex: 0
+  - waveName: 'Wave 2: Toxic Surge'
+    preWaveDelay: 4
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 2
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 2
+      spawnInterval: 1.5
+      startDelay: 3
+      spawnPointIndex: 0
+  wavesHard:
+  - waveName: 'Wave 1: Advance Swarm'
+    preWaveDelay: 1.5
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 1.8
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 1.2
+      startDelay: 2
+      spawnPointIndex: 0
+  - waveName: 'Wave 2: Heavy Incursion'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 1.2
+      startDelay: 2
+      spawnPointIndex: 0
+  timeLimit: 0
+  threeStarCondition: Clear with no life points lost
+  mapPrefab: {fileID: 0}
