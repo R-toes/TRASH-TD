@@ -34,6 +34,13 @@ namespace TrashTD.UI
 
         private readonly List<StageData> availableStages = new List<StageData>();
         private StageData selectedStage;
+        private static bool returnToStageSelector;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetNavigationState()
+        {
+            returnToStageSelector = false;
+        }
 
         private void Awake()
         {
@@ -95,6 +102,17 @@ namespace TrashTD.UI
                 backButton.onClick.RemoveAllListeners();
                 backButton.onClick.AddListener(ShowMainMenu);
             }
+
+            if (returnToStageSelector)
+            {
+                returnToStageSelector = false;
+                ShowStageSelection();
+            }
+        }
+
+        public static void ReturnToStageSelectorOnLoad()
+        {
+            returnToStageSelector = true;
         }
 
         public void BuildDefaultUi()

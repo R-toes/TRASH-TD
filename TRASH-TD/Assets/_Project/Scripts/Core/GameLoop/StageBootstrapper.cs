@@ -88,11 +88,7 @@ namespace TrashTD.Core.GameLoop
             // 6. Initialize and start waves
             waveManager.Initialize(stageData, difficulty);
 
-            // 7. Trigger initial draft offer
-            if (cardDraftSystem != null && operatorPool != null && operatorPool.Count > 0)
-            {
-                cardDraftSystem.GenerateDraftOffer();
-            }
+            // The creature bar starts empty until a draft offer is explicitly created.
         }
 
         private void SpawnVisualGridTiles()

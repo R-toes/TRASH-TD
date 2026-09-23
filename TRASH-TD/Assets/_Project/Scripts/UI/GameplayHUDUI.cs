@@ -17,7 +17,7 @@ namespace TrashTD.UI
     public class GameplayHUDUI : MonoBehaviour
     {
         private const int RerollsRemaining = 3;
-        private const int CreatureSlotCount = 6;
+        private const int CreatureSlotCount = 8;
 
         private Canvas canvas;
         private GameObject pausePanel;
@@ -114,17 +114,17 @@ namespace TrashTD.UI
         private void CreateTopBar(Transform root)
         {
             var pauseButton = CreateButton(root, "PauseButton", "||", new Vector2(70f, 70f));
-            SetPosition(pauseButton.GetComponent<RectTransform>(), new Vector2(80f, -70f), new Vector2(0f, 1f));
+            SetPosition(pauseButton.GetComponent<RectTransform>(), new Vector2(50f, -50f), new Vector2(0f, 1f));
             pauseButton.onClick.AddListener(PauseGame);
 
             waveText = CreateText(root, "WaveText", "WAVE 1/15", 34, TextAnchor.MiddleLeft);
-            SetPosition(waveText.GetComponent<RectTransform>(), new Vector2(125f, -70f), new Vector2(0f, 1f), new Vector2(320f, 70f));
+            SetPosition(waveText.GetComponent<RectTransform>(), new Vector2(270f, -50f), new Vector2(0f, 1f), new Vector2(300f, 70f));
 
             enemyText = CreateText(root, "EnemyText", "0\nENEMIES LEFT", 30, TextAnchor.MiddleCenter);
-            SetPosition(enemyText.GetComponent<RectTransform>(), new Vector2(960f, -70f), new Vector2(0.5f, 1f), new Vector2(300f, 85f));
+            SetPosition(enemyText.GetComponent<RectTransform>(), new Vector2(0f, -50f), new Vector2(0.5f, 1f), new Vector2(280f, 85f));
 
             rerollText = CreateText(root, "RerollText", "3\nREROLLS LEFT", 30, TextAnchor.MiddleCenter);
-            SetPosition(rerollText.GetComponent<RectTransform>(), new Vector2(-120f, -70f), new Vector2(1f, 1f), new Vector2(260f, 85f));
+            SetPosition(rerollText.GetComponent<RectTransform>(), new Vector2(-180f, -50f), new Vector2(1f, 1f), new Vector2(230f, 85f));
         }
 
         private void CreateCreatureBar(Transform root)
@@ -135,8 +135,8 @@ namespace TrashTD.UI
             barRect.anchorMin = new Vector2(0f, 0f);
             barRect.anchorMax = new Vector2(1f, 0f);
             barRect.pivot = new Vector2(0.5f, 0f);
-            barRect.anchoredPosition = new Vector2(-150f, 28f);
-            barRect.sizeDelta = new Vector2(-380f, 170f);
+            barRect.offsetMin = new Vector2(50f, 28f);
+            barRect.offsetMax = new Vector2(-280f, 198f);
 
             var layout = bar.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 12f;
@@ -155,7 +155,7 @@ namespace TrashTD.UI
             }
 
             startWaveButton = CreateButton(root, "StartWaveButton", "START\nWAVE", new Vector2(150f, 90f));
-            SetPosition(startWaveButton.GetComponent<RectTransform>(), new Vector2(-105f, 165f), new Vector2(1f, 0f));
+            SetPosition(startWaveButton.GetComponent<RectTransform>(), new Vector2(-95f, 95f), new Vector2(1f, 0f));
             startWaveButton.onClick.AddListener(StartWave);
         }
 
@@ -171,14 +171,14 @@ namespace TrashTD.UI
             pausePanel.GetComponent<Image>().color = new Color(0.03f, 0.04f, 0.06f, 0.94f);
 
             var title = CreateText(pausePanel.transform, "PauseTitle", "PAUSED", 54, TextAnchor.MiddleCenter);
-            SetPosition(title.GetComponent<RectTransform>(), new Vector2(960f, -300f), new Vector2(0.5f, 1f), new Vector2(500f, 100f));
+            SetPosition(title.GetComponent<RectTransform>(), new Vector2(0f, -300f), new Vector2(0.5f, 1f), new Vector2(500f, 100f));
 
             var resumeButton = CreateButton(pausePanel.transform, "ResumeButton", "RESUME", new Vector2(260f, 70f));
-            SetPosition(resumeButton.GetComponent<RectTransform>(), new Vector2(960f, -480f), new Vector2(0.5f, 1f));
+            SetPosition(resumeButton.GetComponent<RectTransform>(), new Vector2(0f, -480f), new Vector2(0.5f, 1f));
             resumeButton.onClick.AddListener(ResumeGame);
 
             var exitButton = CreateButton(pausePanel.transform, "ExitButton", "EXIT TO MENU", new Vector2(260f, 70f));
-            SetPosition(exitButton.GetComponent<RectTransform>(), new Vector2(960f, -580f), new Vector2(0.5f, 1f));
+            SetPosition(exitButton.GetComponent<RectTransform>(), new Vector2(0f, -580f), new Vector2(0.5f, 1f));
             exitButton.onClick.AddListener(ExitToMenu);
 
             pausePanel.SetActive(false);
@@ -186,7 +186,7 @@ namespace TrashTD.UI
 
         private Button CreateCreatureSlot(Transform parent, string objectName)
         {
-            var button = CreateButton(parent, objectName, "", new Vector2(140f, 130f));
+            var button = CreateButton(parent, objectName, "", new Vector2(120f, 130f));
             var image = button.GetComponent<Image>();
             image.sprite = CreateTrapezoidSprite();
             image.color = new Color(0.04f, 0.05f, 0.07f, 1f);
@@ -208,7 +208,7 @@ namespace TrashTD.UI
                 }
                 else
                 {
-                    label.text = "EMPTY";
+                    label.text = string.Empty;
                     creatureButtons[i].interactable = false;
                 }
             }
@@ -247,6 +247,7 @@ namespace TrashTD.UI
         private void ExitToMenu()
         {
             Time.timeScale = 1f;
+            MainMenuController.ReturnToStageSelectorOnLoad();
             SceneManager.LoadScene("MainMenu");
         }
 
