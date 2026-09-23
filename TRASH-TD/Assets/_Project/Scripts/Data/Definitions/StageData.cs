@@ -55,6 +55,9 @@ namespace TrashTD.Data
         [Tooltip("Display name for the map")]
         public string mapName;
 
+        [Tooltip("Short description shown in the stage selector")]
+        public string shortDescription;
+
         [Header("Map Layout")]
         [Tooltip("Width of the grid in tiles")]
         public int gridWidth = 10;
