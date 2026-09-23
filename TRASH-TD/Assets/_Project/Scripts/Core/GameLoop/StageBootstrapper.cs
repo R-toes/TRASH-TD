@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
 using TrashTD.Enemies;
 using TrashTD.Operators;
 using TrashTD.Systems;
+using TrashTD.UI;
 
 namespace TrashTD.Core.GameLoop
 {
@@ -53,6 +55,7 @@ namespace TrashTD.Core.GameLoop
             if (operatorManager == null) operatorManager = FindFirstObjectByType<OperatorManager>() ?? gameObject.AddComponent<OperatorManager>();
             if (cardDraftSystem == null) cardDraftSystem = FindFirstObjectByType<CardDraftSystem>() ?? gameObject.AddComponent<CardDraftSystem>();
             if (FindFirstObjectByType<RarityUpgradeSystem>() == null) gameObject.AddComponent<RarityUpgradeSystem>();
+            if (FindFirstObjectByType<GameplayHUDUI>() == null) gameObject.AddComponent<GameplayHUDUI>();
         }
 
         private void Start()
@@ -84,7 +87,6 @@ namespace TrashTD.Core.GameLoop
 
             // 6. Initialize and start waves
             waveManager.Initialize(stageData, difficulty);
-            waveManager.StartWaves();
 
             // 7. Trigger initial draft offer
             if (cardDraftSystem != null && operatorPool != null && operatorPool.Count > 0)
@@ -157,9 +159,10 @@ namespace TrashTD.Core.GameLoop
         private void Update()
         {
             // Simple Click-to-Deploy handling during Play mode testing
-            if (pendingDeployCard != null && Input.GetMouseButtonDown(0))
+            if (pendingDeployCard != null && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
             {
-                Vector3 mouseWorld = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                Vector3 mouseScreenPosition = Mouse.current.position.ReadValue();
+                Vector3 mouseWorld = Camera.main.ScreenToWorldPoint(mouseScreenPosition);
                 Vector2Int gridPos = gridManager.WorldToGridPosition(mouseWorld);
 
                 if (gridManager.IsInBounds(gridPos))

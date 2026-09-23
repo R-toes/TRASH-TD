@@ -10,7 +10,7 @@ namespace TrashTD.UI
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
-            if (Object.FindFirstObjectByType<MainMenuController>() != null)
+            if (Object.FindAnyObjectByType<MainMenuController>() != null)
             {
                 return;
             }

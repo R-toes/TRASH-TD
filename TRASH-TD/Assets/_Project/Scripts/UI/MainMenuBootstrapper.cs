@@ -10,7 +10,7 @@ namespace TrashTD.UI
     {
         private void Awake()
         {
-            if (FindFirstObjectByType<MainMenuController>() == null)
+            if (FindAnyObjectByType<MainMenuController>() == null)
             {
                 var controller = new GameObject("MainMenuController");
                 controller.AddComponent<MainMenuController>();
