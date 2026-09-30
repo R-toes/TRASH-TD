@@ -33,10 +33,13 @@ namespace TrashTD.Core.GameLoop
         public int CurrentWaveNumber => currentWaveIndex + 1;
         public int TotalWaves => waves != null ? waves.Length : 0;
         public bool IsActive { get; private set; } = false;
+        public bool IsWaveInProgress { get; private set; } = false;
 
         public event Action<int, int> OnWaveStarted;    // (currentWave, totalWaves)
         public event Action<int> OnWaveCompleted;        // (waveIndex)
         public event Action OnAllWavesCleared;
+        /// <summary>Fired when a single wave's enemies are all defeated (for phase loop).</summary>
+        public event Action OnSingleWaveFinished;
 
         private void Awake()
         {
@@ -87,12 +90,37 @@ namespace TrashTD.Core.GameLoop
         private string GetPathKey(int spawnIndex, EnemyMovementType movementType) => $"{spawnIndex}_{movementType}";
 
         /// <summary>
-        /// Start wave progression.
+        /// Start wave progression (all waves in sequence — legacy mode).
         /// </summary>
         public void StartWaves()
         {
             if (waves == null || waves.Length == 0) return;
             StartCoroutine(WaveProgressionRoutine());
+        }
+
+        /// <summary>
+        /// Start the next single wave (for card pick → prep → wave → card pick loop).
+        /// Returns false if no more waves to start.
+        /// </summary>
+        public bool StartNextWave()
+        {
+            if (waves == null || waves.Length == 0) return false;
+
+            // Advance to next wave
+            currentWaveIndex++;
+            if (currentWaveIndex >= waves.Length) return false;
+
+            IsWaveInProgress = true;
+            StartCoroutine(SingleWaveRoutine(currentWaveIndex));
+            return true;
+        }
+
+        /// <summary>
+        /// Set the wave index externally (used when GameManager tracks the index).
+        /// </summary>
+        public void SetWaveIndex(int index)
+        {
+            currentWaveIndex = index - 1; // StartNextWave will increment
         }
 
         private IEnumerator WaveProgressionRoutine()
@@ -130,6 +158,57 @@ namespace TrashTD.Core.GameLoop
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GamePlayState.Playing)
             {
                 GameManager.Instance.TriggerVictory();
+            }
+        }
+
+        /// <summary>
+        /// Run a single wave, then wait for all enemies to die.
+        /// </summary>
+        private IEnumerator SingleWaveRoutine(int waveIndex)
+        {
+            if (waveIndex < 0 || waveIndex >= waves.Length)
+            {
+                IsWaveInProgress = false;
+                yield break;
+            }
+
+            WaveData currentWave = waves[waveIndex];
+
+            // Pre-wave delay
+            if (currentWave.preWaveDelay > 0f)
+            {
+                yield return new WaitForSeconds(currentWave.preWaveDelay);
+            }
+
+            OnWaveStarted?.Invoke(CurrentWaveNumber, TotalWaves);
+
+            // Spawn all entries in wave
+            yield return StartCoroutine(SpawnWaveEntriesRoutine(currentWave));
+
+            OnWaveCompleted?.Invoke(waveIndex);
+
+            // Wait until all active enemies are defeated
+            while (enemyManager != null && enemyManager.ActiveEnemyCount > 0)
+            {
+                yield return new WaitForSeconds(0.5f);
+            }
+
+            IsWaveInProgress = false;
+
+            // Check if this was the last wave
+            if (waveIndex >= waves.Length - 1)
+            {
+                allWavesSpawned = true;
+                OnAllWavesCleared?.Invoke();
+                if (GameManager.Instance != null && GameManager.Instance.CurrentState == GamePlayState.Playing)
+                {
+                    GameManager.Instance.TriggerVictory();
+                }
+            }
+            else
+            {
+                // Signal that this single wave is done (phase loop listens to this)
+                OnSingleWaveFinished?.Invoke();
             }
         }
 

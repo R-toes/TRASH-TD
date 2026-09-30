@@ -16,7 +16,7 @@ namespace TrashTD.Data
         [Tooltip("Operator class (Guard, Defender, Sniper, Caster, Medic)")]
         public OperatorClass operatorClass;
 
-        [Tooltip("Base rarity (1★–3★ for draft pool; 4★–5★ via upgrade only)")]
+        [Tooltip("Fixed operator rarity. Draft weights control tier drop rates; 4★–5★ are reached via upgrades.")]
         public OperatorRarity baseRarity = OperatorRarity.Star1;
 
         [Tooltip("Melee (Low Ground) or Ranged (High Ground) deployment")]

@@ -4,6 +4,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TrashTD.Core.Grid;
 using TrashTD.Core.GameLoop;
 using TrashTD.Data;
 using TrashTD.Enemies;
@@ -13,24 +14,34 @@ namespace TrashTD.UI
 {
     /// <summary>
     /// Runtime-built in-game HUD for the stage view.
+    /// Integrates with the phase loop: CardPick → Preparation → WaveActive.
+    /// The creature bar shows operators in the player's deck (not draft offers).
     /// </summary>
     public class GameplayHUDUI : MonoBehaviour
     {
-        private const int RerollsRemaining = 3;
-        private const int CreatureSlotCount = 8;
+        private const int DeckSlotCount = 8;
 
         private Canvas canvas;
         private GameObject pausePanel;
+        private GameObject stageInfoPanel;
         private Text waveText;
         private Text enemyText;
-        private Text rerollText;
+        private Text lpText;
+        private Text phaseText;
         private Button startWaveButton;
-        private Button[] creatureButtons;
+        private Text startWaveButtonText;
+        private Button[] deckButtons;
+        private Text[] deckButtonLabels;
+        private Image[] deckButtonImages;
         private CardDraftSystem draftSystem;
         private WaveManager waveManager;
         private EnemyManager enemyManager;
         private GameManager gameManager;
-        private bool waveStarted;
+        private PlayerDeck playerDeck;
+        private GridManager gridManager;
+        private OperatorManager operatorManager;
+
+        private int selectedDeckSlot = -1;
 
         private void Awake()
         {
@@ -38,6 +49,9 @@ namespace TrashTD.UI
             waveManager = FindFirstObjectByType<WaveManager>();
             enemyManager = FindFirstObjectByType<EnemyManager>();
             gameManager = FindFirstObjectByType<GameManager>();
+            playerDeck = FindFirstObjectByType<PlayerDeck>();
+            gridManager = FindFirstObjectByType<GridManager>();
+            operatorManager = FindFirstObjectByType<OperatorManager>();
 
             EnsureEventSystem();
             BuildHud();
@@ -48,7 +62,7 @@ namespace TrashTD.UI
             if (waveManager != null)
             {
                 waveManager.OnWaveStarted += HandleWaveStarted;
-                waveManager.OnWaveCompleted += HandleWaveCompleted;
+                waveManager.OnSingleWaveFinished += HandleSingleWaveFinished;
             }
 
             if (enemyManager != null)
@@ -58,13 +72,21 @@ namespace TrashTD.UI
                 enemyManager.OnEnemyReachedExit += HandleEnemyCountChanged;
             }
 
-            if (draftSystem != null)
+            if (gameManager != null)
             {
-                draftSystem.OnCardsOffered += HandleCardsOffered;
-                HandleCardsOffered(draftSystem.CurrentOfferedCards);
+                gameManager.OnDPChanged += HandleDPChanged;
+                gameManager.OnLifePointsChanged += HandleLPChanged;
+                gameManager.OnPhaseChanged += HandlePhaseChanged;
+            }
+
+            if (playerDeck != null)
+            {
+                playerDeck.OnDeckChanged += HandleDeckChanged;
             }
 
             RefreshCounters();
+            RefreshDeckSlots();
+            UpdatePhaseUI();
         }
 
         private void Update()
@@ -77,7 +99,7 @@ namespace TrashTD.UI
             if (waveManager != null)
             {
                 waveManager.OnWaveStarted -= HandleWaveStarted;
-                waveManager.OnWaveCompleted -= HandleWaveCompleted;
+                waveManager.OnSingleWaveFinished -= HandleSingleWaveFinished;
             }
 
             if (enemyManager != null)
@@ -87,11 +109,22 @@ namespace TrashTD.UI
                 enemyManager.OnEnemyReachedExit -= HandleEnemyCountChanged;
             }
 
-            if (draftSystem != null)
+            if (gameManager != null)
             {
-                draftSystem.OnCardsOffered -= HandleCardsOffered;
+                gameManager.OnDPChanged -= HandleDPChanged;
+                gameManager.OnLifePointsChanged -= HandleLPChanged;
+                gameManager.OnPhaseChanged -= HandlePhaseChanged;
+            }
+
+            if (playerDeck != null)
+            {
+                playerDeck.OnDeckChanged -= HandleDeckChanged;
             }
         }
+
+        // ============================
+        // HUD Construction
+        // ============================
 
         private void BuildHud()
         {
@@ -107,56 +140,126 @@ namespace TrashTD.UI
 
             var root = canvasObject.transform;
             CreateTopBar(root);
-            CreateCreatureBar(root);
+            CreateDeckBar(root);
             CreatePausePanel(root);
         }
 
         private void CreateTopBar(Transform root)
         {
-            var pauseButton = CreateButton(root, "PauseButton", "||", new Vector2(70f, 70f));
-            SetPosition(pauseButton.GetComponent<RectTransform>(), new Vector2(50f, -50f), new Vector2(0f, 1f));
+            // Background strip
+            stageInfoPanel = new GameObject("TopBar", typeof(RectTransform), typeof(Image));
+            stageInfoPanel.transform.SetParent(root, false);
+            var barRect = stageInfoPanel.GetComponent<RectTransform>();
+            barRect.anchorMin = new Vector2(0f, 1f);
+            barRect.anchorMax = new Vector2(1f, 1f);
+            barRect.pivot = new Vector2(0.5f, 1f);
+            barRect.sizeDelta = new Vector2(0f, 90f);
+            barRect.anchoredPosition = Vector2.zero;
+            stageInfoPanel.GetComponent<Image>().color = new Color(0.03f, 0.04f, 0.06f, 0.85f);
+
+            // Pause button (top-left)
+            var pauseButton = CreateButton(stageInfoPanel.transform, "PauseButton", "||", new Vector2(50f, 50f));
+            SetPosition(pauseButton.GetComponent<RectTransform>(), new Vector2(20f, -45f), new Vector2(0f, 1f), new Vector2(50f, 50f), new Vector2(0f, 0.5f));
             pauseButton.onClick.AddListener(PauseGame);
 
-            waveText = CreateText(root, "WaveText", "WAVE 1/15", 34, TextAnchor.MiddleLeft);
-            SetPosition(waveText.GetComponent<RectTransform>(), new Vector2(270f, -50f), new Vector2(0f, 1f), new Vector2(300f, 70f));
+            // Wave text - spaced cleanly to the right of pause button
+            waveText = CreateText(stageInfoPanel.transform, "WaveText", "WAVE 1", 28, TextAnchor.MiddleLeft);
+            SetPosition(waveText.GetComponent<RectTransform>(), new Vector2(95f, -28f), new Vector2(0f, 1f), new Vector2(220f, 32f), new Vector2(0f, 0.5f));
 
-            enemyText = CreateText(root, "EnemyText", "0\nENEMIES LEFT", 30, TextAnchor.MiddleCenter);
-            SetPosition(enemyText.GetComponent<RectTransform>(), new Vector2(0f, -50f), new Vector2(0.5f, 1f), new Vector2(280f, 85f));
+            // Phase text - directly under WaveText
+            phaseText = CreateText(stageInfoPanel.transform, "PhaseText", "PREPARATION", 18, TextAnchor.MiddleLeft);
+            phaseText.color = new Color(0.5f, 0.8f, 1f, 1f);
+            SetPosition(phaseText.GetComponent<RectTransform>(), new Vector2(95f, -60f), new Vector2(0f, 1f), new Vector2(220f, 26f), new Vector2(0f, 0.5f));
 
-            rerollText = CreateText(root, "RerollText", "3\nREROLLS LEFT", 30, TextAnchor.MiddleCenter);
-            SetPosition(rerollText.GetComponent<RectTransform>(), new Vector2(-180f, -50f), new Vector2(1f, 1f), new Vector2(230f, 85f));
+            // Enemy count (center)
+            enemyText = CreateText(stageInfoPanel.transform, "EnemyText", "0 ENEMIES", 24, TextAnchor.MiddleCenter);
+            SetPosition(enemyText.GetComponent<RectTransform>(), new Vector2(0f, -45f), new Vector2(0.5f, 1f), new Vector2(220f, 40f), new Vector2(0.5f, 0.5f));
+
+            // Lives Counter (top-right, 3 lives)
+            lpText = CreateText(stageInfoPanel.transform, "LivesText", "♥ ♥ ♥  (3 LIVES)", 24, TextAnchor.MiddleRight);
+            lpText.color = new Color(1f, 0.35f, 0.35f, 1f);
+            SetPosition(lpText.GetComponent<RectTransform>(), new Vector2(-25f, -45f), new Vector2(1f, 1f), new Vector2(280f, 45f), new Vector2(1f, 0.5f));
         }
 
-        private void CreateCreatureBar(Transform root)
+        private void CreateDeckBar(Transform root)
         {
-            var bar = new GameObject("CreatureBar", typeof(RectTransform));
+            // Bottom bar background
+            var bar = new GameObject("DeckBar", typeof(RectTransform), typeof(Image));
             bar.transform.SetParent(root, false);
             var barRect = bar.GetComponent<RectTransform>();
             barRect.anchorMin = new Vector2(0f, 0f);
             barRect.anchorMax = new Vector2(1f, 0f);
             barRect.pivot = new Vector2(0.5f, 0f);
-            barRect.offsetMin = new Vector2(50f, 28f);
-            barRect.offsetMax = new Vector2(-280f, 198f);
+            barRect.sizeDelta = new Vector2(0f, 170f);
+            barRect.anchoredPosition = Vector2.zero;
+            bar.GetComponent<Image>().color = new Color(0.03f, 0.04f, 0.06f, 0.85f);
 
-            var layout = bar.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 12f;
+            // Deck slots container
+            var slotsContainer = new GameObject("DeckSlots", typeof(RectTransform));
+            slotsContainer.transform.SetParent(bar.transform, false);
+            var slotsRect = slotsContainer.GetComponent<RectTransform>();
+            slotsRect.anchorMin = new Vector2(0f, 0f);
+            slotsRect.anchorMax = new Vector2(1f, 1f);
+            slotsRect.offsetMin = new Vector2(30f, 15f);
+            slotsRect.offsetMax = new Vector2(-210f, -15f);
+
+            var layout = slotsContainer.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 10f;
             layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childControlWidth = false;
             layout.childControlHeight = false;
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = false;
 
-            creatureButtons = new Button[CreatureSlotCount];
-            for (int i = 0; i < CreatureSlotCount; i++)
+            deckButtons = new Button[DeckSlotCount];
+            deckButtonLabels = new Text[DeckSlotCount];
+            deckButtonImages = new Image[DeckSlotCount];
+
+            for (int i = 0; i < DeckSlotCount; i++)
             {
                 int slotIndex = i;
-                creatureButtons[i] = CreateCreatureSlot(bar.transform, "CreatureSlot_" + (i + 1));
-                creatureButtons[i].onClick.AddListener(() => SelectCreature(slotIndex));
+                var slotBtn = CreateDeckSlot(slotsContainer.transform, $"DeckSlot_{i + 1}");
+                deckButtons[i] = slotBtn;
+                deckButtonLabels[i] = slotBtn.GetComponentInChildren<Text>();
+                deckButtonImages[i] = slotBtn.GetComponent<Image>();
+                slotBtn.onClick.AddListener(() => SelectDeckSlot(slotIndex));
+                var dragHandler = slotBtn.gameObject.AddComponent<DeckSlotDragHandler>();
+                dragHandler.Bind(
+                    slotIndex,
+                    () => gameManager != null && gameManager.CurrentPhase == StagePhase.Preparation && playerDeck != null && playerDeck.GetCard(slotIndex) != null,
+                    FinishDeckCardDrag);
+                slotBtn.interactable = false;
             }
 
-            startWaveButton = CreateButton(root, "StartWaveButton", "START\nWAVE", new Vector2(150f, 90f));
-            SetPosition(startWaveButton.GetComponent<RectTransform>(), new Vector2(-95f, 95f), new Vector2(1f, 0f));
+            // Start Wave button
+            startWaveButton = CreateButton(bar.transform, "StartWaveButton", "START\nWAVE", new Vector2(160f, 100f));
+            startWaveButtonText = startWaveButton.GetComponentInChildren<Text>();
+            var swbRect = startWaveButton.GetComponent<RectTransform>();
+            swbRect.anchorMin = new Vector2(1f, 0.5f);
+            swbRect.anchorMax = new Vector2(1f, 0.5f);
+            swbRect.anchoredPosition = new Vector2(-110f, 0f);
+            startWaveButton.GetComponent<Image>().color = new Color(0.18f, 0.55f, 0.34f, 1f);
             startWaveButton.onClick.AddListener(StartWave);
+        }
+
+        private Button CreateDeckSlot(Transform parent, string objectName)
+        {
+            var button = CreateButton(parent, objectName, "", new Vector2(115f, 130f));
+            var image = button.GetComponent<Image>();
+            image.sprite = CreateTrapezoidSprite();
+            image.color = new Color(0.06f, 0.07f, 0.10f, 1f);
+            image.type = Image.Type.Simple;
+
+            // Smaller label text for operator name
+            var label = button.GetComponentInChildren<Text>();
+            if (label != null)
+            {
+                label.fontSize = 14;
+                label.horizontalOverflow = HorizontalWrapMode.Wrap;
+                label.verticalOverflow = VerticalWrapMode.Truncate;
+            }
+
+            return button;
         }
 
         private void CreatePausePanel(Transform root)
@@ -184,50 +287,162 @@ namespace TrashTD.UI
             pausePanel.SetActive(false);
         }
 
-        private Button CreateCreatureSlot(Transform parent, string objectName)
+        // ============================
+        // Phase Handling
+        // ============================
+
+        private void HandlePhaseChanged(StagePhase phase)
         {
-            var button = CreateButton(parent, objectName, "", new Vector2(120f, 130f));
-            var image = button.GetComponent<Image>();
-            image.sprite = CreateTrapezoidSprite();
-            image.color = new Color(0.04f, 0.05f, 0.07f, 1f);
-            image.type = Image.Type.Simple;
-            return button;
+            UpdatePhaseUI();
         }
 
-        private void HandleCardsOffered(IReadOnlyList<DraftCard> cards)
+        private void UpdatePhaseUI()
         {
-            for (int i = 0; i < creatureButtons.Length; i++)
-            {
-                var label = creatureButtons[i].GetComponentInChildren<Text>();
-                if (label == null) continue;
+            if (gameManager == null) return;
 
-                if (i < cards.Count && cards[i] != null && cards[i].operatorData != null)
+            StagePhase phase = gameManager.CurrentPhase;
+
+            switch (phase)
+            {
+                case StagePhase.CardPick:
+                    if (phaseText != null) phaseText.text = "CARD PICK";
+                    startWaveButton.interactable = false;
+                    if (startWaveButtonText != null) startWaveButtonText.text = "DRAFTING...";
+                    break;
+
+                case StagePhase.Preparation:
+                    if (phaseText != null) phaseText.text = "PREPARATION";
+                    startWaveButton.interactable = true;
+                    if (startWaveButtonText != null) startWaveButtonText.text = "START\nWAVE";
+                    startWaveButton.GetComponent<Image>().color = new Color(0.18f, 0.55f, 0.34f, 1f);
+                    break;
+
+                case StagePhase.WaveActive:
+                    if (phaseText != null) phaseText.text = "WAVE IN PROGRESS";
+                    startWaveButton.interactable = false;
+                    if (startWaveButtonText != null) startWaveButtonText.text = "WAVE\nACTIVE";
+                    startWaveButton.GetComponent<Image>().color = new Color(0.3f, 0.3f, 0.35f, 1f);
+                    break;
+            }
+        }
+
+        // ============================
+        // Deck Slots
+        // ============================
+
+        private void HandleDeckChanged(IReadOnlyList<DraftCard> deck)
+        {
+            RefreshDeckSlots();
+        }
+
+        private void RefreshDeckSlots()
+        {
+            if (playerDeck == null || deckButtons == null) return;
+
+            var deck = playerDeck.DeckSlots;
+
+            for (int i = 0; i < DeckSlotCount; i++)
+            {
+                if (i < deck.Count && deck[i] != null && deck[i].operatorData != null)
                 {
-                    label.text = cards[i].operatorData.operatorName;
-                    creatureButtons[i].interactable = true;
+                    var card = deck[i];
+                    string stars = new string('★', (int)card.rarity);
+                    deckButtonLabels[i].text = $"{card.operatorData.operatorName}\n{stars}";
+                    deckButtons[i].interactable = true;
+
+                    // Tint based on class for visual differentiation
+                    deckButtonImages[i].color = GetClassColor(card.operatorData.operatorClass);
+                    deckButtons[i].GetComponent<DeckSlotDragHandler>().SetCard(card, deckButtonImages[i].color);
                 }
                 else
                 {
-                    label.text = string.Empty;
-                    creatureButtons[i].interactable = false;
+                    deckButtonLabels[i].text = "";
+                    deckButtons[i].interactable = false;
+                    deckButtonImages[i].color = new Color(0.06f, 0.07f, 0.10f, 1f);
+                    deckButtons[i].GetComponent<DeckSlotDragHandler>().SetCard(null, deckButtonImages[i].color);
                 }
             }
         }
 
-        private void SelectCreature(int index)
+        private void FinishDeckCardDrag(int slotIndex, Vector2 screenPosition)
         {
-            if (draftSystem != null && index < draftSystem.CurrentOfferedCards.Count)
+            if (gameManager == null || gameManager.CurrentPhase != StagePhase.Preparation || playerDeck == null) return;
+
+            DraftCard card = playerDeck.GetCard(slotIndex);
+            if (card == null) return;
+
+            Camera uiCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+            for (int targetIndex = 0; targetIndex < deckButtons.Length; targetIndex++)
             {
-                draftSystem.SelectCard(index, out _);
+                RectTransform targetRect = deckButtons[targetIndex].GetComponent<RectTransform>();
+                if (!RectTransformUtility.RectangleContainsScreenPoint(targetRect, screenPosition, uiCamera)) continue;
+
+                playerDeck.MoveCard(slotIndex, targetIndex);
+                return;
+            }
+
+            if (gridManager == null || operatorManager == null) return;
+            Camera gameCamera = Camera.main;
+            if (gameCamera == null) return;
+
+            Vector3 worldPosition = gameCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, -gameCamera.transform.position.z));
+            Vector2Int gridPosition = gridManager.WorldToGridPosition(worldPosition);
+            if (!gridManager.IsInBounds(gridPosition)) return;
+
+            if (operatorManager.TryDeployOperator(card.operatorData, card.rarity, gridPosition, out _))
+            {
+                playerDeck.RemoveCard(card);
+                if (selectedDeckSlot == slotIndex) selectedDeckSlot = -1;
             }
         }
 
+        private Color GetClassColor(OperatorClass opClass)
+        {
+            return opClass switch
+            {
+                OperatorClass.Guard => new Color(0.55f, 0.15f, 0.15f, 1f),     // Red-tinted
+                OperatorClass.Defender => new Color(0.15f, 0.25f, 0.55f, 1f),   // Blue-tinted
+                OperatorClass.Sniper => new Color(0.15f, 0.50f, 0.15f, 1f),     // Green-tinted
+                OperatorClass.Caster => new Color(0.45f, 0.15f, 0.55f, 1f),     // Purple-tinted
+                OperatorClass.Medic => new Color(0.45f, 0.45f, 0.15f, 1f),      // Yellow-tinted
+                _ => new Color(0.06f, 0.07f, 0.10f, 1f)
+            };
+        }
+
+        private void SelectDeckSlot(int index)
+        {
+            if (playerDeck == null) return;
+
+            var card = playerDeck.GetCard(index);
+            if (card == null) return;
+
+            selectedDeckSlot = index;
+
+            // Notify deck and draft system that this card was selected for deployment
+            playerDeck.SelectCardForDeployment(index);
+            if (draftSystem != null)
+            {
+                draftSystem.NotifyCardSelected(card);
+            }
+
+            Debug.Log($"[Deck] Selected slot {index}: {card.operatorData.operatorName} ({card.rarity}) - click or drag to a valid tile to deploy.");
+        }
+
+        // ============================
+        // Actions
+        // ============================
+
         private void StartWave()
         {
-            if (waveStarted || waveManager == null) return;
-            waveStarted = true;
-            startWaveButton.interactable = false;
-            waveManager.StartWaves();
+            if (gameManager == null || waveManager == null) return;
+            if (gameManager.CurrentPhase != StagePhase.Preparation) return;
+
+            // Enter wave phase
+            gameManager.EnterWavePhase();
+
+            // Set wave index and start
+            waveManager.SetWaveIndex(gameManager.GetCurrentWaveIndex());
+            waveManager.StartNextWave();
         }
 
         private void PauseGame()
@@ -251,18 +466,21 @@ namespace TrashTD.UI
             SceneManager.LoadScene("MainMenu");
         }
 
+        // ============================
+        // Event Handlers
+        // ============================
+
         private void HandleWaveStarted(int current, int total)
         {
-            waveText.text = $"WAVE {current}/{total}";
-            startWaveButton.interactable = false;
+            if (waveText != null) waveText.text = $"WAVE {current}/{total}";
         }
 
-        private void HandleWaveCompleted(int waveIndex)
+        private void HandleSingleWaveFinished()
         {
-            if (waveManager != null && waveManager.CurrentWaveNumber < waveManager.TotalWaves)
+            // Wave done — GameManager.OnWaveFinished will transition back to CardPick
+            if (gameManager != null)
             {
-                startWaveButton.interactable = true;
-                waveStarted = false;
+                gameManager.OnWaveFinished();
             }
         }
 
@@ -271,18 +489,48 @@ namespace TrashTD.UI
             RefreshCounters();
         }
 
+        private void HandleDPChanged(int dp)
+        {
+            // DP system removed
+        }
+
+        private void HandleLPChanged(int current, int max)
+        {
+            UpdateLivesDisplay(current, max);
+        }
+
+        private void UpdateLivesDisplay(int current, int max)
+        {
+            if (lpText == null) return;
+            int total = max > 0 ? max : 3;
+            string hearts = "";
+            for (int i = 0; i < current; i++) hearts += "♥ ";
+            for (int i = current; i < total; i++) hearts += "♡ ";
+            lpText.text = $"{hearts.Trim()}  ({current} {(current == 1 ? "LIFE" : "LIVES")})";
+        }
+
         private void RefreshCounters()
         {
             if (enemyText != null && enemyManager != null)
             {
-                enemyText.text = $"{enemyManager.ActiveEnemyCount}\nENEMIES LEFT";
+                int count = enemyManager.ActiveEnemyCount;
+                enemyText.text = count == 1 ? "1 ENEMY" : $"{count} ENEMIES";
             }
 
             if (waveText != null && waveManager != null && waveManager.TotalWaves > 0)
             {
                 waveText.text = $"WAVE {Mathf.Max(1, waveManager.CurrentWaveNumber)}/{waveManager.TotalWaves}";
             }
+
+            if (lpText != null && gameManager != null)
+            {
+                UpdateLivesDisplay(gameManager.CurrentLifePoints, gameManager.MaxLifePoints);
+            }
         }
+
+        // ============================
+        // UI Helpers
+        // ============================
 
         private static Text CreateText(Transform parent, string objectName, string value, int fontSize, TextAnchor alignment)
         {
@@ -315,8 +563,9 @@ namespace TrashTD.UI
             return button;
         }
 
-        private static void SetPosition(RectTransform rect, Vector2 position, Vector2 anchor, Vector2? size = null)
+        private static void SetPosition(RectTransform rect, Vector2 position, Vector2 anchor, Vector2? size = null, Vector2? pivot = null)
         {
+            if (pivot.HasValue) rect.pivot = pivot.Value;
             rect.anchorMin = anchor;
             rect.anchorMax = anchor;
             rect.anchoredPosition = position;

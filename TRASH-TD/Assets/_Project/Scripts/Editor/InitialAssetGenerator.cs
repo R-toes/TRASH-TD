@@ -189,7 +189,7 @@ namespace TrashTD.Editor
             // 4. Caster (Pyrolite)
             var casterSprite = LoadSprite("tex_op_caster.png");
             var casterPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Caster", casterSprite, OperatorClass.Caster);
-            var caster = CreateOperator("OP_Caster_Pyrolite", "Pyrolite", OperatorClass.Caster, OperatorPosition.Ranged, OperatorRarity.Star2,
+            var caster = CreateOperator("OP_Caster_Pyrolite", "Pyrolite", OperatorClass.Caster, OperatorPosition.Ranged, OperatorRarity.Star1,
                 hp: 95, atk: 80, def: 10, res: 20, blockCount: 0, range: 2, interval: 1.6f, dp: 15,
                 new[]
                 {
@@ -326,10 +326,10 @@ namespace TrashTD.Editor
             stage.gridHeight = 6;
             stage.squadSizeLimit = 8;
 
-            // Life Points per GDD 1.4.7: Easy=10, Normal=5, Hard=1
-            stage.lifePointsEasy = 10;
-            stage.lifePointsNormal = 5;
-            stage.lifePointsHard = 1;
+            // Lives: 3 lives per stage
+            stage.lifePointsEasy = 3;
+            stage.lifePointsNormal = 3;
+            stage.lifePointsHard = 3;
 
             // Spawn at (0, 3), Exit at (7, 3)
             stage.spawnPoints = new[] { new Vector2Int(0, 3) };

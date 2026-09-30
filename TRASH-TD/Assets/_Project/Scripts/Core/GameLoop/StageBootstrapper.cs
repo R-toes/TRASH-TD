@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
@@ -43,6 +44,7 @@ namespace TrashTD.Core.GameLoop
         public EnemyManager enemyManager;
         public OperatorManager operatorManager;
         public CardDraftSystem cardDraftSystem;
+        public PlayerDeck playerDeck;
 
         private DraftCard pendingDeployCard = null;
 
@@ -54,8 +56,10 @@ namespace TrashTD.Core.GameLoop
             if (enemyManager == null) enemyManager = FindFirstObjectByType<EnemyManager>() ?? gameObject.AddComponent<EnemyManager>();
             if (operatorManager == null) operatorManager = FindFirstObjectByType<OperatorManager>() ?? gameObject.AddComponent<OperatorManager>();
             if (cardDraftSystem == null) cardDraftSystem = FindFirstObjectByType<CardDraftSystem>() ?? gameObject.AddComponent<CardDraftSystem>();
+            if (playerDeck == null) playerDeck = FindFirstObjectByType<PlayerDeck>() ?? gameObject.AddComponent<PlayerDeck>();
             if (FindFirstObjectByType<RarityUpgradeSystem>() == null) gameObject.AddComponent<RarityUpgradeSystem>();
             if (FindFirstObjectByType<GameplayHUDUI>() == null) gameObject.AddComponent<GameplayHUDUI>();
+            if (FindFirstObjectByType<CardDraftOverlayUI>() == null) gameObject.AddComponent<CardDraftOverlayUI>();
         }
 
         private void Start()
@@ -75,20 +79,23 @@ namespace TrashTD.Core.GameLoop
             // 3. Center Camera
             CenterCameraOnGrid();
 
-            // 4. Initialize GameManager
-            gameManager.StartStage(stageData, difficulty);
-
-            // 5. Initialize Draft System
+            // 4. Initialize Draft System
             if (operatorPool != null && operatorPool.Count > 0)
             {
                 cardDraftSystem.SetOperatorPool(operatorPool);
                 cardDraftSystem.OnCardSelected += HandleCardSelectedForDeployment;
             }
+            if (playerDeck != null)
+            {
+                playerDeck.OnCardSelectedForDeployment += HandleCardSelectedForDeployment;
+            }
+            cardDraftSystem.ResetForNewStage();
 
-            // 6. Initialize and start waves
+            // 5. Initialize Wave Manager
             waveManager.Initialize(stageData, difficulty);
 
-            // The creature bar starts empty until a draft offer is explicitly created.
+            // 6. Start Stage (enters CardPick phase, which shows the CardDraftOverlayUI)
+            gameManager.StartStage(stageData, difficulty);
         }
 
         private void SpawnVisualGridTiles()
@@ -146,6 +153,19 @@ namespace TrashTD.Core.GameLoop
             cam.orthographicSize = Mathf.Max(stageData.gridHeight * 0.6f, 5f);
         }
 
+        private void OnDestroy()
+        {
+            if (cardDraftSystem != null)
+            {
+                cardDraftSystem.OnCardSelected -= HandleCardSelectedForDeployment;
+            }
+
+            if (playerDeck != null)
+            {
+                playerDeck.OnCardSelectedForDeployment -= HandleCardSelectedForDeployment;
+            }
+        }
+
         private void HandleCardSelectedForDeployment(DraftCard card)
         {
             pendingDeployCard = card;
@@ -154,8 +174,9 @@ namespace TrashTD.Core.GameLoop
 
         private void Update()
         {
-            // Simple Click-to-Deploy handling during Play mode testing
-            if (pendingDeployCard != null && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            if (pendingDeployCard != null && gameManager != null && gameManager.CurrentPhase == StagePhase.Preparation &&
+                !pointerOverUI && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
             {
                 Vector3 mouseScreenPosition = Mouse.current.position.ReadValue();
                 Vector3 mouseWorld = Camera.main.ScreenToWorldPoint(mouseScreenPosition);
@@ -163,24 +184,18 @@ namespace TrashTD.Core.GameLoop
 
                 if (gridManager.IsInBounds(gridPos))
                 {
-                    int dpCost = pendingDeployCard.operatorData.dpCost;
-                    if (gameManager.TrySpendDP(dpCost))
+                    if (operatorManager.TryDeployOperator(pendingDeployCard.operatorData, pendingDeployCard.rarity, gridPos, out _))
                     {
-                        if (operatorManager.TryDeployOperator(pendingDeployCard.operatorData, pendingDeployCard.rarity, gridPos, out _))
+                        Debug.Log($"<color=green>Deployed {pendingDeployCard.operatorData.operatorName} at ({gridPos.x}, {gridPos.y})!</color>");
+                        if (playerDeck != null)
                         {
-                            Debug.Log($"<color=green>Deployed {pendingDeployCard.operatorData.operatorName} at ({gridPos.x}, {gridPos.y})!</color>");
-                            pendingDeployCard = null;
+                            playerDeck.RemoveCard(pendingDeployCard);
                         }
-                        else
-                        {
-                            // Refund DP if invalid tile
-                            gameManager.AddDP(dpCost);
-                            Debug.LogWarning($"Cannot deploy {pendingDeployCard.operatorData.position} operator on this tile!");
-                        }
+                        pendingDeployCard = null;
                     }
                     else
                     {
-                        Debug.LogWarning($"Not enough DP! Need {dpCost}, have {gameManager.CurrentDP}.");
+                        Debug.LogWarning($"Cannot deploy {pendingDeployCard.operatorData.position} operator on this tile!");
                     }
                 }
             }

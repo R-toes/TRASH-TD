@@ -43,12 +43,55 @@ namespace TrashTD.Systems
 
         private readonly List<DraftCard> currentOfferedCards = new List<DraftCard>(3);
         private int currentRound = 0;
+        private int rerollsRemaining = 3;
+
+        public const int STARTING_REROLLS = 3;
 
         public IReadOnlyList<DraftCard> CurrentOfferedCards => currentOfferedCards;
         public int CurrentRound => currentRound;
+        public int RerollsRemaining => rerollsRemaining;
 
         public event Action<IReadOnlyList<DraftCard>> OnCardsOffered;
         public event Action<DraftCard> OnCardSelected;
+        public event Action<int> OnRerollCountChanged;
+
+        /// <summary>
+        /// Notifies listeners that a card has been selected (e.g. from the player's deck for deployment).
+        /// </summary>
+        public void NotifyCardSelected(DraftCard card)
+        {
+            if (card != null)
+            {
+                OnCardSelected?.Invoke(card);
+            }
+        }
+
+        /// <summary>
+        /// Reset state for a new stage (reroll count, round counter).
+        /// </summary>
+        public void ResetForNewStage()
+        {
+            currentRound = 0;
+            rerollsRemaining = STARTING_REROLLS;
+            currentOfferedCards.Clear();
+            OnRerollCountChanged?.Invoke(rerollsRemaining);
+        }
+
+        /// <summary>
+        /// Reroll the current draft offer. Costs 1 reroll.
+        /// Returns the new offer, or null if no rerolls remain.
+        /// </summary>
+        public List<DraftCard> RerollOffer()
+        {
+            if (rerollsRemaining <= 0) return null;
+
+            rerollsRemaining--;
+            OnRerollCountChanged?.Invoke(rerollsRemaining);
+
+            // Don't increment round on reroll — it's the same draft round, just re-shuffled
+            currentRound--; // GenerateDraftOffer will increment it back
+            return GenerateDraftOffer();
+        }
 
         /// <summary>
         /// Populate the draft pool (can be set via code or inspector).
@@ -80,31 +123,32 @@ namespace TrashTD.Systems
                 return currentOfferedCards;
             }
 
-            // Shuffle or group candidates by class
-            var classBuckets = new Dictionary<OperatorClass, List<OperatorData>>();
-            foreach (var op in availableOperatorPool)
+            var selectedClasses = new HashSet<OperatorClass>();
+            for (int i = 0; i < 3; i++)
             {
-                if (op == null) continue;
-                if (!classBuckets.ContainsKey(op.operatorClass))
+                var candidatesByRarity = new Dictionary<OperatorRarity, List<OperatorData>>();
+                foreach (var op in availableOperatorPool)
                 {
-                    classBuckets[op.operatorClass] = new List<OperatorData>();
+                    if (op == null || selectedClasses.Contains(op.operatorClass)) continue;
+                    if (op.baseRarity < OperatorRarity.Star1 || op.baseRarity > OperatorRarity.Star3) continue;
+
+                    if (!candidatesByRarity.TryGetValue(op.baseRarity, out var candidates))
+                    {
+                        candidates = new List<OperatorData>();
+                        candidatesByRarity.Add(op.baseRarity, candidates);
+                    }
+                    candidates.Add(op);
                 }
-                classBuckets[op.operatorClass].Add(op);
-            }
 
-            // Pick up to 3 distinct classes randomly
-            var availableClasses = new List<OperatorClass>(classBuckets.Keys);
-            ShuffleList(availableClasses);
+                if (candidatesByRarity.Count == 0) break;
 
-            int cardsToPick = Mathf.Min(3, availableClasses.Count);
-            for (int i = 0; i < cardsToPick; i++)
-            {
-                OperatorClass chosenClass = availableClasses[i];
-                var classList = classBuckets[chosenClass];
-                OperatorData chosenOp = classList[UnityEngine.Random.Range(0, classList.Count)];
+                var availableRarities = new List<OperatorRarity>(candidatesByRarity.Keys);
+                OperatorRarity chosenRarity = RollDraftRarity(availableRarities);
+                var rarityCandidates = candidatesByRarity[chosenRarity];
+                OperatorData chosenOp = rarityCandidates[UnityEngine.Random.Range(0, rarityCandidates.Count)];
 
-                OperatorRarity offeredRarity = RollDraftRarity(chosenOp.baseRarity);
-                currentOfferedCards.Add(new DraftCard(chosenOp, offeredRarity));
+                selectedClasses.Add(chosenOp.operatorClass);
+                currentOfferedCards.Add(new DraftCard(chosenOp, chosenOp.baseRarity));
             }
 
             OnCardsOffered?.Invoke(currentOfferedCards);
@@ -112,17 +156,43 @@ namespace TrashTD.Systems
         }
 
         /// <summary>
-        /// Rolls a draft rarity between 1★ and 3★ (GDD 1.6).
-        /// Respects weights while ensuring result is never > 3★.
+        /// Selects a rarity tier using the configured weights, considering only tiers
+        /// with eligible operators. The selected operator keeps its configured rarity.
         /// </summary>
-        private OperatorRarity RollDraftRarity(OperatorRarity baseRarity)
+        private OperatorRarity RollDraftRarity(IReadOnlyList<OperatorRarity> availableRarities)
         {
-            float total = star1Weight + star2Weight + star3Weight;
-            float roll = UnityEngine.Random.Range(0f, total);
+            float totalWeight = 0f;
+            foreach (var rarity in availableRarities)
+            {
+                totalWeight += GetRarityWeight(rarity);
+            }
 
-            if (roll < star1Weight) return OperatorRarity.Star1;
-            if (roll < star1Weight + star2Weight) return OperatorRarity.Star2;
-            return OperatorRarity.Star3;
+            if (totalWeight <= 0f)
+            {
+                return availableRarities[UnityEngine.Random.Range(0, availableRarities.Count)];
+            }
+
+            float roll = UnityEngine.Random.Range(0f, totalWeight);
+            foreach (var rarity in availableRarities)
+            {
+                float weight = GetRarityWeight(rarity);
+                if (weight <= 0f) continue;
+                if (roll < weight) return rarity;
+                roll -= weight;
+            }
+
+            return availableRarities[availableRarities.Count - 1];
+        }
+
+        private float GetRarityWeight(OperatorRarity rarity)
+        {
+            return Mathf.Max(0f, rarity switch
+            {
+                OperatorRarity.Star1 => star1Weight,
+                OperatorRarity.Star2 => star2Weight,
+                OperatorRarity.Star3 => star3Weight,
+                _ => 0f
+            });
         }
 
         /// <summary>

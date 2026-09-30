@@ -93,7 +93,7 @@ namespace TrashTD.UI
             int lp = mapSelectManager.SelectedStage.GetLifePoints(mapSelectManager.SelectedDifficulty);
             if (lifePointsText != null)
             {
-                lifePointsText.text = $"Life Points: {lp}";
+                lifePointsText.text = $"Lives: {lp}";
             }
         }
 

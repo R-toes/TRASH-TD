@@ -22,9 +22,9 @@ MonoBehaviour:
   exitPoints:
   - {x: 7, y: 3}
   enemyPaths: []
-  lifePointsEasy: 10
-  lifePointsNormal: 5
-  lifePointsHard: 1
+  lifePointsEasy: 3
+  lifePointsNormal: 3
+  lifePointsHard: 3
   squadSizeLimit: 8
   wavesEasy:
   - waveName: 'Wave 1: Scouts'

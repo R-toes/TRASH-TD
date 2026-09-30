@@ -6,6 +6,17 @@ using TrashTD.Systems;
 
 namespace TrashTD.Core.GameLoop
 {
+    /// <summary>
+    /// The phase within a single wave cycle.
+    /// CardPick → Preparation → WaveActive → (next wave) CardPick → ...
+    /// </summary>
+    public enum StagePhase
+    {
+        CardPick,       // Player picks a card from the 3-card draft offer
+        Preparation,    // Player places operators on the grid before starting the wave
+        WaveActive      // Wave is spawning / enemies are alive
+    }
+
     public enum GamePlayState
     {
         NotStarted,
@@ -51,10 +62,17 @@ namespace TrashTD.Core.GameLoop
         public float ElapsedTime => elapsedTime;
         public GamePlayState CurrentState => currentState;
 
+        // --- Phase ---
+        private StagePhase currentPhase = StagePhase.CardPick;
+        private int currentWaveIndex = 0;
+
+        public StagePhase CurrentPhase => currentPhase;
+
         // --- Events ---
         public event Action<int, int> OnLifePointsChanged; // (current, max)
         public event Action<int> OnDPChanged;              // (current)
         public event Action<GamePlayState> OnGameStateChanged;
+        public event Action<StagePhase> OnPhaseChanged;
         public event Action<int> OnStageVictory;           // (starsEarned 1-3)
         public event Action OnStageDefeat;
 
@@ -92,36 +110,73 @@ namespace TrashTD.Core.GameLoop
             currentStage = stageData;
             currentDifficulty = difficulty;
 
-            maxLifePoints = stageData.GetLifePoints(difficulty);
+            maxLifePoints = 3; // 3 lives
             currentLifePoints = maxLifePoints;
-            currentDP = startingDP;
+            currentDP = 0;
             dpTimer = 0f;
             elapsedTime = 0f;
             leakedAnyEnemy = false;
+            currentWaveIndex = 0;
 
-            if (OperatorManager.Instance != null)
+            if (OperatorManager.Instance != null && stageData != null)
             {
                 OperatorManager.Instance.SquadLimit = stageData.squadSizeLimit;
             }
 
             SetState(GamePlayState.Playing);
             OnLifePointsChanged?.Invoke(currentLifePoints, maxLifePoints);
-            OnDPChanged?.Invoke(currentDP);
+
+            // Start with the card pick phase
+            SetPhase(StagePhase.CardPick);
         }
+
+        /// <summary>
+        /// Transition to Preparation phase after the player confirms a card.
+        /// </summary>
+        public void EnterPreparationPhase()
+        {
+            if (currentState != GamePlayState.Playing) return;
+            SetPhase(StagePhase.Preparation);
+        }
+
+        /// <summary>
+        /// Transition to WaveActive phase when the player clicks Start Wave.
+        /// </summary>
+        public void EnterWavePhase()
+        {
+            if (currentState != GamePlayState.Playing) return;
+            if (currentPhase != StagePhase.Preparation) return;
+            SetPhase(StagePhase.WaveActive);
+        }
+
+        /// <summary>
+        /// Called when a wave finishes. Moves to CardPick for next wave,
+        /// or triggers victory if all waves are done.
+        /// </summary>
+        public void OnWaveFinished()
+        {
+            if (currentState != GamePlayState.Playing) return;
+            currentWaveIndex++;
+
+            var waves = currentStage.GetWaves(currentDifficulty);
+            if (waves == null || currentWaveIndex >= waves.Length)
+            {
+                // All waves cleared — victory will be triggered by WaveManager
+                // when all remaining enemies are defeated
+                return;
+            }
+
+            // More waves remain — go back to card pick
+            SetPhase(StagePhase.CardPick);
+        }
+
+        public int GetCurrentWaveIndex() => currentWaveIndex;
 
         private void Update()
         {
             if (currentState != GamePlayState.Playing) return;
 
             elapsedTime += Time.deltaTime;
-
-            // DP generation over time
-            dpTimer += Time.deltaTime;
-            if (dpTimer >= dpGenerationInterval)
-            {
-                dpTimer -= dpGenerationInterval;
-                AddDP(dpPerTick);
-            }
 
             // Optional stage timer check
             if (currentStage != null && currentStage.timeLimit > 0f && elapsedTime >= currentStage.timeLimit)
@@ -132,16 +187,12 @@ namespace TrashTD.Core.GameLoop
 
         public void AddDP(int amount)
         {
-            currentDP = Mathf.Clamp(currentDP + amount, 0, maxDP);
-            OnDPChanged?.Invoke(currentDP);
+            // DP system removed
         }
 
         public bool TrySpendDP(int cost)
         {
-            if (currentDP < cost) return false;
-
-            currentDP -= cost;
-            OnDPChanged?.Invoke(currentDP);
+            // DP system removed — deployment is always free
             return true;
         }
 
@@ -221,6 +272,12 @@ namespace TrashTD.Core.GameLoop
         {
             currentState = newState;
             OnGameStateChanged?.Invoke(currentState);
+        }
+
+        private void SetPhase(StagePhase newPhase)
+        {
+            currentPhase = newPhase;
+            OnPhaseChanged?.Invoke(currentPhase);
         }
     }
 }

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
   operatorName: Pyrolite
   operatorClass: 3
-  baseRarity: 2
+  baseRarity: 1
   position: 1
   roleTags: []
   baseHP: 95
