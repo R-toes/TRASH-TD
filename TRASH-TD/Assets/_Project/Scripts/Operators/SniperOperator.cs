@@ -9,8 +9,7 @@ namespace TrashTD.Operators
     /// <summary>
     /// Sniper class — Ranged DPS (GDD 1.3).
     /// High single-target damage, no blocking.
-    /// Targets the enemy closest to reaching the exit (highest leak threat) within range,
-    /// with preference for aerial/ranged targets (Flyers / Casters).
+    /// Prioritizes air enemies, then the enemy closest to reaching the exit.
     /// </summary>
     public class SniperOperator : OperatorBase
     {
@@ -40,37 +39,29 @@ namespace TrashTD.Operators
             var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells);
             if (candidates == null || candidates.Count == 0) return null;
 
-            // Priority:
-            // 1. Flyers/Air enemies first (anti-air specialist per GDD 1.5)
-            // 2. Otherwise enemy with highest path progress (closest to exit)
             EnemyBase bestTarget = null;
-            float maxScore = float.MinValue;
+            float bestDistanceToGoal = float.PositiveInfinity;
+            float bestDistanceToOperator = float.PositiveInfinity;
 
             for (int i = 0; i < candidates.Count; i++)
             {
                 var enemy = candidates[i];
                 if (enemy == null || enemy.IsDead) continue;
 
-                float score = 0f;
-                // Anti-air priority bonus
-                if (enemy.MovementType == TrashTD.Data.EnemyMovementType.Air)
-                {
-                    score += 1000f;
-                }
-                // Casters priority bonus
-                else if (enemy.Data != null && enemy.Data.archetype == TrashTD.Data.EnemyArchetype.Caster)
-                {
-                    score += 500f;
-                }
+                bool isAir = enemy.MovementType == TrashTD.Data.EnemyMovementType.Air;
+                bool bestIsAir = bestTarget != null && bestTarget.MovementType == TrashTD.Data.EnemyMovementType.Air;
+                float distanceToGoal = enemy.DistanceToGoal;
+                float distanceToOperator = Vector3.Distance(transform.position, enemy.transform.position);
+                bool isCloserToGoal = distanceToGoal < bestDistanceToGoal && !Mathf.Approximately(distanceToGoal, bestDistanceToGoal);
+                bool sameGoalDistanceButCloser = Mathf.Approximately(distanceToGoal, bestDistanceToGoal) && distanceToOperator < bestDistanceToOperator;
 
-                // Distance to self (lower distance = slightly higher score tiebreak)
-                float dist = Vector3.Distance(transform.position, enemy.transform.position);
-                score -= dist;
-
-                if (score > maxScore)
+                if (bestTarget == null ||
+                    (isAir && !bestIsAir) ||
+                    (isAir == bestIsAir && (isCloserToGoal || sameGoalDistanceButCloser)))
                 {
-                    maxScore = score;
                     bestTarget = enemy;
+                    bestDistanceToGoal = distanceToGoal;
+                    bestDistanceToOperator = distanceToOperator;
                 }
             }
 

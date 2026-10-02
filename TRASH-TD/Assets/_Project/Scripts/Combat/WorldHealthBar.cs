@@ -15,6 +15,8 @@ namespace TrashTD.Combat
         private LineRenderer fill;
         private float verticalOffset = 0.55f;
         private float healthRatio = 1f;
+        private int sortingLayerId;
+        private int sortingOrder = 30;
 
         public static void UpdateFor(GameObject target, int currentHP, int maxHP)
         {
@@ -31,10 +33,13 @@ namespace TrashTD.Combat
             if (spriteRenderer != null)
             {
                 verticalOffset = spriteRenderer.bounds.extents.y + BarOffset;
+                sortingLayerId = spriteRenderer.sortingLayerID;
+                sortingOrder = Mathf.Max(sortingOrder, spriteRenderer.sortingOrder + 1);
             }
 
             background = CreateLine("HealthBarBackground", new Color(0.035f, 0.045f, 0.05f, 0.95f), BarThickness);
             fill = CreateLine("HealthBarFill", Color.green, BarThickness * 0.62f);
+            fill.sortingOrder = sortingOrder + 1;
         }
 
         private void LateUpdate()
@@ -64,7 +69,8 @@ namespace TrashTD.Combat
             line.startColor = color;
             line.endColor = color;
             line.numCapVertices = 2;
-            line.sortingOrder = 30;
+            line.sortingLayerID = sortingLayerId;
+            line.sortingOrder = sortingOrder;
             line.sharedMaterial = GetSharedMaterial();
             line.gameObject.SetActive(false);
             return line;
@@ -97,9 +103,11 @@ namespace TrashTD.Combat
         {
             if (sharedMaterial != null) return sharedMaterial;
 
-            Shader shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
-            if (shader == null) shader = Shader.Find("Sprites/Default");
+            Shader shader = Shader.Find("Sprites/Default");
+            if (shader == null) shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
             sharedMaterial = new Material(shader);
+            if (sharedMaterial.HasProperty("_Color")) sharedMaterial.SetColor("_Color", Color.white);
+            if (sharedMaterial.HasProperty("_BaseColor")) sharedMaterial.SetColor("_BaseColor", Color.white);
             return sharedMaterial;
         }
     }

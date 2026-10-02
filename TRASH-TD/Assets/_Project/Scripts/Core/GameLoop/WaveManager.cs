@@ -203,6 +203,9 @@ namespace TrashTD.Core.GameLoop
 
             IsWaveInProgress = false;
 
+            OperatorManager.Instance?.AdvanceRedeployCooldownsOneRound();
+            PlayerDeck.Instance?.AdvanceRedeployCooldownsOneRound();
+
             // Check if this was the last wave
             if (waveIndex >= waves.Length - 1)
             {

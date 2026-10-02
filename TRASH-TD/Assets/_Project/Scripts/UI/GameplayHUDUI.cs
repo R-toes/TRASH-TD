@@ -32,7 +32,11 @@ namespace TrashTD.UI
         private Text squadCountText;
         private GameObject selectedOperatorLabelRoot;
         private Text selectedOperatorNameText;
+        private Text selectedOperatorHealthText;
+        private Text selectedOperatorRarityText;
+        private Image selectedOperatorHealthFill;
         private GameObject placementControlsRoot;
+        private Button retreatOperatorButton;
         private Button placementConfirmButton;
         private Button startWaveButton;
         private Text startWaveButtonText;
@@ -163,20 +167,54 @@ namespace TrashTD.UI
             labelRect.anchorMin = new Vector2(0.5f, 0.5f);
             labelRect.anchorMax = new Vector2(0.5f, 0.5f);
             labelRect.pivot = new Vector2(0.5f, 0.5f);
-            labelRect.sizeDelta = new Vector2(190f, 30f);
+            labelRect.sizeDelta = new Vector2(250f, 70f);
 
             Image background = selectedOperatorLabelRoot.GetComponent<Image>();
             background.color = new Color(0.025f, 0.035f, 0.045f, 0.9f);
             background.raycastTarget = false;
 
-            selectedOperatorNameText = CreateText(selectedOperatorLabelRoot.transform, "Name", string.Empty, 17, TextAnchor.MiddleCenter);
-            RectTransform textRect = selectedOperatorNameText.GetComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = new Vector2(6f, 0f);
-            textRect.offsetMax = new Vector2(-6f, 0f);
+            selectedOperatorNameText = CreateText(selectedOperatorLabelRoot.transform, "Name", string.Empty, 16, TextAnchor.MiddleLeft);
+            SetPosition(selectedOperatorNameText.GetComponent<RectTransform>(), new Vector2(10f, -7f), new Vector2(0f, 1f), new Vector2(145f, 24f), new Vector2(0f, 1f));
             selectedOperatorNameText.raycastTarget = false;
+
+            selectedOperatorRarityText = CreateText(selectedOperatorLabelRoot.transform, "Rarity", string.Empty, 17, TextAnchor.MiddleRight);
+            selectedOperatorRarityText.color = new Color(1f, 0.78f, 0.2f, 1f);
+            SetPosition(selectedOperatorRarityText.GetComponent<RectTransform>(), new Vector2(-10f, -7f), new Vector2(1f, 1f), new Vector2(82f, 24f), new Vector2(1f, 1f));
+            selectedOperatorRarityText.raycastTarget = false;
+
+            selectedOperatorHealthText = CreateText(selectedOperatorLabelRoot.transform, "Health", string.Empty, 14, TextAnchor.MiddleLeft);
+            SetPosition(selectedOperatorHealthText.GetComponent<RectTransform>(), new Vector2(10f, 9f), Vector2.zero, new Vector2(84f, 22f), Vector2.zero);
+            selectedOperatorHealthText.raycastTarget = false;
+
+            GameObject healthTrack = new GameObject("HealthTrack", typeof(RectTransform), typeof(Image));
+            healthTrack.transform.SetParent(selectedOperatorLabelRoot.transform, false);
+            Image healthTrackImage = healthTrack.GetComponent<Image>();
+            healthTrackImage.color = new Color(0.15f, 0.17f, 0.19f, 1f);
+            healthTrackImage.raycastTarget = false;
+            SetPosition(healthTrack.GetComponent<RectTransform>(), new Vector2(100f, 13f), Vector2.zero, new Vector2(138f, 12f), Vector2.zero);
+
+            GameObject healthFill = new GameObject("HealthFill", typeof(RectTransform), typeof(Image));
+            healthFill.transform.SetParent(healthTrack.transform, false);
+            selectedOperatorHealthFill = healthFill.GetComponent<Image>();
+            selectedOperatorHealthFill.type = Image.Type.Filled;
+            selectedOperatorHealthFill.fillMethod = Image.FillMethod.Horizontal;
+            selectedOperatorHealthFill.fillOrigin = (int)Image.OriginHorizontal.Left;
+            selectedOperatorHealthFill.color = new Color(0.25f, 0.95f, 0.36f, 1f);
+            selectedOperatorHealthFill.raycastTarget = false;
+            RectTransform fillRect = healthFill.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
+
+            retreatOperatorButton = CreateButton(root, "RetreatOperatorButton", "↶", new Vector2(44f, 44f));
+            SetPosition(retreatOperatorButton.GetComponent<RectTransform>(), new Vector2(152f, 0f), new Vector2(0.5f, 0.5f));
+            retreatOperatorButton.GetComponent<Image>().color = new Color(0.7f, 0.2f, 0.18f, 1f);
+            SetPlacementButtonStyle(retreatOperatorButton, new Color(0.7f, 0.2f, 0.18f, 1f), 28);
+            retreatOperatorButton.onClick.AddListener(RetreatSelectedOperator);
+
             selectedOperatorLabelRoot.SetActive(false);
+            retreatOperatorButton.gameObject.SetActive(false);
         }
 
         private void CreatePlacementControls(Transform root)
@@ -258,6 +296,7 @@ namespace TrashTD.UI
             if (string.IsNullOrEmpty(operatorName))
             {
                 selectedOperatorLabelRoot.SetActive(false);
+                retreatOperatorButton.gameObject.SetActive(false);
                 return;
             }
 
@@ -271,13 +310,26 @@ namespace TrashTD.UI
             {
                 selectedOperatorLabelRoot.GetComponent<RectTransform>().anchoredPosition = localPosition;
                 selectedOperatorLabelRoot.SetActive(true);
+                RectTransform retreatRect = retreatOperatorButton.GetComponent<RectTransform>();
+                retreatRect.anchoredPosition = localPosition + new Vector2(152f, 0f);
+                retreatOperatorButton.gameObject.SetActive(true);
             }
         }
 
         public void SetSelectedOperatorName(string operatorName, int currentHP, int maxHP, OperatorRarity rarity, Vector3 worldPosition)
         {
-            string rarityStars = new string('★', Mathf.Clamp((int)rarity, 1, 5));
-            SetSelectedOperatorName($"{operatorName}\nHP {currentHP}/{maxHP}  {rarityStars}", worldPosition);
+            SetSelectedOperatorName(operatorName, worldPosition);
+            if (string.IsNullOrEmpty(operatorName)) return;
+
+            float healthRatio = maxHP > 0 ? Mathf.Clamp01((float)currentHP / maxHP) : 0f;
+            selectedOperatorHealthText.text = $"HP {currentHP} / {maxHP}";
+            selectedOperatorRarityText.text = new string('★', Mathf.Clamp((int)rarity, 1, 5));
+            selectedOperatorHealthFill.fillAmount = healthRatio;
+            selectedOperatorHealthFill.color = healthRatio <= 0.3f
+                ? new Color(1f, 0.2f, 0.18f, 1f)
+                : healthRatio <= 0.6f
+                    ? new Color(1f, 0.75f, 0.15f, 1f)
+                    : new Color(0.25f, 0.95f, 0.36f, 1f);
         }
 
         private void RefreshSelectedOperatorInfo()
@@ -383,7 +435,8 @@ namespace TrashTD.UI
                 var dragHandler = slotBtn.gameObject.AddComponent<DeckSlotDragHandler>();
                 dragHandler.Bind(
                     slotIndex,
-                    () => gameManager != null && gameManager.CurrentPhase == StagePhase.Preparation && playerDeck != null && playerDeck.GetCard(slotIndex) != null,
+                    () => gameManager != null && gameManager.CurrentPhase == StagePhase.Preparation && playerDeck != null &&
+                        playerDeck.GetCard(slotIndex) != null && playerDeck.GetCard(slotIndex).cooldownRoundsRemaining <= 0,
                     HandleDeckCardDrag,
                     FinishDeckCardDrag);
                 slotBtn.interactable = false;
@@ -484,6 +537,15 @@ namespace TrashTD.UI
             }
         }
 
+        private void RetreatSelectedOperator()
+        {
+            OperatorBase selectedOperator = operatorManager != null ? operatorManager.SelectedOperator : null;
+            if (selectedOperator != null)
+            {
+                operatorManager.RetreatOperator(selectedOperator);
+            }
+        }
+
         // ============================
         // Deck Slots
         // ============================
@@ -505,11 +567,16 @@ namespace TrashTD.UI
                 {
                     var card = deck[i];
                     string stars = new string('★', (int)card.rarity);
-                    deckButtonLabels[i].text = $"{card.operatorData.operatorName}\n{stars}";
-                    deckButtons[i].interactable = true;
+                    bool isReady = card.cooldownRoundsRemaining <= 0;
+                    deckButtonLabels[i].text = isReady
+                        ? $"{card.operatorData.operatorName}\n{stars}"
+                        : $"{card.operatorData.operatorName}\nREADY IN {card.cooldownRoundsRemaining} ROUND(S)";
+                    deckButtons[i].interactable = isReady;
 
                     // Tint based on class for visual differentiation
-                    deckButtonImages[i].color = GetClassColor(card.operatorData.operatorClass);
+                    deckButtonImages[i].color = isReady
+                        ? GetClassColor(card.operatorData.operatorClass)
+                        : new Color(0.22f, 0.22f, 0.24f, 1f);
                     deckButtons[i].GetComponent<DeckSlotDragHandler>().SetCard(card, deckButtonImages[i].color);
                 }
                 else
@@ -594,7 +661,7 @@ namespace TrashTD.UI
             if (playerDeck == null) return;
 
             var card = playerDeck.GetCard(index);
-            if (card == null) return;
+            if (card == null || card.cooldownRoundsRemaining > 0) return;
 
             selectedDeckSlot = index;
 

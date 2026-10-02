@@ -221,7 +221,7 @@ namespace TrashTD.Operators
             int actualDamage = previousHP - currentHP;
             if (actualDamage > 0)
             {
-                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualDamage, false);
+                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualDamage, damageType);
                 TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
             }
 
@@ -243,7 +243,7 @@ namespace TrashTD.Operators
             int actualHealing = currentHP - previousHP;
             if (actualHealing > 0)
             {
-                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualHealing, true);
+                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualHealing, DamageType.Physical, true);
                 TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
             }
         }

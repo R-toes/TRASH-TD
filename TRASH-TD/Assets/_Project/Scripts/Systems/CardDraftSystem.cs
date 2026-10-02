@@ -13,11 +13,13 @@ namespace TrashTD.Systems
     {
         public OperatorData operatorData;
         public OperatorRarity rarity;
+        public int cooldownRoundsRemaining;
 
-        public DraftCard(OperatorData data, OperatorRarity rarity)
+        public DraftCard(OperatorData data, OperatorRarity rarity, int cooldownRoundsRemaining = 0)
         {
             this.operatorData = data;
             this.rarity = rarity;
+            this.cooldownRoundsRemaining = cooldownRoundsRemaining;
         }
     }
 

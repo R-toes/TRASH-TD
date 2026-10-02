@@ -18,7 +18,7 @@ namespace TrashTD.Systems
         [SerializeField] private GridManager gridManager;
 
         private readonly List<OperatorBase> deployedOperators = new List<OperatorBase>();
-        private readonly Dictionary<string, float> redeployCooldowns = new Dictionary<string, float>();
+        private readonly Dictionary<string, int> redeployCooldownRounds = new Dictionary<string, int>();
 
         public IReadOnlyList<OperatorBase> DeployedOperators => deployedOperators;
         public int DeployedCount => deployedOperators.Count;
@@ -63,34 +63,30 @@ namespace TrashTD.Systems
             }
         }
 
-        private void Update()
-        {
-            // Tick redeploy cooldowns
-            if (redeployCooldowns.Count > 0)
-            {
-                var keys = new List<string>(redeployCooldowns.Keys);
-                foreach (var key in keys)
-                {
-                    redeployCooldowns[key] -= Time.deltaTime;
-                    if (redeployCooldowns[key] <= 0f)
-                    {
-                        redeployCooldowns.Remove(key);
-                    }
-                }
-            }
-        }
-
         /// <summary>
         /// Check if an operator is on redeployment cooldown.
         /// </summary>
         public bool IsOnRedeployCooldown(string operatorName)
         {
-            return redeployCooldowns.ContainsKey(operatorName) && redeployCooldowns[operatorName] > 0f;
+            return redeployCooldownRounds.TryGetValue(operatorName, out int rounds) && rounds > 0;
         }
 
-        public float GetRemainingRedeployCooldown(string operatorName)
+        public int GetRemainingRedeployCooldownRounds(string operatorName)
         {
-            return redeployCooldowns.TryGetValue(operatorName, out float cd) ? Mathf.Max(0f, cd) : 0f;
+            return redeployCooldownRounds.TryGetValue(operatorName, out int rounds) ? Mathf.Max(0, rounds) : 0;
+        }
+
+        public void AdvanceRedeployCooldownsOneRound()
+        {
+            if (redeployCooldownRounds.Count == 0) return;
+
+            var keys = new List<string>(redeployCooldownRounds.Keys);
+            foreach (string key in keys)
+            {
+                int roundsRemaining = redeployCooldownRounds[key] - 1;
+                if (roundsRemaining <= 0) redeployCooldownRounds.Remove(key);
+                else redeployCooldownRounds[key] = roundsRemaining;
+            }
         }
 
         /// <summary>
@@ -171,15 +167,35 @@ namespace TrashTD.Systems
 
             if (SelectedOperator == op) SelectOperator(null);
 
+            int cooldownRounds = 0;
             if (op.Data != null)
             {
-                redeployCooldowns[op.Data.operatorName] = op.Data.redeployCooldown;
+                cooldownRounds = GetRetreatCooldownRounds(op.OperatorClass);
+                if (cooldownRounds > 0) redeployCooldownRounds[op.Data.operatorName] = cooldownRounds;
+                else redeployCooldownRounds.Remove(op.Data.operatorName);
             }
 
+            DraftCard returnedCard = op.Data != null
+                ? new DraftCard(op.Data, op.CurrentRarity, cooldownRounds)
+                : null;
             deployedOperators.Remove(op);
             OnOperatorRetreated?.Invoke(op);
             op.Retreat();
             Destroy(op.gameObject);
+            PlayerDeck.Instance?.AddReturnedCard(returnedCard);
+        }
+
+        private static int GetRetreatCooldownRounds(OperatorClass operatorClass)
+        {
+            return operatorClass switch
+            {
+                OperatorClass.Guard => 0,
+                OperatorClass.Sniper => 1,
+                OperatorClass.Caster => 1,
+                OperatorClass.Defender => 2,
+                OperatorClass.Medic => 3,
+                _ => 0
+            };
         }
 
         /// <summary>
@@ -219,7 +235,7 @@ namespace TrashTD.Systems
                 }
             }
             deployedOperators.Clear();
-            redeployCooldowns.Clear();
+            redeployCooldownRounds.Clear();
         }
     }
 }

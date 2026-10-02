@@ -17,6 +17,7 @@ namespace TrashTD.Systems
         public const int MAX_DECK_SIZE = 8;
 
         private readonly List<DraftCard> deckSlots = new List<DraftCard>(MAX_DECK_SIZE);
+        private readonly Queue<DraftCard> pendingReturnedCards = new Queue<DraftCard>();
 
         public IReadOnlyList<DraftCard> DeckSlots => deckSlots;
         public int CardCount
@@ -91,6 +92,19 @@ namespace TrashTD.Systems
             return true;
         }
 
+        public bool AddReturnedCard(DraftCard card)
+        {
+            if (card == null) return false;
+
+            if (IsFull)
+            {
+                pendingReturnedCards.Enqueue(card);
+                return true;
+            }
+
+            return AddCard(card);
+        }
+
         /// <summary>
         /// Remove a card from the deck at the given slot index.
         /// Used when the operator is deployed onto the grid.
@@ -102,6 +116,7 @@ namespace TrashTD.Systems
             var card = deckSlots[slotIndex];
             deckSlots[slotIndex] = null;
             OnCardRemoved?.Invoke(slotIndex);
+            FillVacatedSlotWithReturnedCard(slotIndex);
             OnDeckChanged?.Invoke(deckSlots);
             return card;
         }
@@ -160,6 +175,7 @@ namespace TrashTD.Systems
             {
                 deckSlots[index] = null;
                 OnCardRemoved?.Invoke(index);
+                FillVacatedSlotWithReturnedCard(index);
                 OnDeckChanged?.Invoke(deckSlots);
                 return true;
             }
@@ -181,7 +197,53 @@ namespace TrashTD.Systems
         public void ClearDeck()
         {
             deckSlots.Clear();
+            pendingReturnedCards.Clear();
             OnDeckChanged?.Invoke(deckSlots);
+        }
+
+        public void AdvanceRedeployCooldownsOneRound()
+        {
+            bool changed = false;
+            foreach (DraftCard card in deckSlots)
+            {
+                if (card == null || card.cooldownRoundsRemaining <= 0) continue;
+                card.cooldownRoundsRemaining--;
+                changed = true;
+            }
+
+            int pendingCount = pendingReturnedCards.Count;
+            for (int i = 0; i < pendingCount; i++)
+            {
+                DraftCard card = pendingReturnedCards.Dequeue();
+                if (card.cooldownRoundsRemaining > 0)
+                {
+                    card.cooldownRoundsRemaining--;
+                    changed = true;
+                }
+                pendingReturnedCards.Enqueue(card);
+            }
+
+            if (changed) OnDeckChanged?.Invoke(deckSlots);
+        }
+
+        private void FillVacatedSlotWithReturnedCard(int preferredSlot)
+        {
+            if (pendingReturnedCards.Count == 0 || CardCount >= MAX_DECK_SIZE) return;
+
+            int slot = preferredSlot >= 0 && preferredSlot < deckSlots.Count && deckSlots[preferredSlot] == null
+                ? preferredSlot
+                : deckSlots.FindIndex(existingCard => existingCard == null);
+
+            if (slot < 0)
+            {
+                if (deckSlots.Count >= MAX_DECK_SIZE) return;
+                slot = deckSlots.Count;
+                deckSlots.Add(null);
+            }
+
+            DraftCard returnedCard = pendingReturnedCards.Dequeue();
+            deckSlots[slot] = returnedCard;
+            OnCardAdded?.Invoke(returnedCard);
         }
     }
 }

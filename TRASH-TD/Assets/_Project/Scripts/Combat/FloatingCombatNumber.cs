@@ -1,4 +1,5 @@
 using UnityEngine;
+using TrashTD.Data;
 
 namespace TrashTD.Combat
 {
@@ -12,7 +13,7 @@ namespace TrashTD.Combat
         private Color baseColor;
         private float elapsed;
 
-        public static void Show(Vector3 position, int amount, bool healing)
+        public static void Show(Vector3 position, int amount, DamageType damageType, bool healing = false)
         {
             if (amount <= 0) return;
 
@@ -22,12 +23,14 @@ namespace TrashTD.Combat
             TextMesh text = numberObject.AddComponent<TextMesh>();
             text.text = healing ? $"+{amount}" : $"-{amount}";
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            text.fontSize = 64;
-            text.characterSize = 0.1f;
+            text.fontSize = 48;
+            text.characterSize = 0.075f;
             text.anchor = TextAnchor.MiddleCenter;
             text.alignment = TextAlignment.Center;
             text.fontStyle = FontStyle.Bold;
-            text.color = healing ? new Color(0.25f, 1f, 0.38f) : new Color(1f, 0.28f, 0.2f);
+            text.color = healing
+                ? new Color(0.25f, 1f, 0.38f)
+                : damageType == DamageType.Arts ? new Color(0.72f, 0.38f, 1f) : Color.white;
 
             MeshRenderer meshRenderer = numberObject.GetComponent<MeshRenderer>();
             meshRenderer.sortingOrder = 50;

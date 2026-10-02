@@ -49,6 +49,21 @@ namespace TrashTD.Enemies
         public bool IsBlocked => isBlocked;
         public bool IsDead => isDead;
         public EnemyMovementType MovementType => data.movementType;
+        public float DistanceToGoal
+        {
+            get
+            {
+                if (path == null || currentPathIndex >= path.Count) return 0f;
+
+                float distance = Vector3.Distance(transform.position, path[currentPathIndex]);
+                for (int i = currentPathIndex; i < path.Count - 1; i++)
+                {
+                    distance += Vector3.Distance(path[i], path[i + 1]);
+                }
+
+                return distance;
+            }
+        }
 
         // --- Events ---
         /// <summary>Fired when this enemy reaches an exit point.</summary>
@@ -167,7 +182,7 @@ namespace TrashTD.Enemies
             int actualDamage = previousHP - currentHP;
             if (actualDamage > 0)
             {
-                FloatingCombatNumber.Show(transform.position, actualDamage, false);
+                FloatingCombatNumber.Show(transform.position, actualDamage, damageType);
                 WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
             }
 

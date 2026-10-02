@@ -10,7 +10,7 @@ namespace TrashTD.Operators
     /// <summary>
     /// Caster class — Ranged AoE Magic (GDD 1.3).
     /// Deals Arts damage that bypasses DEF and hits RES instead.
-    /// Targets the enemy whose cluster hits the most enemies (maximizing AoE output).
+    /// Prioritizes high-defense enemies, using nearby enemy count to break ties.
     /// </summary>
     public class CasterOperator : OperatorBase
     {
@@ -21,6 +21,10 @@ namespace TrashTD.Operators
         [Tooltip("Percentage of ATK dealt to secondary targets caught in the splash")]
         [Range(0.1f, 1f)]
         [SerializeField] private float splashDamageRatio = 0.75f;
+
+        [Header("Armor Counter")]
+        [Tooltip("Bonus Arts attack power per point of target DEF")]
+        [SerializeField, Range(0f, 1f)] private float armorDamageBonusRatio = 0.5f;
 
         protected override EnemyBase FindTarget()
         {
@@ -35,9 +39,9 @@ namespace TrashTD.Operators
             if (candidates == null || candidates.Count == 0) return null;
 
             EnemyBase bestTarget = null;
-            int maxClusterCount = -1;
+            int highestDefense = -1;
+            int largestCluster = -1;
 
-            // Find candidate that has the most nearby enemies within splashRadius
             for (int i = 0; i < candidates.Count; i++)
             {
                 var candidate = candidates[i];
@@ -46,9 +50,11 @@ namespace TrashTD.Operators
                 var splashGroup = EnemyManager.Instance.GetEnemiesInRadius(candidate.transform.position, splashRadius);
                 int count = splashGroup != null ? splashGroup.Count : 1;
 
-                if (count > maxClusterCount)
+                if (candidate.CurrentDEF > highestDefense ||
+                    (candidate.CurrentDEF == highestDefense && count > largestCluster))
                 {
-                    maxClusterCount = count;
+                    highestDefense = candidate.CurrentDEF;
+                    largestCluster = count;
                     bestTarget = candidate;
                 }
             }
@@ -73,7 +79,8 @@ namespace TrashTD.Operators
                 0.2f);
 
             // Primary target damage
-            int primaryDmg = DamageCalculator.CalculateDamage(currentATK, target.CurrentRES);
+            int primaryATK = GetArmorAdjustedAttack(currentATK, target);
+            int primaryDmg = DamageCalculator.CalculateDamage(primaryATK, target.CurrentRES);
             target.TakeDamage(primaryDmg, DamageType.Arts);
 
             // Splash AoE to nearby enemies
@@ -87,11 +94,18 @@ namespace TrashTD.Operators
                     var splashTarget = splashTargets[i];
                     if (splashTarget != null && splashTarget != target && !splashTarget.IsDead)
                     {
-                        int splashDmg = DamageCalculator.CalculateDamage(secondaryAtk, splashTarget.CurrentRES);
+                        int armorAdjustedSplashATK = GetArmorAdjustedAttack(secondaryAtk, splashTarget);
+                        int splashDmg = DamageCalculator.CalculateDamage(armorAdjustedSplashATK, splashTarget.CurrentRES);
                         splashTarget.TakeDamage(splashDmg, DamageType.Arts);
                     }
                 }
             }
+        }
+
+        private int GetArmorAdjustedAttack(int attackPower, EnemyBase target)
+        {
+            int armorBonus = Mathf.RoundToInt(target.CurrentDEF * armorDamageBonusRatio);
+            return attackPower + armorBonus;
         }
     }
 }
