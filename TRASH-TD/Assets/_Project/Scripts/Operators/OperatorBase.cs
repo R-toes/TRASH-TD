@@ -212,13 +212,21 @@ namespace TrashTD.Operators
         /// </summary>
         public virtual void TakeDamage(int rawATK, DamageType damageType)
         {
+            if (currentHP <= 0 || rawATK <= 0) return;
+
             int mitigation = damageType == DamageType.Physical ? currentDEF : currentRES;
             int damage = Combat.DamageCalculator.CalculateDamage(rawATK, mitigation);
-            currentHP -= damage;
+            int previousHP = currentHP;
+            currentHP = Mathf.Max(0, currentHP - damage);
+            int actualDamage = previousHP - currentHP;
+            if (actualDamage > 0)
+            {
+                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualDamage, false);
+                TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
+            }
 
             if (currentHP <= 0)
             {
-                currentHP = 0;
                 Die();
             }
         }
@@ -228,7 +236,16 @@ namespace TrashTD.Operators
         /// </summary>
         public void Heal(int amount)
         {
+            if (amount <= 0 || currentHP <= 0) return;
+
+            int previousHP = currentHP;
             currentHP = Mathf.Min(currentHP + amount, maxHP);
+            int actualHealing = currentHP - previousHP;
+            if (actualHealing > 0)
+            {
+                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualHealing, true);
+                TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
+            }
         }
 
         /// <summary>

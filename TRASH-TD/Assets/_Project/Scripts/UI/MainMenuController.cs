@@ -128,6 +128,12 @@ namespace TrashTD.UI
             returnToStageSelector = true;
         }
 
+        public static void SetPendingStageDifficulty(StageDifficulty difficulty)
+        {
+            pendingStageDifficulty = difficulty;
+            hasPendingStageDifficulty = true;
+        }
+
         public static StageDifficulty ConsumePendingStageDifficulty(StageDifficulty fallback)
         {
             if (!hasPendingStageDifficulty) return fallback;
@@ -471,8 +477,7 @@ namespace TrashTD.UI
                 return;
             }
 
-            pendingStageDifficulty = selectedDifficulty;
-            hasPendingStageDifficulty = true;
+            SetPendingStageDifficulty(selectedDifficulty);
             SceneManager.LoadScene("GameplayTest");
         }
 

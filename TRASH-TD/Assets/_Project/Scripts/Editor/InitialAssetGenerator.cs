@@ -386,7 +386,7 @@ namespace TrashTD.Editor
                         preWaveDelay = 2.0f,
                         entries = new[]
                         {
-                            new WaveEntry { enemyData = grunt, count = 2, spawnInterval = 3.0f, startDelay = 0f, spawnPointIndex = 0 }
+                            new WaveEntry { enemyData = grunt, count = 3, spawnInterval = 3.0f, startDelay = 0f, spawnPointIndex = 0 }
                         }
                     }
                 };

@@ -52,6 +52,14 @@ namespace TrashTD.Core.GameLoop
         /// </summary>
         public void Initialize(StageData stageData, StageDifficulty difficulty)
         {
+            if (gridManager == null) gridManager = FindFirstObjectByType<GridManager>();
+            if (enemyManager == null) enemyManager = FindFirstObjectByType<EnemyManager>();
+            if (gridManager == null || enemyManager == null)
+            {
+                Debug.LogError("WaveManager: Cannot initialize without GridManager and EnemyManager.");
+                return;
+            }
+
             waves = stageData.GetWaves(difficulty);
             difficultyLevel = (int)difficulty + 1;
             currentWaveIndex = -1;

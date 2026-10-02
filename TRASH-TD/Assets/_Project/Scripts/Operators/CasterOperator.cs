@@ -64,6 +64,14 @@ namespace TrashTD.Operators
         {
             if (target == null || !isDeployed) return;
 
+            CombatProjectileVisual.Fire(
+                transform.position,
+                target.transform.position,
+                new Color(0.74f, 0.38f, 1f),
+                5.5f,
+                0.26f,
+                0.2f);
+
             // Primary target damage
             int primaryDmg = DamageCalculator.CalculateDamage(currentATK, target.CurrentRES);
             target.TakeDamage(primaryDmg, DamageType.Arts);

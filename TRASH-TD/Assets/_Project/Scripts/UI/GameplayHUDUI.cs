@@ -8,6 +8,7 @@ using TrashTD.Core.Grid;
 using TrashTD.Core.GameLoop;
 using TrashTD.Data;
 using TrashTD.Enemies;
+using TrashTD.Operators;
 using TrashTD.Systems;
 
 namespace TrashTD.UI
@@ -28,6 +29,7 @@ namespace TrashTD.UI
         private Text enemyText;
         private Text lpText;
         private Text phaseText;
+        private Text squadCountText;
         private GameObject selectedOperatorLabelRoot;
         private Text selectedOperatorNameText;
         private GameObject placementControlsRoot;
@@ -98,6 +100,7 @@ namespace TrashTD.UI
         private void Update()
         {
             RefreshCounters();
+            RefreshSelectedOperatorInfo();
         }
 
         private void OnDestroy()
@@ -271,6 +274,30 @@ namespace TrashTD.UI
             }
         }
 
+        public void SetSelectedOperatorName(string operatorName, int currentHP, int maxHP, OperatorRarity rarity, Vector3 worldPosition)
+        {
+            string rarityStars = new string('★', Mathf.Clamp((int)rarity, 1, 5));
+            SetSelectedOperatorName($"{operatorName}\nHP {currentHP}/{maxHP}  {rarityStars}", worldPosition);
+        }
+
+        private void RefreshSelectedOperatorInfo()
+        {
+            OperatorBase selectedOperator = operatorManager != null ? operatorManager.SelectedOperator : null;
+            if (selectedOperator == null || !selectedOperator.IsDeployed || selectedOperator.DeployedCell == null || gridManager == null)
+            {
+                SetSelectedOperatorName(string.Empty, Vector3.zero);
+                return;
+            }
+
+            Vector3 labelPosition = selectedOperator.DeployedCell.WorldPosition + Vector3.up * gridManager.CellSize * 0.7f;
+            SetSelectedOperatorName(
+                selectedOperator.Data.operatorName,
+                selectedOperator.CurrentHP,
+                selectedOperator.MaxHP,
+                selectedOperator.CurrentRarity,
+                labelPosition);
+        }
+
         private void CreateTopBar(Transform root)
         {
             // Background strip
@@ -297,6 +324,9 @@ namespace TrashTD.UI
             phaseText = CreateText(stageInfoPanel.transform, "PhaseText", "PREPARATION", 18, TextAnchor.MiddleLeft);
             phaseText.color = new Color(0.5f, 0.8f, 1f, 1f);
             SetPosition(phaseText.GetComponent<RectTransform>(), new Vector2(95f, -60f), new Vector2(0f, 1f), new Vector2(220f, 26f), new Vector2(0f, 0.5f));
+
+            squadCountText = CreateText(stageInfoPanel.transform, "SquadCountText", "SQUAD 0/8", 18, TextAnchor.MiddleLeft);
+            SetPosition(squadCountText.GetComponent<RectTransform>(), new Vector2(350f, -45f), new Vector2(0f, 1f), new Vector2(190f, 34f), new Vector2(0f, 0.5f));
 
             // Enemy count (center)
             enemyText = CreateText(stageInfoPanel.transform, "EnemyText", "0 ENEMIES", 24, TextAnchor.MiddleCenter);
@@ -675,6 +705,15 @@ namespace TrashTD.UI
             if (lpText != null && gameManager != null)
             {
                 UpdateLivesDisplay(gameManager.CurrentLifePoints, gameManager.MaxLifePoints);
+            }
+
+            if (squadCountText != null && operatorManager != null)
+            {
+                bool isFull = operatorManager.IsAtSquadLimit;
+                squadCountText.text = isFull
+                    ? $"SQUAD FULL {operatorManager.DeployedCount}/{operatorManager.SquadLimit}"
+                    : $"SQUAD {operatorManager.DeployedCount}/{operatorManager.SquadLimit}";
+                squadCountText.color = isFull ? new Color(1f, 0.28f, 0.24f) : Color.white;
             }
         }
 

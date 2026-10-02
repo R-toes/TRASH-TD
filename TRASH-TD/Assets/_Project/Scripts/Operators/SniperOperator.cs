@@ -1,4 +1,5 @@
 using UnityEngine;
+using TrashTD.Combat;
 using TrashTD.Core.Grid;
 using TrashTD.Enemies;
 using TrashTD.Systems;
@@ -13,6 +14,20 @@ namespace TrashTD.Operators
     /// </summary>
     public class SniperOperator : OperatorBase
     {
+        public override void Attack(EnemyBase target)
+        {
+            if (target == null || !isDeployed) return;
+
+            CombatProjectileVisual.Fire(
+                transform.position,
+                target.transform.position,
+                new Color(1f, 0.82f, 0.32f),
+                12f,
+                0.14f,
+                0.08f);
+            base.Attack(target);
+        }
+
         protected override EnemyBase FindTarget()
         {
             if (EnemyManager.Instance == null || deployedCell == null || data == null || data.rangePattern == null)

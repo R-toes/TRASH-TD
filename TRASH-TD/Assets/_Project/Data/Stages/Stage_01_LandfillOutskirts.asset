@@ -32,7 +32,7 @@ MonoBehaviour:
     preWaveDelay: 2
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 2
+      count: 3
       spawnInterval: 3
       startDelay: 0
       spawnPointIndex: 0

@@ -242,7 +242,7 @@ namespace TrashTD.Core.GameLoop
             if (currentState == GamePlayState.Defeat || currentState == GamePlayState.Victory) return;
 
             SetState(GamePlayState.Defeat);
-            Time.timeScale = 1f;
+            Time.timeScale = 0f;
             OnStageDefeat?.Invoke();
         }
 
@@ -251,7 +251,7 @@ namespace TrashTD.Core.GameLoop
             if (currentState == GamePlayState.Victory || currentState == GamePlayState.Defeat) return;
 
             SetState(GamePlayState.Victory);
-            Time.timeScale = 1f;
+            Time.timeScale = 0f;
 
             int stars = CalculateStars();
             OnStageVictory?.Invoke(stars);

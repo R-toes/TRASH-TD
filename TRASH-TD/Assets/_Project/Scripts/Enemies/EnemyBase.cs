@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using TrashTD.Combat;
 using TrashTD.Core.Grid;
 using TrashTD.Core.Pathfinding;
 using TrashTD.Data;
@@ -159,13 +160,19 @@ namespace TrashTD.Enemies
         /// </summary>
         public virtual void TakeDamage(int damage, DamageType damageType)
         {
-            if (isDead) return;
+            if (isDead || damage <= 0) return;
 
-            currentHP -= damage;
+            int previousHP = currentHP;
+            currentHP = Mathf.Max(0, currentHP - damage);
+            int actualDamage = previousHP - currentHP;
+            if (actualDamage > 0)
+            {
+                FloatingCombatNumber.Show(transform.position, actualDamage, false);
+                WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
+            }
 
             if (currentHP <= 0)
             {
-                currentHP = 0;
                 Die();
             }
         }

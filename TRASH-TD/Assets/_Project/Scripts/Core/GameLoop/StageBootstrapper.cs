@@ -58,15 +58,16 @@ namespace TrashTD.Core.GameLoop
         private void Awake()
         {
             if (gridManager == null) gridManager = FindFirstObjectByType<GridManager>() ?? gameObject.AddComponent<GridManager>();
+            if (enemyManager == null) enemyManager = FindFirstObjectByType<EnemyManager>() ?? gameObject.AddComponent<EnemyManager>();
             if (gameManager == null) gameManager = FindFirstObjectByType<GameManager>() ?? gameObject.AddComponent<GameManager>();
             if (waveManager == null) waveManager = FindFirstObjectByType<WaveManager>() ?? gameObject.AddComponent<WaveManager>();
-            if (enemyManager == null) enemyManager = FindFirstObjectByType<EnemyManager>() ?? gameObject.AddComponent<EnemyManager>();
             if (operatorManager == null) operatorManager = FindFirstObjectByType<OperatorManager>() ?? gameObject.AddComponent<OperatorManager>();
             if (cardDraftSystem == null) cardDraftSystem = FindFirstObjectByType<CardDraftSystem>() ?? gameObject.AddComponent<CardDraftSystem>();
             if (playerDeck == null) playerDeck = FindFirstObjectByType<PlayerDeck>() ?? gameObject.AddComponent<PlayerDeck>();
             if (FindFirstObjectByType<RarityUpgradeSystem>() == null) gameObject.AddComponent<RarityUpgradeSystem>();
             if (FindFirstObjectByType<GameplayHUDUI>() == null) gameObject.AddComponent<GameplayHUDUI>();
             if (FindFirstObjectByType<CardDraftOverlayUI>() == null) gameObject.AddComponent<CardDraftOverlayUI>();
+            if (FindFirstObjectByType<StageResultsUI>() == null) gameObject.AddComponent<StageResultsUI>();
         }
 
         private void Start()
@@ -251,6 +252,12 @@ namespace TrashTD.Core.GameLoop
         {
             if (!isPlacementPreviewActive || pendingDeployCard == null) return;
 
+            if (operatorManager == null || operatorManager.IsAtSquadLimit)
+            {
+                RefreshPlacementPreview();
+                return;
+            }
+
             GridCell targetCell = gridManager != null ? gridManager.GetCell(placementGridPosition) : null;
             if (targetCell == null || !targetCell.CanDeploy(pendingDeployCard.operatorData.position))
             {
@@ -292,14 +299,21 @@ namespace TrashTD.Core.GameLoop
 
         private void Update()
         {
-            if (gameManager == null || gameManager.CurrentPhase != StagePhase.Preparation)
+            if (gameManager == null || gameManager.CurrentState != GamePlayState.Playing)
             {
                 if (isPlacementPreviewActive || isOperatorRangePreviewActive) HidePlacementPreview();
                 return;
             }
 
+            bool isPreparing = gameManager.CurrentPhase == StagePhase.Preparation;
+            if (!isPreparing && isPlacementPreviewActive)
+            {
+                pendingDeployCard = null;
+                HidePlacementPreview();
+            }
+
             Keyboard keyboard = Keyboard.current;
-            if (isPlacementPreviewActive)
+            if (isPreparing && isPlacementPreviewActive)
             {
                 if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
                 {
@@ -336,12 +350,9 @@ namespace TrashTD.Core.GameLoop
                 return;
             }
 
-            if (pendingDeployCard != null)
+            if (isPreparing && pendingDeployCard != null)
             {
-                if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame &&
-                    (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()) &&
-                    TryGetGridPosition(Mouse.current.position.ReadValue(), out Vector2Int gridPosition) &&
-                    gridManager.IsInBounds(gridPosition))
+                if (TryGetGridClick(out Vector2Int gridPosition))
                 {
                     GridCell clickedCell = gridManager.GetCell(gridPosition);
                     OperatorBase clickedOperator = clickedCell != null && clickedCell.OccupantOperator != null
@@ -349,7 +360,7 @@ namespace TrashTD.Core.GameLoop
                         : null;
                     if (clickedOperator != null)
                     {
-                        SelectOperatorForRangePreview(clickedOperator);
+                        HandleOperatorMapSelection(clickedOperator);
                     }
                     else
                     {
@@ -359,39 +370,38 @@ namespace TrashTD.Core.GameLoop
                 return;
             }
 
-            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame &&
-                (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()) &&
-                TryGetGridPosition(Mouse.current.position.ReadValue(), out Vector2Int selectedGridPosition) &&
-                gridManager.IsInBounds(selectedGridPosition))
+            if (TryGetGridClick(out Vector2Int selectedGridPosition))
             {
                 GridCell clickedCell = gridManager.GetCell(selectedGridPosition);
                 OperatorBase clickedOperator = clickedCell != null && clickedCell.OccupantOperator != null
                     ? clickedCell.OccupantOperator.GetComponent<OperatorBase>()
                     : null;
 
-                if (clickedOperator != null && operatorManager != null)
-                {
-                    if (operatorManager.SelectedOperator == clickedOperator)
-                    {
-                        operatorManager.SelectOperator(null);
-                        ClearOperatorRangePreview();
-                    }
-                    else
-                    {
-                        SelectOperatorForRangePreview(clickedOperator);
-                    }
-                }
-                else
-                {
-                    operatorManager?.SelectOperator(null);
-                    ClearOperatorRangePreview();
-                }
+                HandleOperatorMapSelection(clickedOperator);
             }
         }
 
-        private void SelectOperatorForRangePreview(OperatorBase op)
+        private bool TryGetGridClick(out Vector2Int gridPosition)
         {
-            operatorManager?.SelectOperator(op);
+            gridPosition = default;
+            return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame &&
+                (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()) &&
+                TryGetGridPosition(Mouse.current.position.ReadValue(), out gridPosition) &&
+                gridManager != null && gridManager.IsInBounds(gridPosition);
+        }
+
+        private void HandleOperatorMapSelection(OperatorBase clickedOperator)
+        {
+            if (operatorManager == null) return;
+
+            if (clickedOperator == null || operatorManager.SelectedOperator == clickedOperator)
+            {
+                operatorManager.SelectOperator(null);
+                ClearOperatorRangePreview();
+                return;
+            }
+
+            operatorManager.SelectOperator(clickedOperator);
         }
 
         private void HandleOperatorSelected(OperatorBase op)
@@ -417,7 +427,12 @@ namespace TrashTD.Core.GameLoop
 
             DrawCellOutline(op.DeployedCell.WorldPosition, new Color(0.15f, 0.85f, 1f, 1f));
             Vector3 labelPosition = op.DeployedCell.WorldPosition + Vector3.up * gridManager.CellSize * 0.7f;
-            gameplayHudUI?.SetSelectedOperatorName(op.Data.operatorName, labelPosition);
+            gameplayHudUI?.SetSelectedOperatorName(
+                op.Data.operatorName,
+                op.CurrentHP,
+                op.MaxHP,
+                op.CurrentRarity,
+                labelPosition);
         }
 
         private void ClearOperatorRangePreview()
@@ -461,7 +476,8 @@ namespace TrashTD.Core.GameLoop
             GridCell targetCell = gridManager.GetCell(placementGridPosition);
             if (targetCell == null) return;
 
-            bool canDeploy = targetCell.CanDeploy(pendingDeployCard.operatorData.position);
+            bool squadFull = operatorManager == null || operatorManager.IsAtSquadLimit;
+            bool canDeploy = targetCell.CanDeploy(pendingDeployCard.operatorData.position) && !squadFull;
             GridCell[] rangeCells = gridManager.GetCellsInRange(
                 placementGridPosition,
                 pendingDeployCard.operatorData.rangePattern,

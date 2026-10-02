@@ -23,6 +23,7 @@ namespace TrashTD.Systems
         public IReadOnlyList<OperatorBase> DeployedOperators => deployedOperators;
         public int DeployedCount => deployedOperators.Count;
         public int SquadLimit { get; set; } = 8;
+        public bool IsAtSquadLimit => DeployedCount >= SquadLimit;
         public OperatorBase SelectedOperator { get; private set; }
 
         public event Action<OperatorBase> OnOperatorDeployed;
