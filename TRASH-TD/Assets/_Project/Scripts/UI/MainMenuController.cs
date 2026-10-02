@@ -13,6 +13,8 @@ namespace TrashTD.UI
     /// </summary>
     public class MainMenuController : MonoBehaviour
     {
+        private const string FirstPlayableStageId = "STAGE_01";
+
         [Header("Main Menu")]
         [SerializeField] private GameObject mainMenuPanel;
         [SerializeField] private GameObject stageSelectionPanel;
@@ -32,14 +34,23 @@ namespace TrashTD.UI
         [SerializeField] private Button playStageButton;
         [SerializeField] private Button stageDetailsBackButton;
 
+        private static StageDifficulty pendingStageDifficulty;
+        private static bool hasPendingStageDifficulty;
+
         private readonly List<StageData> availableStages = new List<StageData>();
         private StageData selectedStage;
+        private StageDifficulty selectedDifficulty = StageDifficulty.Normal;
+        private Button easyDifficultyButton;
+        private Button normalDifficultyButton;
+        private Button hardDifficultyButton;
+        private Text difficultyHeading;
         private static bool returnToStageSelector;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetNavigationState()
         {
             returnToStageSelector = false;
+            hasPendingStageDifficulty = false;
         }
 
         private void Awake()
@@ -80,6 +91,8 @@ namespace TrashTD.UI
             }
 
             BuildStageButtons();
+            BuildDifficultySelector();
+            UpdateDifficultyDisplay();
             ShowMainMenu();
         }
 
@@ -113,6 +126,14 @@ namespace TrashTD.UI
         public static void ReturnToStageSelectorOnLoad()
         {
             returnToStageSelector = true;
+        }
+
+        public static StageDifficulty ConsumePendingStageDifficulty(StageDifficulty fallback)
+        {
+            if (!hasPendingStageDifficulty) return fallback;
+
+            hasPendingStageDifficulty = false;
+            return pendingStageDifficulty;
         }
 
         public void BuildDefaultUi()
@@ -313,10 +334,18 @@ namespace TrashTD.UI
                 button.name = "StageButton_" + (i + 1);
 
                 var textComponent = button.GetComponentInChildren<Text>();
+                bool isPlayable = stage.stageId == FirstPlayableStageId;
                 if (textComponent != null)
                 {
-                    textComponent.text = stage.mapName;
+                    textComponent.text = isPlayable ? stage.mapName : $"{stage.mapName}\nCOMING SOON";
+                    if (!isPlayable)
+                    {
+                        textComponent.color = new Color(0.68f, 0.71f, 0.74f, 1f);
+                    }
                 }
+
+                button.interactable = isPlayable;
+                if (!isPlayable) button.GetComponent<Image>().color = new Color(0.12f, 0.14f, 0.17f, 1f);
 
                 var rect = button.GetComponent<RectTransform>();
                 rect.sizeDelta = new Vector2(250f, 150f);
@@ -329,7 +358,8 @@ namespace TrashTD.UI
 
         private void SelectStage(int stageIndex)
         {
-            if (stageIndex < 0 || stageIndex >= availableStages.Count)
+            if (stageIndex < 0 || stageIndex >= availableStages.Count ||
+                availableStages[stageIndex].stageId != FirstPlayableStageId)
             {
                 return;
             }
@@ -337,16 +367,112 @@ namespace TrashTD.UI
             selectedStage = availableStages[stageIndex];
             stageDetailsTitle.text = selectedStage.mapName;
             stageDetailsDescription.text = selectedStage.shortDescription;
+            UpdateDifficultyDisplay();
             stageDetailsPanel.SetActive(true);
+        }
+
+        private void BuildDifficultySelector()
+        {
+            if (stageDetailsPanel == null) return;
+
+            if (difficultyHeading == null)
+            {
+                var heading = CreateTextChild(stageDetailsPanel.transform, "DifficultyHeading", "DIFFICULTY", 18, TextAnchor.MiddleCenter);
+                difficultyHeading = heading.GetComponent<Text>();
+                difficultyHeading.fontStyle = FontStyle.Bold;
+                RectTransform headingRect = difficultyHeading.GetComponent<RectTransform>();
+                headingRect.anchorMin = new Vector2(0.5f, 0.45f);
+                headingRect.anchorMax = new Vector2(0.5f, 0.45f);
+                headingRect.sizeDelta = new Vector2(240f, 32f);
+            }
+
+            easyDifficultyButton = CreateDifficultyButton(easyDifficultyButton, "EasyDifficultyButton", "EASY", StageDifficulty.Easy, -180f);
+            normalDifficultyButton = CreateDifficultyButton(normalDifficultyButton, "NormalDifficultyButton", "NORMAL", StageDifficulty.Normal, 0f);
+            hardDifficultyButton = CreateDifficultyButton(hardDifficultyButton, "HardDifficultyButton", "HARD", StageDifficulty.Hard, 180f);
+        }
+
+        private Button CreateDifficultyButton(Button existingButton, string objectName, string label, StageDifficulty difficulty, float xPosition)
+        {
+            if (existingButton != null) return existingButton;
+
+            Button button = CreateButtonChild(stageDetailsPanel.transform, objectName, label);
+            RectTransform rect = button.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.36f);
+            rect.anchorMax = new Vector2(0.5f, 0.36f);
+            rect.sizeDelta = new Vector2(160f, 48f);
+            rect.anchoredPosition = new Vector2(xPosition, 0f);
+
+            Text buttonLabel = button.GetComponentInChildren<Text>();
+            if (buttonLabel != null) buttonLabel.fontSize = 19;
+
+            button.onClick.AddListener(() => SetDifficulty(difficulty));
+            return button;
+        }
+
+        private void SetDifficulty(StageDifficulty difficulty)
+        {
+            selectedDifficulty = difficulty;
+            UpdateDifficultyDisplay();
+        }
+
+        private void UpdateDifficultyDisplay()
+        {
+            UpdateDifficultyButton(easyDifficultyButton, StageDifficulty.Easy);
+            UpdateDifficultyButton(normalDifficultyButton, StageDifficulty.Normal);
+            UpdateDifficultyButton(hardDifficultyButton, StageDifficulty.Hard);
+
+            if (difficultyHeading != null)
+            {
+                difficultyHeading.text = $"DIFFICULTY: {selectedDifficulty.ToString().ToUpperInvariant()}";
+            }
+        }
+
+        private void UpdateDifficultyButton(Button button, StageDifficulty difficulty)
+        {
+            if (button == null) return;
+
+            bool isSelected = selectedDifficulty == difficulty;
+            button.GetComponent<Image>().color = isSelected
+                ? new Color(0.12f, 0.58f, 0.38f, 1f)
+                : new Color(0.12f, 0.15f, 0.19f, 1f);
+            Text buttonLabel = button.GetComponentInChildren<Text>();
+            if (buttonLabel != null)
+            {
+                string difficultyName = difficulty.ToString().ToUpperInvariant();
+                int waveCount = GetSelectedStageWaveCount(difficulty);
+                buttonLabel.text = waveCount > 0 ? $"{difficultyName}\n{waveCount} WAVES" : difficultyName;
+                buttonLabel.fontSize = waveCount > 0 ? 16 : 19;
+                buttonLabel.fontStyle = isSelected ? FontStyle.Bold : FontStyle.Normal;
+                buttonLabel.color = isSelected ? Color.white : new Color(0.78f, 0.82f, 0.86f, 1f);
+            }
+        }
+
+        private int GetSelectedStageWaveCount(StageDifficulty difficulty)
+        {
+            if (selectedStage == null) return 0;
+
+            WaveData[] waves = selectedStage.GetWaves(difficulty);
+            if (waves != null && waves.Length > 0) return waves.Length;
+            if (selectedStage.stageId != "STAGE_01") return 0;
+
+            return difficulty switch
+            {
+                StageDifficulty.Easy => 10,
+                StageDifficulty.Normal => 20,
+                StageDifficulty.Hard => 30,
+                _ => 0
+            };
         }
 
         private void PlaySelectedStage()
         {
-            if (selectedStage == null)
+            if (selectedStage == null || selectedStage.stageId != FirstPlayableStageId)
             {
                 return;
             }
 
+            pendingStageDifficulty = selectedDifficulty;
+            hasPendingStageDifficulty = true;
             SceneManager.LoadScene("GameplayTest");
         }
 
@@ -365,8 +491,8 @@ namespace TrashTD.UI
             var title = CreateTextChild(stageDetailsPanel.transform, "StageDetailsTitle", "Select a stage", 30, TextAnchor.MiddleCenter);
             stageDetailsTitle = title.GetComponent<Text>();
             var titleRect = stageDetailsTitle.GetComponent<RectTransform>();
-            titleRect.anchorMin = new Vector2(0.2f, 0.62f);
-            titleRect.anchorMax = new Vector2(0.8f, 0.82f);
+            titleRect.anchorMin = new Vector2(0.2f, 0.7f);
+            titleRect.anchorMax = new Vector2(0.8f, 0.86f);
             titleRect.offsetMin = Vector2.zero;
             titleRect.offsetMax = Vector2.zero;
 
@@ -374,22 +500,22 @@ namespace TrashTD.UI
             stageDetailsDescription = description.GetComponent<Text>();
             stageDetailsDescription.color = new Color(0.8f, 0.85f, 0.9f, 1f);
             var descriptionRect = stageDetailsDescription.GetComponent<RectTransform>();
-            descriptionRect.anchorMin = new Vector2(0.2f, 0.42f);
-            descriptionRect.anchorMax = new Vector2(0.8f, 0.62f);
+            descriptionRect.anchorMin = new Vector2(0.2f, 0.53f);
+            descriptionRect.anchorMax = new Vector2(0.8f, 0.68f);
             descriptionRect.offsetMin = Vector2.zero;
             descriptionRect.offsetMax = Vector2.zero;
 
             playStageButton = CreateButtonChild(stageDetailsPanel.transform, "PlayStageButton", "Play");
             var playRect = playStageButton.GetComponent<RectTransform>();
-            playRect.anchorMin = new Vector2(0.5f, 0.25f);
-            playRect.anchorMax = new Vector2(0.5f, 0.25f);
+            playRect.anchorMin = new Vector2(0.5f, 0.22f);
+            playRect.anchorMax = new Vector2(0.5f, 0.22f);
             playRect.sizeDelta = new Vector2(220f, 60f);
             playStageButton.onClick.AddListener(PlaySelectedStage);
 
             stageDetailsBackButton = CreateButtonChild(stageDetailsPanel.transform, "StageDetailsBackButton", "Back");
             var backButtonRect = stageDetailsBackButton.GetComponent<RectTransform>();
-            backButtonRect.anchorMin = new Vector2(0.5f, 0.12f);
-            backButtonRect.anchorMax = new Vector2(0.5f, 0.12f);
+            backButtonRect.anchorMin = new Vector2(0.5f, 0.1f);
+            backButtonRect.anchorMax = new Vector2(0.5f, 0.1f);
             backButtonRect.sizeDelta = new Vector2(220f, 60f);
             stageDetailsBackButton.onClick.AddListener(ShowStageSelection);
             stageDetailsPanel.SetActive(false);

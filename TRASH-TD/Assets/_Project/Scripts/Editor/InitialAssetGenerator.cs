@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using TrashTD.Data;
@@ -331,25 +332,45 @@ namespace TrashTD.Editor
             stage.lifePointsNormal = 3;
             stage.lifePointsHard = 3;
 
-            // Spawn at (0, 3), Exit at (7, 3)
-            stage.spawnPoints = new[] { new Vector2Int(0, 3) };
-            stage.exitPoints = new[] { new Vector2Int(7, 3) };
-
-            // 8x6 layout with a low-ground middle lane used by ground enemies,
-            // surrounded by low-ground and high-ground deployment tiles.
+            string[] layoutRows =
+            {
+                "HHHHHHHH",
+                "SLLHLLLH",
+                "HHLHLHLH",
+                "HHLHLHLE",
+                "HHLLLHHH",
+                "HHHHHHHH"
+            };
             stage.tileLayout = new TileType[8 * 6];
-            for (int y = 0; y < 6; y++)
+            var spawnPoints = new List<Vector2Int>();
+            var exitPoints = new List<Vector2Int>();
+            for (int row = 0; row < layoutRows.Length; row++)
             {
                 for (int x = 0; x < 8; x++)
                 {
+                    int y = layoutRows.Length - 1 - row;
                     int index = y * 8 + x;
-                    if (x == 0 && y == 3) stage.tileLayout[index] = TileType.SpawnPoint;
-                    else if (x == 7 && y == 3) stage.tileLayout[index] = TileType.ExitPoint;
-                    else if (y == 3) stage.tileLayout[index] = TileType.LowGround;
-                    else if (y == 2 || y == 4) stage.tileLayout[index] = TileType.LowGround;
-                    else stage.tileLayout[index] = TileType.HighGround;
+                    switch (layoutRows[row][x])
+                    {
+                        case 'H':
+                            stage.tileLayout[index] = TileType.HighGround;
+                            break;
+                        case 'S':
+                            stage.tileLayout[index] = TileType.SpawnPoint;
+                            spawnPoints.Add(new Vector2Int(x, y));
+                            break;
+                        case 'E':
+                            stage.tileLayout[index] = TileType.ExitPoint;
+                            exitPoints.Add(new Vector2Int(x, y));
+                            break;
+                        default:
+                            stage.tileLayout[index] = TileType.LowGround;
+                            break;
+                    }
                 }
             }
+            stage.spawnPoints = spawnPoints.ToArray();
+            stage.exitPoints = exitPoints.ToArray();
 
             var grunt = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Grunt_Sludge.asset");
             var rusher = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Rusher_Toxic.asset");
@@ -416,9 +437,51 @@ namespace TrashTD.Editor
                         }
                     }
                 };
+
+                stage.wavesEasy = ExtendWaveCampaign(stage.wavesEasy, 10, 0, grunt, rusher, tank);
+                stage.wavesNormal = ExtendWaveCampaign(stage.wavesNormal, 20, 1, grunt, rusher, tank);
+                stage.wavesHard = ExtendWaveCampaign(stage.wavesHard, 30, 2, grunt, rusher, tank);
             }
 
             EditorUtility.SetDirty(stage);
+        }
+
+        private static WaveData[] ExtendWaveCampaign(WaveData[] openingWaves, int targetWaveCount, int difficultyTier,
+            EnemyData grunt, EnemyData rusher, EnemyData tank)
+        {
+            var waves = new List<WaveData>(openingWaves ?? new WaveData[0]);
+
+            while (waves.Count < targetWaveCount)
+            {
+                int waveNumber = waves.Count + 1;
+                int threat = waveNumber + difficultyTier * 2;
+                EnemyData waveEnemy = threat >= 9 && waveNumber % 5 == 0 && tank != null
+                    ? tank
+                    : threat >= 5 && waveNumber % 3 == 0 && rusher != null
+                        ? rusher
+                        : grunt;
+                int enemyCount = 2 + threat / 3;
+                string enemyGroup = waveEnemy == tank ? "Heavy Incursion" : waveEnemy == rusher ? "Toxic Surge" : "Debris Swarm";
+
+                waves.Add(new WaveData
+                {
+                    waveName = $"Wave {waveNumber}: {enemyGroup}",
+                    preWaveDelay = Mathf.Max(1f, 4f - difficultyTier * 0.75f - waveNumber * 0.08f),
+                    entries = new[]
+                    {
+                        new WaveEntry
+                        {
+                            enemyData = waveEnemy,
+                            count = enemyCount,
+                            spawnInterval = Mathf.Max(0.7f, 2.4f - difficultyTier * 0.25f - waveNumber * 0.04f),
+                            startDelay = 0f,
+                            spawnPointIndex = 0
+                        }
+                    }
+                });
+            }
+
+            return waves.ToArray();
         }
     }
 }

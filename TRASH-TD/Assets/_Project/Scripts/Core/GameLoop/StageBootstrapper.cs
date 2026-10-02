@@ -72,6 +72,7 @@ namespace TrashTD.Core.GameLoop
         private void Start()
         {
             gameplayHudUI = FindFirstObjectByType<GameplayHUDUI>();
+            difficulty = MainMenuController.ConsumePendingStageDifficulty(difficulty);
 
             if (stageData == null)
             {
@@ -474,9 +475,6 @@ namespace TrashTD.Core.GameLoop
             Color placementColor = canDeploy ? new Color(0.15f, 0.85f, 1f, 1f) : new Color(1f, 0.12f, 0.12f, 1f);
             DrawCellOutline(targetCell.WorldPosition, placementColor);
             DrawFacingMarker(targetCell.WorldPosition, placementFacing);
-            string placementStatus = canDeploy ? string.Empty : " | INVALID TILE";
-            gameplayHudUI?.SetPlacementPrompt(
-                $"Facing {placementFacing.ToString().ToUpperInvariant()} | Arrows/WASD turn | Click grid to move | Enter/PLACE to confirm | Esc cancel{placementStatus}");
             gameplayHudUI?.SetPlacementControls(true, canDeploy);
             gameplayHudUI?.SetPlacementControlsPosition(targetCell.WorldPosition);
         }
@@ -563,7 +561,6 @@ namespace TrashTD.Core.GameLoop
             isPlacementPreviewActive = false;
             isOperatorRangePreviewActive = false;
             ClearPlacementPreviewVisuals();
-            gameplayHudUI?.SetPlacementPrompt(string.Empty);
             gameplayHudUI?.SetPlacementControls(false);
         }
     }

@@ -28,7 +28,6 @@ namespace TrashTD.UI
         private Text enemyText;
         private Text lpText;
         private Text phaseText;
-        private Text placementPromptText;
         private GameObject selectedOperatorLabelRoot;
         private Text selectedOperatorNameText;
         private GameObject placementControlsRoot;
@@ -150,11 +149,6 @@ namespace TrashTD.UI
             CreateDeckBar(root);
             CreatePausePanel(root);
             CreatePlacementControls(root);
-            placementPromptText = CreateText(root, "PlacementPrompt", string.Empty, 18, TextAnchor.MiddleCenter);
-            SetPosition(placementPromptText.GetComponent<RectTransform>(), new Vector2(0f, -112f), new Vector2(0.5f, 1f), new Vector2(920f, 42f), new Vector2(0.5f, 0.5f));
-            placementPromptText.color = Color.white;
-            placementPromptText.raycastTarget = false;
-            placementPromptText.gameObject.SetActive(false);
             CreateSelectedOperatorLabel(root);
         }
 
@@ -232,14 +226,6 @@ namespace TrashTD.UI
                 label.fontSize = fontSize;
                 label.raycastTarget = false;
             }
-        }
-
-        public void SetPlacementPrompt(string message)
-        {
-            if (placementPromptText == null) return;
-
-            placementPromptText.text = message;
-            placementPromptText.gameObject.SetActive(!string.IsNullOrEmpty(message));
         }
 
         public void SetPlacementControls(bool active, bool canConfirm = true)
