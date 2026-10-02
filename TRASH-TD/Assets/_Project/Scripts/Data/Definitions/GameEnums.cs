@@ -1,5 +1,13 @@
 namespace TrashTD.Data
 {
+    public enum OperatorFacing
+    {
+        Right,
+        Up,
+        Left,
+        Down
+    }
+
     /// <summary>
     /// The five operator classes as defined in GDD 1.3.
     /// </summary>

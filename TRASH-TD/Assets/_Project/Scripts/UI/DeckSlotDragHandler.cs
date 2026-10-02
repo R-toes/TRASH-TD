@@ -11,6 +11,7 @@ namespace TrashTD.UI
     {
         private int slotIndex;
         private Func<bool> canDrag;
+        private Action<int, Vector2> updateDrag;
         private Action<int, Vector2> finishDrag;
         private DraftCard card;
         private Color slotColor;
@@ -18,10 +19,11 @@ namespace TrashTD.UI
         private RectTransform dragVisualRect;
         private bool isDragging;
 
-        public void Bind(int index, Func<bool> dragAllowed, Action<int, Vector2> onDragFinished)
+        public void Bind(int index, Func<bool> dragAllowed, Action<int, Vector2> onDragUpdated, Action<int, Vector2> onDragFinished)
         {
             slotIndex = index;
             canDrag = dragAllowed;
+            updateDrag = onDragUpdated;
             finishDrag = onDragFinished;
         }
 
@@ -41,6 +43,11 @@ namespace TrashTD.UI
 
         public void OnDrag(PointerEventData eventData)
         {
+            if (isDragging)
+            {
+                updateDrag?.Invoke(slotIndex, eventData.position);
+            }
+
             if (dragVisualRect != null)
             {
                 dragVisualRect.position = eventData.position;

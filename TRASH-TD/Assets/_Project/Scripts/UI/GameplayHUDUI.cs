@@ -28,6 +28,11 @@ namespace TrashTD.UI
         private Text enemyText;
         private Text lpText;
         private Text phaseText;
+        private Text placementPromptText;
+        private GameObject selectedOperatorLabelRoot;
+        private Text selectedOperatorNameText;
+        private GameObject placementControlsRoot;
+        private Button placementConfirmButton;
         private Button startWaveButton;
         private Text startWaveButtonText;
         private Button[] deckButtons;
@@ -40,6 +45,7 @@ namespace TrashTD.UI
         private PlayerDeck playerDeck;
         private GridManager gridManager;
         private OperatorManager operatorManager;
+        private StageBootstrapper stageBootstrapper;
 
         private int selectedDeckSlot = -1;
 
@@ -52,6 +58,7 @@ namespace TrashTD.UI
             playerDeck = FindFirstObjectByType<PlayerDeck>();
             gridManager = FindFirstObjectByType<GridManager>();
             operatorManager = FindFirstObjectByType<OperatorManager>();
+            stageBootstrapper = FindFirstObjectByType<StageBootstrapper>();
 
             EnsureEventSystem();
             BuildHud();
@@ -142,6 +149,140 @@ namespace TrashTD.UI
             CreateTopBar(root);
             CreateDeckBar(root);
             CreatePausePanel(root);
+            CreatePlacementControls(root);
+            placementPromptText = CreateText(root, "PlacementPrompt", string.Empty, 18, TextAnchor.MiddleCenter);
+            SetPosition(placementPromptText.GetComponent<RectTransform>(), new Vector2(0f, -112f), new Vector2(0.5f, 1f), new Vector2(920f, 42f), new Vector2(0.5f, 0.5f));
+            placementPromptText.color = Color.white;
+            placementPromptText.raycastTarget = false;
+            placementPromptText.gameObject.SetActive(false);
+            CreateSelectedOperatorLabel(root);
+        }
+
+        private void CreateSelectedOperatorLabel(Transform root)
+        {
+            selectedOperatorLabelRoot = new GameObject("SelectedOperatorName", typeof(RectTransform), typeof(Image));
+            selectedOperatorLabelRoot.transform.SetParent(root, false);
+            RectTransform labelRect = selectedOperatorLabelRoot.GetComponent<RectTransform>();
+            labelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            labelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            labelRect.pivot = new Vector2(0.5f, 0.5f);
+            labelRect.sizeDelta = new Vector2(190f, 30f);
+
+            Image background = selectedOperatorLabelRoot.GetComponent<Image>();
+            background.color = new Color(0.025f, 0.035f, 0.045f, 0.9f);
+            background.raycastTarget = false;
+
+            selectedOperatorNameText = CreateText(selectedOperatorLabelRoot.transform, "Name", string.Empty, 17, TextAnchor.MiddleCenter);
+            RectTransform textRect = selectedOperatorNameText.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(6f, 0f);
+            textRect.offsetMax = new Vector2(-6f, 0f);
+            selectedOperatorNameText.raycastTarget = false;
+            selectedOperatorLabelRoot.SetActive(false);
+        }
+
+        private void CreatePlacementControls(Transform root)
+        {
+            placementControlsRoot = new GameObject("PlacementControls", typeof(RectTransform));
+            placementControlsRoot.transform.SetParent(root, false);
+            var panelRect = placementControlsRoot.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = Vector2.zero;
+
+            CreateFacingButton("FaceUpButton", "↑", OperatorFacing.Up, new Vector2(0f, 58f));
+            CreateFacingButton("FaceLeftButton", "←", OperatorFacing.Left, new Vector2(-58f, 0f));
+            CreateFacingButton("FaceDownButton", "↓", OperatorFacing.Down, new Vector2(0f, -58f));
+            CreateFacingButton("FaceRightButton", "→", OperatorFacing.Right, new Vector2(58f, 0f));
+
+            var confirmButton = CreateButton(placementControlsRoot.transform, "ConfirmPlacementButton", "PLACE", new Vector2(84f, 34f));
+            SetPlacementButtonPosition(confirmButton, new Vector2(150f, 19f));
+            SetPlacementButtonStyle(confirmButton, new Color(0.12f, 0.58f, 0.28f, 1f), 15);
+            confirmButton.onClick.AddListener(() => stageBootstrapper?.ConfirmOperatorPlacement());
+
+            var cancelButton = CreateButton(placementControlsRoot.transform, "CancelPlacementButton", "CANCEL", new Vector2(84f, 34f));
+            SetPlacementButtonPosition(cancelButton, new Vector2(150f, -21f));
+            SetPlacementButtonStyle(cancelButton, new Color(0.65f, 0.16f, 0.18f, 1f), 14);
+            cancelButton.onClick.AddListener(() => stageBootstrapper?.CancelOperatorPlacement());
+            placementConfirmButton = confirmButton;
+            placementControlsRoot.SetActive(false);
+        }
+
+        private void CreateFacingButton(string objectName, string label, OperatorFacing facing, Vector2 position)
+        {
+            var button = CreateButton(placementControlsRoot.transform, objectName, label, new Vector2(42f, 42f));
+            SetPlacementButtonPosition(button, position);
+            SetPlacementButtonStyle(button, new Color(0.08f, 0.1f, 0.13f, 0.96f), 22);
+            button.onClick.AddListener(() => stageBootstrapper?.SetPlacementFacing(facing));
+        }
+
+        private static void SetPlacementButtonPosition(Button button, Vector2 position)
+        {
+            SetPosition(button.GetComponent<RectTransform>(), position, new Vector2(0.5f, 0.5f), null, new Vector2(0.5f, 0.5f));
+        }
+
+        private static void SetPlacementButtonStyle(Button button, Color backgroundColor, int fontSize)
+        {
+            button.GetComponent<Image>().color = backgroundColor;
+            Text label = button.GetComponentInChildren<Text>();
+            if (label != null)
+            {
+                label.fontSize = fontSize;
+                label.raycastTarget = false;
+            }
+        }
+
+        public void SetPlacementPrompt(string message)
+        {
+            if (placementPromptText == null) return;
+
+            placementPromptText.text = message;
+            placementPromptText.gameObject.SetActive(!string.IsNullOrEmpty(message));
+        }
+
+        public void SetPlacementControls(bool active, bool canConfirm = true)
+        {
+            if (placementControlsRoot != null) placementControlsRoot.SetActive(active);
+            if (placementConfirmButton != null) placementConfirmButton.interactable = canConfirm;
+        }
+
+        public void SetPlacementControlsPosition(Vector3 worldPosition)
+        {
+            if (placementControlsRoot == null || canvas == null) return;
+
+            Camera gameCamera = Camera.main;
+            if (gameCamera == null) return;
+
+            Vector2 screenPosition = RectTransformUtility.WorldToScreenPoint(gameCamera, worldPosition);
+            RectTransform canvasRect = canvas.GetComponent<RectTransform>();
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPosition, null, out Vector2 localPosition))
+            {
+                placementControlsRoot.GetComponent<RectTransform>().anchoredPosition = localPosition;
+            }
+        }
+
+        public void SetSelectedOperatorName(string operatorName, Vector3 worldPosition)
+        {
+            if (selectedOperatorLabelRoot == null || selectedOperatorNameText == null || canvas == null) return;
+            if (string.IsNullOrEmpty(operatorName))
+            {
+                selectedOperatorLabelRoot.SetActive(false);
+                return;
+            }
+
+            Camera gameCamera = Camera.main;
+            if (gameCamera == null) return;
+
+            selectedOperatorNameText.text = operatorName;
+            Vector2 screenPosition = RectTransformUtility.WorldToScreenPoint(gameCamera, worldPosition);
+            RectTransform canvasRect = canvas.GetComponent<RectTransform>();
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPosition, null, out Vector2 localPosition))
+            {
+                selectedOperatorLabelRoot.GetComponent<RectTransform>().anchoredPosition = localPosition;
+                selectedOperatorLabelRoot.SetActive(true);
+            }
         }
 
         private void CreateTopBar(Transform root)
@@ -227,6 +368,7 @@ namespace TrashTD.UI
                 dragHandler.Bind(
                     slotIndex,
                     () => gameManager != null && gameManager.CurrentPhase == StagePhase.Preparation && playerDeck != null && playerDeck.GetCard(slotIndex) != null,
+                    HandleDeckCardDrag,
                     FinishDeckCardDrag);
                 slotBtn.interactable = false;
             }
@@ -377,11 +519,12 @@ namespace TrashTD.UI
                 RectTransform targetRect = deckButtons[targetIndex].GetComponent<RectTransform>();
                 if (!RectTransformUtility.RectangleContainsScreenPoint(targetRect, screenPosition, uiCamera)) continue;
 
+                stageBootstrapper?.CancelOperatorPlacementPreview(card);
                 playerDeck.MoveCard(slotIndex, targetIndex);
                 return;
             }
 
-            if (gridManager == null || operatorManager == null) return;
+            if (gridManager == null || stageBootstrapper == null) return;
             Camera gameCamera = Camera.main;
             if (gameCamera == null) return;
 
@@ -389,10 +532,31 @@ namespace TrashTD.UI
             Vector2Int gridPosition = gridManager.WorldToGridPosition(worldPosition);
             if (!gridManager.IsInBounds(gridPosition)) return;
 
-            if (operatorManager.TryDeployOperator(card.operatorData, card.rarity, gridPosition, out _))
+            stageBootstrapper.BeginOperatorPlacement(card, gridPosition);
+        }
+
+        private void HandleDeckCardDrag(int slotIndex, Vector2 screenPosition)
+        {
+            if (playerDeck == null || gridManager == null || stageBootstrapper == null) return;
+
+            DraftCard card = playerDeck.GetCard(slotIndex);
+            if (card == null) return;
+
+            Camera gameCamera = Camera.main;
+            if (gameCamera == null) return;
+
+            Vector3 worldPosition = gameCamera.ScreenToWorldPoint(new Vector3(
+                screenPosition.x,
+                screenPosition.y,
+                -gameCamera.transform.position.z));
+            Vector2Int gridPosition = gridManager.WorldToGridPosition(worldPosition);
+            if (gridManager.IsInBounds(gridPosition))
             {
-                playerDeck.RemoveCard(card);
-                if (selectedDeckSlot == slotIndex) selectedDeckSlot = -1;
+                stageBootstrapper.BeginOperatorPlacement(card, gridPosition);
+            }
+            else
+            {
+                stageBootstrapper.CancelOperatorPlacementPreview(card);
             }
         }
 

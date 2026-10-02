@@ -21,7 +21,7 @@ namespace TrashTD.Operators
             var gridManager = FindFirstObjectByType<GridManager>();
             if (gridManager == null) return null;
 
-            var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern);
+            var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
             var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells);
             if (candidates == null || candidates.Count == 0) return null;
 

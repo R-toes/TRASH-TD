@@ -39,7 +39,7 @@ namespace TrashTD.Operators
                 var gridManager = FindFirstObjectByType<GridManager>();
                 if (gridManager != null)
                 {
-                    var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern);
+                    var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
                     var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells);
 
                     EnemyBase lowestHP = null;

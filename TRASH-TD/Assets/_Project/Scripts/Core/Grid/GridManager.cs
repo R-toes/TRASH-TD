@@ -177,15 +177,25 @@ namespace TrashTD.Core.Grid
         /// </summary>
         public GridCell[] GetCellsInRange(Vector2Int center, Vector2Int[] rangePattern)
         {
+            return GetCellsInRange(center, rangePattern, OperatorFacing.Right);
+        }
+
+        public GridCell[] GetCellsInRange(Vector2Int center, Vector2Int[] rangePattern, OperatorFacing facing)
+        {
             var result = new System.Collections.Generic.List<GridCell>();
 
             if (rangePattern == null) return result.ToArray();
 
             foreach (Vector2Int offset in rangePattern)
             {
-                int tx = center.x + offset.x;
-                int ty = center.y + offset.y;
-                GridCell cell = GetCell(tx, ty);
+                Vector2Int rotatedOffset = facing switch
+                {
+                    OperatorFacing.Up => new Vector2Int(-offset.y, offset.x),
+                    OperatorFacing.Left => new Vector2Int(-offset.x, -offset.y),
+                    OperatorFacing.Down => new Vector2Int(offset.y, -offset.x),
+                    _ => offset
+                };
+                GridCell cell = GetCell(center + rotatedOffset);
                 if (cell != null)
                     result.Add(cell);
             }

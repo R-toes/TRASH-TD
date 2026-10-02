@@ -28,6 +28,7 @@ namespace TrashTD.Operators
 
         // --- State ---
         protected OperatorRarity currentRarity;
+        protected OperatorFacing facing = OperatorFacing.Right;
         protected GridCell deployedCell;
         protected bool isDeployed;
         protected float attackTimer;
@@ -47,16 +48,25 @@ namespace TrashTD.Operators
         public int CurrentDEF => currentDEF;
         public int CurrentRES => currentRES;
         public OperatorRarity CurrentRarity => currentRarity;
+        public OperatorFacing Facing => facing;
         public OperatorClass OperatorClass => data.operatorClass;
 
         /// <summary>
         /// Initialize this operator with data and rarity.
         /// Call this after instantiation, before deployment.
         /// </summary>
-        public virtual void Initialize(OperatorData operatorData, OperatorRarity rarity)
+        public virtual void Initialize(OperatorData operatorData, OperatorRarity rarity, OperatorFacing operatorFacing = OperatorFacing.Right)
         {
             data = operatorData;
             currentRarity = rarity;
+            facing = operatorFacing;
+            transform.rotation = Quaternion.Euler(0f, 0f, operatorFacing switch
+            {
+                OperatorFacing.Up => 90f,
+                OperatorFacing.Left => 180f,
+                OperatorFacing.Down => 270f,
+                _ => 0f
+            });
 
             // Scale stats by rarity
             maxHP = data.GetScaledHP(rarity);

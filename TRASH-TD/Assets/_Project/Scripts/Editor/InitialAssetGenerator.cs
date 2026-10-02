@@ -161,8 +161,8 @@ namespace TrashTD.Editor
             var guardSprite = LoadSprite("tex_op_guard.png");
             var guardPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Guard", guardSprite, OperatorClass.Guard);
             CreateOperator("OP_Guard_Scrapper", "Scrapper", OperatorClass.Guard, OperatorPosition.Melee, OperatorRarity.Star1,
-                hp: 140, atk: 65, def: 20, res: 0, blockCount: 2, range: 1, interval: 1.1f, dp: 10,
-                new[] { new Vector2Int(0, 0), new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1) },
+                hp: 140, atk: 65, def: 20, res: 0, blockCount: 2, range: 2, interval: 1.1f, dp: 10,
+                new[] { new Vector2Int(1, 0), new Vector2Int(2, 0) },
                 guardSprite, guardPrefab);
 
             // 2. Defender (Bulkhead)

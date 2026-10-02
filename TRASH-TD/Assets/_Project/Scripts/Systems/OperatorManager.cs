@@ -23,9 +23,21 @@ namespace TrashTD.Systems
         public IReadOnlyList<OperatorBase> DeployedOperators => deployedOperators;
         public int DeployedCount => deployedOperators.Count;
         public int SquadLimit { get; set; } = 8;
+        public OperatorBase SelectedOperator { get; private set; }
 
         public event Action<OperatorBase> OnOperatorDeployed;
         public event Action<OperatorBase> OnOperatorRetreated;
+        public event Action<OperatorBase> OnOperatorSelected;
+
+        public bool SelectOperator(OperatorBase op)
+        {
+            if (op != null && (!op.IsDeployed || !deployedOperators.Contains(op))) return false;
+            if (SelectedOperator == op) return true;
+
+            SelectedOperator = op;
+            OnOperatorSelected?.Invoke(op);
+            return true;
+        }
 
         private void Awake()
         {
@@ -85,6 +97,11 @@ namespace TrashTD.Systems
         /// </summary>
         public bool TryDeployOperator(OperatorData opData, OperatorRarity rarity, Vector2Int gridPos, out OperatorBase deployedInstance)
         {
+            return TryDeployOperator(opData, rarity, gridPos, OperatorFacing.Right, out deployedInstance);
+        }
+
+        public bool TryDeployOperator(OperatorData opData, OperatorRarity rarity, Vector2Int gridPos, OperatorFacing facing, out OperatorBase deployedInstance)
+        {
             deployedInstance = null;
 
             if (opData == null || gridManager == null) return false;
@@ -118,7 +135,7 @@ namespace TrashTD.Systems
                 opComp = AddClassComponent(opObj, opData.operatorClass);
             }
 
-            opComp.Initialize(opData, rarity);
+            opComp.Initialize(opData, rarity, facing);
             if (!opComp.Deploy(targetCell))
             {
                 Destroy(opObj);
@@ -150,6 +167,8 @@ namespace TrashTD.Systems
         public void RetreatOperator(OperatorBase op)
         {
             if (op == null || !deployedOperators.Contains(op)) return;
+
+            if (SelectedOperator == op) SelectOperator(null);
 
             if (op.Data != null)
             {
@@ -188,6 +207,8 @@ namespace TrashTD.Systems
         /// </summary>
         public void ClearAll()
         {
+            SelectOperator(null);
+
             for (int i = deployedOperators.Count - 1; i >= 0; i--)
             {
                 if (deployedOperators[i] != null)

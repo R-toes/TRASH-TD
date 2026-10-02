@@ -47,6 +47,13 @@ namespace TrashTD.Core.GameLoop
         public PlayerDeck playerDeck;
 
         private DraftCard pendingDeployCard = null;
+        private GameplayHUDUI gameplayHudUI;
+        private readonly List<GameObject> placementPreviewVisuals = new List<GameObject>();
+        private Material placementPreviewMaterial;
+        private Vector2Int placementGridPosition;
+        private OperatorFacing placementFacing = OperatorFacing.Right;
+        private bool isPlacementPreviewActive;
+        private bool isOperatorRangePreviewActive;
 
         private void Awake()
         {
@@ -64,6 +71,8 @@ namespace TrashTD.Core.GameLoop
 
         private void Start()
         {
+            gameplayHudUI = FindFirstObjectByType<GameplayHUDUI>();
+
             if (stageData == null)
             {
                 Debug.LogWarning("StageBootstrapper: No StageData assigned! Please assign a StageData asset.");
@@ -88,6 +97,11 @@ namespace TrashTD.Core.GameLoop
             if (playerDeck != null)
             {
                 playerDeck.OnCardSelectedForDeployment += HandleCardSelectedForDeployment;
+                playerDeck.OnDeckChanged += HandleDeckChanged;
+            }
+            if (operatorManager != null)
+            {
+                operatorManager.OnOperatorSelected += HandleOperatorSelected;
             }
             cardDraftSystem.ResetForNewStage();
 
@@ -163,42 +177,394 @@ namespace TrashTD.Core.GameLoop
             if (playerDeck != null)
             {
                 playerDeck.OnCardSelectedForDeployment -= HandleCardSelectedForDeployment;
+                playerDeck.OnDeckChanged -= HandleDeckChanged;
             }
+            if (operatorManager != null)
+            {
+                operatorManager.OnOperatorSelected -= HandleOperatorSelected;
+            }
+
+            ClearPlacementPreviewVisuals();
+            if (placementPreviewMaterial != null)
+            {
+                Destroy(placementPreviewMaterial);
+            }
+        }
+
+        private void HandleDeckChanged(IReadOnlyList<DraftCard> deck)
+        {
+            if (pendingDeployCard == null) return;
+
+            for (int i = 0; i < deck.Count; i++)
+            {
+                if (ReferenceEquals(deck[i], pendingDeployCard)) return;
+            }
+
+            pendingDeployCard = null;
+            HidePlacementPreview();
         }
 
         private void HandleCardSelectedForDeployment(DraftCard card)
         {
+            if (isPlacementPreviewActive && !ReferenceEquals(pendingDeployCard, card))
+            {
+                HidePlacementPreview();
+            }
+
             pendingDeployCard = card;
-            Debug.Log($"[Draft] Selected: {card.operatorData.operatorName} ({card.rarity}). Click a valid tile to deploy!");
+            Debug.Log($"[Draft] Selected: {card.operatorData.operatorName} ({card.rarity}). Select a tile, choose a facing, then confirm placement.");
+        }
+
+        public void BeginOperatorPlacement(DraftCard card, Vector2Int gridPosition)
+        {
+            if (card == null || card.operatorData == null || gridManager == null ||
+                gameManager == null || gameManager.CurrentPhase != StagePhase.Preparation ||
+                !gridManager.IsInBounds(gridPosition)) return;
+
+            bool continuingPlacement = isPlacementPreviewActive && ReferenceEquals(pendingDeployCard, card);
+            if (continuingPlacement && placementGridPosition == gridPosition) return;
+
+            if (!continuingPlacement)
+            {
+                operatorManager?.SelectOperator(null);
+                isOperatorRangePreviewActive = false;
+                ClearPlacementPreviewVisuals();
+            }
+
+            pendingDeployCard = card;
+            placementGridPosition = gridPosition;
+            if (!continuingPlacement) placementFacing = OperatorFacing.Right;
+            isPlacementPreviewActive = true;
+            RefreshPlacementPreview();
+        }
+
+        public void SetPlacementFacing(OperatorFacing facing)
+        {
+            if (!isPlacementPreviewActive || placementFacing == facing) return;
+
+            placementFacing = facing;
+            RefreshPlacementPreview();
+        }
+
+        public void ConfirmOperatorPlacement()
+        {
+            if (!isPlacementPreviewActive || pendingDeployCard == null) return;
+
+            GridCell targetCell = gridManager != null ? gridManager.GetCell(placementGridPosition) : null;
+            if (targetCell == null || !targetCell.CanDeploy(pendingDeployCard.operatorData.position))
+            {
+                RefreshPlacementPreview();
+                return;
+            }
+
+            DraftCard deployedCard = pendingDeployCard;
+            if (operatorManager == null || !operatorManager.TryDeployOperator(
+                    deployedCard.operatorData,
+                    deployedCard.rarity,
+                    placementGridPosition,
+                    placementFacing,
+                    out _))
+            {
+                Debug.LogWarning($"Cannot deploy {deployedCard.operatorData.operatorName} here.");
+                return;
+            }
+
+            playerDeck?.RemoveCard(deployedCard);
+            pendingDeployCard = null;
+            HidePlacementPreview();
+            Debug.Log($"<color=green>Deployed {deployedCard.operatorData.operatorName} at ({placementGridPosition.x}, {placementGridPosition.y}) facing {placementFacing}!</color>");
+        }
+
+        public void CancelOperatorPlacement()
+        {
+            pendingDeployCard = null;
+            HidePlacementPreview();
+        }
+
+        public void CancelOperatorPlacementPreview(DraftCard card)
+        {
+            if (isPlacementPreviewActive && ReferenceEquals(pendingDeployCard, card))
+            {
+                HidePlacementPreview();
+            }
         }
 
         private void Update()
         {
-            bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
-            if (pendingDeployCard != null && gameManager != null && gameManager.CurrentPhase == StagePhase.Preparation &&
-                !pointerOverUI && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            if (gameManager == null || gameManager.CurrentPhase != StagePhase.Preparation)
             {
-                Vector3 mouseScreenPosition = Mouse.current.position.ReadValue();
-                Vector3 mouseWorld = Camera.main.ScreenToWorldPoint(mouseScreenPosition);
-                Vector2Int gridPos = gridManager.WorldToGridPosition(mouseWorld);
+                if (isPlacementPreviewActive || isOperatorRangePreviewActive) HidePlacementPreview();
+                return;
+            }
 
-                if (gridManager.IsInBounds(gridPos))
+            Keyboard keyboard = Keyboard.current;
+            if (isPlacementPreviewActive)
+            {
+                if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
                 {
-                    if (operatorManager.TryDeployOperator(pendingDeployCard.operatorData, pendingDeployCard.rarity, gridPos, out _))
+                    CancelOperatorPlacement();
+                    return;
+                }
+
+                OperatorFacing nextFacing = GetFacingInput(keyboard);
+                if (nextFacing != placementFacing)
+                {
+                    placementFacing = nextFacing;
+                    RefreshPlacementPreview();
+                }
+
+                bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+                Vector2Int hoveredPosition = placementGridPosition;
+                bool pointerOnGrid = !pointerOverUI && Mouse.current != null &&
+                    TryGetGridPosition(Mouse.current.position.ReadValue(), out hoveredPosition) &&
+                    gridManager.IsInBounds(hoveredPosition);
+                if (pointerOnGrid && Mouse.current.leftButton.wasPressedThisFrame &&
+                    placementGridPosition != hoveredPosition)
+                {
+                    placementGridPosition = hoveredPosition;
+                    RefreshPlacementPreview();
+                }
+
+                bool confirmWithKeyboard = keyboard != null &&
+                    (keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame);
+                if (confirmWithKeyboard)
+                {
+                    ConfirmOperatorPlacement();
+                }
+
+                return;
+            }
+
+            if (pendingDeployCard != null)
+            {
+                if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame &&
+                    (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()) &&
+                    TryGetGridPosition(Mouse.current.position.ReadValue(), out Vector2Int gridPosition) &&
+                    gridManager.IsInBounds(gridPosition))
+                {
+                    GridCell clickedCell = gridManager.GetCell(gridPosition);
+                    OperatorBase clickedOperator = clickedCell != null && clickedCell.OccupantOperator != null
+                        ? clickedCell.OccupantOperator.GetComponent<OperatorBase>()
+                        : null;
+                    if (clickedOperator != null)
                     {
-                        Debug.Log($"<color=green>Deployed {pendingDeployCard.operatorData.operatorName} at ({gridPos.x}, {gridPos.y})!</color>");
-                        if (playerDeck != null)
-                        {
-                            playerDeck.RemoveCard(pendingDeployCard);
-                        }
-                        pendingDeployCard = null;
+                        SelectOperatorForRangePreview(clickedOperator);
                     }
                     else
                     {
-                        Debug.LogWarning($"Cannot deploy {pendingDeployCard.operatorData.position} operator on this tile!");
+                        BeginOperatorPlacement(pendingDeployCard, gridPosition);
                     }
                 }
+                return;
             }
+
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame &&
+                (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()) &&
+                TryGetGridPosition(Mouse.current.position.ReadValue(), out Vector2Int selectedGridPosition) &&
+                gridManager.IsInBounds(selectedGridPosition))
+            {
+                GridCell clickedCell = gridManager.GetCell(selectedGridPosition);
+                OperatorBase clickedOperator = clickedCell != null && clickedCell.OccupantOperator != null
+                    ? clickedCell.OccupantOperator.GetComponent<OperatorBase>()
+                    : null;
+
+                if (clickedOperator != null && operatorManager != null)
+                {
+                    if (operatorManager.SelectedOperator == clickedOperator)
+                    {
+                        operatorManager.SelectOperator(null);
+                        ClearOperatorRangePreview();
+                    }
+                    else
+                    {
+                        SelectOperatorForRangePreview(clickedOperator);
+                    }
+                }
+                else
+                {
+                    operatorManager?.SelectOperator(null);
+                    ClearOperatorRangePreview();
+                }
+            }
+        }
+
+        private void SelectOperatorForRangePreview(OperatorBase op)
+        {
+            operatorManager?.SelectOperator(op);
+        }
+
+        private void HandleOperatorSelected(OperatorBase op)
+        {
+            if (op == null || op.DeployedCell == null)
+            {
+                ClearOperatorRangePreview();
+                gameplayHudUI?.SetSelectedOperatorName(string.Empty, Vector3.zero);
+                return;
+            }
+
+            ClearPlacementPreviewVisuals();
+            isOperatorRangePreviewActive = true;
+            GridCell[] rangeCells = gridManager.GetCellsInRange(
+                op.DeployedCell.GridPosition,
+                op.GetRangePattern(),
+                op.Facing);
+            Color rangeColor = new Color(0.15f, 1f, 0.28f, 1f);
+            for (int i = 0; i < rangeCells.Length; i++)
+            {
+                DrawCellOutline(rangeCells[i].WorldPosition, rangeColor);
+            }
+
+            DrawCellOutline(op.DeployedCell.WorldPosition, new Color(0.15f, 0.85f, 1f, 1f));
+            Vector3 labelPosition = op.DeployedCell.WorldPosition + Vector3.up * gridManager.CellSize * 0.7f;
+            gameplayHudUI?.SetSelectedOperatorName(op.Data.operatorName, labelPosition);
+        }
+
+        private void ClearOperatorRangePreview()
+        {
+            if (!isOperatorRangePreviewActive) return;
+
+            isOperatorRangePreviewActive = false;
+            ClearPlacementPreviewVisuals();
+            gameplayHudUI?.SetSelectedOperatorName(string.Empty, Vector3.zero);
+        }
+
+        private OperatorFacing GetFacingInput(Keyboard keyboard)
+        {
+            if (keyboard == null) return placementFacing;
+            if (keyboard.rightArrowKey.wasPressedThisFrame || keyboard.dKey.wasPressedThisFrame) return OperatorFacing.Right;
+            if (keyboard.upArrowKey.wasPressedThisFrame || keyboard.wKey.wasPressedThisFrame) return OperatorFacing.Up;
+            if (keyboard.leftArrowKey.wasPressedThisFrame || keyboard.aKey.wasPressedThisFrame) return OperatorFacing.Left;
+            if (keyboard.downArrowKey.wasPressedThisFrame || keyboard.sKey.wasPressedThisFrame) return OperatorFacing.Down;
+            return placementFacing;
+        }
+
+        private bool TryGetGridPosition(Vector2 screenPosition, out Vector2Int gridPosition)
+        {
+            gridPosition = default;
+            Camera gameCamera = Camera.main;
+            if (gameCamera == null || gridManager == null) return false;
+
+            Vector3 worldPosition = gameCamera.ScreenToWorldPoint(new Vector3(
+                screenPosition.x,
+                screenPosition.y,
+                -gameCamera.transform.position.z));
+            gridPosition = gridManager.WorldToGridPosition(worldPosition);
+            return true;
+        }
+
+        private void RefreshPlacementPreview()
+        {
+            ClearPlacementPreviewVisuals();
+            if (!isPlacementPreviewActive || pendingDeployCard == null || gridManager == null) return;
+
+            GridCell targetCell = gridManager.GetCell(placementGridPosition);
+            if (targetCell == null) return;
+
+            bool canDeploy = targetCell.CanDeploy(pendingDeployCard.operatorData.position);
+            GridCell[] rangeCells = gridManager.GetCellsInRange(
+                placementGridPosition,
+                pendingDeployCard.operatorData.rangePattern,
+                placementFacing);
+            Color rangeColor = new Color(0.15f, 1f, 0.28f, 1f);
+            for (int i = 0; i < rangeCells.Length; i++)
+            {
+                DrawCellOutline(rangeCells[i].WorldPosition, rangeColor);
+            }
+
+            Color placementColor = canDeploy ? new Color(0.15f, 0.85f, 1f, 1f) : new Color(1f, 0.12f, 0.12f, 1f);
+            DrawCellOutline(targetCell.WorldPosition, placementColor);
+            DrawFacingMarker(targetCell.WorldPosition, placementFacing);
+            string placementStatus = canDeploy ? string.Empty : " | INVALID TILE";
+            gameplayHudUI?.SetPlacementPrompt(
+                $"Facing {placementFacing.ToString().ToUpperInvariant()} | Arrows/WASD turn | Click grid to move | Enter/PLACE to confirm | Esc cancel{placementStatus}");
+            gameplayHudUI?.SetPlacementControls(true, canDeploy);
+            gameplayHudUI?.SetPlacementControlsPosition(targetCell.WorldPosition);
+        }
+
+        private void DrawCellOutline(Vector3 center, Color color)
+        {
+            float halfSize = gridManager.CellSize * 0.46f;
+            center.z = 0.05f;
+            Vector3[] corners =
+            {
+                center + new Vector3(-halfSize, -halfSize, 0f),
+                center + new Vector3(-halfSize, halfSize, 0f),
+                center + new Vector3(halfSize, halfSize, 0f),
+                center + new Vector3(halfSize, -halfSize, 0f)
+            };
+
+            CreatePreviewLine("PlacementOutlineGlow", gridManager.CellSize * 0.14f, new Color(color.r, color.g, color.b, 0.28f), corners, true);
+            CreatePreviewLine("PlacementOutline", gridManager.CellSize * 0.045f, color, corners, true);
+        }
+
+        private void DrawFacingMarker(Vector3 center, OperatorFacing facing)
+        {
+            Vector2 forward = facing switch
+            {
+                OperatorFacing.Up => Vector2.up,
+                OperatorFacing.Left => Vector2.left,
+                OperatorFacing.Down => Vector2.down,
+                _ => Vector2.right
+            };
+            Vector2 side = new Vector2(-forward.y, forward.x);
+            float cellSize = gridManager.CellSize;
+            Vector3 tip = center + (Vector3)(forward * cellSize * 0.36f);
+            Vector3 baseCenter = center + (Vector3)(forward * cellSize * 0.08f);
+            Vector3[] arrow =
+            {
+                tip,
+                baseCenter + (Vector3)(side * cellSize * 0.14f),
+                baseCenter - (Vector3)(side * cellSize * 0.14f)
+            };
+            for (int i = 0; i < arrow.Length; i++) arrow[i].z = 0.06f;
+            CreatePreviewLine("PlacementFacingMarker", cellSize * 0.05f, Color.white, arrow, true);
+        }
+
+        private void CreatePreviewLine(string objectName, float width, Color color, Vector3[] points, bool closed)
+        {
+            GameObject lineObject = new GameObject(objectName);
+            lineObject.transform.SetParent(transform, false);
+            LineRenderer line = lineObject.AddComponent<LineRenderer>();
+            line.useWorldSpace = true;
+            line.loop = closed;
+            line.positionCount = points.Length;
+            line.SetPositions(points);
+            line.startWidth = width;
+            line.endWidth = width;
+            line.startColor = color;
+            line.endColor = color;
+            line.numCapVertices = 2;
+            line.material = GetPlacementPreviewMaterial();
+            line.sortingOrder = 50;
+            placementPreviewVisuals.Add(lineObject);
+        }
+
+        private Material GetPlacementPreviewMaterial()
+        {
+            if (placementPreviewMaterial != null) return placementPreviewMaterial;
+
+            Shader shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+            placementPreviewMaterial = new Material(shader);
+            return placementPreviewMaterial;
+        }
+
+        private void ClearPlacementPreviewVisuals()
+        {
+            for (int i = 0; i < placementPreviewVisuals.Count; i++)
+            {
+                if (placementPreviewVisuals[i] != null) Destroy(placementPreviewVisuals[i]);
+            }
+            placementPreviewVisuals.Clear();
+        }
+
+        private void HidePlacementPreview()
+        {
+            isPlacementPreviewActive = false;
+            isOperatorRangePreviewActive = false;
+            ClearPlacementPreviewVisuals();
+            gameplayHudUI?.SetPlacementPrompt(string.Empty);
+            gameplayHudUI?.SetPlacementControls(false);
         }
     }
 }
