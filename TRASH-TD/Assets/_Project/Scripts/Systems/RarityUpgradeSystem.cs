@@ -6,19 +6,13 @@ using TrashTD.Data;
 namespace TrashTD.Systems
 {
     /// <summary>
-    /// Tracks acquired duplicate copies of operators and manages rarity progression (GDD 1.6):
-    /// - Rarities: 1★ to 5★.
-    /// - Collecting 3 duplicate copies of a creature upgrades its rarity by one tier (e.g. 1★ -> 2★, up to 5★).
+    /// Merges three matching deck cards into one card of the next rarity tier.
     /// </summary>
     public class RarityUpgradeSystem : MonoBehaviour
     {
         public static RarityUpgradeSystem Instance { get; private set; }
 
         public const int COPIES_REQUIRED_FOR_UPGRADE = 3;
-
-        // Tracks duplicate copies owned: [OperatorName, [Rarity, Count]]
-        private readonly Dictionary<string, Dictionary<OperatorRarity, int>> inventory =
-            new Dictionary<string, Dictionary<OperatorRarity, int>>();
 
         // Tracks highest unlocked rarity tier for each operator
         private readonly Dictionary<string, OperatorRarity> highestRarity =
@@ -46,58 +40,33 @@ namespace TrashTD.Systems
         }
 
         /// <summary>
-        /// Adds a drafted or acquired copy of an operator at a specific rarity tier.
-        /// Automatically checks for 3 duplicates and upgrades if threshold reached.
+        /// Processes a card after it enters the player's deck.
         /// </summary>
-        public void AddCardCopy(OperatorData opData, OperatorRarity rarity)
+        public void ProcessAddedCard(PlayerDeck deck, DraftCard card)
         {
-            if (opData == null) return;
+            if (deck == null || card == null || card.operatorData == null) return;
 
-            string opName = opData.operatorName;
-            if (!inventory.ContainsKey(opName))
+            OperatorData opData = card.operatorData;
+            OperatorRarity currentRarity = card.rarity;
+            OperatorRarity maxRarity = GetMaximumRarity(opData);
+            UpdateHighestRarity(opData, currentRarity);
+            OnCopyAdded?.Invoke(opData, currentRarity, deck.GetCopyCount(opData, currentRarity));
+
+            while (currentRarity < maxRarity)
             {
-                inventory[opName] = new Dictionary<OperatorRarity, int>();
-            }
-
-            if (!inventory[opName].ContainsKey(rarity))
-            {
-                inventory[opName][rarity] = 0;
-            }
-
-            inventory[opName][rarity]++;
-            UpdateHighestRarity(opData, rarity);
-
-            OnCopyAdded?.Invoke(opData, rarity, inventory[opName][rarity]);
-
-            // Check for upgrade: 3 duplicate copies trigger 1 tier upgrade
-            CheckAndExecuteUpgrade(opData, rarity);
-        }
-
-        private void CheckAndExecuteUpgrade(OperatorData opData, OperatorRarity currentRarity)
-        {
-            string opName = opData.operatorName;
-
-            // Maximum tier is 5★
-            if (currentRarity >= OperatorRarity.Star5) return;
-
-            while (inventory[opName].TryGetValue(currentRarity, out int count) && count >= COPIES_REQUIRED_FOR_UPGRADE)
-            {
-                inventory[opName][currentRarity] -= COPIES_REQUIRED_FOR_UPGRADE;
-
                 OperatorRarity nextRarity = (OperatorRarity)((int)currentRarity + 1);
-                if (!inventory[opName].ContainsKey(nextRarity))
-                {
-                    inventory[opName][nextRarity] = 0;
-                }
-                inventory[opName][nextRarity]++;
+                if (!deck.TryMergeCopies(opData, currentRarity, nextRarity, out _)) break;
 
                 UpdateHighestRarity(opData, nextRarity);
                 OnOperatorUpgraded?.Invoke(opData, currentRarity, nextRarity);
-
-                // Cascade upgrade if next tier now also has 3 copies
                 currentRarity = nextRarity;
-                if (currentRarity >= OperatorRarity.Star5) break;
             }
+        }
+
+        private static OperatorRarity GetMaximumRarity(OperatorData opData)
+        {
+            int maxRarity = Mathf.Min((int)OperatorRarity.Star5, (int)opData.baseRarity + 2);
+            return (OperatorRarity)maxRarity;
         }
 
         private void UpdateHighestRarity(OperatorData opData, OperatorRarity rarity)
@@ -114,14 +83,7 @@ namespace TrashTD.Systems
         /// </summary>
         public int GetCopyCount(string operatorName, OperatorRarity rarity)
         {
-            if (inventory.TryGetValue(operatorName, out var rarities))
-            {
-                if (rarities.TryGetValue(rarity, out int count))
-                {
-                    return count;
-                }
-            }
-            return 0;
+            return PlayerDeck.Instance != null ? PlayerDeck.Instance.GetCopyCount(operatorName, rarity) : 0;
         }
 
         /// <summary>
@@ -138,7 +100,6 @@ namespace TrashTD.Systems
         /// </summary>
         public void ResetInventory()
         {
-            inventory.Clear();
             highestRarity.Clear();
         }
     }

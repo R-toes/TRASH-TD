@@ -18,10 +18,10 @@ MonoBehaviour:
   position: 0
   roleTags: []
   baseHP: 140
-  baseATK: 65
+  baseATK: 75
   baseDEF: 20
   baseRES: 0
-  blockCount: 2
+  blockCount: 1
   attackRange: 2
   attackInterval: 1.1
   rangePattern:

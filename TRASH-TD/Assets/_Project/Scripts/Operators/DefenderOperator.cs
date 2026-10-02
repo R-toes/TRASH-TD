@@ -1,4 +1,5 @@
 using UnityEngine;
+using TrashTD.Combat;
 using TrashTD.Enemies;
 
 namespace TrashTD.Operators
@@ -10,6 +11,14 @@ namespace TrashTD.Operators
     /// </summary>
     public class DefenderOperator : OperatorBase
     {
+        public override void Attack(EnemyBase target)
+        {
+            if (target == null || !isDeployed) return;
+
+            MeleeSwipeVisual.Play(transform.position, target.transform.position, new Color(0.55f, 0.9f, 1f, 1f));
+            base.Attack(target);
+        }
+
         protected override EnemyBase FindTarget()
         {
             // Priority: attack blocked enemies — target highest HP (chip down the toughest)

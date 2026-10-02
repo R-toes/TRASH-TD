@@ -208,12 +208,6 @@ namespace TrashTD.Systems
             selectedCard = currentOfferedCards[cardIndex];
             OnCardSelected?.Invoke(selectedCard);
 
-            // Pass to RarityUpgradeSystem to track duplicate/upgrade progression
-            if (RarityUpgradeSystem.Instance != null)
-            {
-                RarityUpgradeSystem.Instance.AddCardCopy(selectedCard.operatorData, selectedCard.rarity);
-            }
-
             return true;
         }
 

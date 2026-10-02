@@ -60,13 +60,6 @@ namespace TrashTD.Operators
             data = operatorData;
             currentRarity = rarity;
             facing = operatorFacing;
-            transform.rotation = Quaternion.Euler(0f, 0f, operatorFacing switch
-            {
-                OperatorFacing.Up => 90f,
-                OperatorFacing.Left => 180f,
-                OperatorFacing.Down => 270f,
-                _ => 0f
-            });
 
             // Scale stats by rarity
             maxHP = data.GetScaledHP(rarity);

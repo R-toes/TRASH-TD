@@ -15,11 +15,11 @@ MonoBehaviour:
   enemyName: Sludge Grunt
   archetype: 0
   movementType: 0
-  baseHP: 100
+  baseHP: 200
   baseATK: 25
   baseDEF: 10
   baseRES: 0
-  moveSpeed: 1
+  moveSpeed: 0.75
   damageType: 0
   attackInterval: 2
   attackRange: 0

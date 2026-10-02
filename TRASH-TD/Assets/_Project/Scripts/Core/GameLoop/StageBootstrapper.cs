@@ -432,6 +432,7 @@ namespace TrashTD.Core.GameLoop
                 op.CurrentHP,
                 op.MaxHP,
                 op.CurrentRarity,
+                op.Data.baseRarity,
                 labelPosition);
         }
 

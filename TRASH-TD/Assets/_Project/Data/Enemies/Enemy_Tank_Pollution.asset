@@ -15,7 +15,7 @@ MonoBehaviour:
   enemyName: Pollution Tank
   archetype: 2
   movementType: 0
-  baseHP: 350
+  baseHP: 1000
   baseATK: 45
   baseDEF: 35
   baseRES: 5

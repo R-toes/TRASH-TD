@@ -23,7 +23,7 @@ MonoBehaviour:
   baseRES: 0
   blockCount: 0
   attackRange: 3
-  attackInterval: 1
+  attackInterval: 0.75
   rangePattern:
   - {x: 1, y: 0}
   - {x: 2, y: 0}

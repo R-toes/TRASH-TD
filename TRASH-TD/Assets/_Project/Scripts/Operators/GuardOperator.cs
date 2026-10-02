@@ -1,4 +1,5 @@
 using UnityEngine;
+using TrashTD.Combat;
 using TrashTD.Core.Grid;
 using TrashTD.Enemies;
 using TrashTD.Systems;
@@ -12,6 +13,14 @@ namespace TrashTD.Operators
     /// </summary>
     public class GuardOperator : OperatorBase
     {
+        public override void Attack(EnemyBase target)
+        {
+            if (target == null || !isDeployed) return;
+
+            MeleeSwipeVisual.Play(transform.position, target.transform.position, new Color(1f, 0.78f, 0.3f, 1f));
+            base.Attack(target);
+        }
+
         protected override EnemyBase FindTarget()
         {
             // Priority 1: Attack blocked enemies first (focus on lowest HP among blocked)

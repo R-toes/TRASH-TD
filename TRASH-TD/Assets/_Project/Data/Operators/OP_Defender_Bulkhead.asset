@@ -17,19 +17,19 @@ MonoBehaviour:
   baseRarity: 1
   position: 0
   roleTags: []
-  baseHP: 280
+  baseHP: 200
   baseATK: 35
-  baseDEF: 45
-  baseRES: 10
+  baseDEF: 38
+  baseRES: 8
   blockCount: 3
   attackRange: 1
   attackInterval: 1.4
   rangePattern:
   - {x: 0, y: 0}
   - {x: 1, y: 0}
-  - {x: -1, y: 0}
-  - {x: 0, y: 1}
-  - {x: 0, y: -1}
+  - {x: 0, y: 0}
+  - {x: 0, y: 0}
+  - {x: 0, y: 0}
   damageType: 0
   dpCost: 14
   redeployCooldown: 60

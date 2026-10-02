@@ -15,7 +15,7 @@ MonoBehaviour:
   enemyName: Toxic Rusher
   archetype: 1
   movementType: 0
-  baseHP: 60
+  baseHP: 150
   baseATK: 20
   baseDEF: 5
   baseRES: 0

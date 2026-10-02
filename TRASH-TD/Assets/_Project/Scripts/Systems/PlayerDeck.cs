@@ -76,18 +76,96 @@ namespace TrashTD.Systems
         {
             if (card == null || IsFull) return false;
 
+            int emptySlot = -1;
             for (int i = 0; i < deckSlots.Count; i++)
             {
                 if (deckSlots[i] != null) continue;
 
-                deckSlots[i] = card;
-                OnCardAdded?.Invoke(card);
-                OnDeckChanged?.Invoke(deckSlots);
-                return true;
+                emptySlot = i;
+                break;
             }
 
-            deckSlots.Add(card);
+            if (emptySlot >= 0)
+            {
+                deckSlots[emptySlot] = card;
+            }
+            else
+            {
+                deckSlots.Add(card);
+            }
+
             OnCardAdded?.Invoke(card);
+            OnDeckChanged?.Invoke(deckSlots);
+            RarityUpgradeSystem.Instance?.ProcessAddedCard(this, card);
+            return true;
+        }
+
+        public int GetCopyCount(OperatorData operatorData, OperatorRarity rarity)
+        {
+            if (operatorData == null) return 0;
+
+            int count = 0;
+            foreach (DraftCard card in deckSlots)
+            {
+                if (card != null && card.operatorData == operatorData && card.rarity == rarity)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        public int GetCopyCount(string operatorName, OperatorRarity rarity)
+        {
+            if (string.IsNullOrEmpty(operatorName)) return 0;
+
+            int count = 0;
+            foreach (DraftCard card in deckSlots)
+            {
+                if (card != null && card.operatorData != null &&
+                    card.operatorData.operatorName == operatorName && card.rarity == rarity)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        public bool TryMergeCopies(
+            OperatorData operatorData,
+            OperatorRarity currentRarity,
+            OperatorRarity upgradedRarity,
+            out DraftCard upgradedCard)
+        {
+            upgradedCard = null;
+            if (operatorData == null) return false;
+
+            var matchingSlots = new List<int>(RarityUpgradeSystem.COPIES_REQUIRED_FOR_UPGRADE);
+            int cooldownRoundsRemaining = 0;
+            for (int i = 0; i < deckSlots.Count; i++)
+            {
+                DraftCard card = deckSlots[i];
+                if (card == null || card.operatorData != operatorData || card.rarity != currentRarity) continue;
+
+                matchingSlots.Add(i);
+                cooldownRoundsRemaining = Mathf.Max(cooldownRoundsRemaining, card.cooldownRoundsRemaining);
+                if (matchingSlots.Count == RarityUpgradeSystem.COPIES_REQUIRED_FOR_UPGRADE) break;
+            }
+
+            if (matchingSlots.Count < RarityUpgradeSystem.COPIES_REQUIRED_FOR_UPGRADE) return false;
+
+            upgradedCard = new DraftCard(operatorData, upgradedRarity, cooldownRoundsRemaining);
+            int upgradedSlot = matchingSlots[0];
+            foreach (int slot in matchingSlots)
+            {
+                deckSlots[slot] = null;
+                OnCardRemoved?.Invoke(slot);
+            }
+
+            deckSlots[upgradedSlot] = upgradedCard;
+            OnCardAdded?.Invoke(upgradedCard);
             OnDeckChanged?.Invoke(deckSlots);
             return true;
         }
@@ -244,6 +322,7 @@ namespace TrashTD.Systems
             DraftCard returnedCard = pendingReturnedCards.Dequeue();
             deckSlots[slot] = returnedCard;
             OnCardAdded?.Invoke(returnedCard);
+            RarityUpgradeSystem.Instance?.ProcessAddedCard(this, returnedCard);
         }
     }
 }

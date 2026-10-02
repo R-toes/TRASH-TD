@@ -35,6 +35,8 @@ namespace TrashTD.UI
         private Text selectedOperatorHealthText;
         private Text selectedOperatorRarityText;
         private Image selectedOperatorHealthFill;
+        private GameObject selectedOperatorUpgradeBadge;
+        private UpgradeArrowGraphic selectedOperatorUpgradeBadgeGraphic;
         private GameObject placementControlsRoot;
         private Button retreatOperatorButton;
         private Button placementConfirmButton;
@@ -43,6 +45,8 @@ namespace TrashTD.UI
         private Button[] deckButtons;
         private Text[] deckButtonLabels;
         private Image[] deckButtonImages;
+        private GameObject[] deckUpgradeBadges;
+        private UpgradeArrowGraphic[] deckUpgradeBadgeLabels;
         private CardDraftSystem draftSystem;
         private WaveManager waveManager;
         private EnemyManager enemyManager;
@@ -167,23 +171,26 @@ namespace TrashTD.UI
             labelRect.anchorMin = new Vector2(0.5f, 0.5f);
             labelRect.anchorMax = new Vector2(0.5f, 0.5f);
             labelRect.pivot = new Vector2(0.5f, 0.5f);
-            labelRect.sizeDelta = new Vector2(250f, 70f);
+            labelRect.sizeDelta = new Vector2(250f, 84f);
 
             Image background = selectedOperatorLabelRoot.GetComponent<Image>();
             background.color = new Color(0.025f, 0.035f, 0.045f, 0.9f);
             background.raycastTarget = false;
 
             selectedOperatorNameText = CreateText(selectedOperatorLabelRoot.transform, "Name", string.Empty, 16, TextAnchor.MiddleLeft);
-            SetPosition(selectedOperatorNameText.GetComponent<RectTransform>(), new Vector2(10f, -7f), new Vector2(0f, 1f), new Vector2(145f, 24f), new Vector2(0f, 1f));
+            SetPosition(selectedOperatorNameText.GetComponent<RectTransform>(), new Vector2(10f, -5f), new Vector2(0f, 1f), new Vector2(145f, 22f), new Vector2(0f, 1f));
             selectedOperatorNameText.raycastTarget = false;
 
             selectedOperatorRarityText = CreateText(selectedOperatorLabelRoot.transform, "Rarity", string.Empty, 17, TextAnchor.MiddleRight);
             selectedOperatorRarityText.color = new Color(1f, 0.78f, 0.2f, 1f);
-            SetPosition(selectedOperatorRarityText.GetComponent<RectTransform>(), new Vector2(-10f, -7f), new Vector2(1f, 1f), new Vector2(82f, 24f), new Vector2(1f, 1f));
+            SetPosition(selectedOperatorRarityText.GetComponent<RectTransform>(), new Vector2(-10f, -5f), new Vector2(1f, 1f), new Vector2(82f, 22f), new Vector2(1f, 1f));
             selectedOperatorRarityText.raycastTarget = false;
 
+            selectedOperatorUpgradeBadge = CreateUpgradeBadge(selectedOperatorLabelRoot.transform, "SelectedOperatorUpgradeBadge", new Vector2(38f, 18f), new Vector2(10f, -29f));
+            selectedOperatorUpgradeBadgeGraphic = selectedOperatorUpgradeBadge.GetComponentInChildren<UpgradeArrowGraphic>();
+
             selectedOperatorHealthText = CreateText(selectedOperatorLabelRoot.transform, "Health", string.Empty, 14, TextAnchor.MiddleLeft);
-            SetPosition(selectedOperatorHealthText.GetComponent<RectTransform>(), new Vector2(10f, 9f), Vector2.zero, new Vector2(84f, 22f), Vector2.zero);
+            SetPosition(selectedOperatorHealthText.GetComponent<RectTransform>(), new Vector2(10f, 3f), Vector2.zero, new Vector2(84f, 20f), Vector2.zero);
             selectedOperatorHealthText.raycastTarget = false;
 
             GameObject healthTrack = new GameObject("HealthTrack", typeof(RectTransform), typeof(Image));
@@ -191,7 +198,7 @@ namespace TrashTD.UI
             Image healthTrackImage = healthTrack.GetComponent<Image>();
             healthTrackImage.color = new Color(0.15f, 0.17f, 0.19f, 1f);
             healthTrackImage.raycastTarget = false;
-            SetPosition(healthTrack.GetComponent<RectTransform>(), new Vector2(100f, 13f), Vector2.zero, new Vector2(138f, 12f), Vector2.zero);
+            SetPosition(healthTrack.GetComponent<RectTransform>(), new Vector2(100f, 7f), Vector2.zero, new Vector2(138f, 12f), Vector2.zero);
 
             GameObject healthFill = new GameObject("HealthFill", typeof(RectTransform), typeof(Image));
             healthFill.transform.SetParent(healthTrack.transform, false);
@@ -316,11 +323,14 @@ namespace TrashTD.UI
             }
         }
 
-        public void SetSelectedOperatorName(string operatorName, int currentHP, int maxHP, OperatorRarity rarity, Vector3 worldPosition)
+        public void SetSelectedOperatorName(string operatorName, int currentHP, int maxHP, OperatorRarity rarity, OperatorRarity baseRarity, Vector3 worldPosition)
         {
             SetSelectedOperatorName(operatorName, worldPosition);
             if (string.IsNullOrEmpty(operatorName)) return;
 
+            int upgradeLevels = Mathf.Clamp((int)rarity - (int)baseRarity, 0, 2);
+            selectedOperatorUpgradeBadgeGraphic.SetArrowCount(upgradeLevels);
+            selectedOperatorUpgradeBadge.SetActive(upgradeLevels > 0);
             float healthRatio = maxHP > 0 ? Mathf.Clamp01((float)currentHP / maxHP) : 0f;
             selectedOperatorHealthText.text = $"HP {currentHP} / {maxHP}";
             selectedOperatorRarityText.text = new string('★', Mathf.Clamp((int)rarity, 1, 5));
@@ -347,6 +357,7 @@ namespace TrashTD.UI
                 selectedOperator.CurrentHP,
                 selectedOperator.MaxHP,
                 selectedOperator.CurrentRarity,
+                selectedOperator.Data.baseRarity,
                 labelPosition);
         }
 
@@ -423,6 +434,8 @@ namespace TrashTD.UI
             deckButtons = new Button[DeckSlotCount];
             deckButtonLabels = new Text[DeckSlotCount];
             deckButtonImages = new Image[DeckSlotCount];
+            deckUpgradeBadges = new GameObject[DeckSlotCount];
+            deckUpgradeBadgeLabels = new UpgradeArrowGraphic[DeckSlotCount];
 
             for (int i = 0; i < DeckSlotCount; i++)
             {
@@ -431,6 +444,8 @@ namespace TrashTD.UI
                 deckButtons[i] = slotBtn;
                 deckButtonLabels[i] = slotBtn.GetComponentInChildren<Text>();
                 deckButtonImages[i] = slotBtn.GetComponent<Image>();
+                deckUpgradeBadges[i] = CreateUpgradeBadge(slotBtn.transform, $"DeckUpgradeBadge_{i + 1}", new Vector2(34f, 18f), new Vector2(-5f, -5f));
+                deckUpgradeBadgeLabels[i] = deckUpgradeBadges[i].GetComponentInChildren<UpgradeArrowGraphic>();
                 slotBtn.onClick.AddListener(() => SelectDeckSlot(slotIndex));
                 var dragHandler = slotBtn.gameObject.AddComponent<DeckSlotDragHandler>();
                 dragHandler.Bind(
@@ -471,6 +486,34 @@ namespace TrashTD.UI
             }
 
             return button;
+        }
+
+        private GameObject CreateUpgradeBadge(Transform parent, string objectName, Vector2 size, Vector2 position)
+        {
+            GameObject badge = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+            badge.transform.SetParent(parent, false);
+            RectTransform badgeRect = badge.GetComponent<RectTransform>();
+            badgeRect.anchorMin = Vector2.one;
+            badgeRect.anchorMax = Vector2.one;
+            badgeRect.pivot = Vector2.one;
+            badgeRect.sizeDelta = size;
+            badgeRect.anchoredPosition = position;
+
+            Image background = badge.GetComponent<Image>();
+            background.color = new Color(1f, 0.78f, 0.2f, 1f);
+            background.raycastTarget = false;
+
+            GameObject arrows = new GameObject("Arrows", typeof(RectTransform), typeof(CanvasRenderer));
+            arrows.transform.SetParent(badge.transform, false);
+            RectTransform arrowsRect = arrows.GetComponent<RectTransform>();
+            arrowsRect.anchorMin = Vector2.zero;
+            arrowsRect.anchorMax = Vector2.one;
+            arrowsRect.offsetMin = new Vector2(2f, 1f);
+            arrowsRect.offsetMax = new Vector2(-2f, -1f);
+            arrows.AddComponent<UpgradeArrowGraphic>().color = new Color(0.12f, 0.1f, 0.04f, 1f);
+
+            badge.SetActive(false);
+            return badge;
         }
 
         private void CreatePausePanel(Transform root)
@@ -577,6 +620,9 @@ namespace TrashTD.UI
                     deckButtonImages[i].color = isReady
                         ? GetClassColor(card.operatorData.operatorClass)
                         : new Color(0.22f, 0.22f, 0.24f, 1f);
+                    int upgradeLevels = Mathf.Clamp((int)card.rarity - (int)card.operatorData.baseRarity, 0, 2);
+                    deckUpgradeBadgeLabels[i].SetArrowCount(upgradeLevels);
+                    deckUpgradeBadges[i].SetActive(upgradeLevels > 0);
                     deckButtons[i].GetComponent<DeckSlotDragHandler>().SetCard(card, deckButtonImages[i].color);
                 }
                 else
@@ -584,6 +630,7 @@ namespace TrashTD.UI
                     deckButtonLabels[i].text = "";
                     deckButtons[i].interactable = false;
                     deckButtonImages[i].color = new Color(0.06f, 0.07f, 0.10f, 1f);
+                    deckUpgradeBadges[i].SetActive(false);
                     deckButtons[i].GetComponent<DeckSlotDragHandler>().SetCard(null, deckButtonImages[i].color);
                 }
             }

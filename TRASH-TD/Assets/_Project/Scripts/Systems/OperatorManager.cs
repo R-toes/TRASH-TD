@@ -4,6 +4,7 @@ using UnityEngine;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
 using TrashTD.Operators;
+using TrashTD.UI;
 
 namespace TrashTD.Systems
 {
@@ -140,6 +141,7 @@ namespace TrashTD.Systems
             }
 
             deployedOperators.Add(opComp);
+            OperatorUpgradeBadge.Show(opComp);
             deployedInstance = opComp;
             OnOperatorDeployed?.Invoke(opComp);
             return true;
