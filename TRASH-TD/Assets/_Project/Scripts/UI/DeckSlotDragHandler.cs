@@ -94,7 +94,7 @@ namespace TrashTD.UI
             labelRect.offsetMax = new Vector2(-4f, -4f);
             var label = labelObject.GetComponent<Text>();
             label.text = card != null && card.operatorData != null ? card.operatorData.operatorName : string.Empty;
-            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.font = UIFontHelper.GetPixelFont();
             label.fontSize = 14;
             label.alignment = TextAnchor.MiddleCenter;
             label.color = Color.white;

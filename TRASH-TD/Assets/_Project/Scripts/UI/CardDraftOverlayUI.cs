@@ -182,7 +182,6 @@ namespace TrashTD.UI
                     // Class
                     classTexts[i].text = opData.operatorClass.ToString().ToUpper();
 
-                    // Rarity stars
                     int starCount = (int)rarity;
                     rarityTexts[i].text = new string('★', starCount) + new string('☆', 5 - starCount);
 
@@ -387,23 +386,23 @@ namespace TrashTD.UI
             overlayRoot.GetComponent<Image>().color = BG_OVERLAY;
 
             // Title
-            titleText = MakeText(overlayRoot.transform, "Title", "CHOOSE YOUR CARD", 42,
+            titleText = MakeText(overlayRoot.transform, "Title", "CHOOSE YOUR CARD", 30,
                 TextAnchor.MiddleCenter, Color.white);
-            PositionRT(titleText, new Vector2(0, -50f), new Vector2(0.5f, 1f), new Vector2(600f, 60f));
+            PositionRT(titleText, new Vector2(0, -48f), new Vector2(0.5f, 1f), new Vector2(700f, 60f));
 
             // Wave info
-            waveInfoText = MakeText(overlayRoot.transform, "WaveInfo", "NEXT: WAVE 1 / ?", 26,
+            waveInfoText = MakeText(overlayRoot.transform, "WaveInfo", "NEXT: WAVE 1 / ?", 18,
                 TextAnchor.MiddleCenter, STAT_LABEL_COLOR);
-            PositionRT(waveInfoText, new Vector2(0, -105f), new Vector2(0.5f, 1f), new Vector2(400f, 40f));
+            PositionRT(waveInfoText, new Vector2(0, -104f), new Vector2(0.5f, 1f), new Vector2(500f, 40f));
 
             // Deck count
-            deckCountText = MakeText(overlayRoot.transform, "DeckCount", "DECK 0/8", 22,
+            deckCountText = MakeText(overlayRoot.transform, "DeckCount", "DECK 0/8", 16,
                 TextAnchor.MiddleRight, Color.white);
             PositionRT(deckCountText, new Vector2(-28f, -32f), new Vector2(1f, 1f), new Vector2(300f, 48f));
             deckCountText.rectTransform.pivot = new Vector2(1f, 1f);
             deckCountText.resizeTextForBestFit = true;
-            deckCountText.resizeTextMinSize = 14;
-            deckCountText.resizeTextMaxSize = 22;
+            deckCountText.resizeTextMinSize = 12;
+            deckCountText.resizeTextMaxSize = 16;
 
             // Card container (centered row of 3 cards)
             var cardContainer = new GameObject("CardContainer", typeof(RectTransform));
@@ -411,8 +410,8 @@ namespace TrashTD.UI
             var containerRect = cardContainer.GetComponent<RectTransform>();
             containerRect.anchorMin = new Vector2(0.5f, 0.5f);
             containerRect.anchorMax = new Vector2(0.5f, 0.5f);
-            containerRect.sizeDelta = new Vector2(1050f, 550f);
-            containerRect.anchoredPosition = new Vector2(0f, 20f);
+            containerRect.sizeDelta = new Vector2(1050f, 570f);
+            containerRect.anchoredPosition = new Vector2(0f, 5f);
 
             var hlg = cardContainer.AddComponent<HorizontalLayoutGroup>();
             hlg.spacing = 30f;
@@ -467,7 +466,7 @@ namespace TrashTD.UI
         private void BuildCard(Transform parent, int index)
         {
             float cardWidth = 310f;
-            float cardHeight = 520f;
+            float cardHeight = 540f;
 
             // Card root
             var cardObj = new GameObject($"Card_{index}", typeof(RectTransform), typeof(Image), typeof(Button));
@@ -497,7 +496,7 @@ namespace TrashTD.UI
 
             // --- Rarity stars (top) ---
             currentY -= 30f;
-            rarityTexts[index] = MakeText(cardObj.transform, $"Rarity_{index}", "★★★☆☆", 22,
+            rarityTexts[index] = MakeText(cardObj.transform, $"Rarity_{index}", "★★★☆☆", 18,
                 TextAnchor.MiddleCenter, STAR_COLOR);
             PositionRT(rarityTexts[index], new Vector2(0, currentY), new Vector2(0.5f, 0.5f),
                 new Vector2(cardWidth - 20f, 30f));
@@ -525,40 +524,40 @@ namespace TrashTD.UI
             portraitImages[index].color = PORTRAIT_BG;
 
             // --- Name ---
-            currentY -= 110f;
-            nameTexts[index] = MakeText(cardObj.transform, $"Name_{index}", "", 24,
+            currentY -= 115f;
+            nameTexts[index] = MakeText(cardObj.transform, $"Name_{index}", "", 20,
                 TextAnchor.MiddleCenter, Color.white);
             PositionRT(nameTexts[index], new Vector2(0, currentY), new Vector2(0.5f, 0.5f),
-                new Vector2(cardWidth - 20f, 32f));
+                new Vector2(cardWidth - 24f, 34f));
             nameTexts[index].fontStyle = FontStyle.Bold;
 
             // --- Class + Position ---
-            currentY -= 28f;
-            classTexts[index] = MakeText(cardObj.transform, $"Class_{index}", "", 16,
+            currentY -= 45f;
+            classTexts[index] = MakeText(cardObj.transform, $"Class_{index}", "", 12,
                 TextAnchor.MiddleCenter, CLASS_COLOR);
-            PositionRT(classTexts[index], new Vector2(-40f, currentY), new Vector2(0.5f, 0.5f),
-                new Vector2(120f, 24f));
+            PositionRT(classTexts[index], new Vector2(-75f, currentY), new Vector2(0.5f, 0.5f),
+                new Vector2(130f, 28f));
 
-            positionTexts[index] = MakeText(cardObj.transform, $"Position_{index}", "", 14,
+            positionTexts[index] = MakeText(cardObj.transform, $"Position_{index}", "", 12,
                 TextAnchor.MiddleCenter, STAT_LABEL_COLOR);
-            PositionRT(positionTexts[index], new Vector2(60f, currentY), new Vector2(0.5f, 0.5f),
-                new Vector2(90f, 24f));
+            PositionRT(positionTexts[index], new Vector2(75f, currentY), new Vector2(0.5f, 0.5f),
+                new Vector2(130f, 28f));
 
             // --- Description / Role Tags (no DP) ---
-            currentY -= 26f;
-            descTexts[index] = MakeText(cardObj.transform, $"Desc_{index}", "", 13,
+            currentY -= 44f;
+            descTexts[index] = MakeText(cardObj.transform, $"Desc_{index}", "", 11,
                 TextAnchor.MiddleCenter, new Color(0.7f, 0.85f, 0.95f, 1f));
             PositionRT(descTexts[index], new Vector2(0, currentY), new Vector2(0.5f, 0.5f),
-                new Vector2(cardWidth - 20f, 26f));
+                new Vector2(cardWidth - 28f, 34f));
 
             // --- Stats grid ---
-            currentY -= 28f;
+            currentY -= 44f;
             float statStartY = currentY;
-            float statLeftX = -70f;
-            float statRightX = 70f;
-            float statRowHeight = 24f;
-            float statLabelWidth = 50f;
-            float statValueWidth = 50f;
+            float statLeftX = -75f;
+            float statRightX = 75f;
+            float statRowHeight = 28f;
+            float statLabelWidth = 46f;
+            float statValueWidth = 46f;
 
             // HP / ATK
             MakeStatRow(cardObj.transform, index, "HP", ref hpTexts[index],
@@ -567,14 +566,14 @@ namespace TrashTD.UI
                 statRightX, statStartY, statLabelWidth, statValueWidth, statRowHeight);
 
             // DEF / RES
-            statStartY -= statRowHeight + 4f;
+            statStartY -= statRowHeight + 7f;
             MakeStatRow(cardObj.transform, index, "DEF", ref defTexts[index],
                 statLeftX, statStartY, statLabelWidth, statValueWidth, statRowHeight);
             MakeStatRow(cardObj.transform, index, "RES", ref resTexts[index],
                 statRightX, statStartY, statLabelWidth, statValueWidth, statRowHeight);
 
             // Block / Range
-            statStartY -= statRowHeight + 4f;
+            statStartY -= statRowHeight + 7f;
             MakeStatRow(cardObj.transform, index, "BLK", ref blockTexts[index],
                 statLeftX, statStartY, statLabelWidth, statValueWidth, statRowHeight);
             MakeStatRow(cardObj.transform, index, "RNG", ref rangeTexts[index],
@@ -585,15 +584,15 @@ namespace TrashTD.UI
             ref Text valueText, float centerX, float y, float labelW, float valueW, float h)
         {
             // Label
-            var labelText = MakeText(parent, $"StatLabel_{label}_{cardIndex}", label, 14,
+            var labelText = MakeText(parent, $"StatLabel_{label}_{cardIndex}", label, 11,
                 TextAnchor.MiddleRight, STAT_LABEL_COLOR);
-            PositionRT(labelText, new Vector2(centerX - valueW * 0.5f - 2f, y),
+            PositionRT(labelText, new Vector2(centerX - 28f, y),
                 new Vector2(0.5f, 0.5f), new Vector2(labelW, h));
 
             // Value
-            valueText = MakeText(parent, $"StatValue_{label}_{cardIndex}", "0", 16,
+            valueText = MakeText(parent, $"StatValue_{label}_{cardIndex}", "0", 13,
                 TextAnchor.MiddleLeft, STAT_VALUE_COLOR);
-            PositionRT(valueText, new Vector2(centerX + labelW * 0.5f + 2f, y),
+            PositionRT(valueText, new Vector2(centerX + 28f, y),
                 new Vector2(0.5f, 0.5f), new Vector2(valueW, h));
             valueText.fontStyle = FontStyle.Bold;
         }
@@ -609,7 +608,7 @@ namespace TrashTD.UI
             obj.transform.SetParent(parent, false);
             var text = obj.GetComponent<Text>();
             text.text = value;
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.font = UIFontHelper.GetPixelFont();
             text.fontSize = fontSize;
             text.alignment = alignment;
             text.color = color;
@@ -625,7 +624,7 @@ namespace TrashTD.UI
             obj.GetComponent<RectTransform>().sizeDelta = size;
             obj.GetComponent<Image>().color = bgColor;
 
-            var text = MakeText(obj.transform, "Label", label, 20, TextAnchor.MiddleCenter, Color.white);
+            var text = MakeText(obj.transform, "Label", label, 14, TextAnchor.MiddleCenter, Color.white);
             var textRect = text.GetComponent<RectTransform>();
             textRect.anchorMin = Vector2.zero;
             textRect.anchorMax = Vector2.one;
@@ -650,16 +649,16 @@ namespace TrashTD.UI
             if (opData == null) return "";
             if (opData.roleTags != null && opData.roleTags.Length > 0)
             {
-                return string.Join(" • ", opData.roleTags);
+                return string.Join(" / ", opData.roleTags);
             }
 
             return opData.operatorClass switch
             {
-                OperatorClass.Guard => "Melee Combatant • Physical DPS",
-                OperatorClass.Defender => "Heavy Defense • Blocks 3",
-                OperatorClass.Sniper => "Ranged Sniper • High Range",
-                OperatorClass.Caster => "Arts Damage • Magic Attacks",
-                OperatorClass.Medic => "Combat Support • Restores HP",
+                OperatorClass.Guard => "Melee Combatant / Physical DPS",
+                OperatorClass.Defender => "Heavy Defense / Blocks 3",
+                OperatorClass.Sniper => "Ranged Sniper / High Range",
+                OperatorClass.Caster => "Arts Damage / Magic Attacks",
+                OperatorClass.Medic => "Combat Support / Restores HP",
                 _ => "Operator"
             };
         }

@@ -1,5 +1,6 @@
 using UnityEngine;
 using TrashTD.Data;
+using TrashTD.UI;
 
 namespace TrashTD.Combat
 {
@@ -22,12 +23,12 @@ namespace TrashTD.Combat
 
             TextMesh text = numberObject.AddComponent<TextMesh>();
             text.text = healing ? $"+{amount}" : $"-{amount}";
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            text.fontSize = 48;
+            UIFontHelper.Apply(text, FontStyle.Normal);
+            text.fontSize = 24;
             text.characterSize = 0.075f;
             text.anchor = TextAnchor.MiddleCenter;
             text.alignment = TextAlignment.Center;
-            text.fontStyle = FontStyle.Bold;
+            text.fontStyle = FontStyle.Normal;
             text.color = healing
                 ? new Color(0.25f, 1f, 0.38f)
                 : damageType == DamageType.Arts ? new Color(0.72f, 0.38f, 1f) : Color.white;
