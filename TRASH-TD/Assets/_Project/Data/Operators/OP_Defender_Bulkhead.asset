@@ -33,5 +33,5 @@ MonoBehaviour:
   damageType: 0
   dpCost: 14
   redeployCooldown: 60
-  portrait: {fileID: 21300000, guid: a1111111111111111111111111111102, type: 3}
-  operatorPrefab: {fileID: 7272833774495134628, guid: 36de915a688a49a4a9a0b374672c4b02, type: 3}
+  portrait: {fileID: 21300000, guid: ba8cc7ecb1b2b28489600391e32fe930, type: 3}
+  operatorPrefab: {fileID: 7272833774495134628, guid: e3be5a76b71b4dc09d5f90a82354c2f9, type: 3}

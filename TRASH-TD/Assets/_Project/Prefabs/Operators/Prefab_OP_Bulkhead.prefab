@@ -11,8 +11,9 @@ GameObject:
   - component: {fileID: 8620061424798014964}
   - component: {fileID: 5297567779274609812}
   - component: {fileID: 3027996299502288798}
+  - component: {fileID: 3961324814967163724}
   m_Layer: 0
-  m_Name: Prefab_OP_Defender
+  m_Name: Prefab_OP_Bulkhead
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -106,3 +107,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.DefenderOperator
   data: {fileID: 0}
+--- !u!114 &3961324814967163724
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7272833774495134628}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c38a8a53d0bc4b25860d07d12988b40a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.BulkheadSpriteAnimation
+  frames:
+  - {fileID: 4414281254907323090, guid: fe8337c638fa85a44806c8f50af25317, type: 3}
+  - {fileID: 6587980602759215763, guid: fe8337c638fa85a44806c8f50af25317, type: 3}

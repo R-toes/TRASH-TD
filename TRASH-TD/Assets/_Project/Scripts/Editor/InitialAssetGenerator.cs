@@ -104,6 +104,21 @@ namespace TrashTD.Editor
             return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
+        private static Sprite LoadSprite(string filename, string spriteName)
+        {
+            string path = $"{ArtFolder}/{filename}";
+            Object[] assets = AssetDatabase.LoadAllAssetsAtPath(path);
+            for (int i = 0; i < assets.Length; i++)
+            {
+                if (assets[i] is Sprite sprite && sprite.name == spriteName)
+                {
+                    return sprite;
+                }
+            }
+
+            return null;
+        }
+
         private static GameObject CreateOrGetOperatorPrefab(string prefabName, Sprite sprite, OperatorClass opClass)
         {
             string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
@@ -159,8 +174,8 @@ namespace TrashTD.Editor
         private static void GenerateOperators()
         {
             // 1. Guard (Scrapper)
-            var guardSprite = LoadSprite("tex_op_guard.png");
-            var guardPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Guard", guardSprite, OperatorClass.Guard);
+            var guardSprite = LoadSprite("Scrapper-Sheet.png", "Scrapper-Sheet_0") ?? LoadSprite("tex_op_guard.png");
+            var guardPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Scrapper", guardSprite, OperatorClass.Guard);
             CreateOperator("OP_Guard_Scrapper", "Scrapper", OperatorClass.Guard, OperatorPosition.Melee, OperatorRarity.Star1,
                 hp: 140, atk: 65, def: 20, res: 0, blockCount: 2, range: 2, interval: 1.1f, dp: 10,
                 new[] { new Vector2Int(1, 0), new Vector2Int(2, 0) },
@@ -168,15 +183,15 @@ namespace TrashTD.Editor
 
             // 2. Defender (Bulkhead)
             var defenderSprite = LoadSprite("tex_op_defender.png");
-            var defenderPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Defender", defenderSprite, OperatorClass.Defender);
+            var defenderPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Bulkhead", defenderSprite, OperatorClass.Defender);
             CreateOperator("OP_Defender_Bulkhead", "Bulkhead", OperatorClass.Defender, OperatorPosition.Melee, OperatorRarity.Star1,
                 hp: 280, atk: 35, def: 45, res: 10, blockCount: 3, range: 1, interval: 1.4f, dp: 14,
                 new[] { new Vector2Int(0, 0), new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1) },
                 defenderSprite, defenderPrefab);
 
             // 3. Sniper (Deadeye)
-            var sniperSprite = LoadSprite("tex_op_sniper.png");
-            var sniperPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Sniper", sniperSprite, OperatorClass.Sniper);
+            var sniperSprite = LoadSprite("Deadeye-Sheet.png", "Deadeye-Sheet_0") ?? LoadSprite("tex_op_sniper.png");
+            var sniperPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Deadeye", sniperSprite, OperatorClass.Sniper);
             CreateOperator("OP_Sniper_Deadeye", "Deadeye", OperatorClass.Sniper, OperatorPosition.Ranged, OperatorRarity.Star1,
                 hp: 85, atk: 90, def: 8, res: 0, blockCount: 0, range: 3, interval: 1.0f, dp: 11,
                 new[]
@@ -188,8 +203,8 @@ namespace TrashTD.Editor
                 sniperSprite, sniperPrefab);
 
             // 4. Caster (Pyrolite)
-            var casterSprite = LoadSprite("tex_op_caster.png");
-            var casterPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Caster", casterSprite, OperatorClass.Caster);
+            var casterSprite = LoadSprite("Pyrolite-Sheet.png", "Pyrolite-Sheet_0") ?? LoadSprite("tex_op_caster.png");
+            var casterPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Pyrolite", casterSprite, OperatorClass.Caster);
             var caster = CreateOperator("OP_Caster_Pyrolite", "Pyrolite", OperatorClass.Caster, OperatorPosition.Ranged, OperatorRarity.Star1,
                 hp: 95, atk: 80, def: 10, res: 20, blockCount: 0, range: 2, interval: 1.6f, dp: 15,
                 new[]
@@ -203,8 +218,8 @@ namespace TrashTD.Editor
             EditorUtility.SetDirty(caster);
 
             // 5. Medic (NurseBot)
-            var medicSprite = LoadSprite("tex_op_medic.png");
-            var medicPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Medic", medicSprite, OperatorClass.Medic);
+            var medicSprite = LoadSprite("NurseBot-Sheet.png", "NurseBot-Sheet_0") ?? LoadSprite("tex_op_medic.png");
+            var medicPrefab = CreateOrGetOperatorPrefab("Prefab_OP_NurseBot", medicSprite, OperatorClass.Medic);
             CreateOperator("OP_Medic_NurseBot", "NurseBot", OperatorClass.Medic, OperatorPosition.Ranged, OperatorRarity.Star1,
                 hp: 90, atk: 55, def: 12, res: 15, blockCount: 0, range: 2, interval: 1.8f, dp: 12,
                 new[]
