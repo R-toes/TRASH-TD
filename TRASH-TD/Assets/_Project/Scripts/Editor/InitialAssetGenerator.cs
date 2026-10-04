@@ -323,8 +323,9 @@ namespace TrashTD.Editor
 
             stage.stageId = "STAGE_01";
             stage.mapName = "Landfill Outskirts";
-            stage.gridWidth = 8;
+            stage.gridWidth = 12;
             stage.gridHeight = 6;
+            stage.mapVisualSprite = null;
             stage.squadSizeLimit = 8;
 
             // Lives: 3 lives per stage
@@ -334,22 +335,22 @@ namespace TrashTD.Editor
 
             string[] layoutRows =
             {
-                "HHHHHHHH",
-                "SLLHLLLH",
-                "HHLHLHLH",
-                "HHLHLHLE",
-                "HHLLLHHH",
-                "HHHHHHHH"
+                "HHHHHHHHHHHH",
+                "SLLHLLLHHHHH",
+                "HHLHLHLHLLLH",
+                "HHLHLHLLLHLE",
+                "HHLLLHHHHHHH",
+                "HHHHHHHHHHHH"
             };
-            stage.tileLayout = new TileType[8 * 6];
+            stage.tileLayout = new TileType[12 * 6];
             var spawnPoints = new List<Vector2Int>();
             var exitPoints = new List<Vector2Int>();
             for (int row = 0; row < layoutRows.Length; row++)
             {
-                for (int x = 0; x < 8; x++)
+                for (int x = 0; x < 12; x++)
                 {
                     int y = layoutRows.Length - 1 - row;
-                    int index = y * 8 + x;
+                    int index = y * 12 + x;
                     switch (layoutRows[row][x])
                     {
                         case 'H':

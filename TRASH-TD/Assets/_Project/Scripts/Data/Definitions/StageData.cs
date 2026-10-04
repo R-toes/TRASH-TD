@@ -68,6 +68,9 @@ namespace TrashTD.Data
         [Tooltip("Grid layout — flattened row-major array of TileType. Length must equal gridWidth * gridHeight.")]
         public TileType[] tileLayout;
 
+        [Tooltip("Optional full-map artwork displayed behind the logical grid")]
+        public Sprite mapVisualSprite;
+
         [Tooltip("Spawn point positions on the grid (enemy entry points)")]
         public Vector2Int[] spawnPoints;
 

@@ -119,6 +119,28 @@ namespace TrashTD.Core.GameLoop
             GameObject gridContainer = new GameObject("VisualGrid");
             gridContainer.transform.SetParent(transform);
 
+            Sprite mapSprite = stageData.mapVisualSprite;
+            if (mapSprite != null)
+            {
+                GameObject mapObject = new GameObject("MapArtwork");
+                mapObject.transform.SetParent(gridContainer.transform);
+
+                var mapRenderer = mapObject.AddComponent<SpriteRenderer>();
+                mapRenderer.sprite = mapSprite;
+                mapRenderer.sortingOrder = 0;
+
+                float cellSize = gridManager.CellSize;
+                Vector3 gridOrigin = gridManager.GridToWorldPosition(0, 0) - new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f);
+                Vector3 mapScale = new Vector3(
+                    stageData.gridWidth * cellSize / mapSprite.bounds.size.x,
+                    stageData.gridHeight * cellSize / mapSprite.bounds.size.y,
+                    1f);
+                mapObject.transform.localScale = mapScale;
+                mapObject.transform.position = gridOrigin + Vector3.Scale(
+                    new Vector3(mapSprite.pivot.x / mapSprite.pixelsPerUnit, mapSprite.pivot.y / mapSprite.pixelsPerUnit, 0f),
+                    mapScale);
+            }
+
             for (int y = 0; y < stageData.gridHeight; y++)
             {
                 for (int x = 0; x < stageData.gridWidth; x++)
@@ -130,9 +152,12 @@ namespace TrashTD.Core.GameLoop
                     tileObj.transform.position = worldPos;
                     tileObj.transform.SetParent(gridContainer.transform);
 
-                    var sr = tileObj.AddComponent<SpriteRenderer>();
-                    sr.sprite = GetSpriteForTile(type);
-                    sr.sortingOrder = 0;
+                    if (mapSprite == null)
+                    {
+                        var sr = tileObj.AddComponent<SpriteRenderer>();
+                        sr.sprite = GetSpriteForTile(type);
+                        sr.sortingOrder = 0;
+                    }
 
                     // Add box collider for click-to-deploy detection
                     var col = tileObj.AddComponent<BoxCollider2D>();
@@ -161,12 +186,10 @@ namespace TrashTD.Core.GameLoop
             if (cam == null) return;
 
             float centerX = (stageData.gridWidth * gridManager.CellSize) * 0.5f;
-            float centerY = (stageData.gridHeight * gridManager.CellSize) * 0.5f;
-            cam.transform.position = new Vector3(centerX, centerY, -10f);
+            cam.transform.position = new Vector3(centerX, 2.75f, -10f);
 
-            // Adjust orthographic size so the grid fits nicely
             cam.orthographic = true;
-            cam.orthographicSize = Mathf.Max(stageData.gridHeight * 0.6f, 5f);
+            cam.orthographicSize = 4.10f;
         }
 
         private void OnDestroy()
