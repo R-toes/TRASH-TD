@@ -64,6 +64,7 @@ namespace TrashTD.Editor
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Scrapper.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Defender_Bulkhead.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Sniper_Deadeye.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Sniper_Proxishot.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Pyrolite.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_NurseBot.asset")
             };

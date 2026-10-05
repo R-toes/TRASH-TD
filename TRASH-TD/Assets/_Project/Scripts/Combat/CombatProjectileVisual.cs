@@ -36,6 +36,33 @@ namespace TrashTD.Combat
             visual.speed = speed;
         }
 
+        public static void FireShotgunSpread(
+            Vector3 start,
+            Vector3 direction,
+            float range,
+            float minSpreadOffset,
+            float maxSpreadOffset,
+            Color color,
+            float speed,
+            float size,
+            float trailWidth,
+            int pelletCount)
+        {
+            if (pelletCount <= 0 || range <= 0f || direction.sqrMagnitude <= Mathf.Epsilon) return;
+
+            direction.Normalize();
+            Vector3 perpendicular = Vector3.Cross(direction, Vector3.forward).normalized;
+            for (int i = 0; i < pelletCount; i++)
+            {
+                float normalizedPosition = pelletCount == 1
+                    ? 0.5f
+                    : i / (float)(pelletCount - 1);
+                float lateralOffset = Mathf.Lerp(minSpreadOffset, maxSpreadOffset, normalizedPosition);
+                Vector3 pelletTarget = start + direction * range + perpendicular * lateralOffset;
+                Fire(start, pelletTarget, color, speed, size, trailWidth);
+            }
+        }
+
         private void Update()
         {
             Vector3 toTarget = targetPosition - transform.position;
