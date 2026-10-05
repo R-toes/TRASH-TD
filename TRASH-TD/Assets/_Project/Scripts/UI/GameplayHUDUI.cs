@@ -54,6 +54,7 @@ namespace TrashTD.UI
         private Text squadCountText;
         private GameObject selectedOperatorLabelRoot;
         private Text selectedOperatorNameText;
+        private Text selectedOperatorSkillDescriptionText;
         private Text selectedOperatorHealthText;
         private Text selectedOperatorRarityText;
         private Image selectedOperatorHealthFill;
@@ -273,8 +274,27 @@ namespace TrashTD.UI
             labelBorder.effectDistance = new Vector2(1.5f, -1.5f);
 
             selectedOperatorNameText = CreateText(selectedOperatorLabelRoot.transform, "Name", string.Empty, 16, TextAnchor.MiddleLeft);
-            SetPosition(selectedOperatorNameText.GetComponent<RectTransform>(), new Vector2(10f, -5f), new Vector2(0f, 1f), new Vector2(145f, 22f), new Vector2(0f, 1f));
+            SetPosition(selectedOperatorNameText.GetComponent<RectTransform>(), new Vector2(10f, -5f), new Vector2(0f, 1f), new Vector2(190f, 22f), new Vector2(0f, 1f));
             selectedOperatorNameText.raycastTarget = false;
+
+            selectedOperatorSkillDescriptionText = CreateText(
+                selectedOperatorLabelRoot.transform,
+                "SkillDescription",
+                string.Empty,
+                13,
+                TextAnchor.UpperLeft);
+            selectedOperatorSkillDescriptionText.fontStyle = FontStyle.Normal;
+            selectedOperatorSkillDescriptionText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            selectedOperatorSkillDescriptionText.verticalOverflow = VerticalWrapMode.Truncate;
+            selectedOperatorSkillDescriptionText.color = new Color(0.68f, 0.88f, 1f, 1f);
+            selectedOperatorSkillDescriptionText.raycastTarget = false;
+            SetPosition(
+                selectedOperatorSkillDescriptionText.GetComponent<RectTransform>(),
+                new Vector2(10f, -48f),
+                new Vector2(0f, 1f),
+                new Vector2(280f, 58f),
+                new Vector2(0f, 1f));
+            selectedOperatorSkillDescriptionText.gameObject.SetActive(false);
 
             selectedOperatorRarityText = CreateText(selectedOperatorLabelRoot.transform, "Rarity", string.Empty, 17, TextAnchor.MiddleRight);
             selectedOperatorRarityText.color = new Color(1f, 0.78f, 0.2f, 1f);
@@ -309,7 +329,7 @@ namespace TrashTD.UI
             selectedOperatorHealthFillRect.offsetMax = Vector2.zero;
 
             retreatOperatorButton = CreateButton(root, "RetreatOperatorButton", "↶", new Vector2(44f, 44f));
-            SetPosition(retreatOperatorButton.GetComponent<RectTransform>(), new Vector2(152f, 0f), new Vector2(0.5f, 0.5f));
+            SetPosition(retreatOperatorButton.GetComponent<RectTransform>(), new Vector2(185f, 0f), new Vector2(0.5f, 0.5f));
             retreatOperatorButton.GetComponent<Image>().color = new Color(0.7f, 0.2f, 0.18f, 1f);
             SetPlacementButtonStyle(retreatOperatorButton, new Color(0.7f, 0.2f, 0.18f, 1f), 28);
             retreatOperatorButton.onClick.AddListener(RetreatSelectedOperator);
@@ -438,7 +458,7 @@ namespace TrashTD.UI
                 selectedOperatorLabelRoot.GetComponent<RectTransform>().anchoredPosition = localPosition;
                 selectedOperatorLabelRoot.SetActive(true);
                 RectTransform retreatRect = retreatOperatorButton.GetComponent<RectTransform>();
-                retreatRect.anchoredPosition = localPosition + new Vector2(152f, 0f);
+                retreatRect.anchoredPosition = localPosition + new Vector2(185f, 0f);
                 retreatOperatorButton.gameObject.SetActive(true);
 
                 if (!selectedLabelShown)
@@ -451,10 +471,24 @@ namespace TrashTD.UI
             }
         }
 
-        public void SetSelectedOperatorName(string operatorName, int currentHP, int maxHP, OperatorRarity rarity, OperatorRarity baseRarity, Vector3 worldPosition)
+        public void SetSelectedOperatorName(
+            string operatorName,
+            int currentHP,
+            int maxHP,
+            OperatorRarity rarity,
+            OperatorRarity baseRarity,
+            string skillDescription,
+            Vector3 worldPosition)
         {
             SetSelectedOperatorName(operatorName, worldPosition);
             if (string.IsNullOrEmpty(operatorName)) return;
+
+            bool hasSkillDescription = !string.IsNullOrWhiteSpace(skillDescription);
+            selectedOperatorLabelRoot.GetComponent<RectTransform>().sizeDelta = hasSkillDescription
+                ? new Vector2(300f, 156f)
+                : new Vector2(250f, 84f);
+            selectedOperatorSkillDescriptionText.text = skillDescription;
+            selectedOperatorSkillDescriptionText.gameObject.SetActive(hasSkillDescription);
 
             int upgradeLevels = Mathf.Clamp((int)rarity - (int)baseRarity, 0, 2);
             selectedOperatorUpgradeBadgeGraphic.SetArrowCount(upgradeLevels);
@@ -507,6 +541,7 @@ namespace TrashTD.UI
                 selectedOperator.MaxHP,
                 selectedOperator.CurrentRarity,
                 selectedOperator.Data.baseRarity,
+                selectedOperator.Data.skillDescription,
                 labelPosition);
         }
 

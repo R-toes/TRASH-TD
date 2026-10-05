@@ -242,7 +242,7 @@ namespace TrashTD.UI
             if (returnToStageSelector)
             {
                 returnToStageSelector = false;
-                ShowStageSelectionInternal(true);
+                ShowStageSelectionInternal();
             }
         }
 
@@ -523,17 +523,18 @@ namespace TrashTD.UI
 
         public void ShowStageSelection()
         {
-            ShowStageSelectionInternal(false);
+            ShowStageSelectionInternal();
         }
 
-        private void ShowStageSelectionInternal(bool instant)
+        private void ShowStageSelectionInternal()
         {
+            CardDraftOverlayUI.HideAllForMenuTransition();
             stageSelectionOpen = true;
             detailsOpen = false;
             SetBackgroundInteractable(true);
 
-            SetPanelVisible(mainMenuPanel, false, instant);
-            SetPanelVisible(stageSelectionPanel, true, instant);
+            SetPanelVisible(mainMenuPanel, false, true);
+            SetPanelVisible(stageSelectionPanel, true, true);
             SetPanelVisible(stageDetailsPanel, false, true, stageDetailsModal);
 
             PlayEntrance(stageEntrance, ref stageEntranceRoutine);

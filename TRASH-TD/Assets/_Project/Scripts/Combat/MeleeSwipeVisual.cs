@@ -9,14 +9,26 @@ namespace TrashTD.Combat
 
         private LineRenderer primarySlash;
         private LineRenderer secondarySlash;
+        private LineRenderer stabLine;
+        private LineRenderer stabGlow;
         private Color slashColor;
         private float elapsed;
+        private Vector3 stabStart;
+        private Vector3 stabEnd;
+        private bool isStab;
 
         public static void Play(Vector3 attackerPosition, Vector3 targetPosition, Color color)
         {
             GameObject visualObject = new GameObject("MeleeSwipeVisual");
             MeleeSwipeVisual visual = visualObject.AddComponent<MeleeSwipeVisual>();
             visual.Initialize(attackerPosition, targetPosition, color);
+        }
+
+        public static void PlayStab(Vector3 attackerPosition, Vector3 targetPosition, Color color)
+        {
+            GameObject visualObject = new GameObject("MeleeStabVisual");
+            MeleeSwipeVisual visual = visualObject.AddComponent<MeleeSwipeVisual>();
+            visual.InitializeStab(attackerPosition, targetPosition, color);
         }
 
         private void Initialize(Vector3 attackerPosition, Vector3 targetPosition, Color color)
@@ -32,6 +44,46 @@ namespace TrashTD.Combat
             secondarySlash = CreateSlash("SecondarySlash", 0.045f);
             SetSlashPoints(primarySlash, center, perpendicular, forward, 0f);
             SetSlashPoints(secondarySlash, center, perpendicular, forward, 0.045f);
+        }
+
+        private void InitializeStab(Vector3 attackerPosition, Vector3 targetPosition, Color color)
+        {
+            isStab = true;
+            slashColor = color;
+            stabStart = attackerPosition;
+            stabEnd = attackerPosition + (targetPosition - attackerPosition) * 1.2f;
+            stabStart.z = targetPosition.z - 0.1f;
+            stabEnd.z = targetPosition.z - 0.1f;
+
+            GameObject glowObject = new GameObject("StabGlow");
+            glowObject.transform.SetParent(transform, false);
+            stabGlow = glowObject.AddComponent<LineRenderer>();
+            stabGlow.useWorldSpace = true;
+            stabGlow.positionCount = 2;
+            stabGlow.startWidth = 0.85f;
+            stabGlow.endWidth = 0.32f;
+            stabGlow.numCapVertices = 3;
+            stabGlow.sortingOrder = 79;
+            stabGlow.sharedMaterial = GetSharedMaterial();
+            stabGlow.startColor = new Color(0.85f, 0.015f, 0.025f, 0.85f);
+            stabGlow.endColor = new Color(1f, 0.12f, 0.08f, 0.55f);
+            stabGlow.SetPosition(0, stabStart);
+            stabGlow.SetPosition(1, stabStart);
+
+            GameObject lineObject = new GameObject("StabLine");
+            lineObject.transform.SetParent(transform, false);
+            stabLine = lineObject.AddComponent<LineRenderer>();
+            stabLine.useWorldSpace = true;
+            stabLine.positionCount = 2;
+            stabLine.startWidth = 0.48f;
+            stabLine.endWidth = 0.16f;
+            stabLine.numCapVertices = 3;
+            stabLine.sortingOrder = 80;
+            stabLine.sharedMaterial = GetSharedMaterial();
+            stabLine.startColor = color;
+            stabLine.endColor = new Color(0.48f, 0.035f, 0.045f, 1f);
+            stabLine.SetPosition(0, stabStart);
+            stabLine.SetPosition(1, stabStart);
         }
 
         private LineRenderer CreateSlash(string objectName, float width)
@@ -66,6 +118,25 @@ namespace TrashTD.Combat
         {
             elapsed += Time.deltaTime;
             float alpha = 1f - Mathf.Clamp01(elapsed / Lifetime);
+            if (isStab)
+            {
+                Vector3 tip = Vector3.Lerp(stabStart, stabEnd, Mathf.Clamp01(elapsed / (Lifetime * 0.65f)));
+                stabLine.SetPosition(1, tip);
+                stabGlow.SetPosition(1, tip);
+                Color startColor = slashColor;
+                startColor.a = alpha;
+                Color endColor = new Color(0.48f, 0.035f, 0.045f, 1f);
+                endColor.a = alpha;
+                stabLine.startColor = startColor;
+                stabLine.endColor = endColor;
+                Color glowStart = new Color(0.85f, 0.015f, 0.025f, 0.85f * alpha);
+                Color glowEnd = new Color(1f, 0.12f, 0.08f, 0.55f * alpha);
+                stabGlow.startColor = glowStart;
+                stabGlow.endColor = glowEnd;
+                if (elapsed >= Lifetime) Destroy(gameObject);
+                return;
+            }
+
             Color primaryColor = slashColor;
             primaryColor.a = alpha;
             Color secondaryColor = Color.Lerp(slashColor, Color.white, 0.5f);

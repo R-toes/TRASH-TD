@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using TrashTD.Core.GameLoop;
 using TrashTD.Data;
 using TrashTD.Systems;
@@ -106,6 +107,18 @@ namespace TrashTD.UI
         private Coroutine hideRoutine;
         private AudioSource sfxSource;
 
+        public static void HideAllForMenuTransition()
+        {
+            CardDraftOverlayUI[] overlays = FindObjectsByType<CardDraftOverlayUI>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+
+            foreach (CardDraftOverlayUI overlay in overlays)
+            {
+                overlay.HideDraftOverlayImmediately();
+            }
+        }
+
         // ============================
         // Lifecycle
         // ============================
@@ -124,6 +137,8 @@ namespace TrashTD.UI
             {
                 draftSystem.OnCardsOffered += HandleCardsOffered;
             }
+
+            SceneManager.activeSceneChanged += HandleActiveSceneChanged;
         }
 
         private void Start()
@@ -139,10 +154,6 @@ namespace TrashTD.UI
                 {
                     ShowDraftOverlay();
                 }
-            }
-            else if (draftSystem != null && draftSystem.CurrentOfferedCards.Count > 0)
-            {
-                HandleCardsOffered(draftSystem.CurrentOfferedCards);
             }
         }
 
@@ -172,6 +183,8 @@ namespace TrashTD.UI
             {
                 draftSystem.OnCardsOffered -= HandleCardsOffered;
             }
+
+            SceneManager.activeSceneChanged -= HandleActiveSceneChanged;
         }
 
         private void HandleKeyboardShortcuts()
@@ -209,9 +222,13 @@ namespace TrashTD.UI
 
         private void HandlePhaseChanged(StagePhase phase)
         {
-            if (phase == StagePhase.CardPick)
+            if (IsActiveGameplayCardPick())
             {
                 ShowDraftOverlay();
+            }
+            else if (gameManager == null || SceneManager.GetActiveScene() != gameObject.scene)
+            {
+                HideDraftOverlayImmediately();
             }
             else
             {
@@ -219,8 +236,22 @@ namespace TrashTD.UI
             }
         }
 
+        private void HandleActiveSceneChanged(Scene previousScene, Scene activeScene)
+        {
+            if (activeScene != gameObject.scene)
+            {
+                HideDraftOverlayImmediately();
+            }
+        }
+
         private void ShowDraftOverlay()
         {
+            if (!IsActiveGameplayCardPick())
+            {
+                HideDraftOverlayImmediately();
+                return;
+            }
+
             selectedCardIndex = -1;
 
             if (hideRoutine != null)
@@ -245,6 +276,15 @@ namespace TrashTD.UI
             UpdateWaveInfo();
         }
 
+        private bool IsActiveGameplayCardPick()
+        {
+            return gameManager != null
+                && gameManager.CurrentState == GamePlayState.Playing
+                && gameManager.CurrentPhase == StagePhase.CardPick
+                && SceneManager.GetActiveScene() == gameObject.scene
+                && gameManager.gameObject.scene == gameObject.scene;
+        }
+
         private void HideDraftOverlay()
         {
             if (overlayRoot == null || !overlayRoot.activeSelf) return;
@@ -259,6 +299,18 @@ namespace TrashTD.UI
 
             if (hideRoutine != null) StopCoroutine(hideRoutine);
             hideRoutine = StartCoroutine(HideRoutine());
+        }
+
+        private void HideDraftOverlayImmediately()
+        {
+            overlayVisible = false;
+            if (hideRoutine != null)
+            {
+                StopCoroutine(hideRoutine);
+                hideRoutine = null;
+            }
+
+            if (overlayRoot != null) overlayRoot.SetActive(false);
         }
 
         // ============================

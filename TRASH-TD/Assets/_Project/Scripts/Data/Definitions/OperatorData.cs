@@ -55,6 +55,39 @@ namespace TrashTD.Data
         [Tooltip("Type of damage dealt by this operator's basic attack")]
         public DamageType damageType = DamageType.Physical;
 
+        [Header("Death Skill")]
+        [Tooltip("Draw two random cards from the operator pool when this operator dies")]
+        public bool drawTwoCardsOnDeath;
+
+        [Header("Isolation")]
+        [Tooltip("Enable an attack bonus when no other deployed operator is in an adjacent grid cell")]
+        public bool bonusWhenIsolated;
+
+        [Tooltip("Attack multiplier while no other operator is adjacent")]
+        [Min(1f)]
+        public float isolatedAttackMultiplier = 1.5f;
+
+        [Tooltip("Short mechanic description shown when inspecting the operator")]
+        [TextArea(2, 3)]
+        public string skillDescription;
+
+        [Header("Chill")]
+        [Tooltip("Chill applied per hit. Set to 0 for operators without chill attacks.")]
+        public float chillPerHit;
+
+        [Tooltip("Movement speed multiplier while chilled")]
+        [Range(0f, 1f)]
+        public float chillSlowMultiplier = 0.65f;
+
+        [Tooltip("Duration of the movement slow in seconds")]
+        public float chillSlowDuration = 2.5f;
+
+        [Tooltip("Accumulated chill required to freeze the target")]
+        public float chillFreezeThreshold = 100f;
+
+        [Tooltip("Freeze duration in seconds")]
+        public float chillFreezeDuration = 1.5f;
+
         [Header("Deployment")]
         [Tooltip("Deployment Point cost to place this operator")]
         public int dpCost = 10;

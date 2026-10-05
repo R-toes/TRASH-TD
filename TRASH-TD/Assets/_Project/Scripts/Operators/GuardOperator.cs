@@ -13,12 +13,146 @@ namespace TrashTD.Operators
     /// </summary>
     public class GuardOperator : OperatorBase
     {
+        private static Material isolationIndicatorMaterial;
+        private LineRenderer isolationIndicator;
+
+        protected override void Update()
+        {
+            base.Update();
+            UpdateIsolationIndicator();
+        }
+
+        protected override void OnDeployed()
+        {
+            base.OnDeployed();
+            CreateIsolationIndicator();
+        }
+
+        protected override void OnRetreated()
+        {
+            if (isolationIndicator != null)
+            {
+                isolationIndicator.gameObject.SetActive(false);
+            }
+            base.OnRetreated();
+        }
+
         public override void Attack(EnemyBase target)
         {
             if (target == null || !isDeployed) return;
 
+            if (data != null && data.bonusWhenIsolated)
+            {
+                bool isIsolated = !HasAdjacentOperator();
+                MeleeSwipeVisual.PlayStab(
+                    transform.position,
+                    target.transform.position,
+                    isIsolated
+                        ? new Color(0.12f, 0.008f, 0.015f, 1f)
+                        : new Color(0.22f, 0.015f, 0.025f, 1f));
+
+                if (isIsolated)
+                {
+                    int attackPower = Mathf.RoundToInt(currentATK * Mathf.Max(1f, data.isolatedAttackMultiplier));
+                    int damage = DamageCalculator.CalculateDamage(attackPower, GetTargetMitigation(target));
+                    target.TakeDamage(damage, data.damageType);
+                }
+                else
+                {
+                    base.Attack(target);
+                }
+
+                return;
+            }
+
             MeleeSwipeVisual.Play(transform.position, target.transform.position, new Color(1f, 0.78f, 0.3f, 1f));
             base.Attack(target);
+        }
+
+        private bool HasAdjacentOperator()
+        {
+            if (OperatorManager.Instance == null || deployedCell == null) return false;
+
+            Vector2Int ownPosition = deployedCell.GridPosition;
+            var deployedOperators = OperatorManager.Instance.DeployedOperators;
+            for (int i = 0; i < deployedOperators.Count; i++)
+            {
+                OperatorBase other = deployedOperators[i];
+                if (other == null || other == this || !other.IsDeployed || other.DeployedCell == null)
+                    continue;
+
+                Vector2Int offset = other.DeployedCell.GridPosition - ownPosition;
+                if (Mathf.Abs(offset.x) <= 2 && Mathf.Abs(offset.y) <= 2 &&
+                    (offset.x != 0 || offset.y != 0))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void CreateIsolationIndicator()
+        {
+            if (data == null || !data.bonusWhenIsolated || isolationIndicator != null) return;
+
+            var indicatorObject = new GameObject("IsolationBuffIndicator");
+            indicatorObject.transform.SetParent(transform, false);
+            indicatorObject.transform.localPosition = new Vector3(0f, 0f, 0.05f);
+
+            isolationIndicator = indicatorObject.AddComponent<LineRenderer>();
+            isolationIndicator.useWorldSpace = false;
+            isolationIndicator.loop = true;
+            isolationIndicator.positionCount = 17;
+            isolationIndicator.startWidth = 0.02f;
+            isolationIndicator.endWidth = 0.02f;
+            isolationIndicator.sortingOrder = 4;
+            isolationIndicator.sharedMaterial = GetIsolationIndicatorMaterial();
+
+            const float outerRadius = 0.46f;
+            const float innerRadius = 0.24f;
+            for (int i = 0; i < isolationIndicator.positionCount; i++)
+            {
+                float angle = i / 16f * Mathf.PI * 2f;
+                float radius = i % 2 == 0 ? outerRadius : innerRadius;
+                isolationIndicator.SetPosition(i, new Vector3(
+                    Mathf.Cos(angle) * radius,
+                    Mathf.Sin(angle) * radius,
+                    0f));
+            }
+
+            isolationIndicator.gameObject.SetActive(false);
+        }
+
+        private void UpdateIsolationIndicator()
+        {
+            if (data == null || !data.bonusWhenIsolated || !isDeployed) return;
+            if (isolationIndicator == null) CreateIsolationIndicator();
+            if (isolationIndicator == null) return;
+
+            bool buffActive = !HasAdjacentOperator();
+            if (isolationIndicator.gameObject.activeSelf != buffActive)
+            {
+                isolationIndicator.gameObject.SetActive(buffActive);
+            }
+
+            if (buffActive)
+            {
+                float pulse = 0.78f + Mathf.Sin(Time.time * 5f) * 0.18f;
+                Color indicatorColor = new Color(1f, 0.08f, 0.06f, pulse);
+                isolationIndicator.startColor = indicatorColor;
+                isolationIndicator.endColor = indicatorColor;
+            }
+        }
+
+        private static Material GetIsolationIndicatorMaterial()
+        {
+            if (isolationIndicatorMaterial != null) return isolationIndicatorMaterial;
+
+            Shader shader = Shader.Find("Sprites/Default");
+            if (shader == null) shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+            isolationIndicatorMaterial = new Material(shader);
+            return isolationIndicatorMaterial;
         }
 
         protected override EnemyBase FindTarget()

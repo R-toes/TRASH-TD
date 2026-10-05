@@ -39,6 +39,15 @@ namespace TrashTD.Enemies
         protected bool isDead;
         protected float attackTimer;
 
+        private float chillAmount;
+        private float slowTimer;
+        private float freezeTimer;
+        private float speedBeforeChill;
+        private float chillSlowMultiplier = 1f;
+        private bool isFrozen;
+        private SpriteRenderer[] chillRenderers;
+        private Color[] originalRendererColors;
+
         // --- Properties ---
         public EnemyData Data => data;
         public int CurrentHP => currentHP;
@@ -46,8 +55,11 @@ namespace TrashTD.Enemies
         public int CurrentATK => currentATK;
         public int CurrentDEF => currentDEF;
         public int CurrentRES => currentRES;
+        public float CurrentMoveSpeed => currentMoveSpeed;
         public bool IsBlocked => isBlocked;
         public bool IsDead => isDead;
+        public bool IsFrozen => isFrozen;
+        public float ChillAmount => chillAmount;
         public EnemyMovementType MovementType => data.movementType;
         public float DistanceToGoal
         {
@@ -85,6 +97,14 @@ namespace TrashTD.Enemies
             currentDEF = data.GetScaledDEF(difficultyLevel);
             currentRES = data.baseRES;
             currentMoveSpeed = data.moveSpeed;
+            chillAmount = 0f;
+            slowTimer = 0f;
+            freezeTimer = 0f;
+            speedBeforeChill = currentMoveSpeed;
+            chillSlowMultiplier = 1f;
+            isFrozen = false;
+            CacheChillRenderers();
+            UpdateChillVisual();
 
             isBlocked = false;
             blockingOperator = null;
@@ -114,6 +134,9 @@ namespace TrashTD.Enemies
         protected virtual void Update()
         {
             if (isDead) return;
+
+            UpdateChillStatus(Time.deltaTime);
+            if (isFrozen) return;
 
             if (isBlocked)
             {
@@ -266,6 +289,103 @@ namespace TrashTD.Enemies
         public void ResetSpeed()
         {
             currentMoveSpeed = data.moveSpeed;
+        }
+
+        /// <summary>
+        /// Applies a timed movement slow and accumulates chill toward a temporary freeze.
+        /// </summary>
+        public void ApplyChill(
+            float amount,
+            float slowMultiplier,
+            float slowDuration,
+            float freezeThreshold,
+            float freezeDuration)
+        {
+            if (isDead || data == null || amount <= 0f || slowDuration <= 0f || freezeThreshold <= 0f)
+                return;
+
+            if (slowTimer <= 0f && !isFrozen)
+            {
+                speedBeforeChill = currentMoveSpeed;
+            }
+
+            chillSlowMultiplier = Mathf.Min(chillSlowMultiplier, Mathf.Clamp01(slowMultiplier));
+            slowTimer = Mathf.Max(slowTimer, slowDuration);
+            if (!isFrozen)
+            {
+                currentMoveSpeed = speedBeforeChill * chillSlowMultiplier;
+            }
+
+            chillAmount += amount;
+            if (chillAmount >= freezeThreshold && freezeDuration > 0f)
+            {
+                chillAmount = 0f;
+                isFrozen = true;
+                freezeTimer = Mathf.Max(freezeTimer, freezeDuration);
+                currentMoveSpeed = 0f;
+            }
+
+            UpdateChillVisual();
+        }
+
+        protected void UpdateChillStatus(float deltaTime)
+        {
+            bool wasSlowed = slowTimer > 0f;
+            bool wasFrozen = isFrozen;
+
+            if (slowTimer > 0f)
+            {
+                slowTimer = Mathf.Max(0f, slowTimer - deltaTime);
+            }
+
+            if (freezeTimer > 0f)
+            {
+                freezeTimer = Mathf.Max(0f, freezeTimer - deltaTime);
+                if (freezeTimer <= 0f)
+                {
+                    isFrozen = false;
+                }
+            }
+
+            if (!isFrozen)
+            {
+                if (slowTimer > 0f)
+                {
+                    currentMoveSpeed = speedBeforeChill * chillSlowMultiplier;
+                }
+                else if (wasSlowed || wasFrozen)
+                {
+                    currentMoveSpeed = speedBeforeChill;
+                    chillSlowMultiplier = 1f;
+                }
+            }
+
+            UpdateChillVisual();
+        }
+
+        private void CacheChillRenderers()
+        {
+            chillRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+            originalRendererColors = new Color[chillRenderers.Length];
+            for (int i = 0; i < chillRenderers.Length; i++)
+            {
+                originalRendererColors[i] = chillRenderers[i].color;
+            }
+        }
+
+        private void UpdateChillVisual()
+        {
+            if (chillRenderers == null || originalRendererColors == null) return;
+
+            float tintAmount = isFrozen ? 0.95f : slowTimer > 0f ? 0.8f : 0f;
+            for (int i = 0; i < chillRenderers.Length; i++)
+            {
+                if (chillRenderers[i] == null) continue;
+
+                Color original = originalRendererColors[i];
+                Color chilled = new Color(0.1f, 0.6f, 1f, original.a);
+                chillRenderers[i].color = Color.Lerp(original, chilled, tintAmount);
+            }
         }
     }
 }

@@ -247,6 +247,7 @@ namespace TrashTD.Operators
         protected virtual void Die()
         {
             Retreat();
+            TrashTD.Systems.OperatorManager.Instance?.HandleOperatorDeath(this);
             OnDeath();
             // TODO: Death animation, respawn cooldown timer
             Destroy(gameObject);
@@ -286,6 +287,19 @@ namespace TrashTD.Operators
         protected virtual void OnRetreated() { }
 
         /// <summary>Called when the operator dies.</summary>
-        protected virtual void OnDeath() { }
+        protected virtual void OnDeath()
+        {
+            if (data == null || !data.drawTwoCardsOnDeath) return;
+
+            TrashTD.Systems.CardDraftSystem draftSystem =
+                FindFirstObjectByType<TrashTD.Systems.CardDraftSystem>();
+            if (draftSystem == null)
+            {
+                Debug.LogError($"{data.operatorName} died, but no CardDraftSystem is active to resolve its death skill.");
+                return;
+            }
+
+            draftSystem.DrawRandomCardsToDeck(2);
+        }
     }
 }

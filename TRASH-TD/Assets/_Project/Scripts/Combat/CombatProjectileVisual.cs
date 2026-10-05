@@ -9,8 +9,19 @@ namespace TrashTD.Combat
 
         private Vector3 targetPosition;
         private float speed;
+        private SpriteRenderer spriteRenderer;
+        private bool burstOnImpact;
+        private bool isImpacting;
+        private float impactTimer;
 
-        public static void Fire(Vector3 start, Vector3 target, Color color, float speed, float size, float trailWidth)
+        public static void Fire(
+            Vector3 start,
+            Vector3 target,
+            Color color,
+            float speed,
+            float size,
+            float trailWidth,
+            bool burstOnImpact = false)
         {
             GameObject projectile = new GameObject("CombatProjectileVisual");
             projectile.transform.position = start;
@@ -34,6 +45,8 @@ namespace TrashTD.Combat
             CombatProjectileVisual visual = projectile.AddComponent<CombatProjectileVisual>();
             visual.targetPosition = target;
             visual.speed = speed;
+            visual.spriteRenderer = spriteRenderer;
+            visual.burstOnImpact = burstOnImpact;
         }
 
         public static void FireShotgunSpread(
@@ -65,12 +78,36 @@ namespace TrashTD.Combat
 
         private void Update()
         {
+            if (isImpacting)
+            {
+                impactTimer -= Time.deltaTime;
+                float progress = 1f - Mathf.Clamp01(impactTimer / 0.2f);
+                transform.localScale = Vector3.one * Mathf.Lerp(0.2f, 0.55f, progress);
+                Color impactColor = spriteRenderer.color;
+                impactColor.a = 1f - progress;
+                spriteRenderer.color = impactColor;
+                if (impactTimer <= 0f)
+                {
+                    Destroy(gameObject);
+                }
+                return;
+            }
+
             Vector3 toTarget = targetPosition - transform.position;
             float step = speed * Time.deltaTime;
             if (toTarget.sqrMagnitude <= step * step)
             {
                 transform.position = targetPosition;
-                Destroy(gameObject);
+                if (burstOnImpact)
+                {
+                    isImpacting = true;
+                    impactTimer = 0.2f;
+                    transform.localScale = Vector3.one * 0.2f;
+                }
+                else
+                {
+                    Destroy(gameObject);
+                }
                 return;
             }
 

@@ -187,6 +187,17 @@ namespace TrashTD.Systems
             PlayerDeck.Instance?.AddReturnedCard(returnedCard);
         }
 
+        /// <summary>
+        /// Removes a dead operator from the squad without returning its card.
+        /// </summary>
+        public void HandleOperatorDeath(OperatorBase op)
+        {
+            if (op == null || !deployedOperators.Remove(op)) return;
+
+            if (SelectedOperator == op) SelectOperator(null);
+            OnOperatorRetreated?.Invoke(op);
+        }
+
         private static int GetRetreatCooldownRounds(OperatorClass operatorClass)
         {
             return operatorClass switch

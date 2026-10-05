@@ -37,11 +37,11 @@ namespace TrashTD.Systems
 
         [Header("Rarity Offer Weights")]
         [Tooltip("Relative weight for 1★ offers")]
-        [SerializeField] private float star1Weight = 60f;
+        [SerializeField] private float star1Weight = 85f;
         [Tooltip("Relative weight for 2★ offers")]
-        [SerializeField] private float star2Weight = 30f;
+        [SerializeField] private float star2Weight = 12f;
         [Tooltip("Relative weight for 3★ offers")]
-        [SerializeField] private float star3Weight = 10f;
+        [SerializeField] private float star3Weight = 3f;
 
         private readonly List<DraftCard> currentOfferedCards = new List<DraftCard>(3);
         private int currentRound = 0;
@@ -105,6 +105,58 @@ namespace TrashTD.Systems
             {
                 availableOperatorPool.AddRange(pool);
             }
+        }
+
+        /// <summary>
+        /// Draw random eligible operator cards directly into the player's deck.
+        /// Cards can be queued by PlayerDeck when all deck slots are occupied.
+        /// </summary>
+        public int DrawRandomCardsToDeck(int count)
+        {
+            if (count <= 0) return 0;
+
+            if (PlayerDeck.Instance == null)
+            {
+                Debug.LogError("CardDraftSystem: Cannot draw operator cards because no PlayerDeck is active.");
+                return 0;
+            }
+
+            var eligibleOperators = new List<OperatorData>();
+            if (availableOperatorPool == null)
+            {
+                Debug.LogError("CardDraftSystem: Cannot draw operator cards because the operator pool is unavailable.");
+                return 0;
+            }
+
+            foreach (OperatorData op in availableOperatorPool)
+            {
+                if (op != null && op.baseRarity >= OperatorRarity.Star1 && op.baseRarity <= OperatorRarity.Star3)
+                {
+                    eligibleOperators.Add(op);
+                }
+            }
+
+            if (eligibleOperators.Count == 0)
+            {
+                Debug.LogError("CardDraftSystem: Cannot draw operator cards because the operator pool has no eligible operators.");
+                return 0;
+            }
+
+            int drawnCount = 0;
+            for (int i = 0; i < count; i++)
+            {
+                OperatorData chosenOperator = eligibleOperators[UnityEngine.Random.Range(0, eligibleOperators.Count)];
+                var card = new DraftCard(chosenOperator, chosenOperator.baseRarity);
+                if (!PlayerDeck.Instance.AddReturnedCard(card))
+                {
+                    Debug.LogError($"CardDraftSystem: Failed to add drawn card for {chosenOperator.operatorName} to the player's deck.");
+                    continue;
+                }
+
+                drawnCount++;
+            }
+
+            return drawnCount;
         }
 
         /// <summary>

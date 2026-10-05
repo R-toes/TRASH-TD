@@ -201,6 +201,8 @@ MonoBehaviour:
   difficulty: 1
   operatorPool:
   - {fileID: 11400000, guid: bd3f1ac48d1f44545850e9e1e5b291ff, type: 2}
+  - {fileID: 11400000, guid: f506c3c0ae460404f99e2b76402a40a3, type: 2}
+  - {fileID: 11400000, guid: 5a541f7796dac634a9a4a0c744b7cfe6, type: 2}
   - {fileID: 11400000, guid: d5f2952e9ace51e4eabe69d1b809048c, type: 2}
   - {fileID: 11400000, guid: e8143c7d70005824fa235b98db549a4d, type: 2}
   - {fileID: 11400000, guid: 12e3bb33877e76d40ac32288df15a389, type: 2}

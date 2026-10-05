@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using TrashTD.Data;
+using TrashTD.Operators;
 using TrashTD.Systems;
 
 namespace TrashTD.Tests
@@ -105,6 +107,63 @@ namespace TrashTD.Tests
         }
 
         [Test]
+        public void DrawgooDeathSkill_DrawsTwoRandomCardsFromOperatorPool()
+        {
+            var deckObject = new GameObject("DrawgooTestDeck");
+            var deck = deckObject.AddComponent<PlayerDeck>();
+            var operatorObject = new GameObject("DrawgooTestOperator");
+            var drawgoo = operatorObject.AddComponent<DrawgooTestOperator>();
+            var drawgooData = ScriptableObject.CreateInstance<OperatorData>();
+            drawgooData.operatorName = "Drawgoo";
+            drawgooData.drawTwoCardsOnDeath = true;
+            drawgoo.Initialize(drawgooData, OperatorRarity.Star1);
+
+            drawgoo.ActivateDeathSkill();
+
+            Assert.AreEqual(2, deck.CardCount);
+            foreach (DraftCard card in deck.DeckSlots)
+            {
+                Assert.IsTrue(testPool.Contains(card.operatorData));
+                Assert.AreEqual(card.operatorData.baseRarity, card.rarity);
+            }
+
+            Object.DestroyImmediate(operatorObject);
+            Object.DestroyImmediate(deckObject);
+            Object.DestroyImmediate(drawgooData);
+        }
+
+        [Test]
+        public void OperatorDeath_RemovesOperatorFromSquadWithoutReturningItsCard()
+        {
+            var managerObject = new GameObject("TestOperatorManager");
+            var manager = managerObject.AddComponent<OperatorManager>();
+            manager.SquadLimit = 1;
+            var deckObject = new GameObject("TestOperatorDeathDeck");
+            var deck = deckObject.AddComponent<PlayerDeck>();
+            var operatorObject = new GameObject("DeadOperator");
+            var op = operatorObject.AddComponent<DrawgooTestOperator>();
+            var operatorData = ScriptableObject.CreateInstance<OperatorData>();
+            op.Initialize(operatorData, OperatorRarity.Star1);
+
+            var deployedOperators = (List<OperatorBase>)typeof(OperatorManager)
+                .GetField("deployedOperators", BindingFlags.Instance | BindingFlags.NonPublic)
+                .GetValue(manager);
+            deployedOperators.Add(op);
+            Assert.IsTrue(manager.IsAtSquadLimit);
+
+            op.TriggerDeath();
+
+            Assert.AreEqual(0, manager.DeployedCount);
+            Assert.AreEqual(0, deck.CardCount);
+            Assert.IsFalse(manager.IsAtSquadLimit);
+
+            Object.DestroyImmediate(operatorObject);
+            Object.DestroyImmediate(deckObject);
+            Object.DestroyImmediate(managerObject);
+            Object.DestroyImmediate(operatorData);
+        }
+
+        [Test]
         public void RerollOffer_StartsAtThree_DecrementsOnEachReroll()
         {
             draftSystem.ResetForNewStage();
@@ -197,6 +256,19 @@ namespace TrashTD.Tests
             Assert.AreEqual(3, deck.CardCount);
 
             Object.DestroyImmediate(deckObject);
+        }
+    }
+
+    public class DrawgooTestOperator : GuardOperator
+    {
+        public void ActivateDeathSkill()
+        {
+            OnDeath();
+        }
+
+        public void TriggerDeath()
+        {
+            Die();
         }
     }
 }

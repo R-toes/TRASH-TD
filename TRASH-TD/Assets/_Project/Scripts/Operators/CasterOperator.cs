@@ -70,6 +70,28 @@ namespace TrashTD.Operators
         {
             if (target == null || !isDeployed) return;
 
+            if (data.chillPerHit > 0f)
+            {
+                CombatProjectileVisual.Fire(
+                    transform.position,
+                    target.transform.position,
+                    new Color(0.35f, 0.8f, 1f),
+                    8.5f,
+                    0.2f,
+                    0.14f,
+                    true);
+
+                int chillDamage = DamageCalculator.CalculateDamage(currentATK, target.CurrentRES);
+                target.TakeDamage(chillDamage, DamageType.Arts);
+                target.ApplyChill(
+                    data.chillPerHit,
+                    data.chillSlowMultiplier,
+                    data.chillSlowDuration,
+                    data.chillFreezeThreshold,
+                    data.chillFreezeDuration);
+                return;
+            }
+
             CombatProjectileVisual.Fire(
                 transform.position,
                 target.transform.position,
