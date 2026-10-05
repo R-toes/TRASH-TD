@@ -34,6 +34,10 @@ namespace TrashTD.Audio
         private const string GameplayScene = "GameplayTest";
         private const string MusicResourcesFolder = "Music/";
         private const string SfxResourcesFolder = "SFX/";
+        private const string MusicVolumeKey = "TrashTD.MusicVolume";
+        private const string SfxVolumeKey = "TrashTD.SfxVolume";
+        private const float DefaultMusicVolume = 0.5f;
+        private const float DefaultSfxVolume = 0.8f;
 
         private static readonly Dictionary<SfxId, string> SfxNames = new Dictionary<SfxId, string>
         {
@@ -53,8 +57,8 @@ namespace TrashTD.Audio
 
         public static AudioManager Instance { get; private set; }
 
-        [SerializeField, Range(0f, 1f)] private float musicVolume = 0.5f;
-        [SerializeField, Range(0f, 1f)] private float sfxVolume = 0.8f;
+        [SerializeField, Range(0f, 1f)] private float musicVolume = DefaultMusicVolume;
+        [SerializeField, Range(0f, 1f)] private float sfxVolume = DefaultSfxVolume;
 
         private AudioSource musicSource;
         private AudioSource sfxSource;
@@ -88,12 +92,12 @@ namespace TrashTD.Audio
             musicSource.loop = true;
             musicSource.playOnAwake = false;
             musicSource.spatialBlend = 0f;
-            musicSource.volume = musicVolume;
-
             sfxSource = gameObject.AddComponent<AudioSource>();
             sfxSource.playOnAwake = false;
             sfxSource.spatialBlend = 0f;
-            sfxSource.volume = sfxVolume;
+            musicVolume = PlayerPrefs.GetFloat(MusicVolumeKey, DefaultMusicVolume);
+            sfxVolume = PlayerPrefs.GetFloat(SfxVolumeKey, DefaultSfxVolume);
+            ApplyVolumes();
 
             mainMenuMusic = Resources.Load<AudioClip>(MusicResourcesFolder + "MainMenuMusic");
             gameplayMusic = Resources.Load<AudioClip>(MusicResourcesFolder + "GameplayMusic");
@@ -143,6 +147,31 @@ namespace TrashTD.Audio
 
             sfxSource.pitch = pitch;
             sfxSource.PlayOneShot(clip, Mathf.Clamp01(volume));
+        }
+
+        public float MusicVolume => musicVolume;
+        public float SfxVolume => sfxVolume;
+
+        public void SetMusicVolume(float volume)
+        {
+            musicVolume = Mathf.Clamp01(volume);
+            if (musicSource != null) musicSource.volume = musicVolume;
+            PlayerPrefs.SetFloat(MusicVolumeKey, musicVolume);
+            PlayerPrefs.Save();
+        }
+
+        public void SetSfxVolume(float volume)
+        {
+            sfxVolume = Mathf.Clamp01(volume);
+            if (sfxSource != null) sfxSource.volume = sfxVolume;
+            PlayerPrefs.SetFloat(SfxVolumeKey, sfxVolume);
+            PlayerPrefs.Save();
+        }
+
+        private void ApplyVolumes()
+        {
+            if (musicSource != null) musicSource.volume = musicVolume;
+            if (sfxSource != null) sfxSource.volume = sfxVolume;
         }
 
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)

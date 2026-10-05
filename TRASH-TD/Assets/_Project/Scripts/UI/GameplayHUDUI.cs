@@ -152,6 +152,18 @@ namespace TrashTD.UI
 
             EnsureEventSystem();
             BuildHud();
+            if (canvas != null && pausePanel != null)
+            {
+                Transform pauseCard = pausePanel.transform.Find("PauseCard");
+                if (pauseCard != null)
+                {
+                    AudioSettingsUI.Create(
+                        canvas.transform,
+                        pauseCard,
+                        button => StyleButton(button, DarkButton, TextDim, 1.05f),
+                        rect => SetPosition(rect, new Vector2(0f, -326f), new Vector2(0.5f, 1f), new Vector2(340f, 60f), new Vector2(0.5f, 0.5f)));
+                }
+            }
         }
 
         private void Start()
@@ -827,7 +839,7 @@ namespace TrashTD.UI
             var card = new GameObject("PauseCard", typeof(RectTransform), typeof(Image));
             card.transform.SetParent(pausePanel.transform, false);
             pauseCard = card.GetComponent<RectTransform>();
-            SetPosition(pauseCard, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(520f, 430f), new Vector2(0.5f, 0.5f));
+            SetPosition(pauseCard, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(520f, 500f), new Vector2(0.5f, 0.5f));
             card.GetComponent<Image>().color = new Color(0.045f, 0.055f, 0.075f, 0.98f);
 
             var border = card.AddComponent<Outline>();
@@ -861,7 +873,7 @@ namespace TrashTD.UI
             StyleButton(resumeButton, AccentColor, new Color(0.4f, 1f, 0.65f, 1f), 1.05f);
 
             var exitButton = CreateButton(card.transform, "ExitButton", "EXIT TO MENU", new Vector2(340f, 60f));
-            SetPosition(exitButton.GetComponent<RectTransform>(), new Vector2(0f, -336f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
+            SetPosition(exitButton.GetComponent<RectTransform>(), new Vector2(0f, -402f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
             exitButton.onClick.AddListener(ExitToMenu);
             StyleButton(exitButton, new Color(0.45f, 0.14f, 0.16f, 1f), new Color(1f, 0.4f, 0.4f, 1f), 1.05f);
 

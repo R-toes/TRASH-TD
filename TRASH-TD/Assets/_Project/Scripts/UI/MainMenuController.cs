@@ -112,6 +112,7 @@ namespace TrashTD.UI
         private Image fadeOverlay;
         private Text loadingLabel;
         private AudioSource sfxSource;
+        private AudioSettingsUI audioSettingsUI;
 
         private sealed class EntranceItem
         {
@@ -205,6 +206,25 @@ namespace TrashTD.UI
             BuildStageButtons();
             BuildDifficultySelector();
             AttachMenuFeedback();
+            Canvas menuCanvas = mainMenuPanel != null ? mainMenuPanel.GetComponentInParent<Canvas>() : null;
+            if (menuCanvas != null)
+            {
+                audioSettingsUI = AudioSettingsUI.Create(
+                    menuCanvas.transform,
+                    mainMenuPanel.transform,
+                    button =>
+                    {
+                        button.GetComponent<Image>().color = DarkButton;
+                        Text label = button.GetComponentInChildren<Text>();
+                        if (label != null)
+                        {
+                            label.fontSize = 16;
+                            label.color = new Color(0.6f, 0.65f, 0.72f, 1f);
+                        }
+                        AttachFeedback(button, PlayClick, TextDim, 1.04f);
+                    },
+                    rect => Place(rect, new Vector2(0f, 0.55f), new Vector2(0f, 0.5f), new Vector2(124f, -168f), new Vector2(200f, 48f)));
+            }
             RegisterEntranceItems();
             UpdateDifficultyDisplay();
 
@@ -232,6 +252,7 @@ namespace TrashTD.UI
             if (backButton != null)
             {
                 backButton.onClick.RemoveAllListeners();
+                backButton.onClick.AddListener(PlayBack);
                 backButton.onClick.AddListener(ShowMainMenu);
             }
 
@@ -244,6 +265,7 @@ namespace TrashTD.UI
             if (stageDetailsBackButton != null)
             {
                 stageDetailsBackButton.onClick.RemoveAllListeners();
+                stageDetailsBackButton.onClick.AddListener(PlayBack);
                 stageDetailsBackButton.onClick.AddListener(CloseStageDetails);
             }
 
@@ -420,7 +442,7 @@ namespace TrashTD.UI
             exitButton.GetComponent<Image>().color = DarkButton;
             var exitBtnLabel = exitButton.GetComponentInChildren<Text>();
             if (exitBtnLabel != null) { exitBtnLabel.fontSize = 16; exitBtnLabel.color = new Color(0.6f, 0.65f, 0.72f, 1f); }
-            Place(exitButton.GetComponent<RectTransform>(), new Vector2(0f, 0.55f), new Vector2(0f, 0.5f), new Vector2(124f, -168f), new Vector2(200f, 48f));
+            Place(exitButton.GetComponent<RectTransform>(), new Vector2(0f, 0.55f), new Vector2(0f, 0.5f), new Vector2(124f, -224f), new Vector2(200f, 48f));
 
             // Version/footer text
             var versionText = MakeText(mainMenuPanel.transform, "VersionText", "v0.1  •  EARLY ACCESS", 11, TextAnchor.MiddleLeft,
@@ -1047,8 +1069,10 @@ namespace TrashTD.UI
         {
             AttachFeedback(startButton, null, AccentBright, 1.05f);
             AttachFeedback(exitButton, null, TextDim, 1.04f);
-            AttachFeedback(backButton, PlayBack, TextDim, 1.04f);
-            AttachFeedback(stageDetailsBackButton, PlayBack, TextDim, 1.04f);
+            MenuButtonFeedback backFeedback = AttachFeedback(backButton, null, TextDim, 1.04f);
+            if (backFeedback != null) backFeedback.Clicked = null;
+            MenuButtonFeedback detailsBackFeedback = AttachFeedback(stageDetailsBackButton, null, TextDim, 1.04f);
+            if (detailsBackFeedback != null) detailsBackFeedback.Clicked = null;
             AttachFeedback(playStageButton, () => PlaySfx(clickClip, 1.15f), AccentBright, 1.05f);
         }
 
@@ -1171,7 +1195,8 @@ namespace TrashTD.UI
             RegisterEntrance(mainEntrance, subtitleText, new Vector2(-50f, 0f), 0.12f);
             RegisterEntrance(mainEntrance, mainDivider, new Vector2(-50f, 0f), 0.18f);
             RegisterEntrance(mainEntrance, startButton, new Vector2(-70f, 0f), 0.24f);
-            RegisterEntrance(mainEntrance, exitButton, new Vector2(-70f, 0f), 0.32f);
+            RegisterEntrance(mainEntrance, audioSettingsUI != null ? audioSettingsUI.SettingsButton : null, new Vector2(-70f, 0f), 0.32f);
+            RegisterEntrance(mainEntrance, exitButton, new Vector2(-70f, 0f), 0.40f);
             RegisterEntrance(mainEntrance, mainVersion, Vector2.zero, 0.45f);
 
             // Stage selector header (cards were registered in BuildStageButtons)
