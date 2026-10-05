@@ -36,6 +36,11 @@ namespace TrashTD.UI
         public bool glowAlways;
 
         public bool hoverEnabled = true;
+
+        /// <summary>
+        /// When false, keyboard/click selection does not trigger the hover look
+        /// (useful in-game, where a clicked button stays "selected" in the EventSystem).
+        /// </summary>
         public bool respondToFocus = true;
 
         /// <summary>Raised when the pointer enters (sound hook).</summary>
@@ -69,6 +74,13 @@ namespace TrashTD.UI
             baseColor = color;
         }
 
+        /// <summary>Springy click bounce without invoking Clicked (e.g. for keyboard shortcuts).</summary>
+        public void Punch()
+        {
+            punching = true;
+            punchTime = 0f;
+        }
+
         /// <summary>Quick side-to-side shake, used for locked / denied interactions.</summary>
         public void Wobble()
         {
@@ -86,7 +98,7 @@ namespace TrashTD.UI
             float k = 1f - Mathf.Exp(-smoothing * dt);
 
             bool active = hoverEnabled && IsInteractable();
-            bool hot = active && (hovered || (respondToFocus && focused));
+            bool hot = active && (hovered || focused);
 
             // Scale
             float targetScale = restScale;
@@ -175,7 +187,7 @@ namespace TrashTD.UI
 
         public void OnSelect(BaseEventData eventData)
         {
-            focused = true;
+            focused = respondToFocus;
         }
 
         public void OnDeselect(BaseEventData eventData)

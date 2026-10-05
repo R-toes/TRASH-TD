@@ -19,20 +19,17 @@ MonoBehaviour:
   roleTags:
   - AoE
   - Shotgun
-  baseHP: 85
-  baseATK: 72
+  baseHP: 50
+  baseATK: 150
   baseDEF: 8
   baseRES: 0
   blockCount: 0
   attackRange: 2
-  attackInterval: 1.6
+  attackInterval: 2.5
   rangePattern:
-  - {x: 1, y: 0}
-  - {x: 2, y: 0}
-  - {x: 1, y: 1}
-  - {x: 2, y: 1}
   - {x: 1, y: -1}
-  - {x: 2, y: -1}
+  - {x: 1, y: 0}
+  - {x: 1, y: 1}
   damageType: 0
   dpCost: 13
   redeployCooldown: 60

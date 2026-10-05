@@ -18,7 +18,7 @@ MonoBehaviour:
   position: 1
   roleTags: []
   baseHP: 85
-  baseATK: 90
+  baseATK: 75
   baseDEF: 8
   baseRES: 0
   blockCount: 0
