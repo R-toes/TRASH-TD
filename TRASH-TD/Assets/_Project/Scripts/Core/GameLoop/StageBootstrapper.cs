@@ -119,6 +119,10 @@ namespace TrashTD.Core.GameLoop
             GameObject gridContainer = new GameObject("VisualGrid");
             gridContainer.transform.SetParent(transform);
 
+            float cellSize = gridManager.CellSize;
+            Vector3 gridBottomLeft = gridManager.GridToWorldPosition(0, 0) - new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f);
+            Vector3 targetBottomLeft = gridBottomLeft + new Vector3(stageData.visualTileOffset.x * cellSize, stageData.visualTileOffset.y * cellSize, 0f);
+
             Sprite mapSprite = stageData.mapVisualSprite;
             if (mapSprite != null)
             {
@@ -129,16 +133,35 @@ namespace TrashTD.Core.GameLoop
                 mapRenderer.sprite = mapSprite;
                 mapRenderer.sortingOrder = 0;
 
-                float cellSize = gridManager.CellSize;
-                Vector3 gridOrigin = gridManager.GridToWorldPosition(0, 0) - new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f);
-                Vector3 mapScale = new Vector3(
-                    stageData.gridWidth * cellSize / mapSprite.bounds.size.x,
-                    stageData.gridHeight * cellSize / mapSprite.bounds.size.y,
-                    1f);
+                // Scale so that 1 tile in the sprite (e.g. 32px) equals cellSize in world units, preserving square pixels.
+                // Any extra rows/columns (e.g. 384x32 extra top row in Level1 complete) naturally extend outside the grid.
+                float pixelPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
+                float spriteUnitsPerTile = pixelPerTile / mapSprite.pixelsPerUnit;
+                float tileScale = cellSize / spriteUnitsPerTile;
+                Vector3 mapScale = new Vector3(tileScale, tileScale, 1f);
                 mapObject.transform.localScale = mapScale;
-                mapObject.transform.position = gridOrigin + Vector3.Scale(
-                    new Vector3(mapSprite.pivot.x / mapSprite.pixelsPerUnit, mapSprite.pivot.y / mapSprite.pixelsPerUnit, 0f),
-                    mapScale);
+
+                // Align the bottom-left of the sprite's bounding box to targetBottomLeft (cell 0,0)
+                mapObject.transform.position = targetBottomLeft - Vector3.Scale(mapSprite.bounds.min, mapScale);
+            }
+
+            Sprite fgSprite = stageData.foregroundVisualSprite;
+            if (fgSprite != null)
+            {
+                GameObject fgObject = new GameObject("ForegroundArtwork");
+                fgObject.transform.SetParent(gridContainer.transform);
+
+                var fgRenderer = fgObject.AddComponent<SpriteRenderer>();
+                fgRenderer.sprite = fgSprite;
+                fgRenderer.sortingOrder = 10; // In front of operators (5) and enemies (4)
+
+                float pixelPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
+                float spriteUnitsPerTile = pixelPerTile / fgSprite.pixelsPerUnit;
+                float tileScale = cellSize / spriteUnitsPerTile;
+                Vector3 fgScale = new Vector3(tileScale, tileScale, 1f);
+                fgObject.transform.localScale = fgScale;
+
+                fgObject.transform.position = targetBottomLeft - Vector3.Scale(fgSprite.bounds.min, fgScale);
             }
 
             for (int y = 0; y < stageData.gridHeight; y++)
@@ -185,11 +208,32 @@ namespace TrashTD.Core.GameLoop
             Camera cam = Camera.main;
             if (cam == null) return;
 
-            float centerX = (stageData.gridWidth * gridManager.CellSize) * 0.5f;
-            cam.transform.position = new Vector3(centerX, 2.75f, -10f);
+            float cellSize = gridManager != null ? gridManager.CellSize : 1.0f;
+            float centerX = (stageData.gridWidth * cellSize) * 0.5f;
 
+            // Visual height: grid height by default, but if mapVisualSprite has extra visual rows (e.g. top row),
+            // take the full visual height into account so the background visuals are fully visible.
+            float visualHeight = stageData.gridHeight * cellSize;
+            if (stageData.mapVisualSprite != null)
+            {
+                float pixelPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
+                float spriteTilesY = stageData.mapVisualSprite.rect.height / pixelPerTile;
+                visualHeight = Mathf.Max(visualHeight, (spriteTilesY + stageData.visualTileOffset.y) * cellSize);
+            }
+
+            // Available vertical ratio between DeckBar (170px) and TopBar (90px) on 1080p reference (~76%)
+            const float availableRatio = 0.759f;
+            float requiredWorldHeight = (visualHeight + 0.35f) / availableRatio;
+            float orthoSize = Mathf.Max(4.10f, requiredWorldHeight * 0.5f);
+
+            // Shift camera down by the difference between bottom DeckBar (170px) and TopBar (90px)
+            // so visual content is vertically centered in the unobstructed play area
+            float hudCenterOffset = ((170f - 90f) / 1080f) * orthoSize;
+            float camY = (visualHeight * 0.5f) - hudCenterOffset;
+
+            cam.transform.position = new Vector3(centerX, camY, -10f);
             cam.orthographic = true;
-            cam.orthographicSize = 4.10f;
+            cam.orthographicSize = orthoSize;
         }
 
         private void OnDestroy()

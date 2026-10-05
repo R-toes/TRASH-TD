@@ -71,6 +71,16 @@ namespace TrashTD.Data
         [Tooltip("Optional full-map artwork displayed behind the logical grid")]
         public Sprite mapVisualSprite;
 
+        [Header("Visual Artwork Alignment")]
+        [Tooltip("Pixel size of one tile in the map visual sprite (usually 32 px)")]
+        public int visualTilePixelSize = 32;
+
+        [Tooltip("Offset in tiles for the visual sprite relative to grid bottom-left origin (x, y). Default (0,0) aligns sprite bottom-left to cell (0,0)")]
+        public Vector2 visualTileOffset = Vector2.zero;
+
+        [Tooltip("Optional foreground artwork displayed in front of units (e.g. fence/trees overlay)")]
+        public Sprite foregroundVisualSprite;
+
         [Tooltip("Spawn point positions on the grid (enemy entry points)")]
         public Vector2Int[] spawnPoints;
 

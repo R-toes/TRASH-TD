@@ -341,7 +341,38 @@ namespace TrashTD.Editor
             stage.mapName = "Landfill Outskirts";
             stage.gridWidth = 12;
             stage.gridHeight = 6;
-            stage.mapVisualSprite = null;
+
+            var levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level1 complete.png");
+            if (levelSprites == null || levelSprites.Length == 0)
+                levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level1 complete.png");
+
+            if (levelSprites != null)
+            {
+                foreach (var obj in levelSprites)
+                {
+                    if (obj is Sprite s)
+                    {
+                        stage.mapVisualSprite = s;
+                        break;
+                    }
+                }
+            }
+            stage.visualTilePixelSize = 32;
+            stage.visualTileOffset = Vector2.zero;
+
+            var fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 1 bottom.png");
+            if (fgSprites != null)
+            {
+                foreach (var obj in fgSprites)
+                {
+                    if (obj is Sprite s)
+                    {
+                        stage.foregroundVisualSprite = s;
+                        break;
+                    }
+                }
+            }
+
             stage.squadSizeLimit = 8;
 
             // Lives: 3 lives per stage
