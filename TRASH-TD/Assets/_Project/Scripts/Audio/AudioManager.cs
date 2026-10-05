@@ -122,6 +122,16 @@ namespace TrashTD.Audio
             return Resources.Load<AudioClip>(SfxResourcesFolder + clipName);
         }
 
+        public void PlayMainMenuMusic()
+        {
+            PlayMusic(mainMenuMusic);
+        }
+
+        public void PlayGameplayMusic()
+        {
+            PlayMusic(gameplayMusic);
+        }
+
         public void PlaySfx(SfxId id, float volume = 1f, float pitch = 1f)
         {
             PlaySfx(GetClip(id), volume, pitch);
@@ -141,13 +151,13 @@ namespace TrashTD.Audio
 
             if (scene.name == MainMenuScene)
             {
-                PlayMusic(mainMenuMusic);
+                PlayMainMenuMusic();
                 return;
             }
 
             if (scene.name != GameplayScene) return;
 
-            PlayMusic(gameplayMusic);
+            PlayGameplayMusic();
             SubscribeToGameplayEvents();
         }
 

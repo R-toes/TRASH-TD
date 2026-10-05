@@ -215,6 +215,8 @@ namespace TrashTD.UI
 
         private void Start()
         {
+            AudioManager.Instance?.PlayMainMenuMusic();
+
             if (startButton != null)
             {
                 startButton.onClick.RemoveAllListeners();
