@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
   operatorName: Proxishot
   operatorClass: 2
-  baseRarity: 1
+  baseRarity: 2
   position: 1
   roleTags:
   - AoE
