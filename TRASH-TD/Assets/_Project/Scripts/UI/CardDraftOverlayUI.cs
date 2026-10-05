@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using TrashTD.Audio;
 using TrashTD.Core.GameLoop;
 using TrashTD.Data;
 using TrashTD.Systems;
@@ -132,6 +133,11 @@ namespace TrashTD.UI
             sfxSource = gameObject.AddComponent<AudioSource>();
             sfxSource.playOnAwake = false;
             sfxSource.spatialBlend = 0f;
+
+            if (hoverClip == null) hoverClip = AudioManager.Instance?.GetClip(SfxId.UiHover);
+            if (clickClip == null) clickClip = AudioManager.Instance?.GetClip(SfxId.UiClick);
+            if (confirmClip == null) confirmClip = AudioManager.Instance?.GetClip(SfxId.UiConfirm);
+            if (rerollClip == null) rerollClip = AudioManager.Instance?.GetClip(SfxId.UiClick);
 
             if (draftSystem != null)
             {
@@ -720,10 +726,7 @@ namespace TrashTD.UI
 
         private void PlaySfx(AudioClip clip, float pitch)
         {
-            if (clip == null || sfxSource == null) return;
-
-            sfxSource.pitch = pitch;
-            sfxSource.PlayOneShot(clip, sfxVolume);
+            AudioManager.Instance?.PlaySfx(clip, sfxVolume, pitch);
         }
 
         private static void ClearUiSelection()

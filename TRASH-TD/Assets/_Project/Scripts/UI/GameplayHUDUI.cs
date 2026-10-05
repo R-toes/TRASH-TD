@@ -5,6 +5,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TrashTD.Audio;
 using TrashTD.Core.Grid;
 using TrashTD.Core.GameLoop;
 using TrashTD.Data;
@@ -143,6 +144,11 @@ namespace TrashTD.UI
             sfxSource = gameObject.AddComponent<AudioSource>();
             sfxSource.playOnAwake = false;
             sfxSource.spatialBlend = 0f;
+
+            if (hoverClip == null) hoverClip = AudioManager.Instance?.GetClip(SfxId.UiHover);
+            if (clickClip == null) clickClip = AudioManager.Instance?.GetClip(SfxId.UiClick);
+            if (waveStartClip == null) waveStartClip = AudioManager.Instance?.GetClip(SfxId.GameplayWaveStart);
+            if (lifeLostClip == null) lifeLostClip = AudioManager.Instance?.GetClip(SfxId.GameplayLifeLost);
 
             EnsureEventSystem();
             BuildHud();
@@ -1120,6 +1126,7 @@ namespace TrashTD.UI
         {
             if (gameManager == null) return;
             gameManager.PauseGame();
+            AudioManager.Instance?.PlaySfx(SfxId.GameplayPause);
             SetPauseVisible(true);
         }
 
@@ -1127,6 +1134,7 @@ namespace TrashTD.UI
         {
             if (gameManager == null) return;
             gameManager.ResumeGame();
+            AudioManager.Instance?.PlaySfx(SfxId.GameplayResume);
             SetPauseVisible(false);
         }
 
@@ -1518,10 +1526,7 @@ namespace TrashTD.UI
 
         private void PlaySfx(AudioClip clip, float pitch)
         {
-            if (clip == null || sfxSource == null) return;
-
-            sfxSource.pitch = pitch;
-            sfxSource.PlayOneShot(clip, sfxVolume);
+            AudioManager.Instance?.PlaySfx(clip, sfxVolume, pitch);
         }
 
         private static float EaseOutCubic(float t)

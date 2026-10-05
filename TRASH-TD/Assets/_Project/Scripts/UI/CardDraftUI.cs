@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TrashTD.Audio;
 using TrashTD.Systems;
 
 namespace TrashTD.UI
@@ -43,6 +44,9 @@ namespace TrashTD.UI
             sfxSource = gameObject.AddComponent<AudioSource>();
             sfxSource.playOnAwake = false;
             sfxSource.spatialBlend = 0f;
+
+            if (hoverClip == null) hoverClip = AudioManager.Instance?.GetClip(SfxId.UiHover);
+            if (clickClip == null) clickClip = AudioManager.Instance?.GetClip(SfxId.UiClick);
 
             if (draftPanel != null)
             {
@@ -252,10 +256,7 @@ namespace TrashTD.UI
 
         private void PlaySfx(AudioClip clip, float pitch)
         {
-            if (clip == null || sfxSource == null) return;
-
-            sfxSource.pitch = pitch;
-            sfxSource.PlayOneShot(clip, sfxVolume);
+            AudioManager.Instance?.PlaySfx(clip, sfxVolume, pitch);
         }
 
         private static Color GetRarityColor(int stars)
