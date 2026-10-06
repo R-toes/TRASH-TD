@@ -1019,7 +1019,7 @@ namespace TrashTD.UI
 
             WaveData[] waves = selectedStage.GetWaves(difficulty);
             if (waves != null && waves.Length > 0) return waves.Length;
-            if (selectedStage.stageId != "STAGE_01") return 0;
+            if (selectedStage.stageId != "STAGE_01" && selectedStage.stageId != "STAGE_02") return 0;
 
             return difficulty switch
             {

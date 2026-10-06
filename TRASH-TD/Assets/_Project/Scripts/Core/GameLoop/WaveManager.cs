@@ -81,17 +81,63 @@ namespace TrashTD.Core.GameLoop
         {
             if (stageData.spawnPoints == null || stageData.exitPoints == null) return;
 
+            // 1. If explicit enemyPaths are configured on the stage, use them
+            if (stageData.enemyPaths != null && stageData.enemyPaths.Length > 0)
+            {
+                foreach (var pathData in stageData.enemyPaths)
+                {
+                    if (pathData == null) continue;
+                    int s = pathData.spawnPointIndex;
+                    int e = pathData.exitPointIndex;
+
+                    if (s < 0 || s >= stageData.spawnPoints.Length) continue;
+
+                    // If explicit waypoints are defined, convert to world coordinates
+                    if (pathData.waypoints != null && pathData.waypoints.Length > 0)
+                    {
+                        var worldPath = new List<Vector3>(pathData.waypoints.Length);
+                        for (int i = 0; i < pathData.waypoints.Length; i++)
+                        {
+                            worldPath.Add(gridManager.GridToWorldPosition(pathData.waypoints[i]));
+                        }
+                        pathCache[GetPathKey(s, EnemyMovementType.Ground)] = worldPath;
+                        pathCache[GetPathKey(s, EnemyMovementType.Air)] = worldPath;
+                        continue;
+                    }
+
+                    // Otherwise if a specific exit point index is designated, find path to that exit
+                    if (e >= 0 && e < stageData.exitPoints.Length)
+                    {
+                        var spawnPos = stageData.spawnPoints[s];
+                        var exitPos = stageData.exitPoints[e];
+
+                        var groundPath = pathfinder.FindPath(spawnPos, exitPos, EnemyMovementType.Ground);
+                        if (groundPath != null) pathCache[GetPathKey(s, EnemyMovementType.Ground)] = groundPath;
+
+                        var airPath = pathfinder.FindPath(spawnPos, exitPos, EnemyMovementType.Air);
+                        if (airPath != null) pathCache[GetPathKey(s, EnemyMovementType.Air)] = airPath;
+                    }
+                }
+            }
+
+            // 2. Fallback for any spawn points not covered by explicit paths
             for (int s = 0; s < stageData.spawnPoints.Length; s++)
             {
-                var spawnPos = stageData.spawnPoints[s];
-                // Compute for Ground and Air
                 string groundKey = GetPathKey(s, EnemyMovementType.Ground);
-                var groundPath = pathfinder.FindBestPath(spawnPos, stageData.exitPoints, EnemyMovementType.Ground);
-                if (groundPath != null) pathCache[groundKey] = groundPath;
+                if (!pathCache.ContainsKey(groundKey))
+                {
+                    var spawnPos = stageData.spawnPoints[s];
+                    var groundPath = pathfinder.FindBestPath(spawnPos, stageData.exitPoints, EnemyMovementType.Ground);
+                    if (groundPath != null) pathCache[groundKey] = groundPath;
+                }
 
                 string airKey = GetPathKey(s, EnemyMovementType.Air);
-                var airPath = pathfinder.FindBestPath(spawnPos, stageData.exitPoints, EnemyMovementType.Air);
-                if (airPath != null) pathCache[airKey] = airPath;
+                if (!pathCache.ContainsKey(airKey))
+                {
+                    var spawnPos = stageData.spawnPoints[s];
+                    var airPath = pathfinder.FindBestPath(spawnPos, stageData.exitPoints, EnemyMovementType.Air);
+                    if (airPath != null) pathCache[airKey] = airPath;
+                }
             }
         }
 

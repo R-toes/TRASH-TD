@@ -498,6 +498,15 @@ namespace TrashTD.Editor
             EditorUtility.SetDirty(stage);
         }
 
+        [InitializeOnLoadMethod]
+        private static void AutoEnsureStage2()
+        {
+            EditorApplication.delayCall += () =>
+            {
+                GenerateStage2();
+            };
+        }
+
         [MenuItem("TRASH TD/Generate Stage 2 (Scrapyard Junction)")]
         public static void GenerateStage2()
         {
@@ -580,12 +589,83 @@ namespace TrashTD.Editor
                     }
                 }
             }
-            stage.spawnPoints = spawnPoints.ToArray();
-            stage.exitPoints = exitPoints.ToArray();
-            stage.enemyPaths = new PathData[0];
-            stage.wavesEasy = new WaveData[0];
-            stage.wavesNormal = new WaveData[0];
-            stage.wavesHard = new WaveData[0];
+            stage.spawnPoints = new[]
+            {
+                new Vector2Int(10, 6), // Spawn 0: Top-Right (Yellow arrow)
+                new Vector2Int(0, 0)   // Spawn 1: Bottom-Left (Blue arrow)
+            };
+            stage.exitPoints = new[]
+            {
+                new Vector2Int(0, 3),  // Exit 0: Left exit (Blue arrow destination)
+                new Vector2Int(10, 3)  // Exit 1: Right exit (Yellow arrow destination)
+            };
+
+            // Symmetrical paths crossing at Scrapyard Junction:
+            // Path 0: Top-Right spawn (10, 6) -> Row 5 westward -> down col 4 -> Row 3 eastward -> Right exit (10, 3) [Yellow arrow]
+            var path0Waypoints = new[]
+            {
+                new Vector2Int(10, 6),
+                new Vector2Int(10, 5),
+                new Vector2Int(9, 5),
+                new Vector2Int(8, 5),
+                new Vector2Int(7, 5),
+                new Vector2Int(6, 5),
+                new Vector2Int(5, 5),
+                new Vector2Int(4, 5),
+                new Vector2Int(4, 4),
+                new Vector2Int(4, 3),
+                new Vector2Int(5, 3),
+                new Vector2Int(6, 3),
+                new Vector2Int(7, 3),
+                new Vector2Int(8, 3),
+                new Vector2Int(9, 3),
+                new Vector2Int(10, 3)
+            };
+
+            // Path 1: Bottom-Left spawn (0, 0) -> Row 1 eastward -> up col 6 -> Row 3 westward -> Left exit (0, 3) [Blue arrow]
+            var path1Waypoints = new[]
+            {
+                new Vector2Int(0, 0),
+                new Vector2Int(0, 1),
+                new Vector2Int(1, 1),
+                new Vector2Int(2, 1),
+                new Vector2Int(3, 1),
+                new Vector2Int(4, 1),
+                new Vector2Int(5, 1),
+                new Vector2Int(6, 1),
+                new Vector2Int(6, 2),
+                new Vector2Int(6, 3),
+                new Vector2Int(5, 3),
+                new Vector2Int(4, 3),
+                new Vector2Int(3, 3),
+                new Vector2Int(2, 3),
+                new Vector2Int(1, 3),
+                new Vector2Int(0, 3)
+            };
+
+            stage.enemyPaths = new[]
+            {
+                new PathData
+                {
+                    spawnPointIndex = 0,
+                    exitPointIndex = 1,
+                    waypoints = path0Waypoints
+                },
+                new PathData
+                {
+                    spawnPointIndex = 1,
+                    exitPointIndex = 0,
+                    waypoints = path1Waypoints
+                }
+            };
+
+            var grunt = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Grunt_Sludge.asset");
+            var rusher = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Rusher_Toxic.asset");
+            var tank = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Tank_Pollution.asset");
+
+            stage.wavesEasy = BuildStage2Waves(10, 0, grunt, rusher, tank);
+            stage.wavesNormal = BuildStage2Waves(20, 1, grunt, rusher, tank);
+            stage.wavesHard = BuildStage2Waves(30, 2, grunt, rusher, tank);
 
             EditorUtility.SetDirty(stage);
             AssetDatabase.SaveAssets();
@@ -594,10 +674,203 @@ namespace TrashTD.Editor
             string resourcesPath = "Assets/Resources/Stages/STAGE_02.asset";
             if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
             if (!AssetDatabase.IsValidFolder("Assets/Resources/Stages")) AssetDatabase.CreateFolder("Assets/Resources", "Stages");
+            AssetDatabase.DeleteAsset(resourcesPath);
             AssetDatabase.CopyAsset(path, resourcesPath);
             AssetDatabase.SaveAssets();
 
-            Debug.Log("<color=green>TRASH TD: Stage 2 (Scrapyard Junction) successfully generated!</color>");
+            Debug.Log("<color=green>TRASH TD: Stage 2 (Scrapyard Junction) successfully generated with dual-lane enemy waves!</color>");
+        }
+
+        private static WaveData[] BuildStage2Waves(int targetWaveCount, int difficultyTier,
+            EnemyData grunt, EnemyData rusher, EnemyData tank)
+        {
+            var waves = new List<WaveData>();
+
+            for (int w = 1; w <= targetWaveCount; w++)
+            {
+                int waveNumber = w;
+                int threat = waveNumber + difficultyTier * 2;
+
+                float preWaveDelay = Mathf.Max(1.5f, 4.0f - difficultyTier * 0.5f - waveNumber * 0.05f);
+                float spawnInterval = Mathf.Max(0.7f, 2.2f - difficultyTier * 0.2f - waveNumber * 0.035f);
+
+                var entries = new List<WaveEntry>();
+                string waveCategory;
+
+                bool isTankWave = threat >= 8 && waveNumber % 5 == 0 && tank != null;
+                bool isRusherWave = !isTankWave && threat >= 4 && waveNumber % 3 == 0 && rusher != null;
+
+                // Alternate primary lane between spawn 0 (Top-Right) and spawn 1 (Bottom-Left)
+                int primaryLane = (waveNumber % 2 == 1) ? 0 : 1;
+                int secondaryLane = (primaryLane == 0) ? 1 : 0;
+
+                float primaryDelay = 0f;
+                float secondaryDelay = (waveNumber == 1) ? 2.0f : 1.5f;
+
+                if (isTankWave)
+                {
+                    bool doubleTank = threat >= 16;
+                    waveCategory = doubleTank ? "Heavy Dual Incursion" : "Heavy Pincer Incursion";
+
+                    if (!doubleTank)
+                    {
+                        entries.Add(new WaveEntry
+                        {
+                            enemyData = tank,
+                            count = 1,
+                            spawnInterval = 0f,
+                            startDelay = primaryDelay,
+                            spawnPointIndex = primaryLane
+                        });
+
+                        int escortCount = 1 + threat / 4;
+                        if (escortCount > 0 && grunt != null)
+                        {
+                            entries.Add(new WaveEntry
+                            {
+                                enemyData = grunt,
+                                count = escortCount,
+                                spawnInterval = spawnInterval,
+                                startDelay = primaryDelay + 1.2f,
+                                spawnPointIndex = primaryLane
+                            });
+                        }
+
+                        EnemyData flankEnemy = (rusher != null) ? rusher : grunt;
+                        int flankCount = 2 + threat / 3;
+                        entries.Add(new WaveEntry
+                        {
+                            enemyData = flankEnemy,
+                            count = flankCount,
+                            spawnInterval = spawnInterval * 0.85f,
+                            startDelay = secondaryDelay,
+                            spawnPointIndex = secondaryLane
+                        });
+                    }
+                    else
+                    {
+                        entries.Add(new WaveEntry
+                        {
+                            enemyData = tank,
+                            count = 1,
+                            spawnInterval = 0f,
+                            startDelay = primaryDelay,
+                            spawnPointIndex = primaryLane
+                        });
+                        entries.Add(new WaveEntry
+                        {
+                            enemyData = tank,
+                            count = 1,
+                            spawnInterval = 0f,
+                            startDelay = secondaryDelay,
+                            spawnPointIndex = secondaryLane
+                        });
+
+                        int supportCount = 2 + threat / 4;
+                        if (grunt != null)
+                        {
+                            entries.Add(new WaveEntry
+                            {
+                                enemyData = grunt,
+                                count = supportCount,
+                                spawnInterval = spawnInterval,
+                                startDelay = primaryDelay + 1.2f,
+                                spawnPointIndex = primaryLane
+                            });
+                        }
+                        if (rusher != null)
+                        {
+                            entries.Add(new WaveEntry
+                            {
+                                enemyData = rusher,
+                                count = supportCount,
+                                spawnInterval = spawnInterval * 0.8f,
+                                startDelay = secondaryDelay + 1.2f,
+                                spawnPointIndex = secondaryLane
+                            });
+                        }
+                    }
+                }
+                else if (isRusherWave)
+                {
+                    waveCategory = "Converging Toxic Surge";
+                    int rusherPrimary = 2 + threat / 4;
+                    int rusherSecondary = 1 + threat / 4;
+
+                    entries.Add(new WaveEntry
+                    {
+                        enemyData = rusher,
+                        count = rusherPrimary,
+                        spawnInterval = spawnInterval * 0.8f,
+                        startDelay = primaryDelay,
+                        spawnPointIndex = primaryLane
+                    });
+                    entries.Add(new WaveEntry
+                    {
+                        enemyData = rusher,
+                        count = rusherSecondary,
+                        spawnInterval = spawnInterval * 0.8f,
+                        startDelay = secondaryDelay,
+                        spawnPointIndex = secondaryLane
+                    });
+
+                    if (threat >= 6 && grunt != null)
+                    {
+                        entries.Add(new WaveEntry
+                        {
+                            enemyData = grunt,
+                            count = 2 + threat / 5,
+                            spawnInterval = spawnInterval,
+                            startDelay = primaryDelay + 1.8f,
+                            spawnPointIndex = primaryLane
+                        });
+                    }
+                }
+                else
+                {
+                    waveCategory = (waveNumber == 1) ? "Converging Scouts" : "Crossfire Swarm";
+                    int countPrimary = (waveNumber == 1) ? 2 : (2 + threat / 4);
+                    int countSecondary = (waveNumber == 1) ? 2 : (1 + threat / 4);
+
+                    entries.Add(new WaveEntry
+                    {
+                        enemyData = grunt != null ? grunt : rusher,
+                        count = countPrimary,
+                        spawnInterval = spawnInterval,
+                        startDelay = primaryDelay,
+                        spawnPointIndex = primaryLane
+                    });
+                    entries.Add(new WaveEntry
+                    {
+                        enemyData = grunt != null ? grunt : rusher,
+                        count = countSecondary,
+                        spawnInterval = spawnInterval,
+                        startDelay = secondaryDelay,
+                        spawnPointIndex = secondaryLane
+                    });
+
+                    if (threat >= 7 && rusher != null)
+                    {
+                        entries.Add(new WaveEntry
+                        {
+                            enemyData = rusher,
+                            count = 1 + threat / 6,
+                            spawnInterval = spawnInterval * 0.85f,
+                            startDelay = secondaryDelay + 1.5f,
+                            spawnPointIndex = secondaryLane
+                        });
+                    }
+                }
+
+                waves.Add(new WaveData
+                {
+                    waveName = $"Wave {waveNumber}: {waveCategory}",
+                    preWaveDelay = preWaveDelay,
+                    entries = entries.ToArray()
+                });
+            }
+
+            return waves.ToArray();
         }
 
         private static WaveData[] ExtendWaveCampaign(WaveData[] openingWaves, int targetWaveCount, int difficultyTier,
