@@ -31,7 +31,16 @@ MonoBehaviour:
   - {x: 0, y: 0}
   - {x: 0, y: 0}
   damageType: 0
+  drawTwoCardsOnDeath: 0
+  bonusWhenIsolated: 0
+  isolatedAttackMultiplier: 1.5
+  skillDescription: 
+  chillPerHit: 0
+  chillSlowMultiplier: 0.65
+  chillSlowDuration: 2.5
+  chillFreezeThreshold: 100
+  chillFreezeDuration: 1.5
   dpCost: 14
   redeployCooldown: 60
-  portrait: {fileID: 21300000, guid: ba8cc7ecb1b2b28489600391e32fe930, type: 3}
+  portrait: {fileID: 4414281254907323090, guid: fe8337c638fa85a44806c8f50af25317, type: 3}
   operatorPrefab: {fileID: 7272833774495134628, guid: e3be5a76b71b4dc09d5f90a82354c2f9, type: 3}
