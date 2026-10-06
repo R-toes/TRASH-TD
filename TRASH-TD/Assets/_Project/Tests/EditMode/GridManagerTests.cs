@@ -162,5 +162,76 @@ namespace TrashTD.Tests
 
             Object.DestroyImmediate(stage);
         }
+
+        [Test]
+        public void Stage2_PathsAndWaves_AreCorrectlyConfigured()
+        {
+            var stage = Resources.Load<StageData>("Stages/STAGE_02");
+            Assert.IsNotNull(stage, "STAGE_02 resource asset must be loadable");
+
+            gridManager.InitializeFromStageData(stage);
+
+            // Paths verification
+            Assert.AreEqual(2, stage.enemyPaths.Length, "Stage 2 must have exactly 2 designated paths");
+
+            // Path 0: Top-Right (10, 6) -> Right Exit (10, 3)
+            var path0 = stage.enemyPaths[0];
+            Assert.AreEqual(0, path0.spawnPointIndex);
+            Assert.AreEqual(1, path0.exitPointIndex);
+            Assert.AreEqual(new Vector2Int(10, 6), path0.waypoints[0]);
+            Assert.AreEqual(new Vector2Int(10, 3), path0.waypoints[path0.waypoints.Length - 1]);
+            foreach (var wp in path0.waypoints)
+            {
+                var cell = gridManager.GetCell(wp.x, wp.y);
+                Assert.IsNotNull(cell, $"Cell at waypoint {wp} must exist");
+                Assert.IsTrue(cell.IsWalkable, $"Cell at waypoint {wp} must be walkable");
+            }
+
+            // Path 1: Bottom-Left (0, 0) -> Left Exit (0, 3)
+            var path1 = stage.enemyPaths[1];
+            Assert.AreEqual(1, path1.spawnPointIndex);
+            Assert.AreEqual(0, path1.exitPointIndex);
+            Assert.AreEqual(new Vector2Int(0, 0), path1.waypoints[0]);
+            Assert.AreEqual(new Vector2Int(0, 3), path1.waypoints[path1.waypoints.Length - 1]);
+            foreach (var wp in path1.waypoints)
+            {
+                var cell = gridManager.GetCell(wp.x, wp.y);
+                Assert.IsNotNull(cell, $"Cell at waypoint {wp} must exist");
+                Assert.IsTrue(cell.IsWalkable, $"Cell at waypoint {wp} must be walkable");
+            }
+
+            // Wave counts
+            Assert.AreEqual(10, stage.wavesEasy.Length, "Easy must have 10 waves");
+            Assert.AreEqual(20, stage.wavesNormal.Length, "Normal must have 20 waves");
+            Assert.AreEqual(30, stage.wavesHard.Length, "Hard must have 30 waves");
+
+            // Verify enemy distribution across both spawn points in all difficulties
+            void VerifyWaveDistribution(WaveData[] waves, string difficultyName)
+            {
+                for (int i = 0; i < waves.Length; i++)
+                {
+                    var wave = waves[i];
+                    Assert.IsNotNull(wave.entries, $"{difficultyName} Wave {i + 1} must have entries");
+                    Assert.IsTrue(wave.entries.Length >= 2, $"{difficultyName} Wave {i + 1} must distribute across both lanes");
+
+                    bool hasSpawn0 = false;
+                    bool hasSpawn1 = false;
+                    foreach (var entry in wave.entries)
+                    {
+                        Assert.IsNotNull(entry.enemyData, $"{difficultyName} Wave {i + 1} entry must have valid EnemyData");
+                        Assert.IsTrue(entry.count > 0, $"{difficultyName} Wave {i + 1} entry must have count > 0");
+                        if (entry.spawnPointIndex == 0) hasSpawn0 = true;
+                        if (entry.spawnPointIndex == 1) hasSpawn1 = true;
+                    }
+
+                    Assert.IsTrue(hasSpawn0, $"{difficultyName} Wave {i + 1} must spawn enemies from spawn 0 (Top-Right)");
+                    Assert.IsTrue(hasSpawn1, $"{difficultyName} Wave {i + 1} must spawn enemies from spawn 1 (Bottom-Left)");
+                }
+            }
+
+            VerifyWaveDistribution(stage.wavesEasy, "Easy");
+            VerifyWaveDistribution(stage.wavesNormal, "Normal");
+            VerifyWaveDistribution(stage.wavesHard, "Hard");
+        }
     }
 }

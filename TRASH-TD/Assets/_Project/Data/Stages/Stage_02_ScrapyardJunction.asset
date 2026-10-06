@@ -23,19 +23,1112 @@ MonoBehaviour:
   visualTileOffset: {x: 0, y: 0}
   foregroundVisualSprite: {fileID: 0}
   spawnPoints:
-  - {x: 0, y: 0}
   - {x: 10, y: 6}
+  - {x: 0, y: 0}
   exitPoints:
   - {x: 0, y: 3}
   - {x: 10, y: 3}
-  enemyPaths: []
+  enemyPaths:
+  - waypoints:
+    - {x: 10, y: 6}
+    - {x: 10, y: 5}
+    - {x: 9, y: 5}
+    - {x: 8, y: 5}
+    - {x: 7, y: 5}
+    - {x: 6, y: 5}
+    - {x: 5, y: 5}
+    - {x: 4, y: 5}
+    - {x: 4, y: 4}
+    - {x: 4, y: 3}
+    - {x: 5, y: 3}
+    - {x: 6, y: 3}
+    - {x: 7, y: 3}
+    - {x: 8, y: 3}
+    - {x: 9, y: 3}
+    - {x: 10, y: 3}
+    spawnPointIndex: 0
+    exitPointIndex: 1
+  - waypoints:
+    - {x: 0, y: 0}
+    - {x: 0, y: 1}
+    - {x: 1, y: 1}
+    - {x: 2, y: 1}
+    - {x: 3, y: 1}
+    - {x: 4, y: 1}
+    - {x: 5, y: 1}
+    - {x: 6, y: 1}
+    - {x: 6, y: 2}
+    - {x: 6, y: 3}
+    - {x: 5, y: 3}
+    - {x: 4, y: 3}
+    - {x: 3, y: 3}
+    - {x: 2, y: 3}
+    - {x: 1, y: 3}
+    - {x: 0, y: 3}
+    spawnPointIndex: 1
+    exitPointIndex: 0
   lifePointsEasy: 3
   lifePointsNormal: 3
-  lifePointsHard: 1
+  lifePointsHard: 3
   squadSizeLimit: 8
-  wavesEasy: []
-  wavesNormal: []
-  wavesHard: []
+  wavesEasy:
+  - waveName: 'Wave 1: Converging Scouts'
+    preWaveDelay: 3.95
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 2.165
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 2.165
+      startDelay: 2
+      spawnPointIndex: 1
+  - waveName: 'Wave 2: Crossfire Swarm'
+    preWaveDelay: 3.9
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 2.13
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 1
+      spawnInterval: 2.13
+      startDelay: 1.5
+      spawnPointIndex: 0
+  - waveName: 'Wave 3: Crossfire Swarm'
+    preWaveDelay: 3.85
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 2.095
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 1
+      spawnInterval: 2.095
+      startDelay: 1.5
+      spawnPointIndex: 1
+  - waveName: 'Wave 4: Crossfire Swarm'
+    preWaveDelay: 3.8
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 2.06
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 2.06
+      startDelay: 1.5
+      spawnPointIndex: 0
+  - waveName: 'Wave 5: Crossfire Swarm'
+    preWaveDelay: 3.75
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 2.025
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 2.025
+      startDelay: 1.5
+      spawnPointIndex: 1
+  - waveName: 'Wave 6: Converging Toxic Surge'
+    preWaveDelay: 3.7
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 1.592
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 2
+      spawnInterval: 1.592
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.99
+      startDelay: 1.8
+      spawnPointIndex: 1
+  - waveName: 'Wave 7: Crossfire Swarm'
+    preWaveDelay: 3.65
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.955
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 1.955
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 2
+      spawnInterval: 1.6617501
+      startDelay: 3
+      spawnPointIndex: 1
+  - waveName: 'Wave 8: Crossfire Swarm'
+    preWaveDelay: 3.6
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.9200001
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.9200001
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 2
+      spawnInterval: 1.6320001
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 9: Converging Toxic Surge'
+    preWaveDelay: 3.55
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 1.508
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 1.508
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.885
+      startDelay: 1.8
+      spawnPointIndex: 0
+  - waveName: 'Wave 10: Heavy Pincer Incursion'
+    preWaveDelay: 3.5
+    entries:
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.85
+      startDelay: 1.2
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 5
+      spawnInterval: 1.5725001
+      startDelay: 1.5
+      spawnPointIndex: 0
+  wavesNormal:
+  - waveName: 'Wave 1: Converging Scouts'
+    preWaveDelay: 3.45
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 1.965
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 1.965
+      startDelay: 2
+      spawnPointIndex: 1
+  - waveName: 'Wave 2: Crossfire Swarm'
+    preWaveDelay: 3.4
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.9300001
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 1.9300001
+      startDelay: 1.5
+      spawnPointIndex: 0
+  - waveName: 'Wave 3: Converging Toxic Surge'
+    preWaveDelay: 3.35
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 1.5160002
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 2
+      spawnInterval: 1.5160002
+      startDelay: 1.5
+      spawnPointIndex: 1
+  - waveName: 'Wave 4: Crossfire Swarm'
+    preWaveDelay: 3.3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.86
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 1.86
+      startDelay: 1.5
+      spawnPointIndex: 0
+  - waveName: 'Wave 5: Crossfire Swarm'
+    preWaveDelay: 3.25
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.825
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 1.825
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 2
+      spawnInterval: 1.5512501
+      startDelay: 3
+      spawnPointIndex: 1
+  - waveName: 'Wave 6: Converging Toxic Surge'
+    preWaveDelay: 3.2
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 1.432
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 1.432
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.7900001
+      startDelay: 1.8
+      spawnPointIndex: 1
+  - waveName: 'Wave 7: Crossfire Swarm'
+    preWaveDelay: 3.15
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.755
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.755
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 2
+      spawnInterval: 1.49175
+      startDelay: 3
+      spawnPointIndex: 1
+  - waveName: 'Wave 8: Crossfire Swarm'
+    preWaveDelay: 3.1
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.72
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.72
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 2
+      spawnInterval: 1.462
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 9: Converging Toxic Surge'
+    preWaveDelay: 3.05
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 1.348
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 1.348
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.6850001
+      startDelay: 1.8
+      spawnPointIndex: 0
+  - waveName: 'Wave 10: Heavy Pincer Incursion'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.6500001
+      startDelay: 1.2
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 1.4025002
+      startDelay: 1.5
+      spawnPointIndex: 0
+  - waveName: 'Wave 11: Crossfire Swarm'
+    preWaveDelay: 2.95
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 1.615
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.615
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 1.37275
+      startDelay: 3
+      spawnPointIndex: 1
+  - waveName: 'Wave 12: Converging Toxic Surge'
+    preWaveDelay: 2.9
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 5
+      spawnInterval: 1.264
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 1.264
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.58
+      startDelay: 1.8
+      spawnPointIndex: 1
+  - waveName: 'Wave 13: Crossfire Swarm'
+    preWaveDelay: 2.85
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 1.5450001
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.5450001
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 1.3132501
+      startDelay: 3
+      spawnPointIndex: 1
+  - waveName: 'Wave 14: Crossfire Swarm'
+    preWaveDelay: 2.8
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 1.51
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 1.51
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 1.2835001
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 15: Heavy Dual Incursion'
+    preWaveDelay: 2.75
+    entries:
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 1.475
+      startDelay: 1.2
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 1.1800001
+      startDelay: 2.7
+      spawnPointIndex: 1
+  - waveName: 'Wave 16: Crossfire Swarm'
+    preWaveDelay: 2.7
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 1.44
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 1.44
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 1.2240001
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 17: Crossfire Swarm'
+    preWaveDelay: 2.65
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 1.4050001
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 1.4050001
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 1.1942501
+      startDelay: 3
+      spawnPointIndex: 1
+  - waveName: 'Wave 18: Converging Toxic Surge'
+    preWaveDelay: 2.6
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 7
+      spawnInterval: 1.0960001
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 1.0960001
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 1.37
+      startDelay: 1.8
+      spawnPointIndex: 1
+  - waveName: 'Wave 19: Crossfire Swarm'
+    preWaveDelay: 2.55
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 7
+      spawnInterval: 1.335
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 1.335
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 1.13475
+      startDelay: 3
+      spawnPointIndex: 1
+  - waveName: 'Wave 20: Heavy Dual Incursion'
+    preWaveDelay: 2.5
+    entries:
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 7
+      spawnInterval: 1.3000001
+      startDelay: 1.2
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 7
+      spawnInterval: 1.0400001
+      startDelay: 2.7
+      spawnPointIndex: 0
+  wavesHard:
+  - waveName: 'Wave 1: Converging Scouts'
+    preWaveDelay: 2.95
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 1.765
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 1.765
+      startDelay: 2
+      spawnPointIndex: 1
+  - waveName: 'Wave 2: Crossfire Swarm'
+    preWaveDelay: 2.9
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.73
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 1.73
+      startDelay: 1.5
+      spawnPointIndex: 0
+  - waveName: 'Wave 3: Converging Toxic Surge'
+    preWaveDelay: 2.85
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 1.3560001
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 2
+      spawnInterval: 1.3560001
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.695
+      startDelay: 1.8
+      spawnPointIndex: 0
+  - waveName: 'Wave 4: Crossfire Swarm'
+    preWaveDelay: 2.8
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.6600001
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.6600001
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 2
+      spawnInterval: 1.4110001
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 5: Heavy Pincer Incursion'
+    preWaveDelay: 2.75
+    entries:
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.625
+      startDelay: 1.2
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 5
+      spawnInterval: 1.38125
+      startDelay: 1.5
+      spawnPointIndex: 1
+  - waveName: 'Wave 6: Converging Toxic Surge'
+    preWaveDelay: 2.7
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 1.2720001
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 1.2720001
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.59
+      startDelay: 1.8
+      spawnPointIndex: 1
+  - waveName: 'Wave 7: Crossfire Swarm'
+    preWaveDelay: 2.65
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.5550001
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 1.5550001
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 2
+      spawnInterval: 1.32175
+      startDelay: 3
+      spawnPointIndex: 1
+  - waveName: 'Wave 8: Crossfire Swarm'
+    preWaveDelay: 2.6
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 1.52
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.52
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 1.292
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 9: Converging Toxic Surge'
+    preWaveDelay: 2.55
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 5
+      spawnInterval: 1.1880001
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 1.1880001
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.485
+      startDelay: 1.8
+      spawnPointIndex: 0
+  - waveName: 'Wave 10: Heavy Pincer Incursion'
+    preWaveDelay: 2.5
+    entries:
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.45
+      startDelay: 1.2
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 1.2325001
+      startDelay: 1.5
+      spawnPointIndex: 0
+  - waveName: 'Wave 11: Crossfire Swarm'
+    preWaveDelay: 2.45
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 1.4150001
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 1.4150001
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 1.2027501
+      startDelay: 3
+      spawnPointIndex: 1
+  - waveName: 'Wave 12: Converging Toxic Surge'
+    preWaveDelay: 2.4
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 1.104
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 5
+      spawnInterval: 1.104
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 1.38
+      startDelay: 1.8
+      spawnPointIndex: 1
+  - waveName: 'Wave 13: Crossfire Swarm'
+    preWaveDelay: 2.35
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 1.345
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 1.345
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 1.1432501
+      startDelay: 3
+      spawnPointIndex: 1
+  - waveName: 'Wave 14: Crossfire Swarm'
+    preWaveDelay: 2.3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 1.3100001
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 1.3100001
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 1.1135001
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 15: Heavy Dual Incursion'
+    preWaveDelay: 2.25
+    entries:
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 1.2750001
+      startDelay: 1.2
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 1.0200001
+      startDelay: 2.7
+      spawnPointIndex: 1
+  - waveName: 'Wave 16: Crossfire Swarm'
+    preWaveDelay: 2.2
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 7
+      spawnInterval: 1.24
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 1.24
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 1.054
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 17: Crossfire Swarm'
+    preWaveDelay: 2.15
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 7
+      spawnInterval: 1.205
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 1.205
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 1.02425
+      startDelay: 3
+      spawnPointIndex: 1
+  - waveName: 'Wave 18: Converging Toxic Surge'
+    preWaveDelay: 2.1
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 7
+      spawnInterval: 0.93600005
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 0.93600005
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 1.1700001
+      startDelay: 1.8
+      spawnPointIndex: 1
+  - waveName: 'Wave 19: Crossfire Swarm'
+    preWaveDelay: 2.05
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 7
+      spawnInterval: 1.135
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 1.135
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 0.96475
+      startDelay: 3
+      spawnPointIndex: 1
+  - waveName: 'Wave 20: Heavy Dual Incursion'
+    preWaveDelay: 2
+    entries:
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 8
+      spawnInterval: 1.1
+      startDelay: 1.2
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 8
+      spawnInterval: 0.88000005
+      startDelay: 2.7
+      spawnPointIndex: 0
+  - waveName: 'Wave 21: Converging Toxic Surge'
+    preWaveDelay: 1.9499999
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 8
+      spawnInterval: 0.85200006
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 7
+      spawnInterval: 0.85200006
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 7
+      spawnInterval: 1.065
+      startDelay: 1.8
+      spawnPointIndex: 0
+  - waveName: 'Wave 22: Crossfire Swarm'
+    preWaveDelay: 1.9
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 8
+      spawnInterval: 1.0300001
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 7
+      spawnInterval: 1.0300001
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 5
+      spawnInterval: 0.8755001
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 23: Crossfire Swarm'
+    preWaveDelay: 1.85
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 8
+      spawnInterval: 0.99500006
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 7
+      spawnInterval: 0.99500006
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 5
+      spawnInterval: 0.8457501
+      startDelay: 3
+      spawnPointIndex: 1
+  - waveName: 'Wave 24: Converging Toxic Surge'
+    preWaveDelay: 1.8
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 9
+      spawnInterval: 0.76800007
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 8
+      spawnInterval: 0.76800007
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 7
+      spawnInterval: 0.96000004
+      startDelay: 1.8
+      spawnPointIndex: 1
+  - waveName: 'Wave 25: Heavy Dual Incursion'
+    preWaveDelay: 1.75
+    entries:
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 9
+      spawnInterval: 0.925
+      startDelay: 1.2
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 9
+      spawnInterval: 0.74
+      startDelay: 2.7
+      spawnPointIndex: 1
+  - waveName: 'Wave 26: Crossfire Swarm'
+    preWaveDelay: 1.6999999
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 9
+      spawnInterval: 0.89000005
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 8
+      spawnInterval: 0.89000005
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 0.75650007
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 27: Converging Toxic Surge'
+    preWaveDelay: 1.65
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 9
+      spawnInterval: 0.684
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 8
+      spawnInterval: 0.684
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 8
+      spawnInterval: 0.855
+      startDelay: 1.8
+      spawnPointIndex: 0
+  - waveName: 'Wave 28: Crossfire Swarm'
+    preWaveDelay: 1.6
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 10
+      spawnInterval: 0.82000005
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 9
+      spawnInterval: 0.82000005
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 0.6970001
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 29: Crossfire Swarm'
+    preWaveDelay: 1.55
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 10
+      spawnInterval: 0.785
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 9
+      spawnInterval: 0.785
+      startDelay: 1.5
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 0.66725004
+      startDelay: 3
+      spawnPointIndex: 1
+  - waveName: 'Wave 30: Heavy Dual Incursion'
+    preWaveDelay: 1.5
+    entries:
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 0
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 0
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 10
+      spawnInterval: 0.75000006
+      startDelay: 1.2
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 10
+      spawnInterval: 0.6000001
+      startDelay: 2.7
+      spawnPointIndex: 0
   timeLimit: 0
   threeStarCondition: Clear with no life points lost
   mapPrefab: {fileID: 0}
