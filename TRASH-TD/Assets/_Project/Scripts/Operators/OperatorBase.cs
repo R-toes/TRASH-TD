@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using TrashTD.Audio;
+using TrashTD.Combat;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
 using TrashTD.Enemies;
@@ -120,8 +121,21 @@ namespace TrashTD.Operators
             if (target == null || !isDeployed) return;
 
             PlayAttackSound();
+            CombatProjectileVisual.Fire(
+                transform.position,
+                target.transform.position,
+                new Color(1f, 0.9f, 0.35f),
+                12f,
+                0.1f,
+                0.05f,
+                false,
+                () => ApplyBasicAttackDamage(target));
+        }
 
-            // Damage is calculated by the combat system using the damage formula
+        private void ApplyBasicAttackDamage(EnemyBase target)
+        {
+            if (target == null || target.IsDead) return;
+
             int damage = Combat.DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
             target.TakeDamage(damage, data.damageType);
         }

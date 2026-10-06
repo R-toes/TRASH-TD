@@ -55,8 +55,15 @@ namespace TrashTD.Operators
                 {
                     PlayAttackSound();
                     int attackPower = Mathf.RoundToInt(currentATK * Mathf.Max(1f, data.isolatedAttackMultiplier));
-                    int damage = DamageCalculator.CalculateDamage(attackPower, GetTargetMitigation(target));
-                    target.TakeDamage(damage, data.damageType);
+                    CombatProjectileVisual.Fire(
+                        transform.position,
+                        target.transform.position,
+                        new Color(1f, 0.2f, 0.15f),
+                        12f,
+                        0.08f,
+                        0.04f,
+                        false,
+                        () => ApplyIsolatedDamage(target, attackPower));
                 }
                 else
                 {
@@ -68,6 +75,14 @@ namespace TrashTD.Operators
 
             MeleeSwipeVisual.Play(transform.position, target.transform.position, new Color(1f, 0.78f, 0.3f, 1f));
             base.Attack(target);
+        }
+
+        private void ApplyIsolatedDamage(EnemyBase target, int attackPower)
+        {
+            if (target == null || target.IsDead) return;
+
+            int damage = DamageCalculator.CalculateDamage(attackPower, GetTargetMitigation(target));
+            target.TakeDamage(damage, data.damageType);
         }
 
         private bool HasAdjacentOperator()

@@ -59,7 +59,13 @@ namespace TrashTD.Operators
                 8f,
                 0.12f,
                 0.06f,
-                PelletCount);
+                PelletCount,
+                () => ApplyShotgunDamage(targets));
+        }
+
+        private void ApplyShotgunDamage(System.Collections.Generic.List<EnemyBase> targets)
+        {
+            if (targets == null) return;
 
             for (int i = 0; i < targets.Count; i++)
             {

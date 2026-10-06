@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace TrashTD.Combat
@@ -13,6 +14,7 @@ namespace TrashTD.Combat
         private bool burstOnImpact;
         private bool isImpacting;
         private float impactTimer;
+        private Action onImpact;
 
         public static void Fire(
             Vector3 start,
@@ -21,7 +23,8 @@ namespace TrashTD.Combat
             float speed,
             float size,
             float trailWidth,
-            bool burstOnImpact = false)
+            bool burstOnImpact = false,
+            Action onImpact = null)
         {
             GameObject projectile = new GameObject("CombatProjectileVisual");
             projectile.transform.position = start;
@@ -47,6 +50,7 @@ namespace TrashTD.Combat
             visual.speed = speed;
             visual.spriteRenderer = spriteRenderer;
             visual.burstOnImpact = burstOnImpact;
+            visual.onImpact = onImpact;
         }
 
         public static void FireShotgunSpread(
@@ -59,7 +63,8 @@ namespace TrashTD.Combat
             float speed,
             float size,
             float trailWidth,
-            int pelletCount)
+            int pelletCount,
+            Action onImpact = null)
         {
             if (pelletCount <= 0 || range <= 0f || direction.sqrMagnitude <= Mathf.Epsilon) return;
 
@@ -72,7 +77,8 @@ namespace TrashTD.Combat
                     : i / (float)(pelletCount - 1);
                 float lateralOffset = Mathf.Lerp(minSpreadOffset, maxSpreadOffset, normalizedPosition);
                 Vector3 pelletTarget = start + direction * range + perpendicular * lateralOffset;
-                Fire(start, pelletTarget, color, speed, size, trailWidth);
+                Fire(start, pelletTarget, color, speed, size, trailWidth, false,
+                    i == pelletCount - 1 ? onImpact : null);
             }
         }
 
@@ -98,6 +104,8 @@ namespace TrashTD.Combat
             if (toTarget.sqrMagnitude <= step * step)
             {
                 transform.position = targetPosition;
+                onImpact?.Invoke();
+                onImpact = null;
                 if (burstOnImpact)
                 {
                     isImpacting = true;

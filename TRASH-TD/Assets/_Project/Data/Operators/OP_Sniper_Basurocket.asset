@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
+  m_Name: OP_Sniper_Basurocket
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
+  operatorName: Basurocket
+  operatorClass: 2
+  baseRarity: 3
+  position: 1
+  roleTags:
+  - Long Range
+  - AoE
+  - Explosive
+  - DPS
+  baseHP: 90
+  baseATK: 190
+  baseDEF: 10
+  baseRES: 0
+  blockCount: 0
+  attackRange: 7
+  attackInterval: 2.5
+  rangePattern:
+  - {x: 2, y: 0}
+  - {x: 3, y: 0}
+  - {x: 4, y: 0}
+  - {x: 5, y: 0}
+  - {x: 6, y: 0}
+  - {x: 7, y: 0}
+  damageType: 0
+  drawTwoCardsOnDeath: 0
+  bonusWhenIsolated: 0
+  isolatedAttackMultiplier: 1.5
+  skillDescription: Long-range explosive sniper. Fires up to 7 tiles forward, cannot attack the adjacent tile, and deals high physical area damage on impact.
+  chillPerHit: 0
+  chillSlowMultiplier: 0.65
+  chillSlowDuration: 2.5
+  chillFreezeThreshold: 100
+  chillFreezeDuration: 1.5
+  dpCost: 16
+  redeployCooldown: 60
+  portrait: {fileID: 21300000, guid: a1111111111111111111111111111103, type: 3}
+  operatorPrefab: {fileID: 685036189517171225, guid: 6c1e8a4f9d2b47a3b5e7c0f2d4a6b8e9, type: 3}

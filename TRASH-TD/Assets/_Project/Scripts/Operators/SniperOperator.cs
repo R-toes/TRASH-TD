@@ -17,14 +17,24 @@ namespace TrashTD.Operators
         {
             if (target == null || !isDeployed) return;
 
+            PlayAttackSound();
             CombatProjectileVisual.Fire(
                 transform.position,
                 target.transform.position,
                 new Color(1f, 0.82f, 0.32f),
                 12f,
                 0.14f,
-                0.08f);
-            base.Attack(target);
+                0.08f,
+                false,
+                () => ApplySniperDamage(target));
+        }
+
+        private void ApplySniperDamage(EnemyBase target)
+        {
+            if (target == null || target.IsDead) return;
+
+            int damage = Combat.DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
+            target.TakeDamage(damage, data.damageType);
         }
 
         protected override EnemyBase FindTarget()

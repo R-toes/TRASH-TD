@@ -81,16 +81,8 @@ namespace TrashTD.Operators
                     8.5f,
                     0.2f,
                     0.14f,
-                    true);
-
-                int chillDamage = DamageCalculator.CalculateDamage(currentATK, target.CurrentRES);
-                target.TakeDamage(chillDamage, DamageType.Arts);
-                target.ApplyChill(
-                    data.chillPerHit,
-                    data.chillSlowMultiplier,
-                    data.chillSlowDuration,
-                    data.chillFreezeThreshold,
-                    data.chillFreezeDuration);
+                    true,
+                    () => ApplyChillImpact(target));
                 return;
             }
 
@@ -100,29 +92,40 @@ namespace TrashTD.Operators
                 new Color(0.74f, 0.38f, 1f),
                 5.5f,
                 0.26f,
-                0.2f);
+                0.2f,
+                false,
+                () => ApplyArtsImpact(target));
+        }
 
-            // Primary target damage
+        private void ApplyChillImpact(EnemyBase target)
+        {
+            if (target == null || target.IsDead) return;
+
+            int chillDamage = DamageCalculator.CalculateDamage(currentATK, target.CurrentRES);
+            target.TakeDamage(chillDamage, DamageType.Arts);
+            target.ApplyChill(data.chillPerHit, data.chillSlowMultiplier, data.chillSlowDuration,
+                data.chillFreezeThreshold, data.chillFreezeDuration);
+        }
+
+        private void ApplyArtsImpact(EnemyBase target)
+        {
+            if (target == null || target.IsDead) return;
+
             int primaryATK = GetArmorAdjustedAttack(currentATK, target);
-            int primaryDmg = DamageCalculator.CalculateDamage(primaryATK, target.CurrentRES);
-            target.TakeDamage(primaryDmg, DamageType.Arts);
+            target.TakeDamage(DamageCalculator.CalculateDamage(primaryATK, target.CurrentRES), DamageType.Arts);
 
-            // Splash AoE to nearby enemies
-            if (EnemyManager.Instance != null && splashRadius > 0f)
+            if (EnemyManager.Instance == null || splashRadius <= 0f) return;
+
+            var splashTargets = EnemyManager.Instance.GetEnemiesInRadius(target.transform.position, splashRadius);
+            int secondaryAtk = Mathf.RoundToInt(currentATK * splashDamageRatio);
+            for (int i = 0; i < splashTargets.Count; i++)
             {
-                var splashTargets = EnemyManager.Instance.GetEnemiesInRadius(target.transform.position, splashRadius);
-                int secondaryAtk = Mathf.RoundToInt(currentATK * splashDamageRatio);
+                var splashTarget = splashTargets[i];
+                if (splashTarget == null || splashTarget == target || splashTarget.IsDead) continue;
 
-                for (int i = 0; i < splashTargets.Count; i++)
-                {
-                    var splashTarget = splashTargets[i];
-                    if (splashTarget != null && splashTarget != target && !splashTarget.IsDead)
-                    {
-                        int armorAdjustedSplashATK = GetArmorAdjustedAttack(secondaryAtk, splashTarget);
-                        int splashDmg = DamageCalculator.CalculateDamage(armorAdjustedSplashATK, splashTarget.CurrentRES);
-                        splashTarget.TakeDamage(splashDmg, DamageType.Arts);
-                    }
-                }
+                int armorAdjustedSplashATK = GetArmorAdjustedAttack(secondaryAtk, splashTarget);
+                int splashDmg = DamageCalculator.CalculateDamage(armorAdjustedSplashATK, splashTarget.CurrentRES);
+                splashTarget.TakeDamage(splashDmg, DamageType.Arts);
             }
         }
 
