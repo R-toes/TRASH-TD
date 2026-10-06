@@ -11,6 +11,8 @@ GameObject:
   - component: {fileID: 1174110668179871130}
   - component: {fileID: 1856980903800519579}
   - component: {fileID: 6849128909979572042}
+  - component: {fileID: 7942113375804192001}
+  - component: {fileID: 7942113375804192002}
   m_Layer: 0
   m_Name: Prefab_Enemy_Grunt
   m_TagString: Untagged
@@ -82,7 +84,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 4
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: b2222222222222222222222222222201, type: 3}
+  m_Sprite: {fileID: -7898312646210637631, guid: b70e07ea602c2134386eab3f3ad2994f, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -106,3 +108,38 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Enemies.GruntEnemy
   data: {fileID: 0}
+--- !u!95 &7942113375804192001
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8358608267878886893}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 8f2d0c4a9b7e6d5c4b3a291817161514, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_WarningMessage: 
+  m_KeepAnimatorControllerStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &7942113375804192002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8358608267878886893}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f3f4a1d4c1a4b92b0a5f5e4c0e8a9d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Enemies.GruntSpriteAnimation
+  frames:
+  - {fileID: -7898312646210637631, guid: b70e07ea602c2134386eab3f3ad2994f, type: 3}
+  - {fileID: -335570222899557190, guid: b70e07ea602c2134386eab3f3ad2994f, type: 3}
+  - {fileID: -4562411033135256672, guid: b70e07ea602c2134386eab3f3ad2994f, type: 3}
+  frameDuration: 0.3
