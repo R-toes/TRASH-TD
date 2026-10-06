@@ -34,6 +34,7 @@ namespace TrashTD.Operators
         protected GridCell deployedCell;
         protected bool isDeployed;
         protected float attackTimer;
+        private float trapDamageTimer;
         protected List<EnemyBase> blockedEnemies = new List<EnemyBase>();
         protected EnemyBase currentTarget;
 
@@ -71,6 +72,7 @@ namespace TrashTD.Operators
             currentRES = data.GetScaledRES(rarity);
 
             attackTimer = 0f;
+            trapDamageTimer = 0f;
             isDeployed = false;
         }
 
@@ -85,6 +87,7 @@ namespace TrashTD.Operators
 
             deployedCell = cell;
             isDeployed = true;
+            trapDamageTimer = 0f;
             cell.Deploy(gameObject);
             transform.position = cell.WorldPosition;
 
@@ -105,6 +108,7 @@ namespace TrashTD.Operators
             deployedCell?.Vacate();
             deployedCell = null;
             isDeployed = false;
+            trapDamageTimer = 0f;
             currentTarget = null;
 
             OnRetreated();
@@ -204,6 +208,22 @@ namespace TrashTD.Operators
         protected virtual void Update()
         {
             if (!isDeployed) return;
+
+            if (deployedCell != null && deployedCell.TileType == TileType.Trap)
+            {
+                trapDamageTimer += Time.deltaTime;
+                while (trapDamageTimer >= TrapTileRules.DamageIntervalSeconds && isDeployed)
+                {
+                    trapDamageTimer -= TrapTileRules.DamageIntervalSeconds;
+                    TrashTD.Combat.AcidDamageFlash.Flash(gameObject);
+                    TakeDamage(TrapTileRules.DamagePerTick, DamageType.Physical);
+                }
+                if (!isDeployed) return;
+            }
+            else
+            {
+                trapDamageTimer = 0f;
+            }
 
             // Update skill cooldowns
             equippedSkill?.UpdateSkill(Time.deltaTime);

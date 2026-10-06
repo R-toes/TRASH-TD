@@ -234,5 +234,83 @@ namespace TrashTD.Tests
             VerifyWaveDistribution(stage.wavesNormal, "Normal");
             VerifyWaveDistribution(stage.wavesHard, "Hard");
         }
+
+        [Test]
+        public void Stage3_RailyardCrossing_LayoutTrapsAndPathsAreCorrectlyConfigured()
+        {
+            var stage = Resources.Load<StageData>("Stages/STAGE_03");
+            Assert.IsNotNull(stage, "STAGE_03 resource asset must be loadable");
+            Assert.AreEqual(14, stage.gridWidth);
+            Assert.AreEqual(7, stage.gridHeight);
+            Assert.AreEqual(14 * 7, stage.tileLayout.Length);
+            Assert.AreEqual(32, stage.visualTilePixelSize);
+            Assert.IsNotNull(stage.mapVisualSprite);
+            Assert.IsNotNull(stage.backgroundVisualSprite);
+            Assert.IsNotNull(stage.upperBackgroundVisualSprites);
+            Assert.IsNotEmpty(stage.upperBackgroundVisualSprites);
+            foreach (var upperLayer in stage.upperBackgroundVisualSprites)
+            {
+                Assert.IsNotNull(upperLayer);
+            }
+
+            CollectionAssert.AreEqual(
+                new[] { new Vector2Int(0, 4), new Vector2Int(0, 1) },
+                stage.spawnPoints);
+            CollectionAssert.AreEqual(
+                new[] { new Vector2Int(13, 0) },
+                stage.exitPoints);
+            Assert.AreEqual(2, stage.enemyPaths.Length);
+            Assert.IsNotEmpty(stage.wavesEasy);
+            Assert.IsNotEmpty(stage.wavesNormal);
+            Assert.IsNotEmpty(stage.wavesHard);
+            foreach (var difficulty in new[] { StageDifficulty.Easy, StageDifficulty.Normal, StageDifficulty.Hard })
+            {
+                foreach (var wave in stage.GetWaves(difficulty))
+                {
+                    Assert.IsNotEmpty(wave.entries);
+                    foreach (var entry in wave.entries)
+                    {
+                        Assert.IsNotNull(entry.enemyData);
+                        Assert.That(entry.spawnPointIndex, Is.InRange(0, stage.spawnPoints.Length - 1));
+                    }
+                }
+            }
+
+            gridManager.InitializeFromStageData(stage);
+
+            foreach (var path in stage.enemyPaths)
+            {
+                Assert.AreEqual(stage.spawnPoints[path.spawnPointIndex], path.waypoints[0]);
+                Assert.AreEqual(stage.exitPoints[path.exitPointIndex], path.waypoints[path.waypoints.Length - 1]);
+                foreach (var waypoint in path.waypoints)
+                {
+                    Assert.IsTrue(gridManager.GetCell(waypoint).IsWalkable, $"Path tile {waypoint} must be walkable");
+                }
+            }
+
+            foreach (var trapPosition in new[] { new Vector2Int(3, 0), new Vector2Int(3, 1) })
+            {
+                var trap = gridManager.GetCell(trapPosition);
+                Assert.AreEqual(TileType.Trap, trap.TileType);
+                Assert.IsTrue(trap.IsWalkable);
+                Assert.IsTrue(trap.CanDeploy(OperatorPosition.Melee));
+                Assert.IsTrue(trap.CanDeploy(OperatorPosition.Ranged));
+            }
+
+            var blockedCell = gridManager.GetCell(6, 0);
+            Assert.AreEqual(TileType.Blocked, blockedCell.TileType);
+            Assert.IsFalse(blockedCell.IsWalkable);
+            Assert.IsFalse(blockedCell.CanDeploy(OperatorPosition.Melee));
+            Assert.IsFalse(blockedCell.CanDeploy(OperatorPosition.Ranged));
+
+            var upperRouteGap = gridManager.GetCell(11, 2);
+            Assert.AreEqual(TileType.Blocked, upperRouteGap.TileType);
+            Assert.IsFalse(upperRouteGap.IsWalkable);
+            Assert.IsFalse(upperRouteGap.CanDeploy(OperatorPosition.Melee));
+            Assert.IsFalse(upperRouteGap.CanDeploy(OperatorPosition.Ranged));
+            CollectionAssert.Contains(stage.enemyPaths[0].waypoints, new Vector2Int(12, 3));
+            CollectionAssert.Contains(stage.enemyPaths[0].waypoints, new Vector2Int(12, 2));
+            CollectionAssert.DoesNotContain(stage.enemyPaths[0].waypoints, new Vector2Int(11, 2));
+        }
     }
 }

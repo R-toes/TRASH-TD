@@ -93,6 +93,7 @@ namespace TrashTD.UI
             GameManager manager = GameManager.Instance;
             if (manager != null)
             {
+                MainMenuController.SetPendingStage(manager.CurrentStage);
                 MainMenuController.SetPendingStageDifficulty(manager.CurrentDifficulty);
             }
 

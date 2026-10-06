@@ -62,7 +62,14 @@ namespace TrashTD.Data
         Blocked,        // Hazard — spikes, water, unwalkable
         EnemyPath,      // Legacy alias for a ground enemy lane; use LowGround for new stages
         SpawnPoint,     // Enemy entry point
-        ExitPoint       // Objective — enemies reaching here cost life points
+        ExitPoint,      // Objective — enemies reaching here cost life points
+        Trap            // Walkable tile that damages units occupying it over time
+    }
+
+    public static class TrapTileRules
+    {
+        public const int DamagePerTick = 1;
+        public const float DamageIntervalSeconds = 1f;
     }
 
     /// <summary>

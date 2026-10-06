@@ -51,7 +51,8 @@ namespace TrashTD.Core.Grid
             IsWalkable = tileType == TileType.EnemyPath
                       || tileType == TileType.SpawnPoint
                       || tileType == TileType.ExitPoint
-                      || tileType == TileType.LowGround;
+                      || tileType == TileType.LowGround
+                      || tileType == TileType.Trap;
             IsAirPassable = tileType != TileType.Blocked;
         }
 
@@ -67,6 +68,8 @@ namespace TrashTD.Core.Grid
                 (TileType.LowGround, OperatorPosition.Melee) => true,
                 (TileType.EnemyPath, OperatorPosition.Melee) => true,
                 (TileType.HighGround, OperatorPosition.Ranged) => true,
+                (TileType.Trap, OperatorPosition.Melee) => true,
+                (TileType.Trap, OperatorPosition.Ranged) => true,
                 // High Ground sometimes allows melee — marked via separate flag if needed
                 // For now, strictly ranged-only on High Ground per GDD
                 _ => false
@@ -103,7 +106,8 @@ namespace TrashTD.Core.Grid
             IsWalkable = newType == TileType.EnemyPath
                       || newType == TileType.SpawnPoint
                       || newType == TileType.ExitPoint
-                      || newType == TileType.LowGround;
+                      || newType == TileType.LowGround
+                      || newType == TileType.Trap;
             IsAirPassable = newType != TileType.Blocked;
         }
     }

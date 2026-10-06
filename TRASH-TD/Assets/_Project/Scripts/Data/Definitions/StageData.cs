@@ -71,6 +71,12 @@ namespace TrashTD.Data
         [Tooltip("Optional full-map artwork displayed behind the logical grid")]
         public Sprite mapVisualSprite;
 
+        [Tooltip("Optional background artwork rendered behind the main map artwork")]
+        public Sprite backgroundVisualSprite;
+
+        [Tooltip("Optional upper-layer artwork rendered above the main map artwork but below units")]
+        public Sprite[] upperBackgroundVisualSprites;
+
         [Header("Visual Artwork Alignment")]
         [Tooltip("Pixel size of one tile in the map visual sprite (usually 32 px)")]
         public int visualTilePixelSize = 32;

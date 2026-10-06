@@ -58,6 +58,10 @@ namespace TrashTD.Systems
         public EnemyBase SpawnEnemy(EnemyData enemyData, List<Vector3> path, int difficultyLevel)
         {
             if (enemyData == null || path == null || path.Count == 0) return null;
+            if (gridManager == null)
+            {
+                gridManager = FindFirstObjectByType<GridManager>();
+            }
 
             GameObject enemyObj;
             if (enemyData.enemyPrefab != null)
@@ -84,6 +88,7 @@ namespace TrashTD.Systems
             }
 
             enemyComp.Initialize(enemyData, difficultyLevel);
+            enemyComp.SetGridManager(gridManager);
             enemyComp.SetPath(path);
 
             enemyComp.OnDied += HandleEnemyDied;

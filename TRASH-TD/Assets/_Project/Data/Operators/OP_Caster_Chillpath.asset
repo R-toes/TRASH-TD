@@ -25,7 +25,7 @@ MonoBehaviour:
   baseRES: 15
   blockCount: 0
   attackRange: 3
-  attackInterval: 1.8
+  attackInterval: 1.4
   rangePattern:
   - {x: 1, y: 0}
   - {x: 2, y: 0}
@@ -38,10 +38,10 @@ MonoBehaviour:
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
   skillDescription: 
-  chillPerHit: 20
+  chillPerHit: 30
   chillSlowMultiplier: 0.5
   chillSlowDuration: 2.5
-  chillFreezeThreshold: 100
+  chillFreezeThreshold: 90
   chillFreezeDuration: 1.5
   dpCost: 13
   redeployCooldown: 60

@@ -28,6 +28,8 @@ namespace TrashTD.Enemies
         protected int currentDEF;
         protected int currentRES;
         protected float currentMoveSpeed;
+        private GridManager gridManager;
+        private float trapDamageTimer;
 
         // --- Pathfinding ---
         protected List<Vector3> path;
@@ -111,6 +113,12 @@ namespace TrashTD.Enemies
             isDead = false;
             attackTimer = 0f;
             currentPathIndex = 0;
+            trapDamageTimer = 0f;
+        }
+
+        public void SetGridManager(GridManager manager)
+        {
+            gridManager = manager;
         }
 
         /// <summary>
@@ -135,6 +143,9 @@ namespace TrashTD.Enemies
         {
             if (isDead) return;
 
+            UpdateTrapDamage(Time.deltaTime);
+            if (isDead) return;
+
             UpdateChillStatus(Time.deltaTime);
             if (isFrozen) return;
 
@@ -147,6 +158,27 @@ namespace TrashTD.Enemies
             {
                 // Move along path
                 MoveAlongPath();
+            }
+        }
+
+        private void UpdateTrapDamage(float deltaTime)
+        {
+            if (gridManager == null) return;
+
+            Vector2Int gridPosition = gridManager.WorldToGridPosition(transform.position);
+            GridCell cell = gridManager.GetCell(gridPosition);
+            if (cell == null || cell.TileType != TileType.Trap)
+            {
+                trapDamageTimer = 0f;
+                return;
+            }
+
+            trapDamageTimer += deltaTime;
+            while (trapDamageTimer >= TrapTileRules.DamageIntervalSeconds && !isDead)
+            {
+                trapDamageTimer -= TrapTileRules.DamageIntervalSeconds;
+                AcidDamageFlash.Flash(gameObject);
+                TakeDamage(TrapTileRules.DamagePerTick, DamageType.Physical);
             }
         }
 

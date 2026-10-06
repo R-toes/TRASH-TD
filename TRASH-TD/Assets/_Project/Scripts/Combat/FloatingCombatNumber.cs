@@ -60,4 +60,108 @@ namespace TrashTD.Combat
             }
         }
     }
+
+    /// <summary>
+    /// Briefly overlays a pulsing acid-green tint on a unit when it takes trap damage.
+    /// </summary>
+    public sealed class AcidDamageFlash : MonoBehaviour
+    {
+        private static readonly Color AcidColor = new Color(0.2f, 1f, 0.05f, 1f);
+        private const float FlashDuration = 0.3f;
+
+        private readonly System.Collections.Generic.List<SpriteRenderer> sourceRenderers =
+            new System.Collections.Generic.List<SpriteRenderer>();
+        private readonly System.Collections.Generic.List<SpriteRenderer> overlayRenderers =
+            new System.Collections.Generic.List<SpriteRenderer>();
+        private float remainingFlashTime;
+
+        public static void Flash(GameObject target)
+        {
+            if (target == null) return;
+
+            AcidDamageFlash flash = target.GetComponent<AcidDamageFlash>();
+            if (flash == null) flash = target.AddComponent<AcidDamageFlash>();
+            flash.StartFlash();
+        }
+
+        private void StartFlash()
+        {
+            if (sourceRenderers.Count == 0)
+            {
+                CacheRenderers();
+            }
+
+            remainingFlashTime = FlashDuration;
+            UpdateOverlayRenderers(1f);
+        }
+
+        private void CacheRenderers()
+        {
+            SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);
+            foreach (SpriteRenderer source in renderers)
+            {
+                if (source == null) continue;
+
+                GameObject overlayObject = new GameObject("AcidDamageOverlay");
+                overlayObject.transform.SetParent(source.transform, false);
+
+                SpriteRenderer overlay = overlayObject.AddComponent<SpriteRenderer>();
+                overlay.sprite = source.sprite;
+                overlay.flipX = source.flipX;
+                overlay.flipY = source.flipY;
+                overlay.sortingLayerID = source.sortingLayerID;
+                overlay.sortingOrder = source.sortingOrder + 1;
+                overlay.maskInteraction = source.maskInteraction;
+                overlay.drawMode = source.drawMode;
+                overlay.size = source.size;
+                overlay.tileMode = source.tileMode;
+                overlay.color = Color.clear;
+                overlay.enabled = false;
+
+                sourceRenderers.Add(source);
+                overlayRenderers.Add(overlay);
+            }
+        }
+
+        private void Update()
+        {
+            if (remainingFlashTime <= 0f) return;
+
+            remainingFlashTime = Mathf.Max(0f, remainingFlashTime - Time.deltaTime);
+            float progress = 1f - remainingFlashTime / FlashDuration;
+            float fade = Mathf.Sin(progress * Mathf.PI);
+            float pulse = 0.4f + 0.6f * (0.5f + 0.5f * Mathf.Sin(progress * Mathf.PI * 8f));
+            UpdateOverlayRenderers(fade * pulse);
+
+            if (remainingFlashTime <= 0f)
+            {
+                for (int i = 0; i < overlayRenderers.Count; i++)
+                {
+                    if (overlayRenderers[i] != null) overlayRenderers[i].enabled = false;
+                }
+            }
+        }
+
+        private void UpdateOverlayRenderers(float intensity)
+        {
+            for (int i = 0; i < sourceRenderers.Count; i++)
+            {
+                SpriteRenderer source = sourceRenderers[i];
+                SpriteRenderer overlay = overlayRenderers[i];
+                if (source == null || overlay == null) continue;
+
+                overlay.sprite = source.sprite;
+                overlay.flipX = source.flipX;
+                overlay.flipY = source.flipY;
+                overlay.sortingLayerID = source.sortingLayerID;
+                overlay.sortingOrder = source.sortingOrder + 1;
+                overlay.maskInteraction = source.maskInteraction;
+                overlay.drawMode = source.drawMode;
+                overlay.size = source.size;
+                overlay.tileMode = source.tileMode;
+                overlay.color = new Color(AcidColor.r, AcidColor.g, AcidColor.b, AcidColor.a * intensity);
+                overlay.enabled = source.enabled && source.gameObject.activeInHierarchy && intensity > 0f;
+            }
+        }
+    }
 }

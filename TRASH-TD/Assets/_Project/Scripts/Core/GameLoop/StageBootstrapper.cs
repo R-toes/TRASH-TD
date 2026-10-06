@@ -18,6 +18,12 @@ namespace TrashTD.Core.GameLoop
     /// </summary>
     public class StageBootstrapper : MonoBehaviour
     {
+        private const float Level3WeatherDamageIntervalSeconds = 2f;
+        private const int AcidRainDropCount = 72;
+        private static Sprite weatherDotSprite;
+        private static Texture2D dustCloudTexture;
+        private static Material dustCloudMaterial;
+
         [Header("Stage Config")]
         [Tooltip("The stage data asset to load and test")]
         public StageData stageData;
@@ -36,6 +42,7 @@ namespace TrashTD.Core.GameLoop
         public Sprite enemyPathSprite;
         public Sprite spawnPointSprite;
         public Sprite exitPointSprite;
+        public Sprite trapSprite;
 
         [Header("Managers (Auto-found if null)")]
         public GridManager gridManager;
@@ -49,7 +56,12 @@ namespace TrashTD.Core.GameLoop
         private DraftCard pendingDeployCard = null;
         private GameplayHUDUI gameplayHudUI;
         private readonly List<GameObject> placementPreviewVisuals = new List<GameObject>();
+        private readonly List<Transform> acidRainDrops = new List<Transform>();
         private Material placementPreviewMaterial;
+        private float weatherDamageTimer;
+        private Vector2 acidRainBoundsMin;
+        private Vector2 acidRainBoundsMax;
+        private Vector2 acidRainVelocity;
         private Vector2Int placementGridPosition;
         private OperatorFacing placementFacing = OperatorFacing.Right;
         private bool isPlacementPreviewActive;
@@ -91,6 +103,12 @@ namespace TrashTD.Core.GameLoop
             // 3. Center Camera
             CenterCameraOnGrid();
 
+            // 3.5 Apply the Level 3 acidstorm and sandstorm
+            if (stageData.stageId == "STAGE_03")
+            {
+                CreateLevel3WeatherEffects();
+            }
+
             // 4. Initialize Draft System
             if (operatorPool != null && operatorPool.Count > 0)
             {
@@ -124,45 +142,29 @@ namespace TrashTD.Core.GameLoop
             Vector3 gridBottomLeft = gridManager.GridToWorldPosition(0, 0) - new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f);
             Vector3 targetBottomLeft = gridBottomLeft + new Vector3(stageData.visualTileOffset.x * cellSize, stageData.visualTileOffset.y * cellSize, 0f);
 
+            DrawMapArtworkLayer(gridContainer.transform, stageData.backgroundVisualSprite, "BackgroundArtwork", 0, targetBottomLeft, true);
+
             Sprite mapSprite = stageData.mapVisualSprite;
-            if (mapSprite != null)
+            DrawMapArtworkLayer(gridContainer.transform, mapSprite, "MapArtwork", 1, targetBottomLeft, false);
+
+            if (stageData.upperBackgroundVisualSprites != null)
             {
-                GameObject mapObject = new GameObject("MapArtwork");
-                mapObject.transform.SetParent(gridContainer.transform);
-
-                var mapRenderer = mapObject.AddComponent<SpriteRenderer>();
-                mapRenderer.sprite = mapSprite;
-                mapRenderer.sortingOrder = 0;
-
-                // Scale so that 1 tile in the sprite (e.g. 32px) equals cellSize in world units, preserving square pixels.
-                // Any extra rows/columns (e.g. 384x32 extra top row in Level1 complete) naturally extend outside the grid.
-                float pixelPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
-                float spriteUnitsPerTile = pixelPerTile / mapSprite.pixelsPerUnit;
-                float tileScale = cellSize / spriteUnitsPerTile;
-                Vector3 mapScale = new Vector3(tileScale, tileScale, 1f);
-                mapObject.transform.localScale = mapScale;
-
-                // Align the bottom-left of the sprite's bounding box to targetBottomLeft (cell 0,0)
-                mapObject.transform.position = targetBottomLeft - Vector3.Scale(mapSprite.bounds.min, mapScale);
+                for (int i = 0; i < stageData.upperBackgroundVisualSprites.Length; i++)
+                {
+                    DrawMapArtworkLayer(
+                        gridContainer.transform,
+                        stageData.upperBackgroundVisualSprites[i],
+                        $"UpperBackgroundArtwork_{i}",
+                        2,
+                        targetBottomLeft,
+                        true);
+                }
             }
 
             Sprite fgSprite = stageData.foregroundVisualSprite;
             if (fgSprite != null)
             {
-                GameObject fgObject = new GameObject("ForegroundArtwork");
-                fgObject.transform.SetParent(gridContainer.transform);
-
-                var fgRenderer = fgObject.AddComponent<SpriteRenderer>();
-                fgRenderer.sprite = fgSprite;
-                fgRenderer.sortingOrder = 10; // In front of operators (5) and enemies (4)
-
-                float pixelPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
-                float spriteUnitsPerTile = pixelPerTile / fgSprite.pixelsPerUnit;
-                float tileScale = cellSize / spriteUnitsPerTile;
-                Vector3 fgScale = new Vector3(tileScale, tileScale, 1f);
-                fgObject.transform.localScale = fgScale;
-
-                fgObject.transform.position = targetBottomLeft - Vector3.Scale(fgSprite.bounds.min, fgScale);
+                DrawMapArtworkLayer(gridContainer.transform, fgSprite, "ForegroundArtwork", 10, targetBottomLeft, false);
             }
 
             for (int y = 0; y < stageData.gridHeight; y++)
@@ -190,6 +192,30 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
+        private void DrawMapArtworkLayer(Transform parent, Sprite sprite, string objectName, int sortingOrder, Vector3 targetBottomLeft, bool alignToSourceRect)
+        {
+            if (sprite == null) return;
+
+            GameObject artworkObject = new GameObject(objectName);
+            artworkObject.transform.SetParent(parent);
+
+            var spriteRenderer = artworkObject.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = sprite;
+            spriteRenderer.sortingOrder = sortingOrder;
+
+            float pixelPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
+            float spriteUnitsPerTile = pixelPerTile / sprite.pixelsPerUnit;
+            float tileScale = gridManager.CellSize / spriteUnitsPerTile;
+            Vector3 artworkScale = new Vector3(tileScale, tileScale, 1f);
+            artworkObject.transform.localScale = artworkScale;
+
+            Vector3 sourceOffset = alignToSourceRect
+                ? new Vector3(sprite.rect.x, sprite.rect.y, 0f) * (gridManager.CellSize / pixelPerTile)
+                : Vector3.zero;
+            artworkObject.transform.position = targetBottomLeft + sourceOffset
+                - Vector3.Scale(sprite.bounds.min, artworkScale);
+        }
+
         private Sprite GetSpriteForTile(TileType type)
         {
             return type switch
@@ -200,6 +226,7 @@ namespace TrashTD.Core.GameLoop
                 TileType.EnemyPath => lowGroundSprite,
                 TileType.SpawnPoint => spawnPointSprite,
                 TileType.ExitPoint => exitPointSprite,
+                TileType.Trap => lowGroundSprite,
                 _ => lowGroundSprite
             };
         }
@@ -367,6 +394,9 @@ namespace TrashTD.Core.GameLoop
 
         private void Update()
         {
+            UpdateAcidRainDrops();
+            UpdateLevel3WeatherDamage();
+
             if (gameManager == null || gameManager.CurrentState != GamePlayState.Playing)
             {
                 if (isPlacementPreviewActive || isOperatorRangePreviewActive) HidePlacementPreview();
@@ -446,6 +476,316 @@ namespace TrashTD.Core.GameLoop
                     : null;
 
                 HandleOperatorMapSelection(clickedOperator);
+            }
+        }
+
+        private void CreateLevel3WeatherEffects()
+        {
+            float cellSize = gridManager.CellSize;
+            float mapWidth = stageData.gridWidth * cellSize;
+            float mapHeight = stageData.gridHeight * cellSize;
+            Vector3 gridBottomLeft = gridManager.GridToWorldPosition(0, 0)
+                - new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f);
+            Vector3 mapCenter = gridBottomLeft + new Vector3(mapWidth * 0.5f, mapHeight * 0.5f, 0f);
+
+            var weatherRoot = new GameObject("Level3WeatherEffects");
+            weatherRoot.transform.SetParent(transform, false);
+
+            CreateAcidRainDrops(weatherRoot.transform, gridBottomLeft, mapWidth, mapHeight, cellSize);
+
+            ParticleSystem sandstorm = CreateWeatherParticleSystem(
+                weatherRoot.transform,
+                "SandstormWind",
+                new Color(0.95f, 0.78f, 0.48f, 0.14f),
+                new Vector3(0.12f, 0.035f, 0.02f),
+                2.8f,
+                12f,
+                8);
+            sandstorm.transform.position = mapCenter;
+            var windShape = sandstorm.shape;
+            windShape.shapeType = ParticleSystemShapeType.Box;
+            windShape.scale = new Vector3(mapWidth + 1f, mapHeight, 0.1f);
+            var windVelocity = sandstorm.velocityOverLifetime;
+            windVelocity.enabled = true;
+            windVelocity.space = ParticleSystemSimulationSpace.World;
+            windVelocity.x = new ParticleSystem.MinMaxCurve(3f);
+            windVelocity.y = new ParticleSystem.MinMaxCurve(0f);
+
+            var windTrails = sandstorm.trails;
+            windTrails.enabled = true;
+            windTrails.mode = ParticleSystemTrailMode.PerParticle;
+            windTrails.ratio = 0.45f;
+            windTrails.lifetime = 0.45f;
+            windTrails.dieWithParticles = true;
+            windTrails.widthOverTrail = new ParticleSystem.MinMaxCurve(0.35f, AnimationCurve.EaseInOut(0f, 1f, 1f, 0f));
+            windTrails.colorOverLifetime = new ParticleSystem.MinMaxGradient(
+                new Color(0.95f, 0.78f, 0.48f, 0.07f));
+            var particleRenderer = sandstorm.GetComponent<ParticleSystemRenderer>();
+            particleRenderer.trailMaterial = GetWeatherParticleMaterial();
+            sandstorm.Play();
+
+            ParticleSystem dust = CreateWeatherParticleSystem(
+                weatherRoot.transform,
+                "SandstormDust",
+                new Color(0.78f, 0.62f, 0.39f, 0.5f),
+                new Vector3(0.3f, 0.2f, 0.02f),
+                9f,
+                28f,
+                8);
+            dust.transform.position = mapCenter;
+            var dustShape = dust.shape;
+            dustShape.shapeType = ParticleSystemShapeType.Box;
+            dustShape.scale = new Vector3(mapWidth + 1f, mapHeight, 0.1f);
+            var dustMain = dust.main;
+            dustMain.startSizeX = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
+            dustMain.startSizeY = new ParticleSystem.MinMaxCurve(0.3f, 0.55f);
+            var dustVelocity = dust.velocityOverLifetime;
+            dustVelocity.enabled = true;
+            dustVelocity.space = ParticleSystemSimulationSpace.World;
+            dustVelocity.x = new ParticleSystem.MinMaxCurve(1.2f, 2f);
+            dustVelocity.y = new ParticleSystem.MinMaxCurve(-0.08f, 0.08f);
+            var dustRenderer = dust.GetComponent<ParticleSystemRenderer>();
+            dustRenderer.sharedMaterial = GetDustCloudMaterial();
+            dust.Play();
+        }
+
+        private void CreateAcidRainDrops(Transform parent, Vector3 gridBottomLeft, float mapWidth, float mapHeight, float cellSize)
+        {
+            acidRainBoundsMin = new Vector2(gridBottomLeft.x, gridBottomLeft.y);
+            acidRainBoundsMax = new Vector2(gridBottomLeft.x + mapWidth, gridBottomLeft.y + mapHeight);
+            acidRainVelocity = new Vector2(1.3f, -5f);
+            float pixelSize = cellSize / 32f;
+            Sprite dotSprite = GetWeatherDotSprite();
+
+            for (int i = 0; i < AcidRainDropCount; i++)
+            {
+                var dropObject = new GameObject($"AcidRainDrop_{i}");
+                dropObject.transform.SetParent(parent, false);
+                dropObject.transform.position = new Vector3(
+                    Random.Range(acidRainBoundsMin.x, acidRainBoundsMax.x),
+                    Random.Range(acidRainBoundsMin.y, acidRainBoundsMax.y),
+                    0f);
+                dropObject.transform.localScale = Vector3.one * pixelSize;
+
+                var renderer = dropObject.AddComponent<SpriteRenderer>();
+                renderer.sprite = dotSprite;
+                renderer.color = new Color(0.2f, 1f, 0.04f, 0.9f);
+                renderer.sortingOrder = 7;
+                acidRainDrops.Add(dropObject.transform);
+            }
+        }
+
+        private static Sprite GetWeatherDotSprite()
+        {
+            if (weatherDotSprite == null)
+            {
+                weatherDotSprite = Sprite.Create(
+                    Texture2D.whiteTexture,
+                    new Rect(0f, 0f, 1f, 1f),
+                    new Vector2(0.5f, 0.5f),
+                    1f);
+            }
+
+            return weatherDotSprite;
+        }
+
+        private static ParticleSystem CreateWeatherParticleSystem(
+            Transform parent,
+            string objectName,
+            Color color,
+            Vector3 particleSize,
+            float lifetime,
+            float emissionRate,
+            int sortingOrder)
+        {
+            var effectObject = new GameObject(objectName);
+            effectObject.transform.SetParent(parent, false);
+
+            var particles = effectObject.AddComponent<ParticleSystem>();
+            var main = particles.main;
+            main.loop = true;
+            main.playOnAwake = false;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 1000;
+            main.startLifetime = lifetime;
+            main.startSpeed = 0f;
+            main.startSize3D = true;
+            main.startSizeX = particleSize.x;
+            main.startSizeY = particleSize.y;
+            main.startSizeZ = particleSize.z;
+            main.startColor = color;
+
+            var emission = particles.emission;
+            emission.rateOverTime = emissionRate;
+
+            var renderer = effectObject.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.sortingOrder = sortingOrder;
+            renderer.sharedMaterial = GetWeatherParticleMaterial();
+
+            var colorOverLifetime = particles.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            var fade = new Gradient();
+            fade.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(color, 0f),
+                    new GradientColorKey(color, 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0f, 0f),
+                    new GradientAlphaKey(color.a, 0.15f),
+                    new GradientAlphaKey(color.a, 0.8f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(fade);
+
+            return particles;
+        }
+
+        private static Material weatherParticleMaterial;
+
+        private static Material GetDustCloudMaterial()
+        {
+            if (dustCloudMaterial != null) return dustCloudMaterial;
+
+            Shader shader = Shader.Find("Sprites/Default");
+            if (shader == null)
+            {
+                Material weatherMaterial = GetWeatherParticleMaterial();
+                if (weatherMaterial == null) return null;
+                dustCloudMaterial = new Material(weatherMaterial);
+            }
+            else
+            {
+                dustCloudMaterial = new Material(shader);
+            }
+
+            dustCloudMaterial.name = "Level3 Dust Cloud Particles";
+            dustCloudMaterial.mainTexture = GetDustCloudTexture();
+            return dustCloudMaterial;
+        }
+
+        private static Texture2D GetDustCloudTexture()
+        {
+            if (dustCloudTexture != null) return dustCloudTexture;
+
+            const int textureSize = 64;
+            dustCloudTexture = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false)
+            {
+                name = "Level3 Soft Dust Cloud",
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+
+            var pixels = new Color[textureSize * textureSize];
+            for (int y = 0; y < textureSize; y++)
+            {
+                for (int x = 0; x < textureSize; x++)
+                {
+                    float dx = (x + 0.5f) / textureSize * 2f - 1f;
+                    float dy = (y + 0.5f) / textureSize * 2f - 1f;
+                    float radius = Mathf.Sqrt(dx * dx + dy * dy);
+                    float edgeVariation =
+                        Mathf.Sin(dx * 5f + dy * 3f) * 0.06f +
+                        Mathf.Sin(dx * 9f - dy * 7f) * 0.035f;
+                    float edge = 0.88f + edgeVariation;
+                    float alpha = 1f - Mathf.SmoothStep(edge - 0.5f, edge, radius);
+                    alpha *= alpha;
+                    pixels[y * textureSize + x] = new Color(1f, 1f, 1f, alpha);
+                }
+            }
+
+            dustCloudTexture.SetPixels(pixels);
+            dustCloudTexture.Apply();
+            return dustCloudTexture;
+        }
+
+        private static Material GetWeatherParticleMaterial()
+        {
+            if (weatherParticleMaterial != null) return weatherParticleMaterial;
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null) shader = Shader.Find("Particles/Standard Unlit");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+            if (shader == null)
+            {
+                Debug.LogError("StageBootstrapper: No supported shader found for Level 3 weather particles.");
+                return null;
+            }
+
+            weatherParticleMaterial = new Material(shader)
+            {
+                name = "Level3 Weather Particles",
+                mainTexture = Texture2D.whiteTexture
+            };
+            return weatherParticleMaterial;
+        }
+
+        private void UpdateLevel3WeatherDamage()
+        {
+            if (stageData == null || stageData.stageId != "STAGE_03" ||
+                gameManager == null || gameManager.CurrentState != GamePlayState.Playing)
+            {
+                return;
+            }
+
+            weatherDamageTimer += Time.deltaTime;
+            while (weatherDamageTimer >= Level3WeatherDamageIntervalSeconds)
+            {
+                weatherDamageTimer -= Level3WeatherDamageIntervalSeconds;
+                ApplyLevel3WeatherDamage();
+            }
+        }
+
+        private void UpdateAcidRainDrops()
+        {
+            if (acidRainDrops.Count == 0) return;
+
+            float deltaTime = Time.deltaTime;
+            for (int i = 0; i < acidRainDrops.Count; i++)
+            {
+                Transform drop = acidRainDrops[i];
+                if (drop == null) continue;
+
+                Vector3 position = drop.position;
+                position.x += acidRainVelocity.x * deltaTime;
+                position.y += acidRainVelocity.y * deltaTime;
+                if (position.y < acidRainBoundsMin.y)
+                {
+                    position.x = Random.Range(acidRainBoundsMin.x, acidRainBoundsMax.x);
+                    position.y = acidRainBoundsMax.y + Random.Range(0f, 0.5f);
+                }
+
+                drop.position = position;
+            }
+        }
+
+        private void ApplyLevel3WeatherDamage()
+        {
+            if (operatorManager != null)
+            {
+                for (int i = operatorManager.DeployedOperators.Count - 1; i >= 0; i--)
+                {
+                    OperatorBase op = operatorManager.DeployedOperators[i];
+                    if (op == null || !op.IsDeployed || op.CurrentHP <= 0) continue;
+
+                    TrashTD.Combat.AcidDamageFlash.Flash(op.gameObject);
+                    op.TakeDamage(TrapTileRules.DamagePerTick, DamageType.Physical);
+                }
+            }
+
+            if (enemyManager != null)
+            {
+                for (int i = enemyManager.ActiveEnemies.Count - 1; i >= 0; i--)
+                {
+                    EnemyBase enemy = enemyManager.ActiveEnemies[i];
+                    if (enemy == null || enemy.IsDead) continue;
+
+                    TrashTD.Combat.AcidDamageFlash.Flash(enemy.gameObject);
+                    enemy.TakeDamage(TrapTileRules.DamagePerTick, DamageType.Physical);
+                }
             }
         }
 
