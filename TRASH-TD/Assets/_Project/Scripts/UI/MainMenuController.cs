@@ -17,8 +17,14 @@ namespace TrashTD.UI
     public class MainMenuController : MonoBehaviour
     {
         private const string FirstPlayableStageId = "STAGE_01";
+        private const string SecondPlayableStageId = "STAGE_02";
         private const string GameplaySceneName = "GameplayTest";
         private const float EntranceDuration = 0.45f;
+
+        private static bool IsStagePlayable(string stageId)
+        {
+            return stageId == FirstPlayableStageId || stageId == SecondPlayableStageId;
+        }
 
         // ── Palette ──────────────────────────────────────────
         private static readonly Color AccentColor = new Color(0.18f, 0.82f, 0.45f, 1f);
@@ -65,6 +71,8 @@ namespace TrashTD.UI
 
         private static StageDifficulty pendingStageDifficulty;
         private static bool hasPendingStageDifficulty;
+        private static StageData pendingStageData;
+        private static bool hasPendingStageData;
         private static bool returnToStageSelector;
 
         private readonly List<StageData> availableStages = new List<StageData>();
@@ -149,6 +157,8 @@ namespace TrashTD.UI
         {
             returnToStageSelector = false;
             hasPendingStageDifficulty = false;
+            pendingStageData = null;
+            hasPendingStageData = false;
         }
 
         // ─────────────────────────────────────────────────────
@@ -309,6 +319,22 @@ namespace TrashTD.UI
 
             hasPendingStageDifficulty = false;
             return pendingStageDifficulty;
+        }
+
+        public static void SetPendingStage(StageData stage)
+        {
+            pendingStageData = stage;
+            hasPendingStageData = true;
+        }
+
+        public static StageData ConsumePendingStage(StageData fallback)
+        {
+            if (!hasPendingStageData) return fallback;
+
+            hasPendingStageData = false;
+            StageData stage = pendingStageData;
+            pendingStageData = null;
+            return stage != null ? stage : fallback;
         }
 
         // ─────────────────────────────────────────────────────
@@ -600,10 +626,15 @@ namespace TrashTD.UI
 
             for (int i = 0; i < stageNames.Length; i++)
             {
-                var stage = ScriptableObject.CreateInstance<StageData>();
-                stage.stageId = "STAGE_0" + (i + 1);
-                stage.mapName = stageNames[i];
-                stage.shortDescription = stageDescriptions[i];
+                string id = "STAGE_0" + (i + 1);
+                var stage = Resources.Load<StageData>("Stages/" + id);
+                if (stage == null)
+                {
+                    stage = ScriptableObject.CreateInstance<StageData>();
+                    stage.stageId = id;
+                    stage.mapName = stageNames[i];
+                    stage.shortDescription = stageDescriptions[i];
+                }
                 availableStages.Add(stage);
             }
 
@@ -629,7 +660,7 @@ namespace TrashTD.UI
                 button.gameObject.SetActive(true);
                 button.name = "StageButton_" + (i + 1);
 
-                bool isPlayable = stage.stageId == FirstPlayableStageId;
+                bool isPlayable = IsStagePlayable(stage.stageId);
                 if (isPlayable) unlocked++;
 
                 StyleStageCard(button, stage, i, isPlayable);
@@ -717,7 +748,7 @@ namespace TrashTD.UI
                 return;
             }
 
-            if (availableStages[stageIndex].stageId != FirstPlayableStageId)
+            if (!IsStagePlayable(availableStages[stageIndex].stageId))
             {
                 if (stageIndex < stageCards.Count && stageCards[stageIndex] != null)
                 {
@@ -1000,11 +1031,12 @@ namespace TrashTD.UI
 
         private void PlaySelectedStage()
         {
-            if (isLoadingStage || selectedStage == null || selectedStage.stageId != FirstPlayableStageId)
+            if (isLoadingStage || selectedStage == null || !IsStagePlayable(selectedStage.stageId))
             {
                 return;
             }
 
+            SetPendingStage(selectedStage);
             SetPendingStageDifficulty(selectedDifficulty);
             isLoadingStage = true;
 

@@ -35,6 +35,7 @@ namespace TrashTD.Editor
             GenerateOperators();
             GenerateEnemies();
             GenerateStage();
+            GenerateStage2();
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -492,6 +493,108 @@ namespace TrashTD.Editor
             }
 
             EditorUtility.SetDirty(stage);
+        }
+
+        [MenuItem("TRASH TD/Generate Stage 2 (Scrapyard Junction)")]
+        public static void GenerateStage2()
+        {
+            string path = $"{StageDataFolder}/Stage_02_ScrapyardJunction.asset";
+            var stage = AssetDatabase.LoadAssetAtPath<StageData>(path);
+            if (stage == null)
+            {
+                stage = ScriptableObject.CreateInstance<StageData>();
+                AssetDatabase.CreateAsset(stage, path);
+            }
+
+            stage.stageId = "STAGE_02";
+            stage.mapName = "Scrapyard Junction";
+            stage.shortDescription = "Secure the scrapyard junction against converging waves.";
+            stage.gridWidth = 11;
+            stage.gridHeight = 7;
+
+            var levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level2 complete.png");
+            if (levelSprites == null || levelSprites.Length == 0)
+                levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level2 complete.png");
+
+            if (levelSprites != null)
+            {
+                foreach (var obj in levelSprites)
+                {
+                    if (obj is Sprite s)
+                    {
+                        stage.mapVisualSprite = s;
+                        break;
+                    }
+                }
+            }
+            stage.visualTilePixelSize = 32;
+            stage.visualTileOffset = Vector2.zero;
+            stage.foregroundVisualSprite = null;
+            stage.squadSizeLimit = 8;
+
+            stage.lifePointsEasy = 3;
+            stage.lifePointsNormal = 3;
+            stage.lifePointsHard = 3;
+
+            string[] layoutRows =
+            {
+                "BBBBBBBBBBS",
+                "BBBBLLLLLLL",
+                "BHHHLHHHHHH",
+                "ELLLLLLLLLE",
+                "HHHHHHLHHHB",
+                "LLLLLLLBBBB",
+                "SBBBBBBBBBB"
+            };
+            stage.tileLayout = new TileType[11 * 7];
+            var spawnPoints = new List<Vector2Int>();
+            var exitPoints = new List<Vector2Int>();
+            for (int row = 0; row < layoutRows.Length; row++)
+            {
+                for (int x = 0; x < 11; x++)
+                {
+                    int y = layoutRows.Length - 1 - row;
+                    int index = y * 11 + x;
+                    switch (layoutRows[row][x])
+                    {
+                        case 'H':
+                            stage.tileLayout[index] = TileType.HighGround;
+                            break;
+                        case 'S':
+                            stage.tileLayout[index] = TileType.SpawnPoint;
+                            spawnPoints.Add(new Vector2Int(x, y));
+                            break;
+                        case 'E':
+                            stage.tileLayout[index] = TileType.ExitPoint;
+                            exitPoints.Add(new Vector2Int(x, y));
+                            break;
+                        case 'B':
+                            stage.tileLayout[index] = TileType.Blocked;
+                            break;
+                        default:
+                            stage.tileLayout[index] = TileType.LowGround;
+                            break;
+                    }
+                }
+            }
+            stage.spawnPoints = spawnPoints.ToArray();
+            stage.exitPoints = exitPoints.ToArray();
+            stage.enemyPaths = new PathData[0];
+            stage.wavesEasy = new WaveData[0];
+            stage.wavesNormal = new WaveData[0];
+            stage.wavesHard = new WaveData[0];
+
+            EditorUtility.SetDirty(stage);
+            AssetDatabase.SaveAssets();
+
+            // Also synchronize into Resources/Stages/STAGE_02.asset for runtime loading
+            string resourcesPath = "Assets/Resources/Stages/STAGE_02.asset";
+            if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
+            if (!AssetDatabase.IsValidFolder("Assets/Resources/Stages")) AssetDatabase.CreateFolder("Assets/Resources", "Stages");
+            AssetDatabase.CopyAsset(path, resourcesPath);
+            AssetDatabase.SaveAssets();
+
+            Debug.Log("<color=green>TRASH TD: Stage 2 (Scrapyard Junction) successfully generated!</color>");
         }
 
         private static WaveData[] ExtendWaveCampaign(WaveData[] openingWaves, int targetWaveCount, int difficultyTier,

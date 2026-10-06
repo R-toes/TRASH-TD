@@ -74,6 +74,7 @@ namespace TrashTD.Core.GameLoop
         {
             gameplayHudUI = FindFirstObjectByType<GameplayHUDUI>();
             difficulty = MainMenuController.ConsumePendingStageDifficulty(difficulty);
+            stageData = MainMenuController.ConsumePendingStage(stageData);
 
             if (stageData == null)
             {
