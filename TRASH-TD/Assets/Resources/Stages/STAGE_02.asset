@@ -21,7 +21,7 @@ MonoBehaviour:
   mapVisualSprite: {fileID: 8967005238335122312, guid: 78e3dddcf4822bf4dbfd3073d0aeef79, type: 3}
   visualTilePixelSize: 32
   visualTileOffset: {x: 0, y: 0}
-  foregroundVisualSprite: {fileID: 0}
+  foregroundVisualSprite: {fileID: -4403071843503546491, guid: 052a4ac04151ce44e9aedcc1e7305c90, type: 3}
   spawnPoints:
   - {x: 10, y: 6}
   - {x: 0, y: 0}

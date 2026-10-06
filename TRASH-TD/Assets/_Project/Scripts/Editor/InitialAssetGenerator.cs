@@ -541,7 +541,22 @@ namespace TrashTD.Editor
             }
             stage.visualTilePixelSize = 32;
             stage.visualTileOffset = Vector2.zero;
-            stage.foregroundVisualSprite = null;
+
+            var fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level2 bottom.png");
+            if (fgSprites == null || fgSprites.Length == 0)
+                fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level2 bottom.png");
+
+            if (fgSprites != null)
+            {
+                foreach (var obj in fgSprites)
+                {
+                    if (obj is Sprite s)
+                    {
+                        stage.foregroundVisualSprite = s;
+                        break;
+                    }
+                }
+            }
             stage.squadSizeLimit = 8;
 
             stage.lifePointsEasy = 3;

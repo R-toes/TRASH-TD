@@ -4,25 +4,7 @@ TextureImporter:
   internalIDToNameTable:
   - first:
       213: -4403071843503546491
-    second: level3 bottom_0
-  - first:
-      213: -6294048661494713202
-    second: level3 bottom_1
-  - first:
-      213: -7590271660830416722
-    second: level3 bottom_2
-  - first:
-      213: 580295817811063507
-    second: level3 bottom_3
-  - first:
-      213: 5595132327951697924
-    second: level3 bottom_4
-  - first:
-      213: -3825874980368989545
-    second: level3 bottom_5
-  - first:
-      213: 3549693859302024278
-    second: level3 bottom_6
+    second: level2 bottom_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -55,7 +37,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 1
+    filterMode: 0
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -69,7 +51,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 100
+  spritePixelsToUnits: 32
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -95,7 +77,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 1
+    textureCompression: 0
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -108,7 +90,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 1
+    textureCompression: 0
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -120,13 +102,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: level3 bottom_0
+      name: level2 bottom_0
       rect:
         serializedVersion: 2
-        x: 34
-        y: 7
-        width: 18
-        height: 35
+        x: 0
+        y: 0
+        width: 352
+        height: 256
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -137,138 +119,6 @@ TextureImporter:
       bones: []
       spriteID: 58f527f9c7525e2c0800000000000000
       internalID: -4403071843503546491
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: level3 bottom_1
-      rect:
-        serializedVersion: 2
-        x: 80
-        y: 0
-        width: 24
-        height: 43
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: e84b594f61c07a8a0800000000000000
-      internalID: -6294048661494713202
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: level3 bottom_2
-      rect:
-        serializedVersion: 2
-        x: 228
-        y: 31
-        width: 78
-        height: 50
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: ea02d73b320f9a690800000000000000
-      internalID: -7590271660830416722
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: level3 bottom_3
-      rect:
-        serializedVersion: 2
-        x: 305
-        y: 35
-        width: 10
-        height: 32
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 3d2f545c8ff9d0800800000000000000
-      internalID: 580295817811063507
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: level3 bottom_4
-      rect:
-        serializedVersion: 2
-        x: 320
-        y: 24
-        width: 32
-        height: 85
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 4088dde3537e5ad40800000000000000
-      internalID: 5595132327951697924
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: level3 bottom_5
-      rect:
-        serializedVersion: 2
-        x: 50
-        y: 12
-        width: 9
-        height: 9
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 7924d08c9f2c7eac0800000000000000
-      internalID: -3825874980368989545
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: level3 bottom_6
-      rect:
-        serializedVersion: 2
-        x: 58
-        y: 0
-        width: 23
-        height: 17
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 654251902cb034130800000000000000
-      internalID: 3549693859302024278
       vertices: []
       indices: 
       edges: []
@@ -287,13 +137,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      level3 bottom_0: -4403071843503546491
-      level3 bottom_1: -6294048661494713202
-      level3 bottom_2: -7590271660830416722
-      level3 bottom_3: 580295817811063507
-      level3 bottom_4: 5595132327951697924
-      level3 bottom_5: -3825874980368989545
-      level3 bottom_6: 3549693859302024278
+      level2 bottom_0: -4403071843503546491
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

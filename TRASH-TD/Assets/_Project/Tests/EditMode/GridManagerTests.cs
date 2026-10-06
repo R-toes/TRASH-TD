@@ -168,6 +168,7 @@ namespace TrashTD.Tests
         {
             var stage = Resources.Load<StageData>("Stages/STAGE_02");
             Assert.IsNotNull(stage, "STAGE_02 resource asset must be loadable");
+            Assert.IsNotNull(stage.foregroundVisualSprite, "Stage 2 foregroundVisualSprite must be assigned");
 
             gridManager.InitializeFromStageData(stage);
 
