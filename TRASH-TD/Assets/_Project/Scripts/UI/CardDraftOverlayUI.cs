@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -14,11 +15,13 @@ namespace TrashTD.UI
 {
     /// <summary>
     /// Runtime-built fullscreen card draft overlay.
-    /// Shows 3 cards with operator portrait, name, class, rarity stars, and stats.
+    /// Left: 3 portrait-focused cards (portrait, name, rarity stars).
+    /// Right: a detail panel for the selected card (name, class / position / damage-type chips,
+    /// stats and passive/ability text).
     /// Player selects a card, then clicks Confirm to add it to their deck.
     /// Includes a Reroll button (up to 3 rerolls per stage).
     /// Integrates with GameManager phase system: shown during CardPick phase.
-    /// Visual polish: fade-in, cards dealt in one by one, rarity/class colors, selection feedback,
+    /// Visual polish: fade-in, cards dealt in one by one, rarity colors, selection feedback,
     /// hover/press feedback (MenuButtonFeedback), keyboard shortcuts and optional UI sounds.
     /// </summary>
     public class CardDraftOverlayUI : MonoBehaviour
@@ -29,6 +32,8 @@ namespace TrashTD.UI
         private static readonly Color CARD_SELECTED = new Color(0.15f, 0.25f, 0.45f, 1f);
         private static readonly Color CARD_HOVER = new Color(0.12f, 0.16f, 0.24f, 1f);
         private static readonly Color PORTRAIT_BG = new Color(0.06f, 0.07f, 0.10f, 1f);
+        private static readonly Color PANEL_BG = new Color(0.045f, 0.055f, 0.075f, 0.96f);
+        private static readonly Color TILE_BG = new Color(0.07f, 0.085f, 0.115f, 1f);
         private static readonly Color CONFIRM_COLOR = new Color(0.18f, 0.55f, 0.34f, 1f);
         private static readonly Color CONFIRM_DISABLED = new Color(0.15f, 0.15f, 0.18f, 1f);
         private static readonly Color REROLL_COLOR = new Color(0.55f, 0.45f, 0.15f, 1f);
@@ -41,6 +46,39 @@ namespace TrashTD.UI
         private static readonly Color SKIP_COLOR = new Color(0.5f, 0.5f, 0.55f, 1f);
         private static readonly Color ACCENT_COLOR = new Color(0.18f, 0.82f, 0.45f, 1f);
         private static readonly Color ACCENT_BRIGHT = new Color(0.30f, 0.95f, 0.58f, 1f);
+        private static readonly Color MELEE_COLOR = new Color(0.95f, 0.60f, 0.25f, 1f);
+        private static readonly Color RANGED_COLOR = new Color(0.35f, 0.78f, 0.92f, 1f);
+
+        // --- Layout (reference resolution 1920x1080, positions relative to screen center) ---
+        private const float CardWidth = 360f;
+        private const float CardHeight = 640f;
+        private const float CardSpacing = 30f;
+        private const float PortraitMargin = 16f;
+        private const float PortraitTop = 18f;
+        private const float PortraitHeight = 452f;
+        private const float PortraitPadding = 12f;
+        private const float ColumnCenterX = -285f;   // card column (left side)
+        private const float PanelCenterX = 650f;     // detail panel (right side)
+        private const float PanelWidth = 500f;
+        private const float ContentCenterY = 10f;
+
+        // Pixel-art portraits are scaled by whole numbers (when they fit) inside this area.
+        private static readonly Vector2 PortraitFitArea = new Vector2(
+            CardWidth - PortraitMargin * 2f - PortraitPadding * 2f,
+            PortraitHeight - PortraitPadding * 2f);
+
+        // Optional data members probed on OperatorData by name (see FindStringMember).
+        // Add your own field names here if they differ.
+        private static readonly string[] PassiveMemberNames =
+        {
+            "passiveDescription", "passiveText", "passive", "abilityDescription", "abilityText",
+            "ability", "traitDescription", "trait", "skillDescription", "description", "shortDescription"
+        };
+
+        private static readonly string[] DamageTypeMemberNames =
+        {
+            "damageType", "attackType", "damageKind", "attackDamageType"
+        };
 
         [Header("UI Sounds (optional)")]
         [SerializeField] private AudioClip hoverClip;
@@ -60,18 +98,10 @@ namespace TrashTD.UI
         // --- Card UI ---
         private GameObject[] cardPanels = new GameObject[3];
         private Image[] cardBackgrounds = new Image[3];
+        private Image[] portraitBgImages = new Image[3];
         private Image[] portraitImages = new Image[3];
         private Text[] nameTexts = new Text[3];
-        private Text[] classTexts = new Text[3];
         private Text[] rarityTexts = new Text[3];
-        private Text[] hpTexts = new Text[3];
-        private Text[] atkTexts = new Text[3];
-        private Text[] defTexts = new Text[3];
-        private Text[] resTexts = new Text[3];
-        private Text[] blockTexts = new Text[3];
-        private Text[] rangeTexts = new Text[3];
-        private Text[] descTexts = new Text[3];
-        private Text[] positionTexts = new Text[3];
 
         // --- Card polish ---
         private CanvasGroup[] cardGroups = new CanvasGroup[3];
@@ -80,6 +110,36 @@ namespace TrashTD.UI
         private Outline[] portraitFrames = new Outline[3];
         private Text[] portraitFallbackTexts = new Text[3];
         private Text[] selectHintTexts = new Text[3];
+
+        // --- Detail panel ---
+        private sealed class Chip
+        {
+            public Image bg;
+            public Outline outline;
+            public Text text;
+        }
+
+        private RectTransform detailsPanelRect;
+        private Image detailAccent;
+        private GameObject detailContentRoot;
+        private RectTransform detailContentRect;
+        private CanvasGroup detailContentGroup;
+        private GameObject detailEmptyRoot;
+        private Text detailNameText;
+        private Text detailStarsText;
+        private Chip detailClassChip;
+        private Chip detailPositionChip;
+        private Chip detailDamageChip;
+        private Text detailRoleText;
+        private Text detailHpText;
+        private Text detailAtkText;
+        private Text detailDefText;
+        private Text detailResText;
+        private Text detailBlockText;
+        private Text detailIntervalText;
+        private Text detailPassiveLabel;
+        private Text detailPassiveText;
+        private Coroutine detailsRoutine;
 
         // --- Buttons ---
         private Button confirmButton;
@@ -171,7 +231,7 @@ namespace TrashTD.UI
             if (confirmFeedback != null && confirmButton != null)
             {
                 confirmFeedback.restScale = confirmButton.interactable
-                    ? 1f + 0.025f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 3f))
+                    ? 1f + 0.02f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 3f))
                     : 1f;
             }
 
@@ -339,64 +399,69 @@ namespace TrashTD.UI
                 {
                     var card = cards[i];
                     var opData = card.operatorData;
-                    var rarity = card.rarity;
-
-                    // Name
-                    nameTexts[i].text = opData.operatorName;
-
-                    // Class
-                    classTexts[i].text = opData.operatorClass.ToString().ToUpper();
-                    Color classColor = GetClassColor(opData.operatorClass);
-                    classTexts[i].color = Color.Lerp(classColor, Color.white, 0.45f);
-                    cardAccents[i].color = classColor;
-
-                    int starCount = (int)rarity;
-                    rarityTexts[i].text = new string('★', starCount) + new string('☆', 5 - starCount);
-
-                    // Rarity tint: stars, portrait frame and hover/selection glow
+                    int starCount = Mathf.Clamp((int)card.rarity, 1, 5);
                     Color rarityColor = GetRarityColor(starCount);
+
+                    // Name + rarity (the only text on the card)
+                    nameTexts[i].text = opData.operatorName;
+                    rarityTexts[i].text = BuildStarString(starCount);
                     rarityTexts[i].color = rarityColor;
+
+                    // Rarity tint: top stripe, portrait backdrop/frame and hover/selection glow
+                    cardAccents[i].color = rarityColor;
+                    portraitBgImages[i].color = Color.Lerp(PORTRAIT_BG, rarityColor, 0.10f);
                     portraitFrames[i].effectColor = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.6f);
                     cardFeedbacks[i].glowColor = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.95f);
 
-                    // Portrait
-                    if (portraitImages[i] != null)
-                    {
-                        if (opData.portrait != null)
-                        {
-                            portraitImages[i].sprite = opData.portrait;
-                            portraitImages[i].color = Color.white;
-                        }
-                        else
-                        {
-                            portraitImages[i].sprite = null;
-                            portraitImages[i].color = PORTRAIT_BG;
-                        }
-                    }
-
-                    // Placeholder initial when there is no portrait art
-                    string initial = string.IsNullOrEmpty(opData.operatorName) ? "?" : opData.operatorName.Substring(0, 1).ToUpper();
-                    portraitFallbackTexts[i].text = initial;
-                    portraitFallbackTexts[i].enabled = opData.portrait == null;
-
-                    // Stats (scaled by rarity)
-                    hpTexts[i].text = opData.GetScaledHP(rarity).ToString();
-                    atkTexts[i].text = opData.GetScaledATK(rarity).ToString();
-                    defTexts[i].text = opData.GetScaledDEF(rarity).ToString();
-                    resTexts[i].text = opData.GetScaledRES(rarity).ToString();
-                    blockTexts[i].text = opData.blockCount.ToString();
-                    rangeTexts[i].text = opData.attackRange.ToString();
-                    descTexts[i].text = GetOperatorDescription(opData);
-                    positionTexts[i].text = opData.position == OperatorPosition.Melee ? "MELEE" : "RANGED";
+                    SetPortrait(i, opData);
                 }
             }
 
             ApplySelectionVisuals();
+            UpdateDetailsPanel(false);
             StartDeal();
 
             UpdateConfirmButton();
             UpdateRerollButton();
             UpdateDeckCount();
+        }
+
+        /// <summary>
+        /// Shows the portrait as large as the frame allows while staying centered.
+        /// Small pixel-art sprites are scaled by whole numbers (when they fit) so they stay crisp.
+        /// </summary>
+        private void SetPortrait(int index, OperatorData opData)
+        {
+            Image image = portraitImages[index];
+            Sprite sprite = opData.portrait;
+
+            string initial = string.IsNullOrEmpty(opData.operatorName) ? "?" : opData.operatorName.Substring(0, 1).ToUpper();
+            portraitFallbackTexts[index].text = initial;
+            portraitFallbackTexts[index].enabled = sprite == null;
+
+            if (sprite == null)
+            {
+                image.sprite = null;
+                image.enabled = false;
+                return;
+            }
+
+            // Pixel art should not be bilinear-smoothed when scaled up.
+            // (For a permanent fix, set the sprite's Filter Mode to Point in its import settings.)
+            if (sprite.texture != null && sprite.texture.filterMode != FilterMode.Point)
+            {
+                sprite.texture.filterMode = FilterMode.Point;
+            }
+
+            image.enabled = true;
+            image.sprite = sprite;
+            image.color = Color.white;
+            image.preserveAspect = false;
+
+            Vector2 pixelSize = sprite.rect.size;
+            float fit = Mathf.Min(PortraitFitArea.x / pixelSize.x, PortraitFitArea.y / pixelSize.y);
+            float scale = fit >= 1f ? Mathf.Floor(fit) : fit;
+            image.rectTransform.sizeDelta = pixelSize * scale;
         }
 
         private void ApplySelectionVisuals()
@@ -414,11 +479,179 @@ namespace TrashTD.UI
 
                 cardFeedbacks[i].SetBaseColor(baseColor);
                 cardFeedbacks[i].glowAlways = selected;
-                cardFeedbacks[i].restScale = selected ? 1.04f : (anySelected ? 0.97f : 1f);
+                cardFeedbacks[i].restScale = selected ? 1.03f : (anySelected ? 0.97f : 1f);
 
                 selectHintTexts[i].text = selected ? "✓ SELECTED" : "CLICK TO SELECT";
                 selectHintTexts[i].color = selected ? ACCENT_BRIGHT : new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.6f);
             }
+        }
+
+        // ============================
+        // Detail Panel
+        // ============================
+
+        private void UpdateDetailsPanel(bool animate)
+        {
+            if (detailContentRoot == null) return;
+
+            DraftCard card = null;
+            if (selectedCardIndex >= 0 && draftSystem != null && selectedCardIndex < draftSystem.CurrentOfferedCards.Count)
+            {
+                card = draftSystem.CurrentOfferedCards[selectedCardIndex];
+            }
+
+            bool hasCard = card != null && card.operatorData != null;
+            detailContentRoot.SetActive(hasCard);
+            detailEmptyRoot.SetActive(!hasCard);
+
+            if (!hasCard)
+            {
+                detailAccent.color = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.35f);
+                return;
+            }
+
+            OperatorData op = card.operatorData;
+            int stars = Mathf.Clamp((int)card.rarity, 1, 5);
+            Color rarityColor = GetRarityColor(stars);
+
+            detailAccent.color = rarityColor;
+            detailNameText.text = op.operatorName;
+            detailStarsText.text = BuildStarString(stars);
+            detailStarsText.color = rarityColor;
+
+            // Type chips: class / position / damage type
+            SetChip(detailClassChip, op.operatorClass.ToString().ToUpper(), GetClassColor(op.operatorClass));
+            bool isMelee = op.position == OperatorPosition.Melee;
+            SetChip(detailPositionChip, isMelee ? "MELEE" : "RANGED", isMelee ? MELEE_COLOR : RANGED_COLOR);
+            GetDamageType(op, out string damageLabel, out Color damageColor);
+            SetChip(detailDamageChip, damageLabel, damageColor);
+
+            detailRoleText.text = GetOperatorDescription(op);
+
+            // Stats (scaled by rarity)
+            detailHpText.text = op.GetScaledHP(card.rarity).ToString();
+            detailAtkText.text = op.GetScaledATK(card.rarity).ToString();
+            detailDefText.text = op.GetScaledDEF(card.rarity).ToString();
+            detailResText.text = op.GetScaledRES(card.rarity).ToString();
+            detailBlockText.text = op.blockCount.ToString();
+            detailIntervalText.text = op.attackInterval.ToString("0.##") + "s";
+
+            // Passive / ability text (only shown when the operator has one)
+            string passive = FindStringMember(op, PassiveMemberNames);
+            bool hasPassive = !string.IsNullOrWhiteSpace(passive);
+            detailPassiveLabel.gameObject.SetActive(hasPassive);
+            detailPassiveText.gameObject.SetActive(hasPassive);
+            if (hasPassive)
+            {
+                detailPassiveLabel.color = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.9f);
+                detailPassiveText.text = passive.Trim();
+            }
+
+            if (animate) PlayDetailsAnimation();
+        }
+
+        private static void SetChip(Chip chip, string label, Color color)
+        {
+            chip.text.text = label;
+            chip.text.color = Color.Lerp(color, Color.white, 0.35f);
+            chip.bg.color = Color.Lerp(TILE_BG, color, 0.22f);
+            chip.outline.effectColor = new Color(color.r, color.g, color.b, 0.55f);
+        }
+
+        private static void GetDamageType(OperatorData op, out string label, out Color color)
+        {
+            // Uses a damage-type member on OperatorData if one exists (see DamageTypeMemberNames),
+            // otherwise falls back to a guess based on the operator's class.
+            string raw = FindStringMember(op, DamageTypeMemberNames);
+            string upper = !string.IsNullOrEmpty(raw)
+                ? raw.ToUpperInvariant()
+                : (op.operatorClass == OperatorClass.Caster ? "ARTS" : op.operatorClass == OperatorClass.Medic ? "HEAL" : "PHYSICAL");
+
+            if (upper.Contains("PHYS"))
+            {
+                label = "PHYSICAL";
+                color = new Color(0.90f, 0.45f, 0.35f, 1f);
+            }
+            else if (upper.Contains("ART") || upper.Contains("MAGIC"))
+            {
+                label = "ARTS";
+                color = new Color(0.70f, 0.50f, 1.00f, 1f);
+            }
+            else if (upper.Contains("HEAL"))
+            {
+                label = "HEAL";
+                color = new Color(0.40f, 0.85f, 0.50f, 1f);
+            }
+            else
+            {
+                label = upper;
+                color = STAT_LABEL_COLOR;
+            }
+        }
+
+        /// <summary>
+        /// Looks for a string/enum field or property by name (first match wins).
+        /// Lets the panel pick up optional OperatorData members without hard-coding their names.
+        /// </summary>
+        private static string FindStringMember(object target, string[] memberNames)
+        {
+            if (target == null) return null;
+
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.IgnoreCase;
+            Type type = target.GetType();
+
+            foreach (string memberName in memberNames)
+            {
+                object value = null;
+
+                FieldInfo field = type.GetField(memberName, flags);
+                if (field != null)
+                {
+                    value = field.GetValue(target);
+                }
+                else
+                {
+                    PropertyInfo property = type.GetProperty(memberName, flags);
+                    if (property != null && property.CanRead && property.GetIndexParameters().Length == 0)
+                    {
+                        value = property.GetValue(target);
+                    }
+                }
+
+                if (value is string text && !string.IsNullOrWhiteSpace(text)) return text;
+                if (value != null && value.GetType().IsEnum) return value.ToString();
+            }
+
+            return null;
+        }
+
+        private void PlayDetailsAnimation()
+        {
+            if (!isActiveAndEnabled) return;
+
+            if (detailsRoutine != null) StopCoroutine(detailsRoutine);
+            detailsRoutine = StartCoroutine(DetailsRoutine());
+        }
+
+        private IEnumerator DetailsRoutine()
+        {
+            const float duration = 0.22f;
+
+            detailContentGroup.alpha = 0f;
+            detailContentRect.anchoredPosition = new Vector2(24f, 0f);
+
+            float t = 0f;
+            while (t < duration)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = EaseOutCubic(Mathf.Clamp01(t / duration));
+                detailContentGroup.alpha = k;
+                detailContentRect.anchoredPosition = new Vector2(24f * (1f - k), 0f);
+                yield return null;
+            }
+
+            detailContentGroup.alpha = 1f;
+            detailContentRect.anchoredPosition = Vector2.zero;
         }
 
         // ============================
@@ -432,10 +665,12 @@ namespace TrashTD.UI
             if (index < 0 || draftSystem == null || index >= draftSystem.CurrentOfferedCards.Count)
                 return;
 
+            bool changed = selectedCardIndex != index;
             selectedCardIndex = index;
 
-            // Update card highlights
+            // Update card highlights + detail panel
             ApplySelectionVisuals();
+            UpdateDetailsPanel(changed);
 
             UpdateConfirmButton();
         }
@@ -587,7 +822,7 @@ namespace TrashTD.UI
             overlayGroup.blocksRaycasts = true;
 
             const float duration = 0.45f;
-            float total = duration + 0.3f;
+            float total = duration + 0.35f;
             float t = 0f;
 
             while (t < total)
@@ -735,16 +970,23 @@ namespace TrashTD.UI
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
         }
 
+        /// <summary>1★ green, 2★ blue, 3★ gold, 4★ purple, 5★ red.</summary>
         private static Color GetRarityColor(int stars)
         {
             switch (stars)
             {
-                case 1: return new Color(0.66f, 0.69f, 0.74f, 1f);
-                case 2: return new Color(0.40f, 0.85f, 0.50f, 1f);
-                case 3: return new Color(0.40f, 0.70f, 1.00f, 1f);
-                case 4: return new Color(0.75f, 0.50f, 1.00f, 1f);
-                default: return new Color(1.00f, 0.82f, 0.25f, 1f);
+                case 1: return new Color(0.35f, 0.85f, 0.45f, 1f);
+                case 2: return new Color(0.35f, 0.65f, 1.00f, 1f);
+                case 3: return new Color(1.00f, 0.82f, 0.25f, 1f);
+                case 4: return new Color(0.75f, 0.45f, 1.00f, 1f);
+                default: return new Color(1.00f, 0.30f, 0.30f, 1f);
             }
+        }
+
+        private static string BuildStarString(int stars)
+        {
+            stars = Mathf.Clamp(stars, 0, 5);
+            return new string('★', stars) + "<color=#3C424D>" + new string('☆', 5 - stars) + "</color>";
         }
 
         private static Color GetClassColor(OperatorClass opClass)
@@ -801,11 +1043,11 @@ namespace TrashTD.UI
             stripeImage.color = ACCENT_COLOR;
             stripeImage.raycastTarget = false;
 
-            // Title
+            // Title (centered above the card column)
             titleText = MakeText(overlayRoot.transform, "Title", "CHOOSE YOUR CARD", 36,
                 TextAnchor.MiddleCenter, Color.white);
             titleText.fontStyle = FontStyle.Bold;
-            PositionRT(titleText, new Vector2(0, -48f), new Vector2(0.5f, 1f), new Vector2(700f, 60f));
+            PositionRT(titleText, new Vector2(ColumnCenterX, -48f), new Vector2(0.5f, 1f), new Vector2(700f, 60f));
             var titleShadow = titleText.gameObject.AddComponent<Shadow>();
             titleShadow.effectColor = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.35f);
             titleShadow.effectDistance = new Vector2(0f, -4f);
@@ -813,7 +1055,7 @@ namespace TrashTD.UI
             // Wave info
             waveInfoText = MakeText(overlayRoot.transform, "WaveInfo", "NEXT: WAVE 1 / ?", 18,
                 TextAnchor.MiddleCenter, STAT_LABEL_COLOR);
-            PositionRT(waveInfoText, new Vector2(0, -104f), new Vector2(0.5f, 1f), new Vector2(500f, 40f));
+            PositionRT(waveInfoText, new Vector2(ColumnCenterX, -104f), new Vector2(0.5f, 1f), new Vector2(500f, 40f));
 
             // Divider under the header
             var divider = new GameObject("HeaderDivider", typeof(RectTransform), typeof(Image));
@@ -821,7 +1063,7 @@ namespace TrashTD.UI
             var dividerImage = divider.GetComponent<Image>();
             dividerImage.color = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.4f);
             dividerImage.raycastTarget = false;
-            PositionRT(dividerImage, new Vector2(0, -134f), new Vector2(0.5f, 1f), new Vector2(240f, 2f));
+            PositionRT(dividerImage, new Vector2(ColumnCenterX, -134f), new Vector2(0.5f, 1f), new Vector2(240f, 2f));
 
             // Deck count
             deckCountText = MakeText(overlayRoot.transform, "DeckCount", "DECK 0/8", 16,
@@ -832,17 +1074,17 @@ namespace TrashTD.UI
             deckCountText.resizeTextMinSize = 12;
             deckCountText.resizeTextMaxSize = 16;
 
-            // Card container (centered row of 3 cards)
+            // Card container (row of 3 cards, left side of the screen)
             var cardContainer = new GameObject("CardContainer", typeof(RectTransform));
             cardContainer.transform.SetParent(overlayRoot.transform, false);
             var containerRect = cardContainer.GetComponent<RectTransform>();
             containerRect.anchorMin = new Vector2(0.5f, 0.5f);
             containerRect.anchorMax = new Vector2(0.5f, 0.5f);
-            containerRect.sizeDelta = new Vector2(1050f, 570f);
-            containerRect.anchoredPosition = new Vector2(0f, 5f);
+            containerRect.sizeDelta = new Vector2(CardWidth * 3f + CardSpacing * 2f, CardHeight);
+            containerRect.anchoredPosition = new Vector2(ColumnCenterX, ContentCenterY);
 
             var hlg = cardContainer.AddComponent<HorizontalLayoutGroup>();
-            hlg.spacing = 30f;
+            hlg.spacing = CardSpacing;
             hlg.childAlignment = TextAnchor.MiddleCenter;
             hlg.childControlWidth = false;
             hlg.childControlHeight = false;
@@ -855,14 +1097,17 @@ namespace TrashTD.UI
                 BuildCard(cardContainer.transform, i);
             }
 
-            // Bottom buttons container
+            // Detail panel (right side of the screen)
+            BuildDetailsPanel(overlayRoot.transform);
+
+            // Reroll / Skip under the cards
             var buttonsContainer = new GameObject("ButtonsContainer", typeof(RectTransform));
             buttonsContainer.transform.SetParent(overlayRoot.transform, false);
             var buttonsRect = buttonsContainer.GetComponent<RectTransform>();
             buttonsRect.anchorMin = new Vector2(0.5f, 0f);
             buttonsRect.anchorMax = new Vector2(0.5f, 0f);
-            buttonsRect.sizeDelta = new Vector2(700f, 70f);
-            buttonsRect.anchoredPosition = new Vector2(0f, 80f);
+            buttonsRect.sizeDelta = new Vector2(420f, 64f);
+            buttonsRect.anchoredPosition = new Vector2(ColumnCenterX, 120f);
 
             var btnHlg = buttonsContainer.AddComponent<HorizontalLayoutGroup>();
             btnHlg.spacing = 20f;
@@ -874,18 +1119,10 @@ namespace TrashTD.UI
 
             // Reroll button
             rerollButton = MakeButton(buttonsContainer.transform, "RerollButton", "REROLL (3)",
-                new Vector2(200f, 60f), REROLL_COLOR);
+                new Vector2(220f, 60f), REROLL_COLOR);
             rerollButtonText = rerollButton.GetComponentInChildren<Text>();
             rerollButton.onClick.AddListener(OnRerollClicked);
             rerollFeedback = AttachFeedback(rerollButton, new Color(1f, 0.85f, 0.35f, 1f), 1.05f);
-
-            // Confirm button
-            confirmButton = MakeButton(buttonsContainer.transform, "ConfirmButton", "SELECT A CARD",
-                new Vector2(260f, 60f), CONFIRM_DISABLED);
-            confirmButtonText = confirmButton.GetComponentInChildren<Text>();
-            confirmButton.onClick.AddListener(OnConfirmClicked);
-            confirmButton.interactable = false;
-            confirmFeedback = AttachFeedback(confirmButton, ACCENT_BRIGHT, 1.05f);
 
             // Skip button
             skipButton = MakeButton(buttonsContainer.transform, "SkipButton", "SKIP",
@@ -893,41 +1130,50 @@ namespace TrashTD.UI
             skipButton.onClick.AddListener(OnSkipClicked);
             skipFeedback = AttachFeedback(skipButton, Color.white, 1.05f);
 
+            // Confirm button (under the detail panel, where the decision is made)
+            confirmButton = MakeButton(overlayRoot.transform, "ConfirmButton", "SELECT A CARD",
+                new Vector2(PanelWidth, 64f), CONFIRM_DISABLED);
+            PositionRT(confirmButton, new Vector2(PanelCenterX, 120f), new Vector2(0.5f, 0f), new Vector2(PanelWidth, 64f));
+            confirmButtonText = confirmButton.GetComponentInChildren<Text>();
+            confirmButtonText.fontSize = 20;
+            confirmButton.onClick.AddListener(OnConfirmClicked);
+            confirmButton.interactable = false;
+            confirmFeedback = AttachFeedback(confirmButton, ACCENT_BRIGHT, 1.03f);
+
             // Keyboard hint
             var hintText = MakeText(overlayRoot.transform, "KeyHints", "1 2 3  SELECT     ENTER  CONFIRM     R  REROLL", 12,
                 TextAnchor.MiddleCenter, new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.55f));
             PositionRT(hintText, new Vector2(0f, 28f), new Vector2(0.5f, 0f), new Vector2(700f, 24f));
 
-            // Header/footer entrance data (positions captured after layout above)
+            // Header/footer/panel entrance data (positions captured after layout above)
             introRects = new[]
             {
                 titleText.rectTransform,
                 waveInfoText.rectTransform,
                 dividerImage.rectTransform,
                 deckCountText.rectTransform,
+                detailsPanelRect,
                 buttonsRect,
+                confirmButton.GetComponent<RectTransform>(),
                 hintText.rectTransform
             };
             introTargets = new Vector2[introRects.Length];
             for (int i = 0; i < introRects.Length; i++) introTargets[i] = introRects[i].anchoredPosition;
             introOffsets = new[]
             {
-                new Vector2(0f, 40f), new Vector2(0f, 40f), new Vector2(0f, 40f),
-                new Vector2(0f, 40f), new Vector2(0f, -60f), new Vector2(0f, -30f)
+                new Vector2(0f, 40f), new Vector2(0f, 40f), new Vector2(0f, 40f), new Vector2(0f, 40f),
+                new Vector2(90f, 0f), new Vector2(0f, -60f), new Vector2(0f, -60f), new Vector2(0f, -30f)
             };
-            introDelays = new[] { 0f, 0.06f, 0.1f, 0.1f, 0.25f, 0.3f };
+            introDelays = new[] { 0f, 0.06f, 0.1f, 0.1f, 0.15f, 0.25f, 0.3f, 0.35f };
         }
 
         private void BuildCard(Transform parent, int index)
         {
-            float cardWidth = 310f;
-            float cardHeight = 540f;
-
             // Card root
             var cardObj = new GameObject($"Card_{index}", typeof(RectTransform), typeof(Image), typeof(Button), typeof(CanvasGroup));
             cardObj.transform.SetParent(parent, false);
             var cardRect = cardObj.GetComponent<RectTransform>();
-            cardRect.sizeDelta = new Vector2(cardWidth, cardHeight);
+            cardRect.sizeDelta = new Vector2(CardWidth, CardHeight);
 
             var cardImg = cardObj.GetComponent<Image>();
             cardImg.color = CARD_BG;
@@ -937,13 +1183,13 @@ namespace TrashTD.UI
             cardBtn.onClick.AddListener(() => OnCardClicked(capturedIndex));
 
             // Hover / press / selection visuals come from MenuButtonFeedback (replaces the color tint).
-            cardFeedbacks[index] = AttachFeedback(cardBtn, STAR_COLOR, 1.04f);
+            cardFeedbacks[index] = AttachFeedback(cardBtn, STAR_COLOR, 1.03f);
             cardGroups[index] = cardObj.GetComponent<CanvasGroup>();
 
             cardPanels[index] = cardObj;
             cardBackgrounds[index] = cardImg;
 
-            // Class-colored accent stripe along the top edge
+            // Rarity-colored accent stripe along the top edge
             var accent = new GameObject($"Accent_{index}", typeof(RectTransform), typeof(Image));
             accent.transform.SetParent(cardObj.transform, false);
             var accentRect = accent.GetComponent<RectTransform>();
@@ -952,31 +1198,16 @@ namespace TrashTD.UI
             accentRect.pivot = new Vector2(0.5f, 1f);
             accentRect.sizeDelta = new Vector2(0f, 5f);
             cardAccents[index] = accent.GetComponent<Image>();
-            cardAccents[index].color = CLASS_COLOR;
+            cardAccents[index].color = STAR_COLOR;
             cardAccents[index].raycastTarget = false;
 
-            float yOffset = cardHeight * 0.5f;
-            float currentY = yOffset;
-
-            // --- Rarity stars (top) ---
-            currentY -= 30f;
-            rarityTexts[index] = MakeText(cardObj.transform, $"Rarity_{index}", "★★★☆☆", 18,
-                TextAnchor.MiddleCenter, STAR_COLOR);
-            PositionRT(rarityTexts[index], new Vector2(0, currentY), new Vector2(0.5f, 0.5f),
-                new Vector2(cardWidth - 20f, 30f));
-
-            // --- Portrait area ---
-            currentY -= 130f;
+            // --- Portrait frame: takes up most of the card ---
             var portraitBg = new GameObject($"PortraitBg_{index}", typeof(RectTransform), typeof(Image));
             portraitBg.transform.SetParent(cardObj.transform, false);
-            var portraitBgRect = portraitBg.GetComponent<RectTransform>();
-            portraitBgRect.anchorMin = new Vector2(0.5f, 0.5f);
-            portraitBgRect.anchorMax = new Vector2(0.5f, 0.5f);
-            portraitBgRect.sizeDelta = new Vector2(160f, 160f);
-            portraitBgRect.anchoredPosition = new Vector2(0, currentY);
-            var portraitBgImage = portraitBg.GetComponent<Image>();
-            portraitBgImage.color = PORTRAIT_BG;
-            portraitBgImage.raycastTarget = false;
+            StretchTopRT(portraitBg.transform, PortraitMargin, PortraitMargin, PortraitTop, PortraitHeight);
+            portraitBgImages[index] = portraitBg.GetComponent<Image>();
+            portraitBgImages[index].color = PORTRAIT_BG;
+            portraitBgImages[index].raycastTarget = false;
 
             // Rarity-colored frame around the portrait
             portraitFrames[index] = portraitBg.AddComponent<Outline>();
@@ -984,8 +1215,8 @@ namespace TrashTD.UI
             portraitFrames[index].effectColor = new Color(1f, 1f, 1f, 0.15f);
 
             // Placeholder initial (shown when the operator has no portrait art)
-            portraitFallbackTexts[index] = MakeText(portraitBg.transform, $"PortraitFallback_{index}", "?", 72,
-                TextAnchor.MiddleCenter, new Color(1f, 1f, 1f, 0.12f));
+            portraitFallbackTexts[index] = MakeText(portraitBg.transform, $"PortraitFallback_{index}", "?", 140,
+                TextAnchor.MiddleCenter, new Color(1f, 1f, 1f, 0.10f));
             portraitFallbackTexts[index].fontStyle = FontStyle.Bold;
             var fallbackRect = portraitFallbackTexts[index].rectTransform;
             fallbackRect.anchorMin = Vector2.zero;
@@ -993,97 +1224,224 @@ namespace TrashTD.UI
             fallbackRect.offsetMin = Vector2.zero;
             fallbackRect.offsetMax = Vector2.zero;
 
+            // Portrait sprite: centered in the frame, size set per sprite in SetPortrait()
             var portraitObj = new GameObject($"Portrait_{index}", typeof(RectTransform), typeof(Image));
             portraitObj.transform.SetParent(portraitBg.transform, false);
             var portraitRect = portraitObj.GetComponent<RectTransform>();
-            portraitRect.anchorMin = Vector2.zero;
-            portraitRect.anchorMax = Vector2.one;
-            portraitRect.offsetMin = new Vector2(8f, 8f);
-            portraitRect.offsetMax = new Vector2(-8f, -8f);
+            portraitRect.anchorMin = new Vector2(0.5f, 0.5f);
+            portraitRect.anchorMax = new Vector2(0.5f, 0.5f);
+            portraitRect.pivot = new Vector2(0.5f, 0.5f);
+            portraitRect.anchoredPosition = Vector2.zero;
+            portraitRect.sizeDelta = PortraitFitArea;
             portraitImages[index] = portraitObj.GetComponent<Image>();
-            portraitImages[index].preserveAspect = true;
-            portraitImages[index].color = PORTRAIT_BG;
+            portraitImages[index].preserveAspect = false;
+            portraitImages[index].color = Color.white;
             portraitImages[index].raycastTarget = false;
 
-            // --- Name ---
-            currentY -= 115f;
-            nameTexts[index] = MakeText(cardObj.transform, $"Name_{index}", "", 20,
+            // --- Name (bottom) ---
+            nameTexts[index] = MakeText(cardObj.transform, $"Name_{index}", "", 26,
                 TextAnchor.MiddleCenter, Color.white);
-            PositionRT(nameTexts[index], new Vector2(0, currentY), new Vector2(0.5f, 0.5f),
-                new Vector2(cardWidth - 24f, 34f));
             nameTexts[index].fontStyle = FontStyle.Bold;
+            nameTexts[index].resizeTextForBestFit = true;
+            nameTexts[index].resizeTextMinSize = 14;
+            nameTexts[index].resizeTextMaxSize = 26;
+            StretchTopRT(nameTexts[index], 14f, 14f, 484f, 44f);
 
-            // --- Class + Position ---
-            currentY -= 45f;
-            classTexts[index] = MakeText(cardObj.transform, $"Class_{index}", "", 12,
-                TextAnchor.MiddleCenter, CLASS_COLOR);
-            PositionRT(classTexts[index], new Vector2(-75f, currentY), new Vector2(0.5f, 0.5f),
-                new Vector2(130f, 28f));
+            // --- Rarity stars (bottom) ---
+            rarityTexts[index] = MakeText(cardObj.transform, $"Rarity_{index}", "", 28,
+                TextAnchor.MiddleCenter, STAR_COLOR);
+            StretchTopRT(rarityTexts[index], 14f, 14f, 530f, 40f);
 
-            positionTexts[index] = MakeText(cardObj.transform, $"Position_{index}", "", 12,
-                TextAnchor.MiddleCenter, STAT_LABEL_COLOR);
-            PositionRT(positionTexts[index], new Vector2(75f, currentY), new Vector2(0.5f, 0.5f),
-                new Vector2(130f, 28f));
-
-            // --- Description / Role Tags (no DP) ---
-            currentY -= 44f;
-            descTexts[index] = MakeText(cardObj.transform, $"Desc_{index}", "", 11,
-                TextAnchor.MiddleCenter, new Color(0.7f, 0.85f, 0.95f, 1f));
-            PositionRT(descTexts[index], new Vector2(0, currentY), new Vector2(0.5f, 0.5f),
-                new Vector2(cardWidth - 28f, 34f));
-
-            // --- Stats grid ---
-            currentY -= 44f;
-            float statStartY = currentY;
-            float statLeftX = -75f;
-            float statRightX = 75f;
-            float statRowHeight = 28f;
-            float statLabelWidth = 46f;
-            float statValueWidth = 46f;
-
-            // HP / ATK
-            MakeStatRow(cardObj.transform, index, "HP", ref hpTexts[index],
-                statLeftX, statStartY, statLabelWidth, statValueWidth, statRowHeight);
-            MakeStatRow(cardObj.transform, index, "ATK", ref atkTexts[index],
-                statRightX, statStartY, statLabelWidth, statValueWidth, statRowHeight);
-
-            // DEF / RES
-            statStartY -= statRowHeight + 7f;
-            MakeStatRow(cardObj.transform, index, "DEF", ref defTexts[index],
-                statLeftX, statStartY, statLabelWidth, statValueWidth, statRowHeight);
-            MakeStatRow(cardObj.transform, index, "RES", ref resTexts[index],
-                statRightX, statStartY, statLabelWidth, statValueWidth, statRowHeight);
-
-            // Block / Range
-            statStartY -= statRowHeight + 7f;
-            MakeStatRow(cardObj.transform, index, "BLK", ref blockTexts[index],
-                statLeftX, statStartY, statLabelWidth, statValueWidth, statRowHeight);
-            MakeStatRow(cardObj.transform, index, "RNG", ref rangeTexts[index],
-                statRightX, statStartY, statLabelWidth, statValueWidth, statRowHeight);
-
-            // --- Select hint / selected badge (bottom) ---
+            // --- Select hint / selected badge ---
             selectHintTexts[index] = MakeText(cardObj.transform, $"SelectHint_{index}", "CLICK TO SELECT", 12,
                 TextAnchor.MiddleCenter, STAT_LABEL_COLOR);
             selectHintTexts[index].fontStyle = FontStyle.Bold;
-            PositionRT(selectHintTexts[index], new Vector2(0, -(cardHeight * 0.5f) + 26f), new Vector2(0.5f, 0.5f),
-                new Vector2(cardWidth - 20f, 26f));
+            StretchTopRT(selectHintTexts[index], 14f, 14f, 596f, 24f);
         }
 
-        private void MakeStatRow(Transform parent, int cardIndex, string label,
-            ref Text valueText, float centerX, float y, float labelW, float valueW, float h)
+        private void BuildDetailsPanel(Transform parent)
         {
-            // Label
-            var labelText = MakeText(parent, $"StatLabel_{label}_{cardIndex}", label, 11,
-                TextAnchor.MiddleRight, STAT_LABEL_COLOR);
-            PositionRT(labelText, new Vector2(centerX - 28f, y),
-                new Vector2(0.5f, 0.5f), new Vector2(labelW, h));
+            var panel = new GameObject("DetailsPanel", typeof(RectTransform), typeof(Image));
+            panel.transform.SetParent(parent, false);
+            detailsPanelRect = panel.GetComponent<RectTransform>();
+            detailsPanelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            detailsPanelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            detailsPanelRect.pivot = new Vector2(0.5f, 0.5f);
+            detailsPanelRect.sizeDelta = new Vector2(PanelWidth, CardHeight);
+            detailsPanelRect.anchoredPosition = new Vector2(PanelCenterX, ContentCenterY);
 
-            // Value
-            valueText = MakeText(parent, $"StatValue_{label}_{cardIndex}", "0", 13,
-                TextAnchor.MiddleLeft, STAT_VALUE_COLOR);
-            PositionRT(valueText, new Vector2(centerX + 28f, y),
-                new Vector2(0.5f, 0.5f), new Vector2(valueW, h));
+            var panelImage = panel.GetComponent<Image>();
+            panelImage.color = PANEL_BG;
+            panelImage.raycastTarget = false;
+
+            var border = panel.AddComponent<Outline>();
+            border.effectColor = new Color(1f, 1f, 1f, 0.06f);
+            border.effectDistance = new Vector2(2f, -2f);
+
+            // Rarity-colored stripe along the top edge
+            var accent = new GameObject("DetailAccent", typeof(RectTransform), typeof(Image));
+            accent.transform.SetParent(panel.transform, false);
+            var accentRect = accent.GetComponent<RectTransform>();
+            accentRect.anchorMin = new Vector2(0f, 1f);
+            accentRect.anchorMax = new Vector2(1f, 1f);
+            accentRect.pivot = new Vector2(0.5f, 1f);
+            accentRect.sizeDelta = new Vector2(0f, 4f);
+            detailAccent = accent.GetComponent<Image>();
+            detailAccent.color = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.35f);
+            detailAccent.raycastTarget = false;
+
+            // --- Placeholder (nothing selected) ---
+            detailEmptyRoot = new GameObject("Empty", typeof(RectTransform));
+            detailEmptyRoot.transform.SetParent(panel.transform, false);
+            StretchFill(detailEmptyRoot.GetComponent<RectTransform>());
+
+            var emptyTitle = MakeText(detailEmptyRoot.transform, "EmptyTitle", "SELECT A CARD", 24,
+                TextAnchor.MiddleCenter, new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.8f));
+            emptyTitle.fontStyle = FontStyle.Bold;
+            PositionRT(emptyTitle, new Vector2(0f, 14f), new Vector2(0.5f, 0.5f), new Vector2(PanelWidth - 60f, 40f));
+
+            var emptySub = MakeText(detailEmptyRoot.transform, "EmptySubtitle", "to see its full details here", 14,
+                TextAnchor.MiddleCenter, new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.5f));
+            PositionRT(emptySub, new Vector2(0f, -22f), new Vector2(0.5f, 0.5f), new Vector2(PanelWidth - 60f, 28f));
+
+            // --- Content (operator selected) ---
+            detailContentRoot = new GameObject("Content", typeof(RectTransform), typeof(CanvasGroup));
+            detailContentRoot.transform.SetParent(panel.transform, false);
+            detailContentRect = detailContentRoot.GetComponent<RectTransform>();
+            StretchFill(detailContentRect);
+            detailContentGroup = detailContentRoot.GetComponent<CanvasGroup>();
+            Transform content = detailContentRoot.transform;
+
+            const float margin = 28f;
+            float innerWidth = PanelWidth - margin * 2f;
+
+            // Name + stars
+            detailNameText = MakeText(content, "DetailName", "", 32, TextAnchor.MiddleLeft, Color.white);
+            detailNameText.fontStyle = FontStyle.Bold;
+            detailNameText.resizeTextForBestFit = true;
+            detailNameText.resizeTextMinSize = 18;
+            detailNameText.resizeTextMaxSize = 32;
+            StretchTopRT(detailNameText, margin, margin, 28f, 42f);
+
+            detailStarsText = MakeText(content, "DetailStars", "", 22, TextAnchor.MiddleLeft, STAR_COLOR);
+            StretchTopRT(detailStarsText, margin, margin, 72f, 28f);
+
+            // Type chips (class / position / damage type)
+            float chipWidth = (innerWidth - 24f) / 3f;
+            detailClassChip = CreateChip(content, "ClassChip", margin, 114f, chipWidth, 34f);
+            detailPositionChip = CreateChip(content, "PositionChip", margin + chipWidth + 12f, 114f, chipWidth, 34f);
+            detailDamageChip = CreateChip(content, "DamageChip", margin + (chipWidth + 12f) * 2f, 114f, chipWidth, 34f);
+
+            // Role line (role tags / class summary)
+            detailRoleText = MakeText(content, "DetailRole", "", 12, TextAnchor.MiddleLeft,
+                new Color(0.70f, 0.85f, 0.95f, 0.85f));
+            detailRoleText.resizeTextForBestFit = true;
+            detailRoleText.resizeTextMinSize = 9;
+            detailRoleText.resizeTextMaxSize = 12;
+            StretchTopRT(detailRoleText, margin, margin, 156f, 22f);
+
+            CreateDivider(content, 190f, margin);
+
+            // Stats
+            var statsLabel = MakeText(content, "StatsLabel", "STATS", 11, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
+            statsLabel.fontStyle = FontStyle.Bold;
+            StretchTopRT(statsLabel, margin, margin, 202f, 18f);
+
+            float tileWidth = (innerWidth - 12f) / 2f;
+            float tileHeight = 62f;
+            float rowStep = tileHeight + 8f;
+            float gridTop = 226f;
+            float rightX = margin + tileWidth + 12f;
+
+            detailHpText = CreateStatTile(content, "HP", new Color(0.35f, 0.85f, 0.45f, 1f), margin, gridTop, tileWidth, tileHeight);
+            detailAtkText = CreateStatTile(content, "ATK", new Color(0.95f, 0.40f, 0.35f, 1f), rightX, gridTop, tileWidth, tileHeight);
+            detailDefText = CreateStatTile(content, "DEF", new Color(0.35f, 0.60f, 1.00f, 1f), margin, gridTop + rowStep, tileWidth, tileHeight);
+            detailResText = CreateStatTile(content, "RES", new Color(0.70f, 0.45f, 1.00f, 1f), rightX, gridTop + rowStep, tileWidth, tileHeight);
+            detailBlockText = CreateStatTile(content, "BLOCK", new Color(1.00f, 0.80f, 0.30f, 1f), margin, gridTop + rowStep * 2f, tileWidth, tileHeight);
+            detailIntervalText = CreateStatTile(content, "ATK SPD", new Color(0.40f, 0.85f, 0.90f, 1f), rightX, gridTop + rowStep * 2f, tileWidth, tileHeight);
+
+            // Passive / ability (hidden when the operator has none)
+            detailPassiveLabel = MakeText(content, "PassiveLabel", "ABILITY", 11, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
+            detailPassiveLabel.fontStyle = FontStyle.Bold;
+            StretchTopRT(detailPassiveLabel, margin, margin, 450f, 18f);
+
+            detailPassiveText = MakeText(content, "PassiveText", "", 15, TextAnchor.UpperLeft,
+                new Color(0.88f, 0.92f, 0.96f, 1f));
+            detailPassiveText.resizeTextForBestFit = true;
+            detailPassiveText.resizeTextMinSize = 11;
+            detailPassiveText.resizeTextMaxSize = 15;
+            StretchTopRT(detailPassiveText, margin, margin, 474f, 134f);
+
+            detailContentRoot.SetActive(false);
+        }
+
+        private Chip CreateChip(Transform parent, string name, float x, float y, float width, float height)
+        {
+            var chip = new Chip();
+
+            var obj = new GameObject(name, typeof(RectTransform), typeof(Image));
+            obj.transform.SetParent(parent, false);
+            PlaceTopLeft(obj.transform, x, y, width, height);
+
+            chip.bg = obj.GetComponent<Image>();
+            chip.bg.color = TILE_BG;
+            chip.bg.raycastTarget = false;
+
+            chip.outline = obj.AddComponent<Outline>();
+            chip.outline.effectDistance = new Vector2(1.5f, -1.5f);
+            chip.outline.effectColor = new Color(1f, 1f, 1f, 0.2f);
+
+            chip.text = MakeText(obj.transform, "Label", "", 13, TextAnchor.MiddleCenter, Color.white);
+            chip.text.fontStyle = FontStyle.Bold;
+            chip.text.resizeTextForBestFit = true;
+            chip.text.resizeTextMinSize = 9;
+            chip.text.resizeTextMaxSize = 13;
+            StretchFill(chip.text.rectTransform);
+
+            return chip;
+        }
+
+        private Text CreateStatTile(Transform parent, string label, Color accent, float x, float y, float width, float height)
+        {
+            var tile = new GameObject($"Stat_{label}", typeof(RectTransform), typeof(Image));
+            tile.transform.SetParent(parent, false);
+            PlaceTopLeft(tile.transform, x, y, width, height);
+            var tileImage = tile.GetComponent<Image>();
+            tileImage.color = TILE_BG;
+            tileImage.raycastTarget = false;
+
+            // Colored bar on the left edge
+            var bar = new GameObject("Bar", typeof(RectTransform), typeof(Image));
+            bar.transform.SetParent(tile.transform, false);
+            var barRect = bar.GetComponent<RectTransform>();
+            barRect.anchorMin = new Vector2(0f, 0f);
+            barRect.anchorMax = new Vector2(0f, 1f);
+            barRect.pivot = new Vector2(0f, 0.5f);
+            barRect.sizeDelta = new Vector2(4f, 0f);
+            barRect.anchoredPosition = Vector2.zero;
+            var barImage = bar.GetComponent<Image>();
+            barImage.color = accent;
+            barImage.raycastTarget = false;
+
+            var labelText = MakeText(tile.transform, "Label", label, 11, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
+            labelText.fontStyle = FontStyle.Bold;
+            PlaceTopLeft(labelText.transform, 18f, 8f, width - 28f, 18f);
+
+            var valueText = MakeText(tile.transform, "Value", "0", 26, TextAnchor.MiddleLeft, STAT_VALUE_COLOR);
             valueText.fontStyle = FontStyle.Bold;
+            PlaceTopLeft(valueText.transform, 18f, 26f, width - 28f, 32f);
+
+            return valueText;
+        }
+
+        private static void CreateDivider(Transform parent, float top, float margin)
+        {
+            var divider = new GameObject("Divider", typeof(RectTransform), typeof(Image));
+            divider.transform.SetParent(parent, false);
+            StretchTopRT(divider.transform, margin, margin, top, 2f);
+            var image = divider.GetComponent<Image>();
+            image.color = new Color(1f, 1f, 1f, 0.08f);
+            image.raycastTarget = false;
         }
 
         // ============================
@@ -1132,6 +1490,36 @@ namespace TrashTD.UI
             rt.anchorMax = anchor;
             rt.anchoredPosition = anchoredPos;
             rt.sizeDelta = size;
+        }
+
+        private static void StretchFill(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+        }
+
+        /// <summary>Full-width strip hanging from the top edge of its parent.</summary>
+        private static void StretchTopRT(Component comp, float left, float right, float top, float height)
+        {
+            var rt = comp.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.offsetMin = new Vector2(left, -(top + height));
+            rt.offsetMax = new Vector2(-right, -top);
+        }
+
+        /// <summary>Fixed-size box positioned from the top-left corner of its parent.</summary>
+        private static void PlaceTopLeft(Component comp, float x, float y, float width, float height)
+        {
+            var rt = comp.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(x, -y);
+            rt.sizeDelta = new Vector2(width, height);
         }
 
         private static string GetOperatorDescription(OperatorData opData)
