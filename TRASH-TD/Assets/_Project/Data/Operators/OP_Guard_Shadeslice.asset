@@ -40,5 +40,5 @@ MonoBehaviour:
   chillFreezeDuration: 1.5
   dpCost: 10
   redeployCooldown: 60
-  portrait: {fileID: 21300000, guid: a1111111111111111111111111111101, type: 3}
-  operatorPrefab: {fileID: 4120733290429841632, guid: 30044fad9ffb2b341bfeed4975c2dc5c, type: 3}
+  portrait: {fileID: 2426505987633283266, guid: 40492eeb02783134cbc4e16243dc8a13, type: 3}
+  operatorPrefab: {fileID: 4120733290429841632, guid: e1f7e3b66aa5452bb562337107704521, type: 3}
