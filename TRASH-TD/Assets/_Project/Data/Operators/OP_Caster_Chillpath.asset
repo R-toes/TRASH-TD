@@ -15,12 +15,12 @@ MonoBehaviour:
   operatorName: Chillpath
   operatorClass: 3
   baseRarity: 1
-  position: 0
+  position: 1
   roleTags:
   - Slow
   - Control
   baseHP: 90
-  baseATK: 30
+  baseATK: 25
   baseDEF: 8
   baseRES: 15
   blockCount: 0
@@ -29,13 +29,16 @@ MonoBehaviour:
   rangePattern:
   - {x: 1, y: 0}
   - {x: 2, y: 0}
-  - {x: 3, y: 0}
   - {x: 1, y: 1}
   - {x: 2, y: 1}
   - {x: 1, y: -1}
   - {x: 2, y: -1}
   damageType: 1
-  chillPerHit: 40
+  drawTwoCardsOnDeath: 0
+  bonusWhenIsolated: 0
+  isolatedAttackMultiplier: 1.5
+  skillDescription: 
+  chillPerHit: 20
   chillSlowMultiplier: 0.5
   chillSlowDuration: 2.5
   chillFreezeThreshold: 100

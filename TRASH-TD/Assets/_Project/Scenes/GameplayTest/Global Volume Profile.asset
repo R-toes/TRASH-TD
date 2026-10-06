@@ -15,7 +15,7 @@ MonoBehaviour:
   active: 1
   intensity:
     m_OverrideState: 1
-    m_Value: 0.183
+    m_Value: 0.148
 --- !u!114 &-3535333348308434072
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -31,7 +31,7 @@ MonoBehaviour:
   active: 1
   intensity:
     m_OverrideState: 1
-    m_Value: 11.4
+    m_Value: 3.33
   tintColor:
     m_OverrideState: 1
     m_Value: {r: 1, g: 1, b: 1, a: 1}
@@ -61,7 +61,7 @@ MonoBehaviour:
     m_Value: 1
   startingPosition:
     m_OverrideState: 1
-    m_Value: 1
+    m_Value: 2.43
   scale:
     m_OverrideState: 1
     m_Value: 1.6
@@ -144,10 +144,10 @@ MonoBehaviour:
   active: 1
   distance:
     m_OverrideState: 1
-    m_Value: 0.126
+    m_Value: 0.3
   cropToFit:
     m_OverrideState: 1
-    m_Value: 0.352
+    m_Value: 0.161
 --- !u!114 &7462526239935213042
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -166,7 +166,7 @@ MonoBehaviour:
     m_Value: 1
   intensity:
     m_OverrideState: 1
-    m_Value: 0.383
+    m_Value: 0.366
   response:
     m_OverrideState: 1
     m_Value: 0.8
