@@ -67,6 +67,8 @@ namespace TrashTD.UI
         private Button placementConfirmButton;
         private Button startWaveButton;
         private Text startWaveButtonText;
+        private Button[] speedButtons;
+        private MenuButtonFeedback[] speedFeedbacks;
         private Button[] deckButtons;
         private Text[] deckButtonLabels;
         private Image[] deckButtonImages;
@@ -255,6 +257,7 @@ namespace TrashTD.UI
             CreateDangerFlash(root);
             CreateTopBar(root);
             CreateDeckBar(root);
+            CreateSpeedBar(root);
             CreatePhaseBanner(root);
             CreatePlacementControls(root);
             CreateSelectedOperatorLabel(root);
@@ -722,6 +725,85 @@ namespace TrashTD.UI
             startWaveButton.GetComponent<Image>().color = ReadyColor;
             startWaveButton.onClick.AddListener(StartWave);
             startWaveFeedback = AttachFeedback(startWaveButton, AccentColor, 1.06f, () => PlaySfx(clickClip, 1.1f));
+        }
+
+        private void CreateSpeedBar(Transform root)
+        {
+            var bar = new GameObject("GameSpeedBar", typeof(RectTransform), typeof(Image));
+            bar.transform.SetParent(root, false);
+            var barRect = bar.GetComponent<RectTransform>();
+            SetPosition(barRect, new Vector2(-24f, 116f), new Vector2(1f, 0f), new Vector2(246f, 54f), new Vector2(1f, 0f));
+            bar.GetComponent<Image>().color = BarColor;
+
+            var outline = bar.AddComponent<Outline>();
+            outline.effectColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.35f);
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            var title = CreateText(bar.transform, "SpeedTitle", "SPEED", 14, TextAnchor.MiddleCenter);
+            title.color = TextDim;
+            title.raycastTarget = false;
+            SetPosition(title.GetComponent<RectTransform>(), new Vector2(0f, 15f), new Vector2(0.5f, 1f), new Vector2(246f, 20f), new Vector2(0.5f, 1f));
+
+            var buttonsRoot = new GameObject("SpeedButtons", typeof(RectTransform));
+            buttonsRoot.transform.SetParent(bar.transform, false);
+            var buttonsRect = buttonsRoot.GetComponent<RectTransform>();
+            SetPosition(buttonsRect, new Vector2(0f, -7f), new Vector2(0.5f, 0.5f), new Vector2(216f, 32f), new Vector2(0.5f, 0.5f));
+            var layout = buttonsRoot.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 6f;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            speedButtons = new Button[3];
+            speedFeedbacks = new MenuButtonFeedback[3];
+            for (int i = 0; i < speedButtons.Length; i++)
+            {
+                float speed = i + 1;
+                var button = CreateButton(buttonsRoot.transform, $"Speed{speed:0}xButton", $"{speed:0}x", new Vector2(66f, 30f));
+                button.GetComponent<Image>().color = DarkButton;
+                int index = i;
+                button.onClick.AddListener(() => SetGameSpeed(index + 1));
+                speedButtons[i] = button;
+                speedFeedbacks[i] = AttachFeedback(button, AccentColor, 1.03f, () =>
+                {
+                    SetGameSpeed(index + 1);
+                    PlayClick();
+                });
+            }
+
+            UpdateSpeedSelection(gameManager != null ? gameManager.GameSpeed : 1f);
+        }
+
+        private void SetGameSpeed(int speed)
+        {
+            if (gameManager == null) return;
+
+            gameManager.SetGameSpeed(speed);
+            UpdateSpeedSelection(speed);
+        }
+
+        private void UpdateSpeedSelection(float speed)
+        {
+            if (speedButtons == null) return;
+
+            int selectedIndex = Mathf.Clamp(Mathf.RoundToInt(speed) - 1, 0, speedButtons.Length - 1);
+            for (int i = 0; i < speedButtons.Length; i++)
+            {
+                bool selected = i == selectedIndex;
+                var image = speedButtons[i].GetComponent<Image>();
+                image.color = selected ? new Color(0.08f, 0.28f, 0.16f, 1f) : DarkButton;
+                speedFeedbacks[i].restScale = selected ? 1.12f : 1f;
+                speedFeedbacks[i].glowAlways = selected;
+                speedFeedbacks[i].glowColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 1f);
+                var label = speedButtons[i].GetComponentInChildren<Text>();
+                if (label != null)
+                {
+                    label.color = selected ? Color.white : TextDim;
+                    label.fontSize = selected ? 21 : 18;
+                }
+            }
         }
 
         private Button CreateDeckSlot(Transform parent, string objectName)

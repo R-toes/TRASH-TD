@@ -61,6 +61,7 @@ namespace TrashTD.Core.GameLoop
         public int CurrentDP => currentDP;
         public float ElapsedTime => elapsedTime;
         public GamePlayState CurrentState => currentState;
+        public float GameSpeed { get; private set; } = 1f;
 
         // --- Phase ---
         private StagePhase currentPhase = StagePhase.CardPick;
@@ -117,6 +118,8 @@ namespace TrashTD.Core.GameLoop
             elapsedTime = 0f;
             leakedAnyEnemy = false;
             currentWaveIndex = 0;
+            GameSpeed = 1f;
+            Time.timeScale = GameSpeed;
 
             if (OperatorManager.Instance != null && stageData != null)
             {
@@ -210,12 +213,16 @@ namespace TrashTD.Core.GameLoop
             if (currentState == GamePlayState.Paused)
             {
                 SetState(GamePlayState.Playing);
-                Time.timeScale = 1f;
+                Time.timeScale = GameSpeed;
             }
         }
 
         public void SetGameSpeed(float speed)
         {
+            if (speed != 1f && speed != 2f && speed != 3f)
+                return;
+
+            GameSpeed = speed;
             if (currentState == GamePlayState.Playing)
             {
                 Time.timeScale = speed;
