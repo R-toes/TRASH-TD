@@ -70,6 +70,8 @@ namespace TrashTD.Operators
         {
             if (target == null || !isDeployed) return;
 
+            PlayAttackSound();
+
             if (data.chillPerHit > 0f)
             {
                 CombatProjectileVisual.Fire(

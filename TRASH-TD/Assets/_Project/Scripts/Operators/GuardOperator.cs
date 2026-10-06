@@ -53,6 +53,7 @@ namespace TrashTD.Operators
 
                 if (isIsolated)
                 {
+                    PlayAttackSound();
                     int attackPower = Mathf.RoundToInt(currentATK * Mathf.Max(1f, data.isolatedAttackMultiplier));
                     int damage = DamageCalculator.CalculateDamage(attackPower, GetTargetMitigation(target));
                     target.TakeDamage(damage, data.damageType);

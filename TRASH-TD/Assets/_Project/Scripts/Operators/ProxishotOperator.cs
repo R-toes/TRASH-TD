@@ -44,6 +44,8 @@ namespace TrashTD.Operators
             }
             if (rangeDistance <= 0f) return;
 
+            PlayAttackSound();
+
             minLateralOffset -= gridManager.CellSize * 0.5f;
             maxLateralOffset += gridManager.CellSize * 0.5f;
 

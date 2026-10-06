@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using TrashTD.Audio;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
 using TrashTD.Enemies;
@@ -118,9 +119,29 @@ namespace TrashTD.Operators
         {
             if (target == null || !isDeployed) return;
 
+            PlayAttackSound();
+
             // Damage is calculated by the combat system using the damage formula
             int damage = Combat.DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
             target.TakeDamage(damage, data.damageType);
+        }
+
+        protected void PlayAttackSound()
+        {
+            if (data == null || AudioManager.Instance == null) return;
+
+            if (data.damageType == DamageType.Arts)
+            {
+                AudioManager.Instance.PlaySfx(SfxId.GameplayMagicAttack);
+            }
+            else if (data.position == OperatorPosition.Ranged)
+            {
+                AudioManager.Instance.PlaySfx(SfxId.GameplayRangedPhysicalAttack);
+            }
+            else
+            {
+                AudioManager.Instance.PlaySfx(SfxId.GameplayMeleeAttack);
+            }
         }
 
         public Vector2Int[] GetRangePattern() => data.rangePattern;

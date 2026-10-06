@@ -21,7 +21,10 @@ namespace TrashTD.Audio
         GameplayEnemyDeath,
         GameplayLifeLost,
         GameplayPause,
-        GameplayResume
+        GameplayResume,
+        GameplayRangedPhysicalAttack,
+        GameplayMagicAttack,
+        GameplayMeleeAttack
     }
 
     /// <summary>
@@ -52,7 +55,10 @@ namespace TrashTD.Audio
             { SfxId.GameplayEnemyDeath, "Gameplay_EnemyDeath" },
             { SfxId.GameplayLifeLost, "Gameplay_LifeLost" },
             { SfxId.GameplayPause, "Gameplay_Pause" },
-            { SfxId.GameplayResume, "Gameplay_Resume" }
+            { SfxId.GameplayResume, "Gameplay_Resume" },
+            { SfxId.GameplayRangedPhysicalAttack, "Operator_RangedPhysicalAttack" },
+            { SfxId.GameplayMagicAttack, "Operator_MagicAttack" },
+            { SfxId.GameplayMeleeAttack, "Operator_MeleeAttack" }
         };
 
         public static AudioManager Instance { get; private set; }
