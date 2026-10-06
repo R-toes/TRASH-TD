@@ -116,6 +116,8 @@ namespace TrashTD.Operators
 
             if (EnemyManager.Instance == null || splashRadius <= 0f) return;
 
+            AoeBlastVisual.PlayCircle(target.transform.position, splashRadius, new Color(0.74f, 0.38f, 1f, 0.5f));
+
             var splashTargets = EnemyManager.Instance.GetEnemiesInRadius(target.transform.position, splashRadius);
             int secondaryAtk = Mathf.RoundToInt(currentATK * splashDamageRatio);
             for (int i = 0; i < splashTargets.Count; i++)
