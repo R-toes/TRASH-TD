@@ -11,10 +11,10 @@ namespace TrashTD.Operators
     /// <summary>
     /// Bubblets — 3-Star Medic.
     /// Range covers self and 8 surrounding tiles (3x3 area).
-    /// Does not heal directly; every 1.5 seconds, grants an allied operator in range
+    /// Does not heal directly; every 2.0 seconds, grants an allied operator in range
     /// a protective bubble shield that negates one instance of damage (even at full HP).
-    /// When the bubble pops, it heals the recipient and deals Arts damage equal to Bubblets' ATK
-    /// to enemies on that tile or directly in front.
+    /// When the bubble pops, it heals the recipient for 30% of Bubblets' ATK and deals Arts damage
+    /// equal to 30% of Bubblets' ATK to enemies on that tile or directly in front.
     /// </summary>
     public class BubbletsOperator : MedicOperator
     {
@@ -44,9 +44,9 @@ namespace TrashTD.Operators
 
             equippedSkill?.UpdateSkill(Time.deltaTime);
 
-            // Shield cast interval (uses attackInterval as cycle interval)
+            // Shield cast interval (uses attackInterval as cycle interval, defaulting to 2.0s)
             attackTimer += Time.deltaTime;
-            float interval = Combat.StageCombatModifiers.GetAttackInterval(data != null ? data.attackInterval : 1.5f);
+            float interval = Combat.StageCombatModifiers.GetAttackInterval(data != null ? data.attackInterval : 2.0f);
             if (attackTimer >= interval)
             {
                 attackTimer = 0f;

@@ -211,7 +211,8 @@ namespace TrashTD.Operators
                 AoeBlastVisual.PlayCircle(frontCell.WorldPosition, 0.8f, new Color(0.35f, 0.88f, 1f, 0.6f));
             }
 
-            int damageValue = bubbletATK > 0 ? bubbletATK : (source != null ? source.CurrentATK : 45);
+            int baseAtk = bubbletATK > 0 ? bubbletATK : (source != null ? source.CurrentATK : 45);
+            int damageValue = Mathf.Max(1, Mathf.RoundToInt(baseAtk * 0.30f));
 
             foreach (var enemy in hitEnemies)
             {

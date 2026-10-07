@@ -16,6 +16,9 @@ namespace TrashTD.Operators
     /// </summary>
     public class MossmoOperator : DefenderOperator, IHealer
     {
+        private const float HealCooldownDuration = 3.0f;
+        private float healCooldownTimer;
+
         public override void Attack(EnemyBase target)
         {
             // Mossmo does not attack
@@ -27,6 +30,16 @@ namespace TrashTD.Operators
             return null;
         }
 
+        protected override void Update()
+        {
+            base.Update();
+
+            if (healCooldownTimer > 0f)
+            {
+                healCooldownTimer -= Time.deltaTime;
+            }
+        }
+
         public override void TakeDamage(int rawATK, DamageType damageType)
         {
             if (currentHP <= 0 || rawATK <= 0) return;
@@ -36,8 +49,9 @@ namespace TrashTD.Operators
             base.TakeDamage(rawATK, damageType);
             int hpAfter = currentHP;
 
-            if (hpBefore > hpAfter && originCell != null)
+            if (hpBefore > hpAfter && originCell != null && healCooldownTimer <= 0f)
             {
+                healCooldownTimer = HealCooldownDuration;
                 TriggerReactiveHeal(originCell);
             }
         }

@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: OP_Guard_Drawgoo
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
   operatorName: Drawgoo
-  operatorClass: 0
+  operatorClass: 1
   baseRarity: 1
   position: 0
   roleTags: []
   baseHP: 200
   baseATK: 10
-  baseDEF: 20
+  baseDEF: 10
   baseRES: 0
   blockCount: 2
   attackRange: 1

@@ -301,7 +301,7 @@ namespace TrashTD.Editor
             {
                 var bubbletsPrefab = CreateBubbletsPrefab(bubbletsFrameOne, bubbletsFrameTwo);
                 var bubblets = CreateOperator("OP_Medic_Bubblets", "Bubblets", OperatorClass.Medic, OperatorPosition.Ranged, OperatorRarity.Star3,
-                    hp: 85, atk: 45, def: 10, res: 10, blockCount: 0, range: 1, interval: 1.5f, dp: 13,
+                    hp: 85, atk: 45, def: 10, res: 10, blockCount: 0, range: 1, interval: 2.0f, dp: 13,
                     new[]
                     {
                         new Vector2Int(0, 0),
@@ -314,7 +314,7 @@ namespace TrashTD.Editor
                 bubblets.damageType = DamageType.Arts;
                 bubblets.roleTags = new[] { "Shield", "Support" };
                 bubblets.skillDescription =
-                    "Passive - Protective Bubble: Does not heal directly. Every 1.5s, grants an allied operator in range a bubble shield that negates 1 instance of damage (even at full HP). When popped, the bubble deals Arts damage equal to Bubblets' ATK to enemies on that tile or directly in front.";
+                    "Passive - Protective Bubble: Grants an allied operator in range a bubble shield that negates 1 instance of damage. When popped, the bubble heals the operator and deals Arts damage equal to 30% of Bubblets' ATK to enemies on that tile or directly in front.";
                 EditorUtility.SetDirty(bubblets);
             }
         }

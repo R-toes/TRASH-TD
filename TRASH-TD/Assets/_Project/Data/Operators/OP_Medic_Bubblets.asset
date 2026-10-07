@@ -25,7 +25,7 @@ MonoBehaviour:
   baseRES: 10
   blockCount: 0
   attackRange: 1
-  attackInterval: 1.5
+  attackInterval: 2
   rangePattern:
   - {x: 0, y: 0}
   - {x: 1, y: 0}
@@ -40,7 +40,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Passive - Protective Bubble: Does not heal directly. Every 1.5s, grants an allied operator in range a bubble shield that negates 1 instance of damage (even at full HP). When popped, the bubble heals the operator and deals Arts damage equal to Bubblets'' ATK to enemies on that tile or directly in front.'
+  skillDescription: 'Passive - Protective Bubble: Grants an allied operator in range a bubble shield that negates 1 instance of damage. When popped, the bubble heals the operator and deals Arts damage equal to 30% of Bubblets'' ATK to enemies on that tile or directly in front.'
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
@@ -50,4 +50,3 @@ MonoBehaviour:
   redeployCooldown: 60
   portrait: {fileID: 2128977424496498489, guid: ec1547bb43d474f4d94c040b555dc8b2, type: 3}
   operatorPrefab: {fileID: 4120733290429841632, guid: c3d4e5f6a7b8091a2b3c4d5e6f7a8b92, type: 3}
-
