@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
+  m_Name: OP_Defender_Mossmo
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
+  operatorName: Mossmo
+  operatorClass: 1
+  baseRarity: 3
+  position: 0
+  roleTags:
+  - Defense
+  - Support
+  baseHP: 175
+  baseATK: 10
+  baseDEF: 30
+  baseRES: 5
+  blockCount: 3
+  attackRange: 1
+  attackInterval: 1.4
+  rangePattern:
+  - {x: 0, y: 0}
+  - {x: 1, y: 0}
+  - {x: -1, y: 0}
+  - {x: 0, y: 1}
+  - {x: 0, y: -1}
+  damageType: 0
+  drawTwoCardsOnDeath: 0
+  bonusWhenIsolated: 0
+  isolatedAttackMultiplier: 1.5
+  skillDescription: 'Passive - Symbiotic Spores: Mossmo does not attack. Every time he takes damage, he heals up to 2 operators in adjacent tiles (including himself) for 50% of NurseBot''s healing power.'
+  chillPerHit: 0
+  chillSlowMultiplier: 0.65
+  chillSlowDuration: 2.5
+  chillFreezeThreshold: 100
+  chillFreezeDuration: 1.5
+  dpCost: 15
+  redeployCooldown: 60
+  portrait: {fileID: -6106041438205602732, guid: 5e115e17c5c350c4ea8d0eb47e7bcf67, type: 3}
+  operatorPrefab: {fileID: 4120733290429841632, guid: d7c3b8a1e2f4509618a3b2c1d4e5f6a7, type: 3}
+

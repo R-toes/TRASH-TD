@@ -69,6 +69,7 @@ namespace TrashTD.Editor
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Drawgoo.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Shadeslice.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Defender_Bulkhead.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Defender_Mossmo.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Sniper_Deadeye.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Sniper_Proxishot.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Pyrolite.asset"),
@@ -229,6 +230,27 @@ namespace TrashTD.Editor
                 new[] { new Vector2Int(0, 0), new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1) },
                 defenderSprite, defenderPrefab);
 
+            // 2b. Defender (Mossmo)
+            var mossmoFrameOne = LoadSprite("Mossmo-Sheet.png", "Mossmo-Sheet_0");
+            var mossmoFrameTwo = LoadSprite("Mossmo-Sheet.png", "Mossmo-Sheet_1");
+            if (mossmoFrameOne != null && mossmoFrameTwo != null)
+            {
+                var mossmoPrefab = CreateMossmoPrefab(mossmoFrameOne, mossmoFrameTwo);
+                var mossmo = CreateOperator("OP_Defender_Mossmo", "Mossmo", OperatorClass.Defender, OperatorPosition.Melee, OperatorRarity.Star3,
+                    hp: 175, atk: 10, def: 30, res: 5, blockCount: 3, range: 1, interval: 1.4f, dp: 15,
+                    new[]
+                    {
+                        new Vector2Int(0, 0),
+                        new Vector2Int(1, 0), new Vector2Int(-1, 0),
+                        new Vector2Int(0, 1), new Vector2Int(0, -1)
+                    },
+                    mossmoFrameOne, mossmoPrefab);
+                mossmo.roleTags = new[] { "Defense", "Support" };
+                mossmo.skillDescription =
+                    "Passive - Symbiotic Spores: Mossmo does not attack. Every time he takes damage, he heals up to 2 operators in adjacent tiles (including himself).";
+                EditorUtility.SetDirty(mossmo);
+            }
+
             // 3. Sniper (Deadeye)
             var sniperSprite = LoadSprite("Deadeye-Sheet.png", "Deadeye-Sheet_0") ?? LoadSprite("tex_op_sniper.png");
             var sniperPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Deadeye", sniperSprite, OperatorClass.Sniper);
@@ -270,6 +292,26 @@ namespace TrashTD.Editor
                     new Vector2Int(1, 1), new Vector2Int(-1, -1)
                 },
                 medicSprite, medicPrefab);
+        }
+
+        private static GameObject CreateMossmoPrefab(Sprite firstFrame, Sprite secondFrame)
+        {
+            const string prefabName = "Prefab_OP_Mossmo";
+            string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            var go = new GameObject(prefabName);
+            var spriteRenderer = go.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = firstFrame;
+            spriteRenderer.sortingOrder = 5;
+            go.AddComponent<MossmoOperator>();
+            var animation = go.AddComponent<OperatorSpriteAnimation>();
+            animation.Configure(new[] { firstFrame, secondFrame });
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
         }
 
         private static GameObject CreateEchosquirePrefab(Sprite firstFrame, Sprite secondFrame)

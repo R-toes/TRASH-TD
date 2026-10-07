@@ -130,7 +130,7 @@ namespace TrashTD.Systems
             OperatorBase opComp = opObj.GetComponent<OperatorBase>();
             if (opComp == null)
             {
-                opComp = AddClassComponent(opObj, opData.operatorClass);
+                opComp = AddClassComponent(opObj, opData);
             }
 
             opComp.Initialize(opData, rarity, facing);
@@ -148,8 +148,14 @@ namespace TrashTD.Systems
             return true;
         }
 
-        private OperatorBase AddClassComponent(GameObject obj, OperatorClass opClass)
+        private OperatorBase AddClassComponent(GameObject obj, OperatorData opData)
         {
+            if (opData != null && opData.operatorName == "Mossmo")
+            {
+                return obj.AddComponent<MossmoOperator>();
+            }
+
+            OperatorClass opClass = opData != null ? opData.operatorClass : OperatorClass.Guard;
             return opClass switch
             {
                 OperatorClass.Guard => obj.AddComponent<GuardOperator>(),

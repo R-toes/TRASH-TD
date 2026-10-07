@@ -116,6 +116,21 @@ namespace TrashTD.Core.GameLoop
             }
 
             // 4. Initialize Draft System
+#if UNITY_EDITOR
+            if (operatorPool != null)
+            {
+                string[] opGuids = UnityEditor.AssetDatabase.FindAssets("t:OperatorData", new[] { "Assets/_Project/Data/Operators" });
+                for (int i = 0; i < opGuids.Length; i++)
+                {
+                    string assetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(opGuids[i]);
+                    OperatorData opData = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>(assetPath);
+                    if (opData != null && !operatorPool.Contains(opData))
+                    {
+                        operatorPool.Add(opData);
+                    }
+                }
+            }
+#endif
             if (operatorPool != null && operatorPool.Count > 0)
             {
                 cardDraftSystem.SetOperatorPool(operatorPool);
