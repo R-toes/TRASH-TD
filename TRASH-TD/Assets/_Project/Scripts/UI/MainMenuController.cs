@@ -20,6 +20,7 @@ namespace TrashTD.UI
         private const string FirstPlayableStageId = "STAGE_01";
         private const string SecondPlayableStageId = "STAGE_02";
         private const string ThirdPlayableStageId = "STAGE_03";
+        private const string SixthPlayableStageId = "STAGE_06";
         private const string GameplaySceneName = "GameplayTest";
         private const float EntranceDuration = 0.45f;
 
@@ -27,7 +28,8 @@ namespace TrashTD.UI
         {
             return stageId == FirstPlayableStageId
                 || stageId == SecondPlayableStageId
-                || stageId == ThirdPlayableStageId;
+                || stageId == ThirdPlayableStageId
+                || stageId == SixthPlayableStageId;
         }
 
         // ── Palette ──────────────────────────────────────────

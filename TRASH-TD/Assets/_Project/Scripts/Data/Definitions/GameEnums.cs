@@ -68,7 +68,7 @@ namespace TrashTD.Data
 
     public static class TrapTileRules
     {
-        public const int DamagePerTick = 1;
+        public const int DamagePerTick = 10;
         public const float DamageIntervalSeconds = 1f;
     }
 

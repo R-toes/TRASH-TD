@@ -37,6 +37,7 @@ namespace TrashTD.Editor
             GenerateStage();
             GenerateStage2();
             GenerateStage3();
+            GenerateStage6();
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -570,6 +571,15 @@ namespace TrashTD.Editor
             };
         }
 
+        [InitializeOnLoadMethod]
+        private static void AutoEnsureStage6()
+        {
+            EditorApplication.delayCall += () =>
+            {
+                GenerateStage6();
+            };
+        }
+
         [MenuItem("TRASH TD/Generate Stage 2 (Scrapyard Junction)")]
         public static void GenerateStage2()
         {
@@ -921,6 +931,283 @@ namespace TrashTD.Editor
             AssetDatabase.DeleteAsset(resourcesPath);
             AssetDatabase.CopyAsset(path, resourcesPath);
             AssetDatabase.SaveAssets();
+        }
+
+        [MenuItem("TRASH TD/Generate Stage 6 (Clockwork Quarry)")]
+        public static void GenerateStage6()
+        {
+            string path = $"{StageDataFolder}/Stage_06_ClockworkQuarry.asset";
+            var stage = AssetDatabase.LoadAssetAtPath<StageData>(path);
+            if (stage == null)
+            {
+                stage = ScriptableObject.CreateInstance<StageData>();
+                AssetDatabase.CreateAsset(stage, path);
+            }
+
+            stage.stageId = "STAGE_06";
+            stage.mapName = "Clockwork Quarry";
+            stage.shortDescription = "Hold the line across the quarry while avoiding the toxic hazard.";
+            stage.gridWidth = 12;
+            stage.gridHeight = 5;
+
+            var levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 6 complete.png");
+            if (levelSprites == null || levelSprites.Length == 0)
+                levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 6 complete.png");
+
+            if (levelSprites != null)
+            {
+                foreach (var obj in levelSprites)
+                {
+                    if (obj is Sprite s)
+                    {
+                        stage.mapVisualSprite = s;
+                        break;
+                    }
+                }
+            }
+            stage.visualTilePixelSize = 32;
+            stage.visualTileOffset = new Vector2(0, -1);
+
+            var fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 6 bottom.png");
+            if (fgSprites == null || fgSprites.Length == 0)
+                fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 6 bottom.png");
+
+            if (fgSprites != null)
+            {
+                foreach (var obj in fgSprites)
+                {
+                    if (obj is Sprite s)
+                    {
+                        stage.foregroundVisualSprite = s;
+                        break;
+                    }
+                }
+            }
+            stage.backgroundVisualSprite = null;
+            stage.upperBackgroundVisualSprites = null;
+            stage.squadSizeLimit = 8;
+            stage.lifePointsEasy = 3;
+            stage.lifePointsNormal = 3;
+            stage.lifePointsHard = 3;
+
+            string[] layoutRows =
+            {
+                "BHHHLLLLLLLS",
+                "BHTTTHHBHBBB",
+                "ELTBTLLLLLLS",
+                "BHTTTHBHBHBB",
+                "BHHHLLLLLLLS"
+            };
+
+            stage.tileLayout = new TileType[stage.gridWidth * stage.gridHeight];
+            var spawnPoints = new List<Vector2Int>();
+            var exitPoints = new List<Vector2Int>();
+            for (int row = 0; row < layoutRows.Length; row++)
+            {
+                for (int x = 0; x < stage.gridWidth; x++)
+                {
+                    int y = layoutRows.Length - 1 - row;
+                    int index = y * stage.gridWidth + x;
+                    switch (layoutRows[row][x])
+                    {
+                        case 'H':
+                            stage.tileLayout[index] = TileType.HighGround;
+                            break;
+                        case 'S':
+                            stage.tileLayout[index] = TileType.SpawnPoint;
+                            spawnPoints.Add(new Vector2Int(x, y));
+                            break;
+                        case 'E':
+                            stage.tileLayout[index] = TileType.ExitPoint;
+                            exitPoints.Add(new Vector2Int(x, y));
+                            break;
+                        case 'T':
+                            stage.tileLayout[index] = TileType.Trap;
+                            break;
+                        case 'B':
+                            stage.tileLayout[index] = TileType.Blocked;
+                            break;
+                        default:
+                            stage.tileLayout[index] = TileType.LowGround;
+                            break;
+                    }
+                }
+            }
+
+            stage.spawnPoints = new[]
+            {
+                new Vector2Int(11, 4),
+                new Vector2Int(11, 2),
+                new Vector2Int(11, 0)
+            };
+            stage.exitPoints = new[]
+            {
+                new Vector2Int(0, 2)
+            };
+
+            stage.enemyPaths = new[]
+            {
+                new PathData
+                {
+                    spawnPointIndex = 0,
+                    exitPointIndex = 0,
+                    waypoints = new[]
+                    {
+                        new Vector2Int(11, 4), new Vector2Int(10, 4), new Vector2Int(9, 4),
+                        new Vector2Int(8, 4), new Vector2Int(7, 4), new Vector2Int(6, 4),
+                        new Vector2Int(5, 4), new Vector2Int(4, 4), new Vector2Int(4, 3),
+                        new Vector2Int(4, 2), new Vector2Int(4, 1), new Vector2Int(3, 1),
+                        new Vector2Int(2, 1), new Vector2Int(2, 2), new Vector2Int(1, 2),
+                        new Vector2Int(0, 2)
+                    }
+                },
+                new PathData
+                {
+                    spawnPointIndex = 1,
+                    exitPointIndex = 0,
+                    waypoints = new[]
+                    {
+                        new Vector2Int(11, 2), new Vector2Int(10, 2), new Vector2Int(9, 2),
+                        new Vector2Int(8, 2), new Vector2Int(7, 2), new Vector2Int(6, 2),
+                        new Vector2Int(5, 2), new Vector2Int(4, 2), new Vector2Int(4, 3),
+                        new Vector2Int(3, 3), new Vector2Int(2, 3), new Vector2Int(2, 2),
+                        new Vector2Int(1, 2), new Vector2Int(0, 2)
+                    }
+                },
+                new PathData
+                {
+                    spawnPointIndex = 2,
+                    exitPointIndex = 0,
+                    waypoints = new[]
+                    {
+                        new Vector2Int(11, 0), new Vector2Int(10, 0), new Vector2Int(9, 0),
+                        new Vector2Int(8, 0), new Vector2Int(7, 0), new Vector2Int(6, 0),
+                        new Vector2Int(5, 0), new Vector2Int(4, 0), new Vector2Int(4, 1),
+                        new Vector2Int(4, 2), new Vector2Int(4, 3), new Vector2Int(3, 3),
+                        new Vector2Int(2, 3), new Vector2Int(2, 2), new Vector2Int(1, 2),
+                        new Vector2Int(0, 2)
+                    }
+                }
+            };
+
+            var grunt = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Grunt_Sludge.asset");
+            var rusher = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Rusher_Toxic.asset");
+            var tank = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Tank_Pollution.asset");
+
+            var stage1 = AssetDatabase.LoadAssetAtPath<StageData>($"{StageDataFolder}/Stage_01_LandfillOutskirts.asset");
+            if (stage1 != null && stage1.wavesEasy != null && stage1.wavesEasy.Length > 0)
+            {
+                stage.wavesEasy = DistributeWavesToLanes(stage1.wavesEasy);
+                stage.wavesNormal = DistributeWavesToLanes(stage1.wavesNormal);
+                stage.wavesHard = DistributeWavesToLanes(stage1.wavesHard);
+            }
+            else
+            {
+                var baseEasy = new[]
+                {
+                    new WaveData
+                    {
+                        waveName = "Wave 1: Scouts",
+                        preWaveDelay = 2.0f,
+                        entries = new[] { new WaveEntry { enemyData = grunt, count = 3, spawnInterval = 3.0f } }
+                    }
+                };
+                var baseNormal = new[]
+                {
+                    new WaveData
+                    {
+                        waveName = "Wave 1: Sludge Scouts",
+                        preWaveDelay = 2.0f,
+                        entries = new[] { new WaveEntry { enemyData = grunt, count = 3, spawnInterval = 2.5f } }
+                    },
+                    new WaveData
+                    {
+                        waveName = "Wave 2: Toxic Surge",
+                        preWaveDelay = 4.0f,
+                        entries = new[]
+                        {
+                            new WaveEntry { enemyData = grunt, count = 4, spawnInterval = 2.0f },
+                            new WaveEntry { enemyData = rusher, count = 2, spawnInterval = 1.5f, startDelay = 3f }
+                        }
+                    }
+                };
+                var baseHard = new[]
+                {
+                    new WaveData
+                    {
+                        waveName = "Wave 1: Advance Swarm",
+                        preWaveDelay = 1.5f,
+                        entries = new[]
+                        {
+                            new WaveEntry { enemyData = grunt, count = 5, spawnInterval = 1.8f },
+                            new WaveEntry { enemyData = rusher, count = 3, spawnInterval = 1.2f, startDelay = 2f }
+                        }
+                    },
+                    new WaveData
+                    {
+                        waveName = "Wave 2: Heavy Incursion",
+                        preWaveDelay = 3.0f,
+                        entries = new[]
+                        {
+                            new WaveEntry { enemyData = tank, count = 1, spawnInterval = 0f },
+                            new WaveEntry { enemyData = rusher, count = 4, spawnInterval = 1.2f, startDelay = 2f }
+                        }
+                    }
+                };
+
+                stage.wavesEasy = DistributeWavesToLanes(ExtendWaveCampaign(baseEasy, 10, 0, grunt, rusher, tank));
+                stage.wavesNormal = DistributeWavesToLanes(ExtendWaveCampaign(baseNormal, 20, 1, grunt, rusher, tank));
+                stage.wavesHard = DistributeWavesToLanes(ExtendWaveCampaign(baseHard, 30, 2, grunt, rusher, tank));
+            }
+
+            EditorUtility.SetDirty(stage);
+            AssetDatabase.SaveAssets();
+
+            string resourcesPath = "Assets/Resources/Stages/STAGE_06.asset";
+            if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
+            if (!AssetDatabase.IsValidFolder("Assets/Resources/Stages")) AssetDatabase.CreateFolder("Assets/Resources", "Stages");
+            AssetDatabase.DeleteAsset(resourcesPath);
+            AssetDatabase.CopyAsset(path, resourcesPath);
+            AssetDatabase.SaveAssets();
+
+            Debug.Log("<color=green>TRASH TD: Stage 6 (Clockwork Quarry) successfully generated!</color>");
+        }
+
+        private static WaveData[] DistributeWavesToLanes(WaveData[] sourceWaves)
+        {
+            if (sourceWaves == null) return new WaveData[0];
+            var result = new WaveData[sourceWaves.Length];
+            for (int i = 0; i < sourceWaves.Length; i++)
+            {
+                var src = sourceWaves[i];
+                var entries = new List<WaveEntry>();
+                if (src.entries != null)
+                {
+                    foreach (var srcEntry in src.entries)
+                    {
+                        if (srcEntry == null || srcEntry.enemyData == null) continue;
+                        int distributedCount = Mathf.Max(1, Mathf.CeilToInt(srcEntry.count * 0.35f));
+                        for (int lane = 0; lane < 3; lane++)
+                        {
+                            entries.Add(new WaveEntry
+                            {
+                                enemyData = srcEntry.enemyData,
+                                count = distributedCount,
+                                spawnInterval = srcEntry.spawnInterval,
+                                startDelay = srcEntry.startDelay + lane * 0.4f,
+                                spawnPointIndex = lane
+                            });
+                        }
+                    }
+                }
+                result[i] = new WaveData
+                {
+                    waveName = src.waveName,
+                    preWaveDelay = src.preWaveDelay,
+                    entries = entries.ToArray()
+                };
+            }
+            return result;
         }
 
         private static WaveData[] BuildStage3Waves(int difficultyTier, EnemyData grunt, EnemyData rusher, EnemyData tank)

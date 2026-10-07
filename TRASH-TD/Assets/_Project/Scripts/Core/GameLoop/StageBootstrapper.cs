@@ -19,7 +19,8 @@ namespace TrashTD.Core.GameLoop
     public class StageBootstrapper : MonoBehaviour
     {
         private const float Level3WeatherDamageIntervalSeconds = 2f;
-        private const int AcidRainDropCount = 72;
+        public const int AcidRainDamagePerTick = 3;
+        private const int AcidRainDropCount = 140;
         private static Sprite weatherDotSprite;
         private static Texture2D dustCloudTexture;
         private static Material dustCloudMaterial;
@@ -103,8 +104,8 @@ namespace TrashTD.Core.GameLoop
             // 3. Center Camera
             CenterCameraOnGrid();
 
-            // 3.5 Apply the Level 3 acidstorm and sandstorm
-            if (stageData.stageId == "STAGE_03")
+            // 3.5 Apply acidstorm and weather effects
+            if (stageData.stageId == "STAGE_03" || stageData.stageId == "STAGE_06")
             {
                 CreateLevel3WeatherEffects();
             }
@@ -239,15 +240,21 @@ namespace TrashTD.Core.GameLoop
             float cellSize = gridManager != null ? gridManager.CellSize : 1.0f;
             float centerX = (stageData.gridWidth * cellSize) * 0.5f;
 
-            // Visual height: grid height by default, but if mapVisualSprite has extra visual rows (e.g. top row),
-            // take the full visual height into account so the background visuals are fully visible.
-            float visualHeight = stageData.gridHeight * cellSize;
+            // Visual height: grid height by default, but if mapVisualSprite has extra visual rows (e.g. top/bottom rows),
+            // take the full visual height and vertical span into account so background visuals are fully visible and centered.
+            float visualMinY = 0f;
+            float visualMaxY = stageData.gridHeight * cellSize;
             if (stageData.mapVisualSprite != null)
             {
                 float pixelPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
                 float spriteTilesY = stageData.mapVisualSprite.rect.height / pixelPerTile;
-                visualHeight = Mathf.Max(visualHeight, (spriteTilesY + stageData.visualTileOffset.y) * cellSize);
+                float spriteBottom = stageData.visualTileOffset.y * cellSize;
+                float spriteTop = (spriteTilesY + stageData.visualTileOffset.y) * cellSize;
+                visualMinY = Mathf.Min(visualMinY, spriteBottom);
+                visualMaxY = Mathf.Max(visualMaxY, spriteTop);
             }
+            float visualHeight = visualMaxY - visualMinY;
+            float visualCenterY = (visualMinY + visualMaxY) * 0.5f;
 
             // Available vertical ratio between DeckBar (170px) and TopBar (90px) on 1080p reference (~76%)
             const float availableRatio = 0.759f;
@@ -257,7 +264,7 @@ namespace TrashTD.Core.GameLoop
             // Shift camera down by the difference between bottom DeckBar (170px) and TopBar (90px)
             // so visual content is vertically centered in the unobstructed play area
             float hudCenterOffset = ((170f - 90f) / 1080f) * orthoSize;
-            float camY = (visualHeight * 0.5f) - hudCenterOffset;
+            float camY = visualCenterY - hudCenterOffset;
 
             cam.transform.position = new Vector3(centerX, camY, -10f);
             cam.orthographic = true;
@@ -486,74 +493,40 @@ namespace TrashTD.Core.GameLoop
             float mapHeight = stageData.gridHeight * cellSize;
             Vector3 gridBottomLeft = gridManager.GridToWorldPosition(0, 0)
                 - new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f);
-            Vector3 mapCenter = gridBottomLeft + new Vector3(mapWidth * 0.5f, mapHeight * 0.5f, 0f);
 
             var weatherRoot = new GameObject("Level3WeatherEffects");
             weatherRoot.transform.SetParent(transform, false);
 
             CreateAcidRainDrops(weatherRoot.transform, gridBottomLeft, mapWidth, mapHeight, cellSize);
-
-            ParticleSystem sandstorm = CreateWeatherParticleSystem(
-                weatherRoot.transform,
-                "SandstormWind",
-                new Color(0.95f, 0.78f, 0.48f, 0.14f),
-                new Vector3(0.12f, 0.035f, 0.02f),
-                2.8f,
-                12f,
-                8);
-            sandstorm.transform.position = mapCenter;
-            var windShape = sandstorm.shape;
-            windShape.shapeType = ParticleSystemShapeType.Box;
-            windShape.scale = new Vector3(mapWidth + 1f, mapHeight, 0.1f);
-            var windVelocity = sandstorm.velocityOverLifetime;
-            windVelocity.enabled = true;
-            windVelocity.space = ParticleSystemSimulationSpace.World;
-            windVelocity.x = new ParticleSystem.MinMaxCurve(3f);
-            windVelocity.y = new ParticleSystem.MinMaxCurve(0f);
-
-            var windTrails = sandstorm.trails;
-            windTrails.enabled = true;
-            windTrails.mode = ParticleSystemTrailMode.PerParticle;
-            windTrails.ratio = 0.45f;
-            windTrails.lifetime = 0.45f;
-            windTrails.dieWithParticles = true;
-            windTrails.widthOverTrail = new ParticleSystem.MinMaxCurve(0.35f, AnimationCurve.EaseInOut(0f, 1f, 1f, 0f));
-            windTrails.colorOverLifetime = new ParticleSystem.MinMaxGradient(
-                new Color(0.95f, 0.78f, 0.48f, 0.07f));
-            var particleRenderer = sandstorm.GetComponent<ParticleSystemRenderer>();
-            particleRenderer.trailMaterial = GetWeatherParticleMaterial();
-            sandstorm.Play();
-
-            ParticleSystem dust = CreateWeatherParticleSystem(
-                weatherRoot.transform,
-                "SandstormDust",
-                new Color(0.78f, 0.62f, 0.39f, 0.5f),
-                new Vector3(0.3f, 0.2f, 0.02f),
-                9f,
-                28f,
-                8);
-            dust.transform.position = mapCenter;
-            var dustShape = dust.shape;
-            dustShape.shapeType = ParticleSystemShapeType.Box;
-            dustShape.scale = new Vector3(mapWidth + 1f, mapHeight, 0.1f);
-            var dustMain = dust.main;
-            dustMain.startSizeX = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
-            dustMain.startSizeY = new ParticleSystem.MinMaxCurve(0.3f, 0.55f);
-            var dustVelocity = dust.velocityOverLifetime;
-            dustVelocity.enabled = true;
-            dustVelocity.space = ParticleSystemSimulationSpace.World;
-            dustVelocity.x = new ParticleSystem.MinMaxCurve(1.2f, 2f);
-            dustVelocity.y = new ParticleSystem.MinMaxCurve(-0.08f, 0.08f);
-            var dustRenderer = dust.GetComponent<ParticleSystemRenderer>();
-            dustRenderer.sharedMaterial = GetDustCloudMaterial();
-            dust.Play();
         }
 
         private void CreateAcidRainDrops(Transform parent, Vector3 gridBottomLeft, float mapWidth, float mapHeight, float cellSize)
         {
-            acidRainBoundsMin = new Vector2(gridBottomLeft.x, gridBottomLeft.y);
-            acidRainBoundsMax = new Vector2(gridBottomLeft.x + mapWidth, gridBottomLeft.y + mapHeight);
-            acidRainVelocity = new Vector2(1.3f, -5f);
+            float minX = gridBottomLeft.x;
+            float maxX = gridBottomLeft.x + mapWidth;
+            float minY = gridBottomLeft.y;
+            float maxY = gridBottomLeft.y + mapHeight;
+
+            if (stageData.mapVisualSprite != null)
+            {
+                float pixelPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
+                float spriteTilesX = stageData.mapVisualSprite.rect.width / pixelPerTile;
+                float spriteTilesY = stageData.mapVisualSprite.rect.height / pixelPerTile;
+
+                float spriteLeft = gridBottomLeft.x + stageData.visualTileOffset.x * cellSize;
+                float spriteRight = spriteLeft + spriteTilesX * cellSize;
+                float spriteBottom = gridBottomLeft.y + stageData.visualTileOffset.y * cellSize;
+                float spriteTop = spriteBottom + spriteTilesY * cellSize;
+
+                minX = Mathf.Min(minX, spriteLeft);
+                maxX = Mathf.Max(maxX, spriteRight);
+                minY = Mathf.Min(minY, spriteBottom);
+                maxY = Mathf.Max(maxY, spriteTop);
+            }
+
+            acidRainBoundsMin = new Vector2(minX, minY);
+            acidRainBoundsMax = new Vector2(maxX, maxY);
+            acidRainVelocity = new Vector2(0.5f, -6f);
             float pixelSize = cellSize / 32f;
             Sprite dotSprite = GetWeatherDotSprite();
 
@@ -570,7 +543,7 @@ namespace TrashTD.Core.GameLoop
                 var renderer = dropObject.AddComponent<SpriteRenderer>();
                 renderer.sprite = dotSprite;
                 renderer.color = new Color(0.2f, 1f, 0.04f, 0.9f);
-                renderer.sortingOrder = 7;
+                renderer.sortingOrder = 25;
                 acidRainDrops.Add(dropObject.transform);
             }
         }
@@ -725,7 +698,7 @@ namespace TrashTD.Core.GameLoop
 
         private void UpdateLevel3WeatherDamage()
         {
-            if (stageData == null || stageData.stageId != "STAGE_03" ||
+            if (stageData == null || (stageData.stageId != "STAGE_03" && stageData.stageId != "STAGE_06") ||
                 gameManager == null || gameManager.CurrentState != GamePlayState.Playing)
             {
                 return;
@@ -752,7 +725,7 @@ namespace TrashTD.Core.GameLoop
                 Vector3 position = drop.position;
                 position.x += acidRainVelocity.x * deltaTime;
                 position.y += acidRainVelocity.y * deltaTime;
-                if (position.y < acidRainBoundsMin.y)
+                if (position.y < acidRainBoundsMin.y || position.x > acidRainBoundsMax.x)
                 {
                     position.x = Random.Range(acidRainBoundsMin.x, acidRainBoundsMax.x);
                     position.y = acidRainBoundsMax.y + Random.Range(0f, 0.5f);
@@ -772,7 +745,7 @@ namespace TrashTD.Core.GameLoop
                     if (op == null || !op.IsDeployed || op.CurrentHP <= 0) continue;
 
                     TrashTD.Combat.AcidDamageFlash.Flash(op.gameObject);
-                    op.TakeDamage(TrapTileRules.DamagePerTick, DamageType.Physical);
+                    op.TakeDamage(AcidRainDamagePerTick, DamageType.Physical);
                 }
             }
 
@@ -784,7 +757,7 @@ namespace TrashTD.Core.GameLoop
                     if (enemy == null || enemy.IsDead) continue;
 
                     TrashTD.Combat.AcidDamageFlash.Flash(enemy.gameObject);
-                    enemy.TakeDamage(TrapTileRules.DamagePerTick, DamageType.Physical);
+                    enemy.TakeDamage(AcidRainDamagePerTick, DamageType.Physical);
                 }
             }
         }
