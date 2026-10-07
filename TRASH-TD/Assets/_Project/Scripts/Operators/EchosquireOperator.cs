@@ -41,7 +41,7 @@ namespace TrashTD.Operators
 
             int hpBeforeHit = target.CurrentHP;
             int damage = DamageCalculator.CalculateDamage(currentATK, target.CurrentDEF);
-            target.TakeDamage(damage, Data.damageType);
+            if (!target.TryTakeAttackDamage(damage, Data.damageType)) return;
 
             int actualDamage = Mathf.Min(damage, hpBeforeHit);
             int healing = Mathf.FloorToInt(actualDamage * LifestealRatio);

@@ -170,7 +170,7 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             int damage = Combat.DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
-            target.TakeDamage(damage, data.damageType);
+            target.TryTakeAttackDamage(damage, data.damageType);
         }
 
         protected void PlayAttackSound()
@@ -192,7 +192,7 @@ namespace TrashTD.Operators
         }
 
         public Vector2Int[] GetRangePattern() => data.rangePattern;
-        public float GetAttackInterval() => data.attackInterval;
+        public float GetAttackInterval() => Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval);
         public DamageType GetDamageType() => data.damageType;
 
         /// <summary>
@@ -259,7 +259,7 @@ namespace TrashTD.Operators
 
             // Attack timing
             attackTimer += Time.deltaTime;
-            if (attackTimer >= data.attackInterval)
+            if (attackTimer >= Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval))
             {
                 attackTimer = 0f;
                 currentTarget = FindTarget();
@@ -306,6 +306,15 @@ namespace TrashTD.Operators
             {
                 Die();
             }
+        }
+
+        public bool TryTakeAttackDamage(int rawATK, DamageType damageType)
+        {
+            if (!Combat.StageCombatModifiers.TryAttackHit(transform.position))
+                return false;
+
+            TakeDamage(rawATK, damageType);
+            return true;
         }
 
         /// <summary>

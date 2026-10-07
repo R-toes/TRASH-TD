@@ -103,7 +103,7 @@ namespace TrashTD.Operators
             if (lockedTarget == null || lockedTarget.IsDead) return;
 
             int damage = GetCurrentBeamDamage();
-            lockedTarget.TakeDamage(damage, DamageType.Arts);
+            lockedTarget.TryTakeAttackDamage(damage, DamageType.Arts);
             lockDuration += DamageTickInterval;
         }
 

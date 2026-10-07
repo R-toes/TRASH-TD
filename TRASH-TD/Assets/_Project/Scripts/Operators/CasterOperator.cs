@@ -102,7 +102,7 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             int chillDamage = DamageCalculator.CalculateDamage(currentATK, target.CurrentRES);
-            target.TakeDamage(chillDamage, DamageType.Arts);
+            if (!target.TryTakeAttackDamage(chillDamage, DamageType.Arts)) return;
             target.ApplyChill(data.chillPerHit, data.chillSlowMultiplier, data.chillSlowDuration,
                 data.chillFreezeThreshold, data.chillFreezeDuration);
         }
@@ -112,7 +112,9 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             int primaryATK = GetArmorAdjustedAttack(currentATK, target);
-            target.TakeDamage(DamageCalculator.CalculateDamage(primaryATK, target.CurrentRES), DamageType.Arts);
+            target.TryTakeAttackDamage(
+                DamageCalculator.CalculateDamage(primaryATK, target.CurrentRES),
+                DamageType.Arts);
 
             if (EnemyManager.Instance == null || splashRadius <= 0f) return;
 
@@ -127,7 +129,7 @@ namespace TrashTD.Operators
 
                 int armorAdjustedSplashATK = GetArmorAdjustedAttack(secondaryAtk, splashTarget);
                 int splashDmg = DamageCalculator.CalculateDamage(armorAdjustedSplashATK, splashTarget.CurrentRES);
-                splashTarget.TakeDamage(splashDmg, DamageType.Arts);
+                splashTarget.TryTakeAttackDamage(splashDmg, DamageType.Arts);
             }
         }
 

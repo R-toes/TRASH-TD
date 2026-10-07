@@ -34,7 +34,7 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             int damage = Combat.DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
-            target.TakeDamage(damage, data.damageType);
+            target.TryTakeAttackDamage(damage, data.damageType);
         }
 
         protected override EnemyBase FindTarget()

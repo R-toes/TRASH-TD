@@ -73,7 +73,7 @@ namespace TrashTD.Operators
                 if (inRangeTarget == null || inRangeTarget.IsDead) continue;
 
                 int damage = DamageCalculator.CalculateDamage(currentATK, inRangeTarget.CurrentDEF);
-                inRangeTarget.TakeDamage(damage, DamageType.Physical);
+                inRangeTarget.TryTakeAttackDamage(damage, DamageType.Physical);
             }
         }
 

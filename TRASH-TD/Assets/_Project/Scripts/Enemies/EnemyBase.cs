@@ -247,6 +247,15 @@ namespace TrashTD.Enemies
             }
         }
 
+        public bool TryTakeAttackDamage(int damage, DamageType damageType)
+        {
+            if (!Combat.StageCombatModifiers.TryAttackHit(transform.position))
+                return false;
+
+            TakeDamage(damage, damageType);
+            return true;
+        }
+
         /// <summary>
         /// Handle enemy death.
         /// </summary>
@@ -296,10 +305,11 @@ namespace TrashTD.Enemies
             if (blockingOperator == null) return;
 
             attackTimer += Time.deltaTime;
-            if (attackTimer >= data.attackInterval)
+            if (attackTimer >= Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval))
             {
                 attackTimer = 0f;
-                blockingOperator.TakeDamage(currentATK, data.damageType);
+                MeleeSwipeVisual.Play(transform.position, blockingOperator.transform.position, new Color(1f, 0.35f, 0.25f, 1f));
+                blockingOperator.TryTakeAttackDamage(currentATK, data.damageType);
             }
         }
 

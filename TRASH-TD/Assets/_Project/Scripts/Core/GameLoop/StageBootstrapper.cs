@@ -18,7 +18,7 @@ namespace TrashTD.Core.GameLoop
     /// </summary>
     public class StageBootstrapper : MonoBehaviour
     {
-        private const float Level3WeatherDamageIntervalSeconds = 2f;
+        private const float AcidRainDamageIntervalSeconds = 2f;
         public const int AcidRainDamagePerTick = 3;
         private const int AcidRainDropCount = 140;
         private static Sprite weatherDotSprite;
@@ -88,6 +88,7 @@ namespace TrashTD.Core.GameLoop
             gameplayHudUI = FindFirstObjectByType<GameplayHUDUI>();
             difficulty = MainMenuController.ConsumePendingStageDifficulty(difficulty);
             stageData = MainMenuController.ConsumePendingStage(stageData);
+            TrashTD.Combat.StageCombatModifiers.ConfigureForStage(stageData);
 
             if (stageData == null)
             {
@@ -104,10 +105,14 @@ namespace TrashTD.Core.GameLoop
             // 3. Center Camera
             CenterCameraOnGrid();
 
-            // 3.5 Apply acidstorm and weather effects
-            if (stageData.stageId == "STAGE_03" || stageData.stageId == "STAGE_06")
+            // Acid rain remains a Stage 6 effect; Stage 3 uses its sandstorm combat modifiers.
+            if (stageData.stageId == "STAGE_03")
             {
-                CreateLevel3WeatherEffects();
+                CreateStage3SandstormVisuals();
+            }
+            else if (stageData.stageId == "STAGE_06")
+            {
+                CreateStage6AcidRain();
             }
 
             // 4. Initialize Draft System
@@ -402,7 +407,7 @@ namespace TrashTD.Core.GameLoop
         private void Update()
         {
             UpdateAcidRainDrops();
-            UpdateLevel3WeatherDamage();
+            UpdateStage6AcidRainDamage();
 
             if (gameManager == null || gameManager.CurrentState != GamePlayState.Playing)
             {
@@ -486,7 +491,7 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
-        private void CreateLevel3WeatherEffects()
+        private void CreateStage6AcidRain()
         {
             float cellSize = gridManager.CellSize;
             float mapWidth = stageData.gridWidth * cellSize;
@@ -494,10 +499,78 @@ namespace TrashTD.Core.GameLoop
             Vector3 gridBottomLeft = gridManager.GridToWorldPosition(0, 0)
                 - new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f);
 
-            var weatherRoot = new GameObject("Level3WeatherEffects");
+            var weatherRoot = new GameObject("Stage6AcidRain");
             weatherRoot.transform.SetParent(transform, false);
 
             CreateAcidRainDrops(weatherRoot.transform, gridBottomLeft, mapWidth, mapHeight, cellSize);
+        }
+
+        private void CreateStage3SandstormVisuals()
+        {
+            float cellSize = gridManager.CellSize;
+            float mapWidth = stageData.gridWidth * cellSize;
+            float mapHeight = stageData.gridHeight * cellSize;
+            Vector3 gridBottomLeft = gridManager.GridToWorldPosition(0, 0)
+                - new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f);
+            Vector3 mapCenter = gridBottomLeft + new Vector3(mapWidth * 0.5f, mapHeight * 0.5f, 0f);
+
+            var weatherRoot = new GameObject("Stage3SandstormVisuals");
+            weatherRoot.transform.SetParent(transform, false);
+
+            ParticleSystem wind = CreateWeatherParticleSystem(
+                weatherRoot.transform,
+                "SandstormWind",
+                new Color(0.95f, 0.78f, 0.48f, 0.14f),
+                new Vector3(0.12f, 0.035f, 0.02f),
+                2.8f,
+                12f,
+                7);
+            wind.transform.position = mapCenter;
+            var windShape = wind.shape;
+            windShape.shapeType = ParticleSystemShapeType.Box;
+            windShape.scale = new Vector3(mapWidth + 1f, mapHeight, 0.1f);
+            var windVelocity = wind.velocityOverLifetime;
+            windVelocity.enabled = true;
+            windVelocity.space = ParticleSystemSimulationSpace.World;
+            windVelocity.x = new ParticleSystem.MinMaxCurve(3f);
+            windVelocity.y = new ParticleSystem.MinMaxCurve(0f);
+
+            var windTrails = wind.trails;
+            windTrails.enabled = true;
+            windTrails.mode = ParticleSystemTrailMode.PerParticle;
+            windTrails.ratio = 0.45f;
+            windTrails.lifetime = 0.45f;
+            windTrails.dieWithParticles = true;
+            windTrails.widthOverTrail = new ParticleSystem.MinMaxCurve(
+                0.35f,
+                AnimationCurve.EaseInOut(0f, 1f, 1f, 0f));
+            windTrails.colorOverLifetime = new ParticleSystem.MinMaxGradient(
+                new Color(0.95f, 0.78f, 0.48f, 0.07f));
+            wind.GetComponent<ParticleSystemRenderer>().trailMaterial = GetWeatherParticleMaterial();
+            wind.Play();
+
+            ParticleSystem dust = CreateWeatherParticleSystem(
+                weatherRoot.transform,
+                "SandstormDust",
+                new Color(0.78f, 0.62f, 0.39f, 0.5f),
+                new Vector3(0.3f, 0.2f, 0.02f),
+                9f,
+                28f,
+                7);
+            dust.transform.position = mapCenter;
+            var dustShape = dust.shape;
+            dustShape.shapeType = ParticleSystemShapeType.Box;
+            dustShape.scale = new Vector3(mapWidth + 1f, mapHeight, 0.1f);
+            var dustMain = dust.main;
+            dustMain.startSizeX = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
+            dustMain.startSizeY = new ParticleSystem.MinMaxCurve(0.3f, 0.55f);
+            var dustVelocity = dust.velocityOverLifetime;
+            dustVelocity.enabled = true;
+            dustVelocity.space = ParticleSystemSimulationSpace.World;
+            dustVelocity.x = new ParticleSystem.MinMaxCurve(1.2f, 2f);
+            dustVelocity.y = new ParticleSystem.MinMaxCurve(-0.08f, 0.08f);
+            dust.GetComponent<ParticleSystemRenderer>().sharedMaterial = GetDustCloudMaterial();
+            dust.Play();
         }
 
         private void CreateAcidRainDrops(Transform parent, Vector3 gridBottomLeft, float mapWidth, float mapHeight, float cellSize)
@@ -696,19 +769,19 @@ namespace TrashTD.Core.GameLoop
             return weatherParticleMaterial;
         }
 
-        private void UpdateLevel3WeatherDamage()
+        private void UpdateStage6AcidRainDamage()
         {
-            if (stageData == null || (stageData.stageId != "STAGE_03" && stageData.stageId != "STAGE_06") ||
+            if (stageData == null || stageData.stageId != "STAGE_06" ||
                 gameManager == null || gameManager.CurrentState != GamePlayState.Playing)
             {
                 return;
             }
 
             weatherDamageTimer += Time.deltaTime;
-            while (weatherDamageTimer >= Level3WeatherDamageIntervalSeconds)
+            while (weatherDamageTimer >= AcidRainDamageIntervalSeconds)
             {
-                weatherDamageTimer -= Level3WeatherDamageIntervalSeconds;
-                ApplyLevel3WeatherDamage();
+                weatherDamageTimer -= AcidRainDamageIntervalSeconds;
+                ApplyStage6AcidRainDamage();
             }
         }
 
@@ -735,7 +808,7 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
-        private void ApplyLevel3WeatherDamage()
+        private void ApplyStage6AcidRainDamage()
         {
             if (operatorManager != null)
             {

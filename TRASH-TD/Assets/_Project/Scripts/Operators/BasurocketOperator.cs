@@ -68,7 +68,7 @@ namespace TrashTD.Operators
 
                 int damage = Mathf.RoundToInt(currentATK * BlastDamageMultiplier);
                 damage = DamageCalculator.CalculateDamage(damage, blastTarget.CurrentDEF);
-                blastTarget.TakeDamage(damage, DamageType.Physical);
+                blastTarget.TryTakeAttackDamage(damage, DamageType.Physical);
             }
         }
 

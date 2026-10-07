@@ -40,6 +40,28 @@ namespace TrashTD.Combat
             animation.Initialize(text);
         }
 
+        public static void ShowMiss(Vector3 position)
+        {
+            GameObject numberObject = new GameObject("FloatingCombatNumber");
+            numberObject.transform.position = position + Vector3.up * 0.35f + Vector3.right * Random.Range(-0.12f, 0.12f);
+
+            TextMesh text = numberObject.AddComponent<TextMesh>();
+            text.text = "MISS";
+            UIFontHelper.Apply(text, FontStyle.Normal);
+            text.fontSize = 24;
+            text.characterSize = 0.075f;
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.fontStyle = FontStyle.Bold;
+            text.color = new Color(1f, 0.85f, 0.35f);
+
+            MeshRenderer meshRenderer = numberObject.GetComponent<MeshRenderer>();
+            meshRenderer.sortingOrder = 50;
+
+            FloatingCombatNumber animation = numberObject.AddComponent<FloatingCombatNumber>();
+            animation.Initialize(text);
+        }
+
         private void Initialize(TextMesh text)
         {
             label = text;

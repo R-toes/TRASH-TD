@@ -25,7 +25,7 @@ namespace TrashTD.Enemies
 
             // Attacks operators at range while moving
             attackTimer += Time.deltaTime;
-            if (attackTimer >= data.attackInterval)
+            if (attackTimer >= Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval))
             {
                 attackTimer = 0f;
                 AttackNearestOperator();
@@ -58,7 +58,19 @@ namespace TrashTD.Enemies
 
             if (closest != null)
             {
-                closest.TakeDamage(currentATK, data.damageType);
+                CombatProjectileVisual.Fire(
+                    transform.position,
+                    closest.transform.position,
+                    new Color(0.55f, 0.9f, 0.3f),
+                    8f,
+                    0.1f,
+                    0.05f,
+                    false,
+                    () =>
+                    {
+                        if (closest != null && closest.IsDeployed)
+                            closest.TryTakeAttackDamage(currentATK, data.damageType);
+                    });
             }
         }
     }

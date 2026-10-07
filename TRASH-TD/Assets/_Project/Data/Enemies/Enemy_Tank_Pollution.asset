@@ -26,5 +26,5 @@ MonoBehaviour:
   isUnblockable: 0
   blockWeight: 1
   lifePointCost: 1
-  sprite: {fileID: 21300000, guid: b2222222222222222222222222222203, type: 3}
+  sprite: {fileID: -4705057663721211982, guid: aff895bdd49e6c249b6888ca33a1a0c7, type: 3}
   enemyPrefab: {fileID: 4017071742725256548, guid: 872d7c9dd24e93e418eb40ce59b3629e, type: 3}
