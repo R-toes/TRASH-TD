@@ -64,6 +64,7 @@ namespace TrashTD.Editor
             bootstrapper.operatorPool = new System.Collections.Generic.List<OperatorData>
             {
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Scrapper.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Echosquire.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Drawgoo.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Shadeslice.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Defender_Bulkhead.asset"),
@@ -187,6 +188,38 @@ namespace TrashTD.Editor
                 new[] { new Vector2Int(1, 0), new Vector2Int(2, 0) },
                 guardSprite, guardPrefab);
 
+            var echosquireFrameOne = LoadSprite("Echosquire-Sheet.png", "Echosquire-Sheet_0");
+            var echosquireFrameTwo = LoadSprite("Echosquire-Sheet.png", "Echosquire-Sheet_1");
+            if (echosquireFrameOne == null || echosquireFrameTwo == null)
+            {
+                Debug.LogError("Echosquire-Sheet.png must contain the imported Echosquire-Sheet_0 and Echosquire-Sheet_1 sprites.");
+            }
+            else
+            {
+                var echosquirePrefab = CreateEchosquirePrefab(echosquireFrameOne, echosquireFrameTwo);
+                var echosquire = CreateOperator(
+                    "OP_Guard_Echosquire",
+                    "Echosquire",
+                    OperatorClass.Guard,
+                    OperatorPosition.Melee,
+                    OperatorRarity.Star2,
+                    hp: 130,
+                    atk: 55,
+                    def: 18,
+                    res: 0,
+                    blockCount: 2,
+                    range: 1,
+                    interval: 1.2f,
+                    dp: 13,
+                    new[] { new Vector2Int(1, 0) },
+                    echosquireFrameOne,
+                    echosquirePrefab);
+                echosquire.roleTags = new[] { "Lifesteal", "Survival" };
+                echosquire.skillDescription =
+                    "Passive - Vampiric Guard: Restores 20% of physical damage dealt as HP. Cannot be healed by other operators.";
+                EditorUtility.SetDirty(echosquire);
+            }
+
             // 2. Defender (Bulkhead)
             var defenderSprite = LoadSprite("tex_op_defender.png");
             var defenderPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Bulkhead", defenderSprite, OperatorClass.Defender);
@@ -236,6 +269,26 @@ namespace TrashTD.Editor
                     new Vector2Int(1, 1), new Vector2Int(-1, -1)
                 },
                 medicSprite, medicPrefab);
+        }
+
+        private static GameObject CreateEchosquirePrefab(Sprite firstFrame, Sprite secondFrame)
+        {
+            const string prefabName = "Prefab_OP_Echosquire";
+            string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            var go = new GameObject(prefabName);
+            var spriteRenderer = go.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = firstFrame;
+            spriteRenderer.sortingOrder = 5;
+            go.AddComponent<EchosquireOperator>();
+            var animation = go.AddComponent<OperatorSpriteAnimation>();
+            animation.Configure(new[] { firstFrame, secondFrame });
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
         }
 
         private static OperatorData CreateOperator(string assetName, string displayName, OperatorClass opClass,

@@ -13,27 +13,26 @@ namespace TrashTD.Operators
     /// </summary>
     public class GuardOperator : OperatorBase
     {
-        private static Material isolationIndicatorMaterial;
-        private LineRenderer isolationIndicator;
+        private SpriteRenderer isolationAuraOuter;
+        private SpriteRenderer isolationAuraInner;
+        private SpriteRenderer operatorSpriteRenderer;
 
         protected override void Update()
         {
             base.Update();
-            UpdateIsolationIndicator();
+            UpdateIsolationAura();
         }
 
         protected override void OnDeployed()
         {
             base.OnDeployed();
-            CreateIsolationIndicator();
+            CreateIsolationAura();
         }
 
         protected override void OnRetreated()
         {
-            if (isolationIndicator != null)
-            {
-                isolationIndicator.gameObject.SetActive(false);
-            }
+            if (isolationAuraOuter != null) isolationAuraOuter.enabled = false;
+            if (isolationAuraInner != null) isolationAuraInner.enabled = false;
             base.OnRetreated();
         }
 
@@ -108,67 +107,84 @@ namespace TrashTD.Operators
             return false;
         }
 
-        private void CreateIsolationIndicator()
+        private void CreateIsolationAura()
         {
-            if (data == null || !data.bonusWhenIsolated || isolationIndicator != null) return;
+            if (data == null || !data.bonusWhenIsolated || isolationAuraOuter != null) return;
 
-            var indicatorObject = new GameObject("IsolationBuffIndicator");
-            indicatorObject.transform.SetParent(transform, false);
-            indicatorObject.transform.localPosition = new Vector3(0f, 0f, 0.05f);
-
-            isolationIndicator = indicatorObject.AddComponent<LineRenderer>();
-            isolationIndicator.useWorldSpace = false;
-            isolationIndicator.loop = true;
-            isolationIndicator.positionCount = 17;
-            isolationIndicator.startWidth = 0.02f;
-            isolationIndicator.endWidth = 0.02f;
-            isolationIndicator.sortingOrder = 4;
-            isolationIndicator.sharedMaterial = GetIsolationIndicatorMaterial();
-
-            const float outerRadius = 0.46f;
-            const float innerRadius = 0.24f;
-            for (int i = 0; i < isolationIndicator.positionCount; i++)
+            operatorSpriteRenderer = GetComponent<SpriteRenderer>();
+            if (operatorSpriteRenderer == null)
             {
-                float angle = i / 16f * Mathf.PI * 2f;
-                float radius = i % 2 == 0 ? outerRadius : innerRadius;
-                isolationIndicator.SetPosition(i, new Vector3(
-                    Mathf.Cos(angle) * radius,
-                    Mathf.Sin(angle) * radius,
-                    0f));
+                Debug.LogError($"{data.operatorName} requires a SpriteRenderer for its isolation aura.", this);
+                return;
             }
 
-            isolationIndicator.gameObject.SetActive(false);
+            isolationAuraOuter = CreateAuraLayer(
+                "IsolationAuraOuter",
+                operatorSpriteRenderer.sortingOrder - 2,
+                new Color(1f, 0.12f, 0.015f, 0.82f));
+            isolationAuraInner = CreateAuraLayer(
+                "IsolationAuraInner",
+                operatorSpriteRenderer.sortingOrder - 1,
+                new Color(1f, 0.55f, 0.06f, 0.72f));
         }
 
-        private void UpdateIsolationIndicator()
+        private SpriteRenderer CreateAuraLayer(string objectName, int sortingOrder, Color color)
+        {
+            var auraObject = new GameObject(objectName);
+            auraObject.transform.SetParent(transform, false);
+            auraObject.transform.localPosition = Vector3.zero;
+
+            var auraRenderer = auraObject.AddComponent<SpriteRenderer>();
+            auraRenderer.sprite = operatorSpriteRenderer.sprite;
+            auraRenderer.color = color;
+            auraRenderer.flipX = operatorSpriteRenderer.flipX;
+            auraRenderer.flipY = operatorSpriteRenderer.flipY;
+            auraRenderer.sortingLayerID = operatorSpriteRenderer.sortingLayerID;
+            auraRenderer.sortingOrder = sortingOrder;
+            auraRenderer.sharedMaterial = operatorSpriteRenderer.sharedMaterial;
+            auraRenderer.enabled = false;
+            return auraRenderer;
+        }
+
+        private void UpdateIsolationAura()
         {
             if (data == null || !data.bonusWhenIsolated || !isDeployed) return;
-            if (isolationIndicator == null) CreateIsolationIndicator();
-            if (isolationIndicator == null) return;
+            if (isolationAuraOuter == null) CreateIsolationAura();
+            if (isolationAuraOuter == null || isolationAuraInner == null) return;
 
             bool buffActive = !HasAdjacentOperator();
-            if (isolationIndicator.gameObject.activeSelf != buffActive)
+            if (isolationAuraOuter.enabled != buffActive)
             {
-                isolationIndicator.gameObject.SetActive(buffActive);
+                isolationAuraOuter.enabled = buffActive;
+                isolationAuraInner.enabled = buffActive;
             }
 
             if (buffActive)
             {
-                float pulse = 0.78f + Mathf.Sin(Time.time * 5f) * 0.18f;
-                Color indicatorColor = new Color(1f, 0.08f, 0.06f, pulse);
-                isolationIndicator.startColor = indicatorColor;
-                isolationIndicator.endColor = indicatorColor;
+                UpdateIsolationAuraAnimation(Time.time);
             }
         }
 
-        private static Material GetIsolationIndicatorMaterial()
+        private void UpdateIsolationAuraAnimation(float time)
         {
-            if (isolationIndicatorMaterial != null) return isolationIndicatorMaterial;
+            isolationAuraOuter.sprite = operatorSpriteRenderer.sprite;
+            isolationAuraInner.sprite = operatorSpriteRenderer.sprite;
+            isolationAuraOuter.flipX = operatorSpriteRenderer.flipX;
+            isolationAuraOuter.flipY = operatorSpriteRenderer.flipY;
+            isolationAuraInner.flipX = operatorSpriteRenderer.flipX;
+            isolationAuraInner.flipY = operatorSpriteRenderer.flipY;
 
-            Shader shader = Shader.Find("Sprites/Default");
-            if (shader == null) shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
-            isolationIndicatorMaterial = new Material(shader);
-            return isolationIndicatorMaterial;
+            float pulse = 0.5f + 0.5f * Mathf.Sin(time * 5f);
+            float flicker = Mathf.Sin(time * 13f) * 0.025f;
+            isolationAuraOuter.transform.localScale = Vector3.one * (1.22f + pulse * 0.035f + flicker);
+            isolationAuraInner.transform.localScale = Vector3.one * (1.11f + pulse * 0.025f - flicker * 0.5f);
+            isolationAuraOuter.transform.localPosition = new Vector3(0f, Mathf.Sin(time * 7f) * 0.012f, 0.01f);
+            isolationAuraInner.transform.localPosition = new Vector3(0f, Mathf.Sin(time * 9f + 1f) * 0.008f, 0.005f);
+
+            Color outerColor = new Color(1f, Mathf.Lerp(0.06f, 0.22f, pulse), 0.015f, 0.7f + pulse * 0.22f);
+            Color innerColor = new Color(1f, Mathf.Lerp(0.28f, 0.72f, pulse), 0.06f, 0.45f + pulse * 0.35f);
+            isolationAuraOuter.color = outerColor;
+            isolationAuraInner.color = innerColor;
         }
 
         protected override EnemyBase FindTarget()

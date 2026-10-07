@@ -74,7 +74,8 @@ namespace TrashTD.Operators
             for (int i = 0; i < candidates.Count; i++)
             {
                 var ally = candidates[i];
-                if (ally == null || !ally.IsDeployed || ally.CurrentHP >= ally.MaxHP) continue;
+                if (ally == null || !ally.IsDeployed || !ally.CanReceiveHealing ||
+                    ally.CurrentHP >= ally.MaxHP) continue;
 
                 float ratio = (float)ally.CurrentHP / ally.MaxHP;
                 if (ratio < lowestRatio)

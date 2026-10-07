@@ -106,6 +106,37 @@ namespace TrashTD.Tests
             Assert.AreEqual(operatorData.baseRarity, offer[0].rarity);
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        [Test]
+        public void SetDeveloperOffer_ReplacesOfferWithChosenOperator()
+        {
+            draftSystem.GenerateDraftOffer();
+            OperatorData chosenOperator = testPool[0];
+            IReadOnlyList<DraftCard> notifiedOffer = null;
+            draftSystem.OnCardsOffered += offer => notifiedOffer = offer;
+
+            bool wasSet = draftSystem.SetDeveloperOffer(chosenOperator);
+
+            Assert.IsTrue(wasSet);
+            Assert.AreEqual(1, draftSystem.CurrentOfferedCards.Count);
+            Assert.AreSame(chosenOperator, draftSystem.CurrentOfferedCards[0].operatorData);
+            Assert.AreSame(draftSystem.CurrentOfferedCards, notifiedOffer);
+        }
+
+        [Test]
+        public void SetDeveloperOffer_RejectsOperatorOutsidePool()
+        {
+            OperatorData outsideOperator = ScriptableObject.CreateInstance<OperatorData>();
+            outsideOperator.operatorName = "OutsidePool";
+
+            bool wasSet = draftSystem.SetDeveloperOffer(outsideOperator);
+
+            Assert.IsFalse(wasSet);
+            Assert.AreEqual(0, draftSystem.CurrentOfferedCards.Count);
+            Object.DestroyImmediate(outsideOperator);
+        }
+#endif
+
         [Test]
         public void DrawgooDeathSkill_DrawsTwoRandomCardsFromOperatorPool()
         {

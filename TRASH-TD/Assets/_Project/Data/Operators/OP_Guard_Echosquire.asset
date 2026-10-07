@@ -10,38 +10,35 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
-  m_Name: OP_Caster_Pyrolite
+  m_Name: OP_Guard_Echosquire
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
-  operatorName: Pyrolite
-  operatorClass: 3
-  baseRarity: 1
-  position: 1
-  roleTags: []
-  baseHP: 95
-  baseATK: 80
-  baseDEF: 10
-  baseRES: 20
-  blockCount: 0
-  attackRange: 2
-  attackInterval: 1.6
+  operatorName: Echosquire
+  operatorClass: 0
+  baseRarity: 2
+  position: 0
+  roleTags:
+  - Lifesteal
+  - Survival
+  baseHP: 65
+  baseATK: 70
+  baseDEF: 14
+  baseRES: 0
+  blockCount: 2
+  attackRange: 1
+  attackInterval: 1.2
   rangePattern:
   - {x: 1, y: 0}
-  - {x: 2, y: 0}
-  - {x: 0, y: 1}
-  - {x: 1, y: 1}
-  - {x: 0, y: -1}
-  - {x: 1, y: -1}
-  damageType: 1
+  damageType: 0
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: Deals increased damage to enemies with high defence. Can deal AoE Arts damage.
+  skillDescription: 'Passive - Vampiric Guard: Restores 20% of physical damage dealt as HP. Cannot be healed by other operators.'
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
   chillFreezeThreshold: 100
   chillFreezeDuration: 1.5
-  dpCost: 15
+  dpCost: 13
   redeployCooldown: 60
-  portrait: {fileID: -6978141465280609473, guid: 171a50e7bc1c9834483e15cfe93a2b60, type: 3}
-  operatorPrefab: {fileID: 1724151342938439338, guid: 2e0e2a0e55ea4091b99560f17bad7f7c, type: 3}
+  portrait: {fileID: 7841794329617421502, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
+  operatorPrefab: {fileID: 4120733290429841632, guid: 48933fd514214022a8d3a5712d7c24d5, type: 3}

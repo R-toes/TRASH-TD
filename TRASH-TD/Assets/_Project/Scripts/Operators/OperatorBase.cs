@@ -53,6 +53,7 @@ namespace TrashTD.Operators
         public OperatorRarity CurrentRarity => currentRarity;
         public OperatorFacing Facing => facing;
         public OperatorClass OperatorClass => data.operatorClass;
+        public virtual bool CanReceiveHealing => true;
 
         /// <summary>
         /// Initialize this operator with data and rarity.
@@ -283,6 +284,17 @@ namespace TrashTD.Operators
         /// Heal this operator.
         /// </summary>
         public void Heal(int amount)
+        {
+            if (!CanReceiveHealing) return;
+            ApplyHealing(amount);
+        }
+
+        protected void HealSelf(int amount)
+        {
+            ApplyHealing(amount);
+        }
+
+        private void ApplyHealing(int amount)
         {
             if (amount <= 0 || currentHP <= 0) return;
 

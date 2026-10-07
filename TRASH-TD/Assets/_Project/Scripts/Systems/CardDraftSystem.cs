@@ -52,6 +52,9 @@ namespace TrashTD.Systems
         public IReadOnlyList<DraftCard> CurrentOfferedCards => currentOfferedCards;
         public int CurrentRound => currentRound;
         public int RerollsRemaining => rerollsRemaining;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public IReadOnlyList<OperatorData> AvailableOperatorPool => availableOperatorPool;
+#endif
 
         public event Action<IReadOnlyList<DraftCard>> OnCardsOffered;
         public event Action<DraftCard> OnCardSelected;
@@ -106,6 +109,20 @@ namespace TrashTD.Systems
                 availableOperatorPool.AddRange(pool);
             }
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public bool SetDeveloperOffer(OperatorData operatorData)
+        {
+            if (operatorData == null || availableOperatorPool == null ||
+                !availableOperatorPool.Contains(operatorData))
+                return false;
+
+            currentOfferedCards.Clear();
+            currentOfferedCards.Add(new DraftCard(operatorData, operatorData.baseRarity));
+            OnCardsOffered?.Invoke(currentOfferedCards);
+            return true;
+        }
+#endif
 
         /// <summary>
         /// Draw random eligible operator cards directly into the player's deck.

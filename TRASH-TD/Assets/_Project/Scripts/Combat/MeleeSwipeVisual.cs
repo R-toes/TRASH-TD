@@ -17,11 +17,11 @@ namespace TrashTD.Combat
         private Vector3 stabEnd;
         private bool isStab;
 
-        public static void Play(Vector3 attackerPosition, Vector3 targetPosition, Color color)
+        public static void Play(Vector3 attackerPosition, Vector3 targetPosition, Color color, float sizeMultiplier = 1f)
         {
             GameObject visualObject = new GameObject("MeleeSwipeVisual");
             MeleeSwipeVisual visual = visualObject.AddComponent<MeleeSwipeVisual>();
-            visual.Initialize(attackerPosition, targetPosition, color);
+            visual.Initialize(attackerPosition, targetPosition, color, sizeMultiplier);
         }
 
         public static void PlayStab(Vector3 attackerPosition, Vector3 targetPosition, Color color)
@@ -31,19 +31,20 @@ namespace TrashTD.Combat
             visual.InitializeStab(attackerPosition, targetPosition, color);
         }
 
-        private void Initialize(Vector3 attackerPosition, Vector3 targetPosition, Color color)
+        private void Initialize(Vector3 attackerPosition, Vector3 targetPosition, Color color, float sizeMultiplier)
         {
             slashColor = color;
+            sizeMultiplier = Mathf.Max(0.1f, sizeMultiplier);
             Vector2 forward = (targetPosition - attackerPosition).normalized;
             if (forward.sqrMagnitude < 0.001f) forward = Vector2.right;
             Vector2 perpendicular = new Vector2(-forward.y, forward.x);
             Vector3 center = targetPosition - (Vector3)forward * 0.06f;
             center.z = targetPosition.z - 0.1f;
 
-            primarySlash = CreateSlash("PrimarySlash", 0.09f);
-            secondarySlash = CreateSlash("SecondarySlash", 0.045f);
-            SetSlashPoints(primarySlash, center, perpendicular, forward, 0f);
-            SetSlashPoints(secondarySlash, center, perpendicular, forward, 0.045f);
+            primarySlash = CreateSlash("PrimarySlash", 0.09f * sizeMultiplier);
+            secondarySlash = CreateSlash("SecondarySlash", 0.045f * sizeMultiplier);
+            SetSlashPoints(primarySlash, center, perpendicular, forward, 0f, sizeMultiplier);
+            SetSlashPoints(secondarySlash, center, perpendicular, forward, 0.045f * sizeMultiplier, sizeMultiplier);
         }
 
         private void InitializeStab(Vector3 attackerPosition, Vector3 targetPosition, Color color)
@@ -103,13 +104,21 @@ namespace TrashTD.Combat
             return slash;
         }
 
-        private void SetSlashPoints(LineRenderer slash, Vector3 center, Vector2 perpendicular, Vector2 forward, float offset)
+        private void SetSlashPoints(
+            LineRenderer slash,
+            Vector3 center,
+            Vector2 perpendicular,
+            Vector2 forward,
+            float offset,
+            float sizeMultiplier)
         {
             const int pointCount = 7;
             for (int i = 0; i < pointCount; i++)
             {
                 float t = (i / (pointCount - 1f)) * 2f - 1f;
-                Vector2 point = (Vector2)center + perpendicular * (t * 0.38f) + forward * (0.14f * (1f - t * t) + offset);
+                Vector2 point = (Vector2)center +
+                    perpendicular * (t * 0.38f * sizeMultiplier) +
+                    forward * (0.14f * (1f - t * t) * sizeMultiplier + offset);
                 slash.SetPosition(i, new Vector3(point.x, point.y, center.z - 0.01f));
             }
         }

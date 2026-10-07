@@ -150,6 +150,12 @@ namespace TrashTD.UI
         private MenuButtonFeedback rerollFeedback;
         private Button skipButton;
         private MenuButtonFeedback skipFeedback;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private Button developerPickButton;
+        private GameObject developerPickerRoot;
+        private Transform developerPickerList;
+        private bool developerPickerPopulated;
+#endif
 
         // --- State ---
         private int selectedCardIndex = -1;
@@ -258,6 +264,10 @@ namespace TrashTD.UI
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             if (keyboard == null) return;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (developerPickerRoot != null && developerPickerRoot.activeSelf) return;
+#endif
+
             if (keyboard.digit1Key.wasPressedThisFrame) SelectCardByKey(0);
             if (keyboard.digit2Key.wasPressedThisFrame) SelectCardByKey(1);
             if (keyboard.digit3Key.wasPressedThisFrame) SelectCardByKey(2);
@@ -318,6 +328,9 @@ namespace TrashTD.UI
                 return;
             }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (developerPickerRoot != null) developerPickerRoot.SetActive(false);
+#endif
             selectedCardIndex = -1;
 
             if (hideRoutine != null)
@@ -1106,7 +1119,11 @@ namespace TrashTD.UI
             var buttonsRect = buttonsContainer.GetComponent<RectTransform>();
             buttonsRect.anchorMin = new Vector2(0.5f, 0f);
             buttonsRect.anchorMax = new Vector2(0.5f, 0f);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            buttonsRect.sizeDelta = new Vector2(640f, 64f);
+#else
             buttonsRect.sizeDelta = new Vector2(420f, 64f);
+#endif
             buttonsRect.anchoredPosition = new Vector2(ColumnCenterX, 120f);
 
             var btnHlg = buttonsContainer.AddComponent<HorizontalLayoutGroup>();
@@ -1129,6 +1146,14 @@ namespace TrashTD.UI
                 new Vector2(140f, 60f), SKIP_COLOR);
             skipButton.onClick.AddListener(OnSkipClicked);
             skipFeedback = AttachFeedback(skipButton, Color.white, 1.05f);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            developerPickButton = MakeButton(buttonsContainer.transform, "DeveloperPickButton", "DEV PICK",
+                new Vector2(200f, 60f), new Color(0.32f, 0.24f, 0.48f, 1f));
+            developerPickButton.onClick.AddListener(ShowDeveloperPicker);
+            AttachFeedback(developerPickButton, new Color(0.75f, 0.55f, 1f, 1f), 1.05f);
+            BuildDeveloperPicker();
+#endif
 
             // Confirm button (under the detail panel, where the decision is made)
             confirmButton = MakeButton(overlayRoot.transform, "ConfirmButton", "SELECT A CARD",
@@ -1166,6 +1191,145 @@ namespace TrashTD.UI
             };
             introDelays = new[] { 0f, 0.06f, 0.1f, 0.1f, 0.15f, 0.25f, 0.3f, 0.35f };
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private void BuildDeveloperPicker()
+        {
+            developerPickerRoot = new GameObject(
+                "DeveloperOperatorPicker",
+                typeof(RectTransform),
+                typeof(Image),
+                typeof(CanvasGroup));
+            developerPickerRoot.transform.SetParent(overlayRoot.transform, false);
+            var rootRect = developerPickerRoot.GetComponent<RectTransform>();
+            rootRect.anchorMin = Vector2.zero;
+            rootRect.anchorMax = Vector2.one;
+            rootRect.offsetMin = Vector2.zero;
+            rootRect.offsetMax = Vector2.zero;
+            developerPickerRoot.GetComponent<Image>().color = new Color(0.01f, 0.015f, 0.025f, 0.92f);
+
+            var panel = new GameObject("PickerPanel", typeof(RectTransform), typeof(Image));
+            panel.transform.SetParent(developerPickerRoot.transform, false);
+            var panelRect = panel.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = new Vector2(760f, 820f);
+            panel.GetComponent<Image>().color = PANEL_BG;
+
+            var title = MakeText(panel.transform, "Title", "DEVELOPER PICKER", 26,
+                TextAnchor.MiddleLeft, new Color(0.82f, 0.65f, 1f, 1f));
+            title.fontStyle = FontStyle.Bold;
+            PositionRT(title, new Vector2(28f, -22f), new Vector2(0f, 1f), new Vector2(570f, 48f));
+
+            var closeButton = MakeButton(panel.transform, "CloseButton", "CLOSE",
+                new Vector2(110f, 44f), SKIP_COLOR);
+            PositionRT(closeButton, new Vector2(-24f, -24f), new Vector2(1f, 1f), new Vector2(110f, 44f));
+            closeButton.onClick.AddListener(() => developerPickerRoot.SetActive(false));
+            AttachFeedback(closeButton, Color.white, 1.04f);
+
+            var hint = MakeText(panel.transform, "Hint", "Choose an operator from this stage's draft pool.",
+                14, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
+            PositionRT(hint, new Vector2(28f, -76f), new Vector2(0f, 1f), new Vector2(700f, 30f));
+
+            var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+            viewport.transform.SetParent(panel.transform, false);
+            var viewportRect = viewport.GetComponent<RectTransform>();
+            viewportRect.anchorMin = new Vector2(0f, 0f);
+            viewportRect.anchorMax = new Vector2(1f, 1f);
+            viewportRect.offsetMin = new Vector2(20f, 20f);
+            viewportRect.offsetMax = new Vector2(-20f, -122f);
+            viewport.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.18f);
+            viewport.GetComponent<Mask>().showMaskGraphic = true;
+
+            var scrollRect = panel.AddComponent<ScrollRect>();
+            scrollRect.viewport = viewportRect;
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.scrollSensitivity = 35f;
+
+            var content = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            content.transform.SetParent(viewport.transform, false);
+            var contentRect = content.GetComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0f, 1f);
+            contentRect.anchorMax = new Vector2(1f, 1f);
+            contentRect.pivot = new Vector2(0.5f, 1f);
+            contentRect.sizeDelta = Vector2.zero;
+            var layout = content.GetComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(10, 10, 10, 10);
+            layout.spacing = 8f;
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+            var fitter = content.GetComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            developerPickerList = content.transform;
+            scrollRect.content = contentRect;
+            developerPickerRoot.SetActive(false);
+        }
+
+        private void ShowDeveloperPicker()
+        {
+            if (draftSystem == null || developerPickerRoot == null) return;
+
+            if (developerPickerPopulated)
+            {
+                developerPickerRoot.SetActive(true);
+                return;
+            }
+
+            IReadOnlyList<OperatorData> operators = draftSystem.AvailableOperatorPool;
+            int addedCount = 0;
+            if (operators != null)
+            {
+                for (int i = 0; i < operators.Count; i++)
+                {
+                    OperatorData opData = operators[i];
+                    if (opData == null) continue;
+                    int stars = Mathf.Clamp((int)opData.baseRarity, 1, 5);
+
+                    Button option = MakeButton(
+                        developerPickerList,
+                        $"Operator_{addedCount}",
+                        $"{opData.operatorName}  |  {opData.operatorClass}  |  {new string('★', stars)}",
+                        new Vector2(680f, 64f),
+                        CARD_BG);
+                    option.gameObject.AddComponent<LayoutElement>().preferredHeight = 64f;
+                    option.onClick.AddListener(() => SelectDeveloperOperator(opData));
+                    AttachFeedback(option, GetRarityColor(stars), 1.02f);
+                    addedCount++;
+                }
+            }
+
+            if (addedCount == 0)
+            {
+                Debug.LogError("CardDraftOverlayUI: Developer picker has no operators in the active draft pool.");
+                var emptyText = MakeText(developerPickerList, "EmptyPool",
+                    "No operators are available in the active draft pool.", 16, TextAnchor.MiddleCenter, Color.white);
+                emptyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 64f;
+            }
+
+            developerPickerPopulated = true;
+            developerPickerRoot.SetActive(true);
+        }
+
+        private void SelectDeveloperOperator(OperatorData operatorData)
+        {
+            if (draftSystem == null || !draftSystem.SetDeveloperOffer(operatorData))
+            {
+                Debug.LogError("CardDraftOverlayUI: Could not set the requested developer draft offer.");
+                return;
+            }
+
+            developerPickerRoot.SetActive(false);
+            selectedCardIndex = -1;
+            UpdateConfirmButton();
+        }
+#endif
 
         private void BuildCard(Transform parent, int index)
         {
