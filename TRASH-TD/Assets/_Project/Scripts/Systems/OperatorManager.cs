@@ -154,6 +154,10 @@ namespace TrashTD.Systems
             {
                 return obj.AddComponent<MossmoOperator>();
             }
+            if (opData != null && opData.operatorName == "Bubblets")
+            {
+                return obj.AddComponent<BubbletsOperator>();
+            }
 
             OperatorClass opClass = opData != null ? opData.operatorClass : OperatorClass.Guard;
             return opClass switch

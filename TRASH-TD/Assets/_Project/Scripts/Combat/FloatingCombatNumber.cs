@@ -62,6 +62,28 @@ namespace TrashTD.Combat
             animation.Initialize(text);
         }
 
+        public static void ShowText(Vector3 position, string message, Color color)
+        {
+            GameObject numberObject = new GameObject("FloatingCombatNumber");
+            numberObject.transform.position = position + Vector3.up * 0.35f + Vector3.right * Random.Range(-0.12f, 0.12f);
+
+            TextMesh text = numberObject.AddComponent<TextMesh>();
+            text.text = message;
+            UIFontHelper.Apply(text, FontStyle.Normal);
+            text.fontSize = 24;
+            text.characterSize = 0.075f;
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.fontStyle = FontStyle.Bold;
+            text.color = color;
+
+            MeshRenderer meshRenderer = numberObject.GetComponent<MeshRenderer>();
+            meshRenderer.sortingOrder = 50;
+
+            FloatingCombatNumber animation = numberObject.AddComponent<FloatingCombatNumber>();
+            animation.Initialize(text);
+        }
+
         private void Initialize(TextMesh text)
         {
             label = text;

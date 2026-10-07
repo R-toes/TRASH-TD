@@ -74,7 +74,8 @@ namespace TrashTD.Editor
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Sniper_Proxishot.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Pyrolite.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Chillpath.asset"),
-                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_NurseBot.asset")
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_NurseBot.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Bubblets.asset")
             };
 
             // Assign Tile Sprites
@@ -292,6 +293,50 @@ namespace TrashTD.Editor
                     new Vector2Int(1, 1), new Vector2Int(-1, -1)
                 },
                 medicSprite, medicPrefab);
+
+            // 5b. Medic (Bubblets)
+            var bubbletsFrameOne = LoadSprite("Bubblets-Sheet.png", "Bubblets-Sheet_0");
+            var bubbletsFrameTwo = LoadSprite("Bubblets-Sheet.png", "Bubblets-Sheet_1");
+            if (bubbletsFrameOne != null && bubbletsFrameTwo != null)
+            {
+                var bubbletsPrefab = CreateBubbletsPrefab(bubbletsFrameOne, bubbletsFrameTwo);
+                var bubblets = CreateOperator("OP_Medic_Bubblets", "Bubblets", OperatorClass.Medic, OperatorPosition.Ranged, OperatorRarity.Star3,
+                    hp: 85, atk: 45, def: 10, res: 10, blockCount: 0, range: 1, interval: 1.5f, dp: 13,
+                    new[]
+                    {
+                        new Vector2Int(0, 0),
+                        new Vector2Int(1, 0), new Vector2Int(-1, 0),
+                        new Vector2Int(0, 1), new Vector2Int(0, -1),
+                        new Vector2Int(1, 1), new Vector2Int(-1, 1),
+                        new Vector2Int(1, -1), new Vector2Int(-1, -1)
+                    },
+                    bubbletsFrameOne, bubbletsPrefab);
+                bubblets.damageType = DamageType.Arts;
+                bubblets.roleTags = new[] { "Shield", "Support" };
+                bubblets.skillDescription =
+                    "Passive - Protective Bubble: Does not heal directly. Every 1.5s, grants an allied operator in range a bubble shield that negates 1 instance of damage (even at full HP). When popped, the bubble deals Arts damage equal to Bubblets' ATK to enemies on that tile or directly in front.";
+                EditorUtility.SetDirty(bubblets);
+            }
+        }
+
+        private static GameObject CreateBubbletsPrefab(Sprite firstFrame, Sprite secondFrame)
+        {
+            const string prefabName = "Prefab_OP_Bubblets";
+            string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            var go = new GameObject(prefabName);
+            var spriteRenderer = go.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = firstFrame;
+            spriteRenderer.sortingOrder = 5;
+            go.AddComponent<BubbletsOperator>();
+            var animation = go.AddComponent<OperatorSpriteAnimation>();
+            animation.Configure(new[] { firstFrame, secondFrame });
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
         }
 
         private static GameObject CreateMossmoPrefab(Sprite firstFrame, Sprite secondFrame)

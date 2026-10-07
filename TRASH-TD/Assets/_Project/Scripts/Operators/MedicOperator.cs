@@ -43,13 +43,13 @@ namespace TrashTD.Operators
             // Medics do not deal damage
         }
 
-        public void Heal(OperatorBase target)
+        public virtual void Heal(OperatorBase target)
         {
             if (target == null) return;
             target.Heal(GetHealAmount());
         }
 
-        public int GetHealAmount()
+        public virtual int GetHealAmount()
         {
             return currentATK;
         }

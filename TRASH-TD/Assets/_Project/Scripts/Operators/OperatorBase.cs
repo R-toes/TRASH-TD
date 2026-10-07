@@ -54,6 +54,7 @@ namespace TrashTD.Operators
         public OperatorFacing Facing => facing;
         public OperatorClass OperatorClass => data.operatorClass;
         public virtual bool CanReceiveHealing => true;
+        public IReadOnlyList<EnemyBase> BlockedEnemies => blockedEnemies;
 
         /// <summary>
         /// Initialize this operator with data and rarity.
@@ -290,6 +291,12 @@ namespace TrashTD.Operators
         public virtual void TakeDamage(int rawATK, DamageType damageType)
         {
             if (currentHP <= 0 || rawATK <= 0) return;
+
+            var shield = GetComponent<BubbleShield>();
+            if (shield != null && shield.TryConsume(rawATK, damageType))
+            {
+                return;
+            }
 
             int mitigation = damageType == DamageType.Physical ? currentDEF : currentRES;
             int damage = Combat.DamageCalculator.CalculateDamage(rawATK, mitigation);
