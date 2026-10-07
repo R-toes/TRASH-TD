@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
+  m_Name: OP_Caster_Castiel
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
+  operatorName: Castiel
+  operatorClass: 3
+  baseRarity: 2
+  position: 1
+  roleTags:
+  - Light Magic
+  - Lock-On
+  - Ranged
+  baseHP: 90
+  baseATK: 80
+  baseDEF: 8
+  baseRES: 25
+  blockCount: 0
+  attackRange: 2
+  attackInterval: 0.375
+  rangePattern:
+  - {x: -1, y: -1}
+  - {x: 0, y: -1}
+  - {x: 1, y: -1}
+  - {x: -1, y: 0}
+  - {x: 1, y: 0}
+  - {x: -1, y: 1}
+  - {x: 0, y: 1}
+  - {x: 1, y: 1}
+  - {x: 2, y: 0}
+  damageType: 1
+  drawTwoCardsOnDeath: 0
+  bonusWhenIsolated: 0
+  isolatedAttackMultiplier: 1.5
+  skillDescription: Continuous light magic laser that locks onto one target. Damage ticks every 0.375 seconds and increases every 1.5 seconds from 5 to 15, 30, 80, then 100.
+  chillPerHit: 0
+  chillSlowMultiplier: 0.65
+  chillSlowDuration: 2.5
+  chillFreezeThreshold: 100
+  chillFreezeDuration: 1.5
+  dpCost: 12
+  redeployCooldown: 60
+  portrait: {fileID: 21300000, guid: a1111111111111111111111111111104, type: 3}
+  operatorPrefab: {fileID: 1724151342938439340, guid: 7e1c5a9d3b4f48a6c2e0d8f7b5a1c9e6, type: 3}
