@@ -993,9 +993,9 @@ namespace TrashTD.Editor
             string[] layoutRows =
             {
                 "BHHHLLLLLLLS",
-                "BHTTTHHBHBBB",
+                "BHTTTHHHBHBB",
                 "ELTBTLLLLLLS",
-                "BHTTTHBHBHBB",
+                "BHTTTHBHHHBB",
                 "BHHHLLLLLLLS"
             };
 
