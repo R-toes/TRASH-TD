@@ -873,9 +873,65 @@ namespace TrashTD.Core.GameLoop
 
             Color placementColor = canDeploy ? new Color(0.15f, 0.85f, 1f, 1f) : new Color(1f, 0.12f, 0.12f, 1f);
             DrawCellOutline(targetCell.WorldPosition, placementColor);
+            DrawOperatorPreview(targetCell.WorldPosition, pendingDeployCard.operatorData, placementFacing, canDeploy);
             DrawFacingMarker(targetCell.WorldPosition, placementFacing);
             gameplayHudUI?.SetPlacementControls(true, canDeploy);
             gameplayHudUI?.SetPlacementControlsPosition(targetCell.WorldPosition);
+        }
+
+        private void DrawOperatorPreview(Vector3 position, OperatorData opData, OperatorFacing facing, bool canDeploy)
+        {
+            if (opData == null) return;
+
+            Sprite previewSprite = GetOperatorPreviewSprite(opData);
+            if (previewSprite == null) return;
+
+            GameObject previewObject = new GameObject("OperatorPlacementSpritePreview");
+            previewObject.transform.SetParent(transform, false);
+            previewObject.transform.position = new Vector3(position.x, position.y, 0f);
+
+            Vector3 scale = opData.operatorPrefab != null ? opData.operatorPrefab.transform.localScale : Vector3.one;
+            previewObject.transform.localScale = scale;
+
+            SpriteRenderer sr = previewObject.AddComponent<SpriteRenderer>();
+            sr.sprite = previewSprite;
+            if (opData.operatorPrefab != null)
+            {
+                SpriteRenderer prefabSr = opData.operatorPrefab.GetComponent<SpriteRenderer>()
+                    ?? opData.operatorPrefab.GetComponentInChildren<SpriteRenderer>();
+                if (prefabSr != null && prefabSr.sharedMaterial != null)
+                {
+                    sr.sharedMaterial = prefabSr.sharedMaterial;
+                }
+            }
+
+            sr.flipX = (facing == OperatorFacing.Right);
+            sr.sortingOrder = 7;
+            sr.color = canDeploy
+                ? new Color(1f, 1f, 1f, 0.88f)
+                : new Color(1f, 0.35f, 0.35f, 0.65f);
+
+            placementPreviewVisuals.Add(previewObject);
+        }
+
+        private Sprite GetOperatorPreviewSprite(OperatorData opData)
+        {
+            if (opData == null) return null;
+
+            if (opData.operatorPrefab != null)
+            {
+                SpriteRenderer prefabSr = opData.operatorPrefab.GetComponent<SpriteRenderer>();
+                if (prefabSr == null)
+                {
+                    prefabSr = opData.operatorPrefab.GetComponentInChildren<SpriteRenderer>();
+                }
+                if (prefabSr != null && prefabSr.sprite != null)
+                {
+                    return prefabSr.sprite;
+                }
+            }
+
+            return opData.portrait;
         }
 
         private void DrawCellOutline(Vector3 center, Color color)

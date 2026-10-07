@@ -141,6 +141,7 @@ namespace TrashTD.Systems
             }
 
             deployedOperators.Add(opComp);
+            opComp.ApplyFacingVisuals();
             OperatorUpgradeBadge.Show(opComp);
             deployedInstance = opComp;
             OnOperatorDeployed?.Invoke(opComp);

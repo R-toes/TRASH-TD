@@ -75,6 +75,32 @@ namespace TrashTD.Operators
             attackTimer = 0f;
             trapDamageTimer = 0f;
             isDeployed = false;
+
+            ApplyFacingVisuals();
+        }
+
+        public void SetFacing(OperatorFacing newFacing)
+        {
+            facing = newFacing;
+            ApplyFacingVisuals();
+        }
+
+        public virtual void ApplyFacingVisuals()
+        {
+            bool mirrorHorizontally = facing == OperatorFacing.Right;
+            SpriteRenderer sr = GetComponent<SpriteRenderer>();
+            if (sr != null)
+            {
+                sr.flipX = mirrorHorizontally;
+            }
+            else
+            {
+                SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>();
+                for (int i = 0; i < renderers.Length; i++)
+                {
+                    renderers[i].flipX = mirrorHorizontally;
+                }
+            }
         }
 
         // ========================
@@ -91,6 +117,8 @@ namespace TrashTD.Operators
             trapDamageTimer = 0f;
             cell.Deploy(gameObject);
             transform.position = cell.WorldPosition;
+
+            ApplyFacingVisuals();
 
             OnDeployed();
             return true;
