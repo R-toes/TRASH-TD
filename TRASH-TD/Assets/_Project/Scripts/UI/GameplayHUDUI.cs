@@ -69,6 +69,10 @@ namespace TrashTD.UI
         private Text startWaveButtonText;
         private Button[] speedButtons;
         private MenuButtonFeedback[] speedFeedbacks;
+        private RectTransform trashDropZone;
+        private GameObject discardConfirmationPanel;
+        private DraftCard pendingDiscardCard;
+        private int pendingDiscardSlot = -1;
         private Button[] deckButtons;
         private Text[] deckButtonLabels;
         private Image[] deckButtonImages;
@@ -258,6 +262,8 @@ namespace TrashTD.UI
             CreateTopBar(root);
             CreateDeckBar(root);
             CreateSpeedBar(root);
+            CreateTrashDropZone(root);
+            CreateDiscardConfirmationPanel(root);
             CreatePhaseBanner(root);
             CreatePlacementControls(root);
             CreateSelectedOperatorLabel(root);
@@ -776,6 +782,106 @@ namespace TrashTD.UI
             UpdateSpeedSelection(gameManager != null ? gameManager.GameSpeed : 1f);
         }
 
+        private void CreateTrashDropZone(Transform root)
+        {
+            var zone = new GameObject("TrashDropZone", typeof(RectTransform), typeof(Image), typeof(Button));
+            zone.transform.SetParent(root, false);
+            trashDropZone = zone.GetComponent<RectTransform>();
+            SetPosition(trashDropZone, new Vector2(-335f, 85f), new Vector2(1f, 0f),
+                new Vector2(68f, 68f), new Vector2(1f, 0.5f));
+
+            var image = zone.GetComponent<Image>();
+            image.color = new Color(0.10f, 0.07f, 0.09f, 0.96f);
+            image.raycastTarget = true;
+            var outline = zone.AddComponent<Outline>();
+            outline.effectColor = new Color(1f, 0.25f, 0.3f, 0.55f);
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            var icon = new GameObject("TrashIcon", typeof(RectTransform), typeof(Image));
+            icon.transform.SetParent(zone.transform, false);
+            var iconRect = icon.GetComponent<RectTransform>();
+            SetPosition(iconRect, Vector2.zero, new Vector2(0.5f, 0.5f),
+                new Vector2(42f, 48f), new Vector2(0.5f, 0.5f));
+            var iconImage = icon.GetComponent<Image>();
+            iconImage.sprite = CreateTrashIconSprite();
+            iconImage.color = new Color(1f, 0.35f, 0.38f, 1f);
+            iconImage.raycastTarget = false;
+
+            var button = zone.GetComponent<Button>();
+            button.interactable = false;
+            AttachFeedback(button, new Color(1f, 0.3f, 0.35f, 1f), 1.04f);
+        }
+
+        private void CreateDiscardConfirmationPanel(Transform root)
+        {
+            discardConfirmationPanel = new GameObject("DiscardConfirmationPanel", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+            discardConfirmationPanel.transform.SetParent(root, false);
+            Stretch(discardConfirmationPanel.GetComponent<RectTransform>());
+            discardConfirmationPanel.GetComponent<Image>().color = new Color(0.01f, 0.012f, 0.02f, 0.78f);
+
+            var card = new GameObject("DiscardCard", typeof(RectTransform), typeof(Image));
+            card.transform.SetParent(discardConfirmationPanel.transform, false);
+            var cardRect = card.GetComponent<RectTransform>();
+            SetPosition(cardRect, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(470f, 240f), new Vector2(0.5f, 0.5f));
+            card.GetComponent<Image>().color = DarkButton;
+            var cardOutline = card.AddComponent<Outline>();
+            cardOutline.effectColor = AccentColor;
+            cardOutline.effectDistance = new Vector2(2f, -2f);
+
+            var title = CreateText(card.transform, "Title", "DISCARD OPERATOR?", 24, TextAnchor.MiddleCenter);
+            SetPosition(title.GetComponent<RectTransform>(), new Vector2(0f, 74f), new Vector2(0.5f, 0.5f),
+                new Vector2(430f, 40f), new Vector2(0.5f, 0.5f));
+            var message = CreateText(card.transform, "Message", string.Empty, 17, TextAnchor.MiddleCenter);
+            message.color = TextDim;
+            message.name = "Message";
+            SetPosition(message.GetComponent<RectTransform>(), new Vector2(0f, 32f), new Vector2(0.5f, 0.5f),
+                new Vector2(430f, 32f), new Vector2(0.5f, 0.5f));
+
+            var confirm = CreateButton(card.transform, "ConfirmDiscardButton", "DISCARD", new Vector2(175f, 52f));
+            SetPosition(confirm.GetComponent<RectTransform>(), new Vector2(-100f, -65f), new Vector2(0.5f, 0.5f),
+                new Vector2(175f, 52f), new Vector2(0.5f, 0.5f));
+            StyleButton(confirm, new Color(0.38f, 0.10f, 0.12f, 1f), LifeColor, 1.05f,
+                ConfirmDiscard);
+
+            var cancel = CreateButton(card.transform, "CancelDiscardButton", "CANCEL", new Vector2(175f, 52f));
+            SetPosition(cancel.GetComponent<RectTransform>(), new Vector2(100f, -65f), new Vector2(0.5f, 0.5f),
+                new Vector2(175f, 52f), new Vector2(0.5f, 0.5f));
+            StyleButton(cancel, DarkButton, TextDim, 1.05f, CancelDiscard);
+
+            discardConfirmationPanel.SetActive(false);
+        }
+
+        private void ShowDiscardConfirmation(int slotIndex, DraftCard card)
+        {
+            if (discardConfirmationPanel == null || card == null || card.operatorData == null) return;
+
+            pendingDiscardSlot = slotIndex;
+            pendingDiscardCard = card;
+            var message = discardConfirmationPanel.transform.Find("DiscardCard/Message")?.GetComponent<Text>();
+            if (message != null)
+                message.text = $"Discard {card.operatorData.operatorName} from your deck?";
+            discardConfirmationPanel.SetActive(true);
+        }
+
+        private void ConfirmDiscard()
+        {
+            if (playerDeck != null && pendingDiscardSlot >= 0 &&
+                playerDeck.GetCard(pendingDiscardSlot) == pendingDiscardCard)
+            {
+                playerDeck.RemoveCard(pendingDiscardSlot);
+            }
+
+            CancelDiscard();
+        }
+
+        private void CancelDiscard()
+        {
+            pendingDiscardCard = null;
+            pendingDiscardSlot = -1;
+            if (discardConfirmationPanel != null)
+                discardConfirmationPanel.SetActive(false);
+        }
+
         private void SetGameSpeed(int speed)
         {
             if (gameManager == null) return;
@@ -1120,6 +1226,14 @@ namespace TrashTD.UI
             if (card == null) return;
 
             Camera uiCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+            if (trashDropZone != null &&
+                RectTransformUtility.RectangleContainsScreenPoint(trashDropZone, screenPosition, uiCamera))
+            {
+                stageBootstrapper?.CancelOperatorPlacementPreview(card);
+                ShowDiscardConfirmation(slotIndex, card);
+                return;
+            }
+
             for (int targetIndex = 0; targetIndex < deckButtons.Length; targetIndex++)
             {
                 RectTransform targetRect = deckButtons[targetIndex].GetComponent<RectTransform>();
@@ -1709,6 +1823,48 @@ namespace TrashTD.UI
             texture.SetPixels(pixels);
             texture.Apply();
             return Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        private static Sprite CreateTrashIconSprite()
+        {
+            const int width = 24;
+            const int height = 24;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.filterMode = FilterMode.Point;
+            var pixels = new Color[width * height];
+            for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.clear;
+
+            void Pixel(int x, int y)
+            {
+                if (x >= 0 && x < width && y >= 0 && y < height)
+                    pixels[y * width + x] = Color.white;
+            }
+
+            // Main bin body: wide rim, slightly tapered sides, and a solid base.
+            for (int y = 4; y <= 17; y++)
+            {
+                int left = y <= 6 ? 4 : 5;
+                int right = y <= 6 ? 19 : 18;
+                for (int x = left; x <= right; x++) Pixel(x, y);
+            }
+            for (int x = 6; x <= 17; x++) Pixel(x, 3);
+
+            // Lid and handle at the top of the can.
+            for (int x = 3; x <= 20; x++) Pixel(x, 18);
+            for (int x = 7; x <= 16; x++) Pixel(x, 20);
+            for (int x = 9; x <= 14; x++) Pixel(x, 21);
+
+            // Three vertical cut-outs make the bin read clearly at small size.
+            for (int y = 7; y <= 15; y++)
+            {
+                pixels[y * width + 8] = Color.clear;
+                pixels[y * width + 11] = Color.clear;
+                pixels[y * width + 14] = Color.clear;
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply();
+            return Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 24f);
         }
 
         /// <summary>Transparent center, opaque edges — tinted red for the life-lost flash.</summary>
