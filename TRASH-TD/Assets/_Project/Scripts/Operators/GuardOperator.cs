@@ -121,11 +121,11 @@ namespace TrashTD.Operators
             isolationAuraOuter = CreateAuraLayer(
                 "IsolationAuraOuter",
                 operatorSpriteRenderer.sortingOrder - 2,
-                new Color(1f, 0.12f, 0.015f, 0.82f));
+                new Color(0.28f, 0.025f, 0.035f, 0.34f));
             isolationAuraInner = CreateAuraLayer(
                 "IsolationAuraInner",
                 operatorSpriteRenderer.sortingOrder - 1,
-                new Color(1f, 0.55f, 0.06f, 0.72f));
+                new Color(0.4f, 0.045f, 0.055f, 0.24f));
         }
 
         private SpriteRenderer CreateAuraLayer(string objectName, int sortingOrder, Color color)
@@ -181,8 +181,8 @@ namespace TrashTD.Operators
             isolationAuraOuter.transform.localPosition = new Vector3(0f, Mathf.Sin(time * 7f) * 0.012f, 0.01f);
             isolationAuraInner.transform.localPosition = new Vector3(0f, Mathf.Sin(time * 9f + 1f) * 0.008f, 0.005f);
 
-            Color outerColor = new Color(1f, Mathf.Lerp(0.06f, 0.22f, pulse), 0.015f, 0.7f + pulse * 0.22f);
-            Color innerColor = new Color(1f, Mathf.Lerp(0.28f, 0.72f, pulse), 0.06f, 0.45f + pulse * 0.35f);
+            Color outerColor = new Color(0.28f, Mathf.Lerp(0.02f, 0.055f, pulse), 0.035f, 0.24f + pulse * 0.12f);
+            Color innerColor = new Color(0.4f, Mathf.Lerp(0.035f, 0.075f, pulse), 0.055f, 0.16f + pulse * 0.12f);
             isolationAuraOuter.color = outerColor;
             isolationAuraInner.color = innerColor;
         }
