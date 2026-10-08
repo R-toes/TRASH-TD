@@ -22,20 +22,30 @@ namespace TrashTD.Operators
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
 
-            // If frames are missing or incomplete, auto-resolve both 32x32 frames from the sprite's texture sheet
-            if (frames == null || frames.Length != 2 || frames[0] == null || frames[1] == null)
+            // If frames are missing or incomplete, auto-resolve frames from the sprite's texture sheet
+            if (!HasValidFrames())
             {
                 TryResolveFramesFromTexture();
             }
 
-            if (frames == null || frames.Length != 2 || frames[0] == null || frames[1] == null)
+            if (!HasValidFrames())
             {
-                Debug.LogError($"{nameof(OperatorSpriteAnimation)} requires exactly two assigned sprites.", this);
+                Debug.LogError($"{nameof(OperatorSpriteAnimation)} requires at least two assigned sprites.", this);
                 enabled = false;
                 return;
             }
 
             spriteRenderer.sprite = frames[0];
+        }
+
+        private bool HasValidFrames()
+        {
+            if (frames == null || frames.Length < 2) return false;
+            for (int i = 0; i < frames.Length; i++)
+            {
+                if (frames[i] == null) return false;
+            }
+            return true;
         }
 
         private void TryResolveFramesFromTexture()
@@ -49,14 +59,20 @@ namespace TrashTD.Operators
             float ppu = spriteRenderer.sprite.pixelsPerUnit > 0f ? spriteRenderer.sprite.pixelsPerUnit : 32f;
             Vector2 pivot = new Vector2(0.5f, 0.5f);
 
-            // 2-frame horizontal sprite sheet (64x32 or two equal halves)
-            float frameWidth = texture.width / 2f;
+            int frameCount = Mathf.Max(2, Mathf.FloorToInt((float)texture.width / texture.height));
+            if (texture.name.ToLowerInvariant().Contains("basurocket"))
+            {
+                frameCount = 4;
+            }
+
+            float frameWidth = texture.height > 0 ? texture.height : (texture.width / (float)frameCount);
             float frameHeight = texture.height;
 
-            Sprite frame0 = Sprite.Create(texture, new Rect(0, 0, frameWidth, frameHeight), pivot, ppu);
-            Sprite frame1 = Sprite.Create(texture, new Rect(frameWidth, 0, frameWidth, frameHeight), pivot, ppu);
-
-            frames = new[] { frame0, frame1 };
+            frames = new Sprite[frameCount];
+            for (int i = 0; i < frameCount; i++)
+            {
+                frames[i] = Sprite.Create(texture, new Rect(i * frameWidth, 0, frameWidth, frameHeight), pivot, ppu);
+            }
         }
 
         private void Update()

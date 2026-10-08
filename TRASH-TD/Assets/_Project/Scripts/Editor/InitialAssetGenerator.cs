@@ -72,6 +72,7 @@ namespace TrashTD.Editor
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Defender_Mossmo.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Sniper_Deadeye.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Sniper_Proxishot.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Sniper_Basurocket.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Pyrolite.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Chillpath.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_NurseBot.asset"),
@@ -265,6 +266,29 @@ namespace TrashTD.Editor
                 },
                 sniperSprite, sniperPrefab);
 
+            // 3b. Sniper (Basurocket)
+            var basuFrame0 = LoadSprite("Basurocket-sheet.png", "Basurocket-sheet_0");
+            var basuFrame1 = LoadSprite("Basurocket-sheet.png", "Basurocket-sheet_1");
+            var basuFrame2 = LoadSprite("Basurocket-sheet.png", "Basurocket-sheet_2");
+            var basuFrame3 = LoadSprite("Basurocket-sheet.png", "Basurocket-sheet_3");
+            if (basuFrame0 != null && basuFrame1 != null && basuFrame2 != null && basuFrame3 != null)
+            {
+                var basuFrames = new[] { basuFrame0, basuFrame1, basuFrame2, basuFrame3 };
+                var basuPrefab = CreateBasurocketPrefab(basuFrames);
+                var basurocket = CreateOperator("OP_Sniper_Basurocket", "Basurocket", OperatorClass.Sniper, OperatorPosition.Ranged, OperatorRarity.Star3,
+                    hp: 90, atk: 190, def: 10, res: 0, blockCount: 0, range: 7, interval: 2.5f, dp: 16,
+                    new[]
+                    {
+                        new Vector2Int(2, 0), new Vector2Int(3, 0), new Vector2Int(4, 0),
+                        new Vector2Int(5, 0), new Vector2Int(6, 0), new Vector2Int(7, 0)
+                    },
+                    basuFrame0, basuPrefab);
+                basurocket.roleTags = new[] { "Long Range", "AoE", "Explosive", "DPS" };
+                basurocket.skillDescription =
+                    "Long-range explosive sniper. Fires up to 7 tiles forward, cannot attack the adjacent tile, and deals high physical area damage on impact.";
+                EditorUtility.SetDirty(basurocket);
+            }
+
             // 4. Caster (Pyrolite)
             var casterSprite = LoadSprite("Pyrolite-Sheet.png", "Pyrolite-Sheet_0") ?? LoadSprite("tex_op_caster.png");
             var casterPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Pyrolite", casterSprite, OperatorClass.Caster);
@@ -373,6 +397,41 @@ namespace TrashTD.Editor
             go.AddComponent<EchosquireOperator>();
             var animation = go.AddComponent<OperatorSpriteAnimation>();
             animation.Configure(new[] { firstFrame, secondFrame });
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        private static GameObject CreateBasurocketPrefab(Sprite[] frames)
+        {
+            const string prefabName = "Prefab_OP_Sniper_Basurocket";
+            string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null)
+            {
+                var existingAnim = existing.GetComponent<OperatorSpriteAnimation>();
+                if (existingAnim == null)
+                {
+                    existingAnim = existing.AddComponent<OperatorSpriteAnimation>();
+                }
+                existingAnim.Configure(frames);
+                var existingSr = existing.GetComponent<SpriteRenderer>();
+                if (existingSr != null && frames != null && frames.Length > 0 && frames[0] != null)
+                {
+                    existingSr.sprite = frames[0];
+                }
+                EditorUtility.SetDirty(existing);
+                return existing;
+            }
+
+            var go = new GameObject(prefabName);
+            var spriteRenderer = go.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
+            spriteRenderer.sortingOrder = 5;
+            go.AddComponent<BasurocketOperator>();
+            var animation = go.AddComponent<OperatorSpriteAnimation>();
+            animation.Configure(frames);
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
             Object.DestroyImmediate(go);

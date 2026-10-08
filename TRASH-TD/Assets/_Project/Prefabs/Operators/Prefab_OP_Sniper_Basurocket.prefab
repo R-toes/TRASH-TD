@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 7503740675108855287}
   - component: {fileID: 3918343413170272717}
   - component: {fileID: 1116288335480441512}
+  - component: {fileID: 4829105820194857201}
   m_Layer: 0
   m_Name: OP_Sniper_Basurocket
   m_TagString: Untagged
@@ -73,7 +74,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 5
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: a1111111111111111111111111111103, type: 3}
+  m_Sprite: {fileID: 359521540, guid: aab3535792b35934aa0c00872bc97b5e, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -96,3 +97,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.BasurocketOperator
   data: {fileID: 0}
+--- !u!114 &4829105820194857201
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 685036189517171225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15730cd9b1a04c21b3c152b454d2f53a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
+  frames:
+  - {fileID: 359521540, guid: aab3535792b35934aa0c00872bc97b5e, type: 3}
+  - {fileID: 589293902, guid: aab3535792b35934aa0c00872bc97b5e, type: 3}
+  - {fileID: 1977943138, guid: aab3535792b35934aa0c00872bc97b5e, type: 3}
+  - {fileID: -444524536, guid: aab3535792b35934aa0c00872bc97b5e, type: 3}
+

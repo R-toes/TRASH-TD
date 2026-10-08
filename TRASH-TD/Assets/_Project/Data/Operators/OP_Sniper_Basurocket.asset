@@ -21,9 +21,9 @@ MonoBehaviour:
   - AoE
   - Explosive
   - DPS
-  baseHP: 90
+  baseHP: 60
   baseATK: 190
-  baseDEF: 10
+  baseDEF: 5
   baseRES: 0
   blockCount: 0
   attackRange: 7
@@ -47,5 +47,5 @@ MonoBehaviour:
   chillFreezeDuration: 1.5
   dpCost: 16
   redeployCooldown: 60
-  portrait: {fileID: 21300000, guid: a1111111111111111111111111111103, type: 3}
+  portrait: {fileID: 359521540, guid: aab3535792b35934aa0c00872bc97b5e, type: 3}
   operatorPrefab: {fileID: 685036189517171225, guid: 6c1e8a4f9d2b47a3b5e7c0f2d4a6b8e9, type: 3}
