@@ -158,6 +158,14 @@ namespace TrashTD.Systems
             {
                 return obj.AddComponent<BubbletsOperator>();
             }
+            if (opData != null && opData.operatorName == "Progeny")
+            {
+                return obj.AddComponent<ProgenyOperator>();
+            }
+            if (opData != null && opData.operatorName == "Basurocket")
+            {
+                return obj.AddComponent<BasurocketOperator>();
+            }
 
             OperatorClass opClass = opData != null ? opData.operatorClass : OperatorClass.Guard;
             return opClass switch

@@ -57,7 +57,7 @@ namespace TrashTD.Operators
         /// <summary>
         /// Finds the allied operator within heal range with the lowest HP percentage below 100%.
         /// </summary>
-        private OperatorBase FindHealTarget()
+        protected virtual OperatorBase FindHealTarget()
         {
             if (OperatorManager.Instance == null || deployedCell == null || data == null || data.rangePattern == null)
                 return null;

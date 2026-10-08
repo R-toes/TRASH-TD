@@ -77,7 +77,8 @@ namespace TrashTD.Editor
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Pyrolite.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Chillpath.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_NurseBot.asset"),
-                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Bubblets.asset")
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Bubblets.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Progeny.asset")
             };
 
             // Assign Tile Sprites
@@ -380,6 +381,30 @@ namespace TrashTD.Editor
                     "Passive - Protective Bubble: Grants an allied operator in range a bubble shield that negates 1 instance of damage. When popped, the bubble heals the operator and deals Arts damage equal to 30% of Bubblets' ATK to enemies on that tile or directly in front.";
                 EditorUtility.SetDirty(bubblets);
             }
+
+            // 5c. Medic (Progeny)
+            var progenyFrame0 = LoadSprite("Progeny-Sheet.png", "Progeny-Sheet_0");
+            var progenyFrame1 = LoadSprite("Progeny-Sheet.png", "Progeny-Sheet_1");
+            var progenyFrame2 = LoadSprite("Progeny-Sheet.png", "Progeny-Sheet_2");
+            var progenyFrame3 = LoadSprite("Progeny-Sheet.png", "Progeny-Sheet_3");
+            if (progenyFrame0 != null && progenyFrame1 != null && progenyFrame2 != null && progenyFrame3 != null)
+            {
+                var progenyFrames = new[] { progenyFrame0, progenyFrame1, progenyFrame2, progenyFrame3 };
+                var progenyPrefab = CreateProgenyPrefab(progenyFrames);
+                var progeny = CreateOperator("OP_Medic_Progeny", "Progeny", OperatorClass.Medic, OperatorPosition.Ranged, OperatorRarity.Star2,
+                    hp: 95, atk: 35, def: 12, res: 12, blockCount: 0, range: 1, interval: 1.8f, dp: 12,
+                    new[]
+                    {
+                        new Vector2Int(0, 0),
+                        new Vector2Int(1, 0), new Vector2Int(-1, 0),
+                        new Vector2Int(0, 1), new Vector2Int(0, -1)
+                    },
+                    progenyFrame0, progenyPrefab);
+                progeny.roleTags = new[] { "Chain Heal", "Support" };
+                progeny.skillDescription =
+                    "Passive - Chain Heal: Restores HP to an allied operator in range. The heal bounces to a second operator in the surrounding tiles of the healed operator (healing reduced by 50% when it bounces).";
+                EditorUtility.SetDirty(progeny);
+            }
         }
 
         private static GameObject CreateBubbletsPrefab(Sprite firstFrame, Sprite secondFrame)
@@ -489,6 +514,41 @@ namespace TrashTD.Editor
             spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
             spriteRenderer.sortingOrder = 5;
             go.AddComponent<BasurocketOperator>();
+            var animation = go.AddComponent<OperatorSpriteAnimation>();
+            animation.Configure(frames);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        private static GameObject CreateProgenyPrefab(Sprite[] frames)
+        {
+            const string prefabName = "Prefab_OP_Progeny";
+            string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null)
+            {
+                var existingAnim = existing.GetComponent<OperatorSpriteAnimation>();
+                if (existingAnim == null)
+                {
+                    existingAnim = existing.AddComponent<OperatorSpriteAnimation>();
+                }
+                existingAnim.Configure(frames);
+                var existingSr = existing.GetComponent<SpriteRenderer>();
+                if (existingSr != null && frames != null && frames.Length > 0 && frames[0] != null)
+                {
+                    existingSr.sprite = frames[0];
+                }
+                EditorUtility.SetDirty(existing);
+                return existing;
+            }
+
+            var go = new GameObject(prefabName);
+            var spriteRenderer = go.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
+            spriteRenderer.sortingOrder = 5;
+            go.AddComponent<ProgenyOperator>();
             var animation = go.AddComponent<OperatorSpriteAnimation>();
             animation.Configure(frames);
 

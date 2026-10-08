@@ -10,19 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
-  m_Name: OP_Medic_NurseBot
+  m_Name: OP_Medic_Progeny
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
-  operatorName: NurseBot
+  operatorName: Progeny
   operatorClass: 4
-  baseRarity: 1
+  baseRarity: 2
   position: 1
-  roleTags: []
-  baseHP: 90
-  baseATK: 20
+  roleTags:
+  - Chain Heal
+  - Support
+  baseHP: 95
+  baseATK: 35
   baseDEF: 12
-  baseRES: 15
+  baseRES: 12
   blockCount: 0
-  attackRange: 2
+  attackRange: 1
   attackInterval: 1.8
   rangePattern:
   - {x: 0, y: 0}
@@ -30,13 +32,11 @@ MonoBehaviour:
   - {x: -1, y: 0}
   - {x: 0, y: 1}
   - {x: 0, y: -1}
-  - {x: 1, y: 1}
-  - {x: -1, y: -1}
   damageType: 0
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 
+  skillDescription: 'Passive - Chain Heal: Restores HP to an allied operator in range. The heal bounces to a second operator in the surrounding tiles of the healed operator (healing reduced by 50% when it bounces).'
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
@@ -44,5 +44,6 @@ MonoBehaviour:
   chillFreezeDuration: 1.5
   dpCost: 12
   redeployCooldown: 60
-  portrait: {fileID: 5227333541322342438, guid: 6fc58da2cd538b343935feeb99ddb22f, type: 3}
-  operatorPrefab: {fileID: 6549728481407477408, guid: 0f7e6f41325b4fd8ac97245ace7d879b, type: 3}
+  portrait: {fileID: -1862473255, guid: acf5107dd3f8262468847691f1ecffb8, type: 3}
+  operatorPrefab: {fileID: 5120733290429841632, guid: a1b2c3d4e5f67890123456789abcdef0, type: 3}
+
