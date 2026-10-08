@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
+  m_Name: OP_Guard_QiFu
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
+  operatorName: Chi Paw
+  operatorClass: 0
+  baseRarity: 1
+  position: 0
+  roleTags:
+  - Chi
+  - Knockback
+  baseHP: 140
+  baseATK: 65
+  baseDEF: 20
+  baseRES: 0
+  blockCount: 2
+  attackRange: 1
+  attackInterval: 1.1
+  rangePattern:
+  - {x: 1, y: 0}
+  damageType: 0
+  drawTwoCardsOnDeath: 0
+  bonusWhenIsolated: 0
+  isolatedAttackMultiplier: 1.5
+  skillDescription: Every fourth landed hit channels a green Chi Paw that pushes the enemy back one block.
+  chillPerHit: 0
+  chillSlowMultiplier: 0.65
+  chillSlowDuration: 2.5
+  chillFreezeThreshold: 100
+  chillFreezeDuration: 1.5
+  dpCost: 10
+  redeployCooldown: 60
+  portrait: {fileID: 2002156026692265899, guid: f1dce23d008b5034bb6a3ebb5780f7fc, type: 3}
+  operatorPrefab: {fileID: 4120733290429841632, guid: a1d9c8667b114f4aa94dc9b5ff89d30d, type: 3}

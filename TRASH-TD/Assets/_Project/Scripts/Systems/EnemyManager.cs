@@ -128,7 +128,7 @@ namespace TrashTD.Systems
             for (int i = 0; i < activeEnemies.Count; i++)
             {
                 var enemy = activeEnemies[i];
-                if (enemy == null || enemy.IsDead || enemy.IsBlocked) continue;
+                if (enemy == null || enemy.IsDead || enemy.IsBlocked || enemy.IsPushingBack) continue;
                 if (enemy.MovementType == EnemyMovementType.Air) continue;
                 if (enemy.Data != null && enemy.Data.isUnblockable) continue;
 

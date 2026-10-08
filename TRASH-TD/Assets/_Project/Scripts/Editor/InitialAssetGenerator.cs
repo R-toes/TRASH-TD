@@ -65,6 +65,7 @@ namespace TrashTD.Editor
             bootstrapper.operatorPool = new System.Collections.Generic.List<OperatorData>
             {
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Scrapper.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_QiFu.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Echosquire.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Drawgoo.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Shadeslice.asset"),
@@ -222,6 +223,44 @@ namespace TrashTD.Editor
                 echosquire.skillDescription =
                     "Passive - Vampiric Guard: Restores 20% of physical damage dealt as HP. Cannot be healed by other operators.";
                 EditorUtility.SetDirty(echosquire);
+            }
+
+            var qiFuFrames = new Sprite[8];
+            bool hasAllQiFuFrames = true;
+            for (int i = 0; i < qiFuFrames.Length; i++)
+            {
+                qiFuFrames[i] = LoadSprite("Qi_Fu_Sheet.png", $"Qi_Fu_Sheet_{i}");
+                hasAllQiFuFrames &= qiFuFrames[i] != null;
+            }
+
+            if (!hasAllQiFuFrames)
+            {
+                Debug.LogError("Qi_Fu_Sheet.png must contain the imported Qi_Fu_Sheet_0 through Qi_Fu_Sheet_7 sprites.");
+            }
+            else
+            {
+                var qiFuPrefab = CreateQiFuPrefab(qiFuFrames);
+                var qiFu = CreateOperator(
+                    "OP_Guard_QiFu",
+                    "Chi Paw",
+                    OperatorClass.Guard,
+                    OperatorPosition.Melee,
+                    OperatorRarity.Star1,
+                    hp: 140,
+                    atk: 65,
+                    def: 20,
+                    res: 0,
+                    blockCount: 2,
+                    range: 1,
+                    interval: 1.1f,
+                    dp: 10,
+                    new[] { new Vector2Int(1, 0) },
+                    qiFuFrames[0],
+                    qiFuPrefab);
+                qiFu.damageType = DamageType.Physical;
+                qiFu.roleTags = new[] { "Chi", "Knockback" };
+                qiFu.skillDescription = "Every fourth landed hit channels a green Chi Paw that pushes the enemy back one block.";
+                EditorUtility.SetDirty(qiFu);
             }
 
             // 2. Defender (Bulkhead)
@@ -397,6 +436,26 @@ namespace TrashTD.Editor
             go.AddComponent<EchosquireOperator>();
             var animation = go.AddComponent<OperatorSpriteAnimation>();
             animation.Configure(new[] { firstFrame, secondFrame });
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        private static GameObject CreateQiFuPrefab(Sprite[] frames)
+        {
+            const string prefabName = "Prefab_OP_QiFu";
+            string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            var go = new GameObject(prefabName);
+            var spriteRenderer = go.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = frames[0];
+            spriteRenderer.sortingOrder = 5;
+            go.AddComponent<QiFuOperator>();
+            var animation = go.AddComponent<OperatorSpriteAnimation>();
+            animation.Configure(frames);
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
             Object.DestroyImmediate(go);

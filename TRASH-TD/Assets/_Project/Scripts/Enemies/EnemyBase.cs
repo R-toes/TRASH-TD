@@ -30,6 +30,12 @@ namespace TrashTD.Enemies
         protected float currentMoveSpeed;
         private GridManager gridManager;
         private float trapDamageTimer;
+        private bool isPushingBack;
+        private Vector3 pushbackStartPosition;
+        private Vector3 pushbackTargetPosition;
+        private float pushbackElapsed;
+        private float pushbackDuration;
+        private int pushbackTargetPathIndex;
 
         // --- Pathfinding ---
         protected List<Vector3> path;
@@ -59,6 +65,7 @@ namespace TrashTD.Enemies
         public int CurrentRES => currentRES;
         public float CurrentMoveSpeed => currentMoveSpeed;
         public bool IsBlocked => isBlocked;
+        public bool IsPushingBack => isPushingBack;
         public bool IsDead => isDead;
         public bool IsFrozen => isFrozen;
         public float ChillAmount => chillAmount;
@@ -110,6 +117,8 @@ namespace TrashTD.Enemies
 
             isBlocked = false;
             blockingOperator = null;
+            isPushingBack = false;
+            pushbackElapsed = 0f;
             isDead = false;
             attackTimer = 0f;
             currentPathIndex = 0;
@@ -153,6 +162,10 @@ namespace TrashTD.Enemies
             {
                 // Attack the blocking operator while blocked
                 AttackBlocker();
+            }
+            else if (isPushingBack)
+            {
+                UpdatePushback();
             }
             else
             {
@@ -207,6 +220,109 @@ namespace TrashTD.Enemies
                 {
                     ReachExit();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Push this enemy backward along its route by the requested number of grid cells.
+        /// </summary>
+        public bool PushBack(int cells, float duration = 0.45f)
+        {
+            if (isDead || isPushingBack || gridManager == null || path == null || cells <= 0 || currentPathIndex <= 0)
+                return false;
+
+            float remainingDistance = gridManager.CellSize * cells;
+            if (remainingDistance <= 0f)
+                return false;
+
+            Vector3 startPosition = transform.position;
+            Vector3 pushedPosition;
+            int nextPathIndex;
+            bool moved;
+            Vector3 previousTargetPosition = startPosition;
+            bool hasPreviousTarget = false;
+            do
+            {
+                CalculatePushbackTarget(startPosition, remainingDistance, out pushedPosition, out nextPathIndex, out moved);
+                if (!moved)
+                    return false;
+
+                if (hasPreviousTarget && (pushedPosition - previousTargetPosition).sqrMagnitude <= Mathf.Epsilon)
+                    return false;
+
+                GridCell destinationCell = gridManager.GetCell(gridManager.WorldToGridPosition(pushedPosition));
+                if (destinationCell == null || !destinationCell.IsOccupied || destinationCell.OccupantOperator == null)
+                    break;
+
+                previousTargetPosition = pushedPosition;
+                hasPreviousTarget = true;
+                remainingDistance += gridManager.CellSize;
+            }
+            while (remainingDistance > 0f);
+
+            if (isBlocked && blockingOperator != null)
+                blockingOperator.ReleaseBlock(this);
+
+            pushbackStartPosition = transform.position;
+            pushbackTargetPosition = pushedPosition;
+            pushbackTargetPathIndex = nextPathIndex;
+            pushbackElapsed = 0f;
+            pushbackDuration = Mathf.Max(0.01f, duration);
+            isPushingBack = true;
+            return true;
+        }
+
+        private void CalculatePushbackTarget(
+            Vector3 startPosition,
+            float distance,
+            out Vector3 targetPosition,
+            out int targetPathIndex,
+            out bool moved)
+        {
+            targetPosition = startPosition;
+            targetPathIndex = currentPathIndex;
+            moved = false;
+            int waypointIndex = Mathf.Min(currentPathIndex - 1, path.Count - 1);
+
+            while (waypointIndex >= 0 && distance > 0f)
+            {
+                Vector3 waypoint = path[waypointIndex];
+                float segmentDistance = Vector3.Distance(targetPosition, waypoint);
+                if (segmentDistance <= Mathf.Epsilon)
+                {
+                    targetPathIndex = waypointIndex;
+                    waypointIndex--;
+                    continue;
+                }
+
+                if (segmentDistance >= distance)
+                {
+                    targetPosition = Vector3.MoveTowards(targetPosition, waypoint, distance);
+                    moved = true;
+                    distance = 0f;
+                }
+                else
+                {
+                    targetPosition = waypoint;
+                    distance -= segmentDistance;
+                    targetPathIndex = waypointIndex;
+                    waypointIndex--;
+                    moved = true;
+                }
+            }
+        }
+
+        private void UpdatePushback()
+        {
+            pushbackElapsed += Time.deltaTime;
+            float progress = Mathf.Clamp01(pushbackElapsed / pushbackDuration);
+            float easedProgress = Mathf.SmoothStep(0f, 1f, progress);
+            transform.position = Vector3.Lerp(pushbackStartPosition, pushbackTargetPosition, easedProgress);
+
+            if (progress >= 1f)
+            {
+                currentPathIndex = pushbackTargetPathIndex;
+                isPushingBack = false;
             }
         }
 
