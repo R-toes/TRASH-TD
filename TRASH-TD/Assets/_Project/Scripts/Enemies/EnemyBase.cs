@@ -425,7 +425,7 @@ namespace TrashTD.Enemies
             {
                 attackTimer = 0f;
                 MeleeSwipeVisual.Play(transform.position, blockingOperator.transform.position, new Color(1f, 0.35f, 0.25f, 1f));
-                blockingOperator.TryTakeAttackDamage(currentATK, data.damageType);
+                blockingOperator.TryTakeAttackDamage(currentATK, data.damageType, this);
             }
         }
 

@@ -17,11 +17,11 @@ MonoBehaviour:
   baseRarity: 1
   position: 0
   roleTags: []
-  baseHP: 200
+  baseHP: 150
   baseATK: 10
   baseDEF: 10
   baseRES: 0
-  blockCount: 2
+  blockCount: 3
   attackRange: 1
   attackInterval: 1
   rangePattern: []

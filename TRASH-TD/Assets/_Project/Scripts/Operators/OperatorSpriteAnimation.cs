@@ -81,7 +81,7 @@ namespace TrashTD.Operators
 
             Texture2D texture = spriteRenderer.sprite.texture;
             int frameCount = Mathf.RoundToInt((float)texture.width / texture.height);
-            if (texture.name.ToLowerInvariant().Contains("basurocket") || texture.name.ToLowerInvariant().Contains("progeny") || texture.name.ToLowerInvariant().Contains("stag-ger") || texture.name.ToLowerInvariant().Contains("stagger"))
+            if (texture.name.ToLowerInvariant().Contains("basurocket") || texture.name.ToLowerInvariant().Contains("progeny") || texture.name.ToLowerInvariant().Contains("stag-ger") || texture.name.ToLowerInvariant().Contains("stagger") || texture.name.ToLowerInvariant().Contains("thornchin"))
             {
                 frameCount = 4;
             }

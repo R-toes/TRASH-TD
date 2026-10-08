@@ -79,7 +79,8 @@ namespace TrashTD.Editor
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_NurseBot.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Bubblets.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Progeny.asset"),
-                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Stagger.asset")
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Stagger.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Defender_Thornchin.asset")
             };
 
             // Assign Tile Sprites
@@ -325,6 +326,25 @@ namespace TrashTD.Editor
                 mossmo.skillDescription =
                     "Passive - Symbiotic Spores: Mossmo does not attack. Every time he takes damage, he heals up to 2 operators in adjacent tiles (including himself).";
                 EditorUtility.SetDirty(mossmo);
+            }
+
+            // 2c. Defender (Thornchin)
+            var thornchinFrame0 = LoadSprite("Thornchin-Sheet.png", "Thornchin-Sheet_0");
+            var thornchinFrame1 = LoadSprite("Thornchin-Sheet.png", "Thornchin-Sheet_1");
+            var thornchinFrame2 = LoadSprite("Thornchin-Sheet.png", "Thornchin-Sheet_2");
+            var thornchinFrame3 = LoadSprite("Thornchin-Sheet.png", "Thornchin-Sheet_3");
+            if (thornchinFrame0 != null && thornchinFrame1 != null && thornchinFrame2 != null && thornchinFrame3 != null)
+            {
+                var thornchinFrames = new[] { thornchinFrame0, thornchinFrame1, thornchinFrame2, thornchinFrame3 };
+                var thornchinPrefab = CreateThornchinPrefab(thornchinFrames);
+                var thornchin = CreateOperator("OP_Defender_Thornchin", "Thornchin", OperatorClass.Defender, OperatorPosition.Melee, OperatorRarity.Star2,
+                    hp: 240, atk: 40, def: 36, res: 5, blockCount: 3, range: 0, interval: 1.4f, dp: 13,
+                    new[] { new Vector2Int(0, 0) },
+                    thornchinFrame0, thornchinPrefab);
+                thornchin.roleTags = new[] { "Defense", "Retaliation" };
+                thornchin.skillDescription =
+                    "Passive - Bristling Spines: Whenever Thornchin is attacked, it retaliates against the attacker with sharp urchin spines, dealing Physical damage equal to Thornchin's ATK.";
+                EditorUtility.SetDirty(thornchin);
             }
 
             // 3. Sniper (Deadeye)
@@ -618,6 +638,41 @@ namespace TrashTD.Editor
             spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
             spriteRenderer.sortingOrder = 5;
             go.AddComponent<StaggerOperator>();
+            var animation = go.AddComponent<OperatorSpriteAnimation>();
+            animation.Configure(frames);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        private static GameObject CreateThornchinPrefab(Sprite[] frames)
+        {
+            const string prefabName = "Prefab_OP_Defender_Thornchin";
+            string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null)
+            {
+                var existingAnim = existing.GetComponent<OperatorSpriteAnimation>();
+                if (existingAnim == null)
+                {
+                    existingAnim = existing.AddComponent<OperatorSpriteAnimation>();
+                }
+                existingAnim.Configure(frames);
+                var existingSr = existing.GetComponent<SpriteRenderer>();
+                if (existingSr != null && frames != null && frames.Length > 0 && frames[0] != null)
+                {
+                    existingSr.sprite = frames[0];
+                }
+                EditorUtility.SetDirty(existing);
+                return existing;
+            }
+
+            var go = new GameObject(prefabName);
+            var spriteRenderer = go.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
+            spriteRenderer.sortingOrder = 5;
+            go.AddComponent<ThornchinOperator>();
             var animation = go.AddComponent<OperatorSpriteAnimation>();
             animation.Configure(frames);
 

@@ -46,12 +46,12 @@ namespace TrashTD.Operators
         /// <summary>
         /// Defenders have a passive damage reduction bonus beyond their DEF stat.
         /// </summary>
-        public override void TakeDamage(int rawATK, Data.DamageType damageType)
+        public override void TakeDamage(int rawATK, Data.DamageType damageType, EnemyBase attacker = null)
         {
             // Defenders take slightly reduced damage as a class trait
             // TODO: Exact class trait bonus — not specified in GDD, using placeholder 10% reduction
             int reducedATK = Mathf.RoundToInt(rawATK * 0.9f);
-            base.TakeDamage(reducedATK, damageType);
+            base.TakeDamage(reducedATK, damageType, attacker);
         }
     }
 }

@@ -40,13 +40,13 @@ namespace TrashTD.Operators
             }
         }
 
-        public override void TakeDamage(int rawATK, DamageType damageType)
+        public override void TakeDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
         {
             if (currentHP <= 0 || rawATK <= 0) return;
 
             GridCell originCell = deployedCell;
             int hpBefore = currentHP;
-            base.TakeDamage(rawATK, damageType);
+            base.TakeDamage(rawATK, damageType, attacker);
             int hpAfter = currentHP;
 
             if (hpBefore > hpAfter && originCell != null && healCooldownTimer <= 0f)

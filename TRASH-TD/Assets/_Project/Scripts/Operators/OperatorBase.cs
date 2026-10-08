@@ -288,7 +288,7 @@ namespace TrashTD.Operators
         /// <summary>
         /// Take damage from an enemy or effect.
         /// </summary>
-        public virtual void TakeDamage(int rawATK, DamageType damageType)
+        public virtual void TakeDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
         {
             if (currentHP <= 0 || rawATK <= 0) return;
 
@@ -315,12 +315,12 @@ namespace TrashTD.Operators
             }
         }
 
-        public bool TryTakeAttackDamage(int rawATK, DamageType damageType)
+        public bool TryTakeAttackDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
         {
             if (!Combat.StageCombatModifiers.TryAttackHit(transform.position))
                 return false;
 
-            TakeDamage(rawATK, damageType);
+            TakeDamage(rawATK, damageType, attacker);
             return true;
         }
 

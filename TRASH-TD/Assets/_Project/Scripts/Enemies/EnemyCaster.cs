@@ -69,7 +69,7 @@ namespace TrashTD.Enemies
                     () =>
                     {
                         if (closest != null && closest.IsDeployed)
-                            closest.TryTakeAttackDamage(currentATK, data.damageType);
+                            closest.TryTakeAttackDamage(currentATK, data.damageType, this);
                     });
             }
         }

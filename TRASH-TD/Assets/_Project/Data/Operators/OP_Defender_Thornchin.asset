@@ -10,35 +10,36 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
-  m_Name: OP_Guard_Stagger
+  m_Name: OP_Defender_Thornchin
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
-  operatorName: Stag-ger
-  operatorClass: 0
+  operatorName: Thornchin
+  operatorClass: 1
   baseRarity: 2
   position: 0
   roleTags:
-  - Multi-Target
-  - Brawler
-  baseHP: 110
-  baseATK: 55
-  baseDEF: 22
-  baseRES: 0
-  blockCount: 2
-  attackRange: 1
-  attackInterval: 1.2
+  - Defense
+  - Retaliation
+  baseHP: 240
+  baseATK: 40
+  baseDEF: 36
+  baseRES: 5
+  blockCount: 3
+  attackRange: 0
+  attackInterval: 1.4
   rangePattern:
-  - {x: 1, y: 0}
+  - {x: 0, y: 0}
   damageType: 0
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Passive - Six-Limb Slugger: When attacking, strikes all blocked enemies (including enemies blocked by allies on its tile). '
+  skillDescription: 'Passive - Bristling Spines: Whenever Thornchin is attacked, it retaliates against the attacker with sharp urchin spines, dealing Physical damage equal to Thornchin''s ATK.'
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
   chillFreezeThreshold: 100
   chillFreezeDuration: 1.5
-  dpCost: 12
+  dpCost: 13
   redeployCooldown: 60
-  portrait: {fileID: -7339511831693593426, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
-  operatorPrefab: {fileID: 6120733290429841632, guid: c1d2e3f4a5b67890123456789abcdef0, type: 3}
+  portrait: {fileID: -5567693554339136048, guid: 729ff55dbb36a314f90b25846c7777e1, type: 3}
+  operatorPrefab: {fileID: 7120733290429841632, guid: e8f7a6b5c4d32109876543210abcdef2, type: 3}
+

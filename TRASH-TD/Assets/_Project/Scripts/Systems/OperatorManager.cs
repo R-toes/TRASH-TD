@@ -170,6 +170,10 @@ namespace TrashTD.Systems
             {
                 return obj.AddComponent<StaggerOperator>();
             }
+            if (opData != null && opData.operatorName == "Thornchin")
+            {
+                return obj.AddComponent<ThornchinOperator>();
+            }
 
             OperatorClass opClass = opData != null ? opData.operatorClass : OperatorClass.Guard;
             return opClass switch
