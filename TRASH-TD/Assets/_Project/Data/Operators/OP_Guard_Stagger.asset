@@ -10,33 +10,29 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
-  m_Name: OP_Medic_Progeny
+  m_Name: OP_Guard_Stagger
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
-  operatorName: Progeny
-  operatorClass: 4
+  operatorName: Stag-ger
+  operatorClass: 0
   baseRarity: 2
-  position: 1
+  position: 0
   roleTags:
-  - Chain Heal
-  - Support
-  baseHP: 95
-  baseATK: 35
-  baseDEF: 12
-  baseRES: 12
-  blockCount: 0
+  - Multi-Target
+  - Brawler
+  baseHP: 145
+  baseATK: 60
+  baseDEF: 22
+  baseRES: 0
+  blockCount: 2
   attackRange: 1
-  attackInterval: 1.8
+  attackInterval: 1.2
   rangePattern:
-  - {x: 0, y: 0}
   - {x: 1, y: 0}
-  - {x: -1, y: 0}
-  - {x: 0, y: 1}
-  - {x: 0, y: -1}
   damageType: 0
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Passive - Chain Heal: The Heal bounce between 2 operators, (Healing reduced by 50% when it bounces)'
+  skillDescription: 'Passive - Six-Limb Slugger: When attacking, strikes all blocked enemies on his tile and adjacent tiles simultaneously (including enemies blocked by allies on his sides or back). If no enemies are blocked, attacks a single target in range.'
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
@@ -44,5 +40,6 @@ MonoBehaviour:
   chillFreezeDuration: 1.5
   dpCost: 12
   redeployCooldown: 60
-  portrait: {fileID: -1862473255, guid: acf5107dd3f8262468847691f1ecffb8, type: 3}
-  operatorPrefab: {fileID: 5120733290429841632, guid: a1b2c3d4e5f67890123456789abcdef0, type: 3}
+  portrait: {fileID: -7339511831693593426, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
+  operatorPrefab: {fileID: 6120733290429841632, guid: c1d2e3f4a5b67890123456789abcdef0, type: 3}
+

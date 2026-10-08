@@ -166,6 +166,10 @@ namespace TrashTD.Systems
             {
                 return obj.AddComponent<BasurocketOperator>();
             }
+            if (opData != null && (opData.operatorName == "Stag-ger" || opData.operatorName == "Stagger"))
+            {
+                return obj.AddComponent<StaggerOperator>();
+            }
 
             OperatorClass opClass = opData != null ? opData.operatorClass : OperatorClass.Guard;
             return opClass switch

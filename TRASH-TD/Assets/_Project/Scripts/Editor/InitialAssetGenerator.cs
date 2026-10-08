@@ -78,7 +78,8 @@ namespace TrashTD.Editor
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Chillpath.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_NurseBot.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Bubblets.asset"),
-                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Progeny.asset")
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Progeny.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Stagger.asset")
             };
 
             // Assign Tile Sprites
@@ -262,6 +263,39 @@ namespace TrashTD.Editor
                 qiFu.roleTags = new[] { "Chi", "Knockback" };
                 qiFu.skillDescription = "Every fourth landed hit channels a green Chi Paw that pushes the enemy back one block.";
                 EditorUtility.SetDirty(qiFu);
+            }
+
+            // 1d. Guard (Stag-ger)
+            var staggerFrame0 = LoadSprite("Stag-ger-Sheet.png", "Stag-ger-Sheet_0");
+            var staggerFrame1 = LoadSprite("Stag-ger-Sheet.png", "Stag-ger-Sheet_1");
+            var staggerFrame2 = LoadSprite("Stag-ger-Sheet.png", "Stag-ger-Sheet_2");
+            var staggerFrame3 = LoadSprite("Stag-ger-Sheet.png", "Stag-ger-Sheet_3");
+            if (staggerFrame0 != null && staggerFrame1 != null && staggerFrame2 != null && staggerFrame3 != null)
+            {
+                var staggerFrames = new[] { staggerFrame0, staggerFrame1, staggerFrame2, staggerFrame3 };
+                var staggerPrefab = CreateStaggerPrefab(staggerFrames);
+                var stagger = CreateOperator(
+                    "OP_Guard_Stagger",
+                    "Stag-ger",
+                    OperatorClass.Guard,
+                    OperatorPosition.Melee,
+                    OperatorRarity.Star2,
+                    hp: 145,
+                    atk: 60,
+                    def: 22,
+                    res: 0,
+                    blockCount: 2,
+                    range: 1,
+                    interval: 1.2f,
+                    dp: 12,
+                    new[] { new Vector2Int(1, 0) },
+                    staggerFrame0,
+                    staggerPrefab);
+                stagger.damageType = DamageType.Physical;
+                stagger.roleTags = new[] { "Multi-Target", "Brawler" };
+                stagger.skillDescription =
+                    "Passive - Six-Limb Slugger: When attacking, strikes all blocked enemies on his tile and adjacent tiles simultaneously (including enemies blocked by allies on his sides or back). If no enemies are blocked, attacks a single target in range.";
+                EditorUtility.SetDirty(stagger);
             }
 
             // 2. Defender (Bulkhead)
@@ -549,6 +583,41 @@ namespace TrashTD.Editor
             spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
             spriteRenderer.sortingOrder = 5;
             go.AddComponent<ProgenyOperator>();
+            var animation = go.AddComponent<OperatorSpriteAnimation>();
+            animation.Configure(frames);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        private static GameObject CreateStaggerPrefab(Sprite[] frames)
+        {
+            const string prefabName = "Prefab_OP_Stagger";
+            string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null)
+            {
+                var existingAnim = existing.GetComponent<OperatorSpriteAnimation>();
+                if (existingAnim == null)
+                {
+                    existingAnim = existing.AddComponent<OperatorSpriteAnimation>();
+                }
+                existingAnim.Configure(frames);
+                var existingSr = existing.GetComponent<SpriteRenderer>();
+                if (existingSr != null && frames != null && frames.Length > 0 && frames[0] != null)
+                {
+                    existingSr.sprite = frames[0];
+                }
+                EditorUtility.SetDirty(existing);
+                return existing;
+            }
+
+            var go = new GameObject(prefabName);
+            var spriteRenderer = go.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
+            spriteRenderer.sortingOrder = 5;
+            go.AddComponent<StaggerOperator>();
             var animation = go.AddComponent<OperatorSpriteAnimation>();
             animation.Configure(frames);
 
