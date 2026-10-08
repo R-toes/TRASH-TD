@@ -15,10 +15,10 @@ MonoBehaviour:
   enemyName: Talon Rat
   archetype: 4
   movementType: 1
-  baseHP: 200
+  baseHP: 225
   baseATK: 30
   baseDEF: 60
-  baseRES: 20
+  baseRES: 35
   moveSpeed: 0.75
   damageType: 1
   attackInterval: 1
