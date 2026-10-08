@@ -8,6 +8,7 @@ using TrashTD.Enemies;
 using TrashTD.Operators;
 using TrashTD.Systems;
 using TrashTD.UI;
+using TrashTD.Development;
 
 namespace TrashTD.Core.GameLoop
 {
@@ -68,6 +69,8 @@ namespace TrashTD.Core.GameLoop
         private bool isPlacementPreviewActive;
         private bool isOperatorRangePreviewActive;
 
+        public bool IsSandbox => stageData != null && stageData.stageId == "SANDBOX";
+
         private void Awake()
         {
             if (gridManager == null) gridManager = FindFirstObjectByType<GridManager>() ?? gameObject.AddComponent<GridManager>();
@@ -88,6 +91,27 @@ namespace TrashTD.Core.GameLoop
             gameplayHudUI = FindFirstObjectByType<GameplayHUDUI>();
             difficulty = MainMenuController.ConsumePendingStageDifficulty(difficulty);
             stageData = MainMenuController.ConsumePendingStage(stageData);
+            if (stageData != null && stageData.stageId == "SANDBOX")
+            {
+                StageData stageOne = Resources.Load<StageData>("Stages/STAGE_01");
+                if (stageOne != null)
+                {
+                    // Work on a runtime copy so play mode doesn't overwrite the sandbox asset.
+                    stageData = Instantiate(stageData);
+                    stageData.gridWidth = stageOne.gridWidth;
+                    stageData.gridHeight = stageOne.gridHeight;
+                    stageData.tileLayout = stageOne.tileLayout;
+                    stageData.mapVisualSprite = stageOne.mapVisualSprite;
+                    stageData.backgroundVisualSprite = stageOne.backgroundVisualSprite;
+                    stageData.upperBackgroundVisualSprites = stageOne.upperBackgroundVisualSprites;
+                    stageData.foregroundVisualSprite = stageOne.foregroundVisualSprite;
+                    stageData.visualTilePixelSize = stageOne.visualTilePixelSize;
+                    stageData.visualTileOffset = stageOne.visualTileOffset;
+                    stageData.spawnPoints = stageOne.spawnPoints;
+                    stageData.exitPoints = stageOne.exitPoints;
+                    stageData.enemyPaths = stageOne.enemyPaths;
+                }
+            }
             TrashTD.Combat.StageCombatModifiers.ConfigureForStage(stageData);
 
             if (stageData == null)
@@ -131,6 +155,11 @@ namespace TrashTD.Core.GameLoop
                 }
             }
 #endif
+            if (IsSandbox && operatorManager != null)
+            {
+                operatorManager.SquadLimit = int.MaxValue;
+            }
+
             if (operatorPool != null && operatorPool.Count > 0)
             {
                 cardDraftSystem.SetOperatorPool(operatorPool);
@@ -152,6 +181,13 @@ namespace TrashTD.Core.GameLoop
 
             // 6. Start Stage (enters CardPick phase, which shows the CardDraftOverlayUI)
             gameManager.StartStage(stageData, difficulty);
+
+            if (stageData.stageId == "SANDBOX")
+            {
+                operatorManager.SquadLimit = int.MaxValue;
+                FindFirstObjectByType<CardDraftOverlayUI>()?.HideForSandbox();
+                gameObject.AddComponent<SandboxController>().Initialize(this);
+            }
         }
 
         private void SpawnVisualGridTiles()
@@ -342,7 +378,7 @@ namespace TrashTD.Core.GameLoop
         public void BeginOperatorPlacement(DraftCard card, Vector2Int gridPosition)
         {
             if (card == null || card.operatorData == null || gridManager == null ||
-                gameManager == null || gameManager.CurrentPhase != StagePhase.Preparation ||
+                gameManager == null || (!IsSandbox && gameManager.CurrentPhase != StagePhase.Preparation) ||
                 !gridManager.IsInBounds(gridPosition)) return;
 
             bool continuingPlacement = isPlacementPreviewActive && ReferenceEquals(pendingDeployCard, card);
@@ -374,7 +410,7 @@ namespace TrashTD.Core.GameLoop
         {
             if (!isPlacementPreviewActive || pendingDeployCard == null) return;
 
-            if (operatorManager == null || operatorManager.IsAtSquadLimit)
+            if (operatorManager == null || (!IsSandbox && operatorManager.IsAtSquadLimit))
             {
                 RefreshPlacementPreview();
                 return;
@@ -430,7 +466,7 @@ namespace TrashTD.Core.GameLoop
                 return;
             }
 
-            bool isPreparing = gameManager.CurrentPhase == StagePhase.Preparation;
+            bool isPreparing = IsSandbox || gameManager.CurrentPhase == StagePhase.Preparation;
             if (!isPreparing && isPlacementPreviewActive)
             {
                 pendingDeployCard = null;

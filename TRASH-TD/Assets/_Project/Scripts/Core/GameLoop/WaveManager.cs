@@ -25,6 +25,7 @@ namespace TrashTD.Core.GameLoop
         private int currentWaveIndex = -1;
         private bool isSpawningWave = false;
         private bool allWavesSpawned = false;
+        private bool sandboxMode;
         private int difficultyLevel = 1;
 
         // Cached paths: [spawnIndex, exitIndex, movementType]
@@ -35,11 +36,110 @@ namespace TrashTD.Core.GameLoop
         public bool IsActive { get; private set; } = false;
         public bool IsWaveInProgress { get; private set; } = false;
 
+        // ========================
+        // Sandbox (QA stage only)
+        // ========================
+
+        /// <summary>Gap between queued sandbox enemies; matches the authored stage spawn cadence.</summary>
+        private const float SandboxSpawnInterval = 2f;
+        private int sandboxWaveCount;
+
+        public int SandboxWaveNumber => sandboxWaveCount;
+
+        /// <summary>
+        /// Sandbox only: starts a wave that deploys the queued enemies one after another through the
+        /// same entry/interval spawning used by authored waves. The wave stays active (so enemies can
+        /// be spawned on demand) until <see cref="EndSandboxWave"/> is called.
+        /// </summary>
+        public bool StartSandboxWave(IReadOnlyList<EnemyData> queuedEnemies)
+        {
+            if (!sandboxMode || IsWaveInProgress) return false;
+
+            sandboxWaveCount++;
+            IsWaveInProgress = true;
+            OnWaveStarted?.Invoke(sandboxWaveCount, 0);
+
+            WaveData wave = BuildSandboxWave(queuedEnemies);
+            if (wave.entries.Length > 0)
+            {
+                StartCoroutine(SpawnWaveEntriesRoutine(wave));
+            }
+            return true;
+        }
+
+        private static WaveData BuildSandboxWave(IReadOnlyList<EnemyData> queuedEnemies)
+        {
+            var entries = new List<WaveEntry>();
+            float startDelay = 0f;
+            if (queuedEnemies != null)
+            {
+                for (int i = 0; i < queuedEnemies.Count; i++)
+                {
+                    EnemyData data = queuedEnemies[i];
+                    if (data == null) continue;
+
+                    // Consecutive copies of one enemy share an entry, like authored waves.
+                    WaveEntry last = entries.Count > 0 ? entries[entries.Count - 1] : null;
+                    if (last != null && last.enemyData == data)
+                    {
+                        last.count++;
+                    }
+                    else
+                    {
+                        entries.Add(new WaveEntry
+                        {
+                            enemyData = data,
+                            count = 1,
+                            spawnInterval = SandboxSpawnInterval,
+                            startDelay = startDelay,
+                            spawnPointIndex = 0
+                        });
+                    }
+                    startDelay += SandboxSpawnInterval;
+                }
+            }
+
+            return new WaveData { waveName = "Sandbox Wave", preWaveDelay = 0f, entries = entries.ToArray() };
+        }
+
+        /// <summary>Sandbox only: spawns one enemy immediately while a wave is active.</summary>
+        public bool SpawnSandboxEnemyNow(EnemyData enemyData)
+        {
+            if (!sandboxMode || !IsWaveInProgress || enemyData == null || enemyManager == null) return false;
+            if (!TryGetPath(0, enemyData, out List<Vector3> path)) return false;
+            return enemyManager.SpawnEnemy(enemyData, path, difficultyLevel) != null;
+        }
+
+        /// <summary>Sandbox only: cancels any pending spawns and kills every active enemy.</summary>
+        public void EndSandboxWave()
+        {
+            if (!sandboxMode || !IsWaveInProgress) return;
+
+            // Entry spawns run as separate coroutines, so stopping only the parent would leave them spawning.
+            StopAllCoroutines();
+            enemyManager?.ClearAllForSandbox();
+            IsWaveInProgress = false;
+
+            OperatorManager.Instance?.AdvanceRedeployCooldownsOneRound();
+            PlayerDeck.Instance?.AdvanceRedeployCooldownsOneRound();
+        }
+
+        private bool TryGetPath(int spawnIndex, EnemyData enemyData, out List<Vector3> path)
+        {
+            if (pathCache.TryGetValue(GetPathKey(spawnIndex, enemyData.movementType), out path) && path != null && path.Count > 0)
+                return true;
+
+            Debug.LogWarning($"WaveManager: No {enemyData.movementType} path from spawn point {spawnIndex}; '{enemyData.enemyName}' was not spawned.");
+            return false;
+        }
+
         public event Action<int, int> OnWaveStarted;    // (currentWave, totalWaves)
         public event Action<int> OnWaveCompleted;        // (waveIndex)
         public event Action OnAllWavesCleared;
         /// <summary>Fired when a single wave's enemies are all defeated (for phase loop).</summary>
         public event Action OnSingleWaveFinished;
+
+        public bool IsSandboxMode => sandboxMode;
 
         private void Awake()
         {
@@ -75,6 +175,7 @@ namespace TrashTD.Core.GameLoop
             PrecomputePaths(stageData);
 
             IsActive = true;
+            sandboxMode = stageData != null && stageData.stageId == "SANDBOX";
         }
 
         private void PrecomputePaths(StageData stageData)
@@ -296,8 +397,7 @@ namespace TrashTD.Core.GameLoop
                 yield return new WaitForSeconds(entry.startDelay);
             }
 
-            string pathKey = GetPathKey(entry.spawnPointIndex, entry.enemyData.movementType);
-            if (!pathCache.TryGetValue(pathKey, out var path) || path == null || path.Count == 0)
+            if (!TryGetPath(entry.spawnPointIndex, entry.enemyData, out var path))
             {
                 yield break;
             }

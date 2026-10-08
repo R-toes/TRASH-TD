@@ -257,6 +257,14 @@ namespace TrashTD.Enemies
         }
 
         /// <summary>
+        /// Kill immediately without going through damage (sandbox wave clears).
+        /// </summary>
+        public void ForceKill()
+        {
+            if (!isDead) Die();
+        }
+
+        /// <summary>
         /// Handle enemy death.
         /// </summary>
         protected virtual void Die()

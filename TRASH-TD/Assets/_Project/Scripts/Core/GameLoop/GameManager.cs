@@ -62,6 +62,8 @@ namespace TrashTD.Core.GameLoop
         public float ElapsedTime => elapsedTime;
         public GamePlayState CurrentState => currentState;
         public float GameSpeed { get; private set; } = 1f;
+        /// <summary>QA sandbox stage: leaks never cost lives and the stage can't be lost.</summary>
+        public bool IsSandbox => currentStage != null && currentStage.stageId == "SANDBOX";
 
         // --- Phase ---
         private StagePhase currentPhase = StagePhase.CardPick;
@@ -182,7 +184,7 @@ namespace TrashTD.Core.GameLoop
             elapsedTime += Time.deltaTime;
 
             // Optional stage timer check
-            if (currentStage != null && currentStage.timeLimit > 0f && elapsedTime >= currentStage.timeLimit)
+            if (!IsSandbox && currentStage != null && currentStage.timeLimit > 0f && elapsedTime >= currentStage.timeLimit)
             {
                 TriggerDefeat();
             }
@@ -231,7 +233,7 @@ namespace TrashTD.Core.GameLoop
 
         private void HandleEnemyReachedExit(EnemyBase enemy)
         {
-            if (currentState != GamePlayState.Playing) return;
+            if (currentState != GamePlayState.Playing || IsSandbox) return;
 
             leakedAnyEnemy = true;
             int cost = (enemy != null && enemy.Data != null) ? enemy.Data.lifePointCost : 1;
@@ -246,6 +248,7 @@ namespace TrashTD.Core.GameLoop
 
         public void TriggerDefeat()
         {
+            if (IsSandbox) return;
             if (currentState == GamePlayState.Defeat || currentState == GamePlayState.Victory) return;
 
             SetState(GamePlayState.Defeat);

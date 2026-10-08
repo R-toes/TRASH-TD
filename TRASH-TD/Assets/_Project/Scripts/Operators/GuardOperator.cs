@@ -223,7 +223,8 @@ namespace TrashTD.Operators
                     for (int i = 0; i < candidates.Count; i++)
                     {
                         var enemy = candidates[i];
-                        if (enemy != null && !enemy.IsDead && enemy.CurrentHP < lowestHPValue)
+                        // Skip flyers melee guards can't reach so they don't lock onto them over ground enemies.
+                        if (enemy != null && CanAttackTarget(enemy) && enemy.CurrentHP < lowestHPValue)
                         {
                             lowestHP = enemy;
                             lowestHPValue = enemy.CurrentHP;

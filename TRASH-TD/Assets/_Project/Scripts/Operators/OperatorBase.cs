@@ -264,11 +264,19 @@ namespace TrashTD.Operators
             {
                 attackTimer = 0f;
                 currentTarget = FindTarget();
-                if (currentTarget != null)
+                if (currentTarget != null && CanAttackTarget(currentTarget))
                 {
                     Attack(currentTarget);
                 }
             }
+        }
+
+        protected virtual bool CanAttackTarget(EnemyBase target)
+        {
+            if (target == null || target.IsDead) return false;
+            return target.MovementType != EnemyMovementType.Air ||
+                   data.position == OperatorPosition.Ranged ||
+                   data.operatorClass == OperatorClass.Caster;
         }
 
         // ========================

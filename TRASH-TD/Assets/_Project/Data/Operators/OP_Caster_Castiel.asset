@@ -41,7 +41,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: Continuous light magic laser that locks onto one target. Damage ticks every 0.375 seconds and increases every 1.5 seconds from 5 to 15, 30, 80, then 100.
+  skillDescription: Continuous light magic laser that locks onto one target. Damage ticks every 0.375 seconds and increases every 1.5 seconds from 5 to 15, 30, 80, 100, then 150.
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5

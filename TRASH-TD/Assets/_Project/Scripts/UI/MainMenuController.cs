@@ -21,6 +21,7 @@ namespace TrashTD.UI
         private const string SecondPlayableStageId = "STAGE_02";
         private const string ThirdPlayableStageId = "STAGE_03";
         private const string SixthPlayableStageId = "STAGE_06";
+        private const string SandboxStageId = "SANDBOX";
         private const string GameplaySceneName = "GameplayTest";
         private const float EntranceDuration = 0.45f;
 
@@ -29,7 +30,8 @@ namespace TrashTD.UI
             return stageId == FirstPlayableStageId
                 || stageId == SecondPlayableStageId
                 || stageId == ThirdPlayableStageId
-                || stageId == SixthPlayableStageId;
+                || stageId == SixthPlayableStageId
+                || stageId == SandboxStageId;
         }
 
         // ── Palette ──────────────────────────────────────────
@@ -648,6 +650,7 @@ namespace TrashTD.UI
             {
                 "Stage 1", "Stage 2", "Stage 3",
                 "Stage 4", "Stage 5", "Stage 6"
+                , "QA Sandbox"
             };
 
             string[] stageDescriptions = new[]
@@ -657,12 +660,13 @@ namespace TrashTD.UI
                 "Secure the scrapline junction.",
                 "Reclaim the ruined market district.",
                 "Push through the cinder dump.",
-                "Take back the clockwork quarry."
+                "Take back the clockwork quarry.",
+                "Development-only map for enemy and operator testing."
             };
 
             for (int i = 0; i < stageNames.Length; i++)
             {
-                string id = "STAGE_0" + (i + 1);
+                string id = i < 6 ? "STAGE_0" + (i + 1) : SandboxStageId;
                 var stage = Resources.Load<StageData>("Stages/" + id);
                 if (stage == null)
                 {
