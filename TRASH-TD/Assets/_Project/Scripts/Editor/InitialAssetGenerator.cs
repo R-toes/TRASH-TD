@@ -159,13 +159,23 @@ namespace TrashTD.Editor
             sr.sortingOrder = 5;
 
             // Add corresponding class component
-            switch (opClass)
+            if (prefabName == "Prefab_OP_Bulkhead") go.AddComponent<BulkheadOperator>();
+            else if (prefabName == "Prefab_OP_Deadeye") go.AddComponent<DeadeyeOperator>();
+            else if (prefabName == "Prefab_OP_Pyrolite") go.AddComponent<PyroliteOperator>();
+            else if (prefabName == "Prefab_OP_Chillpath") go.AddComponent<ChillpathOperator>();
+            else if (prefabName == "Prefab_OP_Coalesce") go.AddComponent<CoalesceOperator>();
+            else if (prefabName == "Prefab_OP_Scrapper") go.AddComponent<ScrapperOperator>();
+            else if (prefabName == "Prefab_OP_Proxishot") go.AddComponent<ProxishotOperator>();
+            else
             {
-                case OperatorClass.Guard: go.AddComponent<GuardOperator>(); break;
-                case OperatorClass.Defender: go.AddComponent<DefenderOperator>(); break;
-                case OperatorClass.Sniper: go.AddComponent<SniperOperator>(); break;
-                case OperatorClass.Caster: go.AddComponent<CasterOperator>(); break;
-                case OperatorClass.Medic: go.AddComponent<MedicOperator>(); break;
+                switch (opClass)
+                {
+                    case OperatorClass.Guard: go.AddComponent<GuardOperator>(); break;
+                    case OperatorClass.Defender: go.AddComponent<DefenderOperator>(); break;
+                    case OperatorClass.Sniper: go.AddComponent<SniperOperator>(); break;
+                    case OperatorClass.Caster: go.AddComponent<CasterOperator>(); break;
+                    case OperatorClass.Medic: go.AddComponent<MedicOperator>(); break;
+                }
             }
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
@@ -206,10 +216,12 @@ namespace TrashTD.Editor
             var scrapperFrame1 = LoadSprite("Scrapper-Sheet.png", "Scrapper-Sheet_1") ?? LoadSprite("Scrapper-Sheet.png", "Scrapper_1");
             var scrapperFrames = scrapperFrame1 != null ? new[] { scrapperFrame0, scrapperFrame1 } : new[] { scrapperFrame0 };
             var guardPrefab = CreateScrapperPrefab(scrapperFrames);
-            CreateOperator("OP_Guard_Scrapper", "Scrapper", OperatorClass.Guard, OperatorPosition.Melee, OperatorRarity.Star1,
+            var scrapper = CreateOperator("OP_Guard_Scrapper", "Scrapper", OperatorClass.Guard, OperatorPosition.Melee, OperatorRarity.Star1,
                 hp: 140, atk: 85, def: 20, res: 0, blockCount: 1, range: 2, interval: 1.1f, dp: 10,
                 new[] { new Vector2Int(1, 0), new Vector2Int(2, 0) },
                 scrapperFrame0, guardPrefab);
+            scrapper.skillDescription = "When attacking, has a 20% chance to Stun the target for 2 seconds.";
+            EditorUtility.SetDirty(scrapper);
 
             var echosquireFrameOne = LoadSprite("Echosquire-Sheet.png", "Echosquire-Sheet_0");
             var echosquireFrameTwo = LoadSprite("Echosquire-Sheet.png", "Echosquire-Sheet_1");
@@ -317,10 +329,12 @@ namespace TrashTD.Editor
             // 2. Defender (Bulkhead)
             var defenderSprite = LoadSprite("tex_op_defender.png");
             var defenderPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Bulkhead", defenderSprite, OperatorClass.Defender);
-            CreateOperator("OP_Defender_Bulkhead", "Bulkhead", OperatorClass.Defender, OperatorPosition.Melee, OperatorRarity.Star1,
+            var bulkhead = CreateOperator("OP_Defender_Bulkhead", "Bulkhead", OperatorClass.Defender, OperatorPosition.Melee, OperatorRarity.Star1,
                 hp: 280, atk: 35, def: 45, res: 10, blockCount: 3, range: 1, interval: 1.4f, dp: 14,
                 new[] { new Vector2Int(0, 0), new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1) },
                 defenderSprite, defenderPrefab);
+            bulkhead.skillDescription = "When blocking 3 enemies, increases ATK by 20% but decreases DEF by 20%.";
+            EditorUtility.SetDirty(bulkhead);
 
             // 2b. Defender (Mossmo)
             var mossmoFrameOne = LoadSprite("Mossmo-Sheet.png", "Mossmo-Sheet_0");
@@ -365,7 +379,7 @@ namespace TrashTD.Editor
             // 3. Sniper (Deadeye)
             var sniperSprite = LoadSprite("Deadeye-Sheet.png", "Deadeye-Sheet_0") ?? LoadSprite("tex_op_sniper.png");
             var sniperPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Deadeye", sniperSprite, OperatorClass.Sniper);
-            CreateOperator("OP_Sniper_Deadeye", "Deadeye", OperatorClass.Sniper, OperatorPosition.Ranged, OperatorRarity.Star1,
+            var deadeye = CreateOperator("OP_Sniper_Deadeye", "Deadeye", OperatorClass.Sniper, OperatorPosition.Ranged, OperatorRarity.Star1,
                 hp: 85, atk: 90, def: 8, res: 0, blockCount: 0, range: 3, interval: 1.0f, dp: 11,
                 new[]
                 {
@@ -374,6 +388,8 @@ namespace TrashTD.Editor
                     new Vector2Int(1, -1), new Vector2Int(2, -1)
                 },
                 sniperSprite, sniperPrefab);
+            deadeye.skillDescription = "Increases damage by 20% but also increases attack interval by 20% against flying enemies.";
+            EditorUtility.SetDirty(deadeye);
 
             // 3b. Sniper (Basurocket)
             var basuFrame0 = LoadSprite("Basurocket-sheet.png", "Basurocket-sheet_0");
@@ -411,6 +427,7 @@ namespace TrashTD.Editor
                 },
                 casterSprite, casterPrefab);
             caster.damageType = DamageType.Arts;
+            caster.skillDescription = "Increases damage by 3% per enemy in range (stacks up to 5 times). Deals AoE Arts damage.";
             EditorUtility.SetDirty(caster);
 
             // 5. Medic (Coalesce)
@@ -422,7 +439,7 @@ namespace TrashTD.Editor
                 ? new[] { coalesceFrame0, coalesceFrame1, coalesceFrame2, coalesceFrame3 }
                 : (coalesceFrame0 != null ? new[] { coalesceFrame0 } : null);
             var coalescePrefab = CreateCoalescePrefab(coalesceFrames);
-            CreateOperator("OP_Medic_Coalesce", "Coalesce", OperatorClass.Medic, OperatorPosition.Ranged, OperatorRarity.Star1,
+            var coalesce = CreateOperator("OP_Medic_Coalesce", "Coalesce", OperatorClass.Medic, OperatorPosition.Ranged, OperatorRarity.Star1,
                 hp: 90, atk: 55, def: 12, res: 15, blockCount: 0, range: 2, interval: 1.8f, dp: 12,
                 new[]
                 {
@@ -432,6 +449,8 @@ namespace TrashTD.Editor
                     new Vector2Int(1, 1), new Vector2Int(-1, -1)
                 },
                 coalesceFrame0 ?? LoadSprite("tex_op_medic.png"), coalescePrefab);
+            coalesce.skillDescription = "Healing an operator with HP below 30% has a 20% chance to trigger an extra healing.";
+            EditorUtility.SetDirty(coalesce);
 
             // 5b. Medic (Bubblets)
             var bubbletsFrameOne = LoadSprite("Bubblets-Sheet.png", "Bubblets-Sheet_0");
@@ -728,7 +747,7 @@ namespace TrashTD.Editor
             var spriteRenderer = go.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
             spriteRenderer.sortingOrder = 5;
-            go.AddComponent<GuardOperator>();
+            go.AddComponent<ScrapperOperator>();
             var animation = go.AddComponent<OperatorSpriteAnimation>();
             animation.Configure(frames);
 
@@ -763,7 +782,7 @@ namespace TrashTD.Editor
             var spriteRenderer = go.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
             spriteRenderer.sortingOrder = 5;
-            go.AddComponent<MedicOperator>();
+            go.AddComponent<CoalesceOperator>();
             var animation = go.AddComponent<OperatorSpriteAnimation>();
             animation.Configure(frames);
 

@@ -27,7 +27,7 @@ namespace TrashTD.Operators
 
             // Heal timing (uses attackInterval as heal tick interval)
             attackTimer += Time.deltaTime;
-            if (attackTimer >= Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval))
+            if (attackTimer >= GetAttackInterval())
             {
                 attackTimer = 0f;
                 OperatorBase healTarget = FindHealTarget();

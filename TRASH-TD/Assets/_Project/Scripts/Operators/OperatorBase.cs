@@ -47,8 +47,8 @@ namespace TrashTD.Operators
         public GridCell DeployedCell => deployedCell;
         public int CurrentHP => currentHP;
         public int MaxHP => maxHP;
-        public int CurrentATK => currentATK;
-        public int CurrentDEF => currentDEF;
+        public virtual int CurrentATK => currentATK;
+        public virtual int CurrentDEF => currentDEF;
         public int CurrentRES => currentRES;
         public OperatorRarity CurrentRarity => currentRarity;
         public OperatorFacing Facing => facing;
@@ -184,7 +184,7 @@ namespace TrashTD.Operators
         {
             if (target == null || target.IsDead) return;
 
-            int damage = Combat.DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
+            int damage = Combat.DamageCalculator.CalculateDamage(CurrentATK, GetTargetMitigation(target));
             target.TryTakeAttackDamage(damage, data.damageType);
         }
 
@@ -207,7 +207,7 @@ namespace TrashTD.Operators
         }
 
         public Vector2Int[] GetRangePattern() => data.rangePattern;
-        public float GetAttackInterval() => Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval);
+        public virtual float GetAttackInterval() => Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval);
         public DamageType GetDamageType() => data.damageType;
 
         /// <summary>
@@ -274,7 +274,7 @@ namespace TrashTD.Operators
 
             // Attack timing
             attackTimer += Time.deltaTime;
-            if (attackTimer >= Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval))
+            if (attackTimer >= GetAttackInterval())
             {
                 attackTimer = 0f;
                 currentTarget = FindTarget();
@@ -318,7 +318,7 @@ namespace TrashTD.Operators
                 return;
             }
 
-            int mitigation = damageType == DamageType.Physical ? currentDEF : currentRES;
+            int mitigation = damageType == DamageType.Physical ? CurrentDEF : currentRES;
             int damage = Combat.DamageCalculator.CalculateDamage(rawATK, mitigation);
             int previousHP = currentHP;
             currentHP = Mathf.Max(0, currentHP - damage);

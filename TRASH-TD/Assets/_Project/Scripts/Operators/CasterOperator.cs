@@ -97,21 +97,29 @@ namespace TrashTD.Operators
                 () => ApplyArtsImpact(target));
         }
 
-        private void ApplyChillImpact(EnemyBase target)
+        protected virtual float GetDamageMultiplier() => 1f;
+
+        protected virtual void ApplyChillImpact(EnemyBase target)
         {
             if (target == null || target.IsDead) return;
 
-            int chillDamage = DamageCalculator.CalculateDamage(currentATK, target.CurrentRES);
+            int chillDamage = DamageCalculator.CalculateDamage(Mathf.RoundToInt(currentATK * GetDamageMultiplier()), target.CurrentRES);
             if (!target.TryTakeAttackDamage(chillDamage, DamageType.Arts, this)) return;
-            target.ApplyChill(data.chillPerHit, data.chillSlowMultiplier, data.chillSlowDuration,
+            bool didFreeze = target.ApplyChill(data.chillPerHit, data.chillSlowMultiplier, data.chillSlowDuration,
                 data.chillFreezeThreshold, data.chillFreezeDuration);
+            if (didFreeze)
+            {
+                OnFreezeApplied(target);
+            }
         }
 
-        private void ApplyArtsImpact(EnemyBase target)
+        protected virtual void OnFreezeApplied(EnemyBase target) { }
+
+        protected virtual void ApplyArtsImpact(EnemyBase target)
         {
             if (target == null || target.IsDead) return;
 
-            int primaryATK = GetArmorAdjustedAttack(currentATK, target);
+            int primaryATK = Mathf.RoundToInt(GetArmorAdjustedAttack(currentATK, target) * GetDamageMultiplier());
             target.TryTakeAttackDamage(
                 DamageCalculator.CalculateDamage(primaryATK, target.CurrentRES),
                 DamageType.Arts,
@@ -122,7 +130,7 @@ namespace TrashTD.Operators
             AoeBlastVisual.PlayCircle(target.transform.position, splashRadius, new Color(0.74f, 0.38f, 1f, 0.5f));
 
             var splashTargets = EnemyManager.Instance.GetEnemiesInRadius(target.transform.position, splashRadius, data.position);
-            int secondaryAtk = Mathf.RoundToInt(currentATK * splashDamageRatio);
+            int secondaryAtk = Mathf.RoundToInt(currentATK * splashDamageRatio * GetDamageMultiplier());
             for (int i = 0; i < splashTargets.Count; i++)
             {
                 var splashTarget = splashTargets[i];

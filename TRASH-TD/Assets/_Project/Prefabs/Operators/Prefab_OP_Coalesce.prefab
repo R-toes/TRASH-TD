@@ -101,9 +101,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 6549728481407477408}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6489fb480d31d7b4c86ef70b6fb3cb9c, type: 3}
+  m_Script: {fileID: 11500000, guid: e555c2291b794afeac36bb78838e5763, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.MedicOperator
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.CoalesceOperator
   data: {fileID: 0}
 --- !u!114 &7058294136912038843
 MonoBehaviour:

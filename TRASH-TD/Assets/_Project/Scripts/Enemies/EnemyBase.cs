@@ -66,9 +66,11 @@ namespace TrashTD.Enemies
         private float chillAmount;
         private float slowTimer;
         private float freezeTimer;
+        private float stunTimer;
         private float speedBeforeChill;
         private float chillSlowMultiplier = 1f;
         private bool isFrozen;
+        private bool isStunned;
         private SpriteRenderer[] animationRenderers;
         private int animationFrameIndex;
         private float animationFrameTimer;
@@ -87,6 +89,7 @@ namespace TrashTD.Enemies
         public bool IsPushingBack => isPushingBack;
         public bool IsDead => isDead;
         public bool IsFrozen => isFrozen;
+        public bool IsStunned => isStunned;
         public float ChillAmount => chillAmount;
         public EnemyMovementType MovementType => data.movementType;
         public float DistanceToGoal
@@ -132,9 +135,11 @@ namespace TrashTD.Enemies
             chillAmount = 0f;
             slowTimer = 0f;
             freezeTimer = 0f;
+            stunTimer = 0f;
             speedBeforeChill = currentMoveSpeed;
             chillSlowMultiplier = 1f;
             isFrozen = false;
+            isStunned = false;
             CacheChillRenderers();
             UpdateChillVisual();
 
@@ -181,7 +186,7 @@ namespace TrashTD.Enemies
             if (isDead) return;
 
             UpdateChillStatus(Time.deltaTime);
-            if (isFrozen) return;
+            if (isFrozen || isStunned) return;
 
             if (isBlocked)
             {
@@ -209,7 +214,7 @@ namespace TrashTD.Enemies
             if (isDead) return;
 
             UpdateChillStatus(deltaTime);
-            if (isFrozen) return;
+            if (isFrozen || isStunned) return;
 
             if (isPushingBack)
             {
@@ -783,7 +788,7 @@ namespace TrashTD.Enemies
         /// <summary>
         /// Applies a timed movement slow and accumulates chill toward a temporary freeze.
         /// </summary>
-        public void ApplyChill(
+        public bool ApplyChill(
             float amount,
             float slowMultiplier,
             float slowDuration,
@@ -791,7 +796,7 @@ namespace TrashTD.Enemies
             float freezeDuration)
         {
             if (isDead || data == null || amount <= 0f || slowDuration <= 0f || freezeThreshold <= 0f)
-                return;
+                return false;
 
             if (slowTimer <= 0f && !isFrozen)
             {
@@ -805,6 +810,7 @@ namespace TrashTD.Enemies
                 currentMoveSpeed = speedBeforeChill * chillSlowMultiplier;
             }
 
+            bool triggeredFreeze = false;
             chillAmount += amount;
             if (chillAmount >= freezeThreshold && freezeDuration > 0f)
             {
@@ -812,6 +818,25 @@ namespace TrashTD.Enemies
                 isFrozen = true;
                 freezeTimer = Mathf.Max(freezeTimer, freezeDuration);
                 currentMoveSpeed = 0f;
+                triggeredFreeze = true;
+            }
+
+            UpdateChillVisual();
+            return triggeredFreeze;
+        }
+
+        /// <summary>
+        /// Applies a stun to this enemy, completely stopping its movement and attacks for the given duration.
+        /// </summary>
+        public void ApplyStun(float duration)
+        {
+            if (isDead || duration <= 0f) return;
+
+            stunTimer = Mathf.Max(stunTimer, duration);
+            if (!isStunned)
+            {
+                isStunned = true;
+                Combat.FloatingCombatNumber.ShowText(transform.position, "STUNNED!", new Color(1f, 0.9f, 0.2f));
             }
 
             UpdateChillVisual();
@@ -836,7 +861,16 @@ namespace TrashTD.Enemies
                 }
             }
 
-            if (!isFrozen)
+            if (stunTimer > 0f)
+            {
+                stunTimer = Mathf.Max(0f, stunTimer - deltaTime);
+                if (stunTimer <= 0f)
+                {
+                    isStunned = false;
+                }
+            }
+
+            if (!isFrozen && !isStunned)
             {
                 if (slowTimer > 0f)
                 {
@@ -866,14 +900,16 @@ namespace TrashTD.Enemies
         {
             if (chillRenderers == null || originalRendererColors == null) return;
 
-            float tintAmount = isFrozen ? 0.95f : slowTimer > 0f ? 0.8f : 0f;
+            float tintAmount = isFrozen ? 0.95f : isStunned ? 0.85f : slowTimer > 0f ? 0.8f : 0f;
             for (int i = 0; i < chillRenderers.Length; i++)
             {
                 if (chillRenderers[i] == null) continue;
 
                 Color original = originalRendererColors[i];
-                Color chilled = new Color(0.1f, 0.6f, 1f, original.a);
-                chillRenderers[i].color = Color.Lerp(original, chilled, tintAmount);
+                Color effectColor = isStunned
+                    ? new Color(1f, 0.9f, 0.15f, original.a)
+                    : new Color(0.1f, 0.6f, 1f, original.a);
+                chillRenderers[i].color = Color.Lerp(original, effectColor, tintAmount);
             }
         }
     }

@@ -35,7 +35,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: Deals increased damage to enemies with high defence. Can deal AoE Arts damage.
+  skillDescription: 'Increases damage by 3% per enemy in range (stacks up to 5 times). Deals AoE Arts damage.'
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5

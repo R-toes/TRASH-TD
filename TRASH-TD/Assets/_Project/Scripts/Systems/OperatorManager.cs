@@ -128,8 +128,12 @@ namespace TrashTD.Systems
             }
 
             OperatorBase opComp = opObj.GetComponent<OperatorBase>();
-            if (opComp == null)
+            if (opComp == null || ShouldReplaceWithSpecializedComponent(opComp, opData))
             {
+                if (opComp != null)
+                {
+                    DestroyImmediate(opComp);
+                }
                 opComp = AddClassComponent(opObj, opData);
             }
 
@@ -146,6 +150,24 @@ namespace TrashTD.Systems
             deployedInstance = opComp;
             OnOperatorDeployed?.Invoke(opComp);
             return true;
+        }
+
+        private bool ShouldReplaceWithSpecializedComponent(OperatorBase opComp, OperatorData opData)
+        {
+            if (opComp == null || opData == null) return false;
+            return (opData.operatorName == "Mossmo" && !(opComp is MossmoOperator)) ||
+                   (opData.operatorName == "Bubblets" && !(opComp is BubbletsOperator)) ||
+                   (opData.operatorName == "Progeny" && !(opComp is ProgenyOperator)) ||
+                   (opData.operatorName == "Basurocket" && !(opComp is BasurocketOperator)) ||
+                   ((opData.operatorName == "Stag-ger" || opData.operatorName == "Stagger") && !(opComp is StaggerOperator)) ||
+                   (opData.operatorName == "Thornchin" && !(opComp is ThornchinOperator)) ||
+                   (opData.operatorName == "Scrapper" && !(opComp is ScrapperOperator)) ||
+                   (opData.operatorName == "Bulkhead" && !(opComp is BulkheadOperator)) ||
+                   (opData.operatorName == "Pyrolite" && !(opComp is PyroliteOperator)) ||
+                   (opData.operatorName == "Deadeye" && !(opComp is DeadeyeOperator)) ||
+                   (opData.operatorName == "Chillpath" && !(opComp is ChillpathOperator)) ||
+                   (opData.operatorName == "Coalesce" && !(opComp is CoalesceOperator)) ||
+                   ((opData.operatorName == "Proxishot" || opData.operatorName == "Proxyshot") && !(opComp is ProxishotOperator));
         }
 
         private OperatorBase AddClassComponent(GameObject obj, OperatorData opData)
@@ -173,6 +195,34 @@ namespace TrashTD.Systems
             if (opData != null && opData.operatorName == "Thornchin")
             {
                 return obj.AddComponent<ThornchinOperator>();
+            }
+            if (opData != null && opData.operatorName == "Scrapper")
+            {
+                return obj.AddComponent<ScrapperOperator>();
+            }
+            if (opData != null && opData.operatorName == "Bulkhead")
+            {
+                return obj.AddComponent<BulkheadOperator>();
+            }
+            if (opData != null && opData.operatorName == "Pyrolite")
+            {
+                return obj.AddComponent<PyroliteOperator>();
+            }
+            if (opData != null && opData.operatorName == "Deadeye")
+            {
+                return obj.AddComponent<DeadeyeOperator>();
+            }
+            if (opData != null && opData.operatorName == "Chillpath")
+            {
+                return obj.AddComponent<ChillpathOperator>();
+            }
+            if (opData != null && opData.operatorName == "Coalesce")
+            {
+                return obj.AddComponent<CoalesceOperator>();
+            }
+            if (opData != null && (opData.operatorName == "Proxishot" || opData.operatorName == "Proxyshot"))
+            {
+                return obj.AddComponent<ProxishotOperator>();
             }
 
             OperatorClass opClass = opData != null ? opData.operatorClass : OperatorClass.Guard;

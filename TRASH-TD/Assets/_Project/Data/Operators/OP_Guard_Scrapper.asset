@@ -28,6 +28,7 @@ MonoBehaviour:
   - {x: 1, y: 0}
   - {x: 2, y: 0}
   damageType: 0
+  skillDescription: 'When attacking, has a 20% chance to Stun the target for 2 seconds.'
   dpCost: 10
   redeployCooldown: 60
   portrait: {fileID: -705202181, guid: 98e7a721d66dd4c48acc4d1cf6e1541e, type: 3}

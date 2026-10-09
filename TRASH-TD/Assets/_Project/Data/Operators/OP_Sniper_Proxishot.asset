@@ -31,6 +31,7 @@ MonoBehaviour:
   - {x: 1, y: 0}
   - {x: 1, y: 1}
   damageType: 0
+  skillDescription: 'For every enemy type killed, increases ATK by 3% (cap at 5 stacks, resets when retreated).'
   dpCost: 13
   redeployCooldown: 60
   portrait: {fileID: 4798833663072170488, guid: 323ca61e4bd2cd24199506d2ec39cad4, type: 3}

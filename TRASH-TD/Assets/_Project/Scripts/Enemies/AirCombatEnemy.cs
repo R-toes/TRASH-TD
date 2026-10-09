@@ -62,7 +62,7 @@ namespace TrashTD.Enemies
                 attackPauseTimer = Mathf.Max(0f, attackPauseTimer - Time.deltaTime);
 
             UpdateHoverShadow();
-            if (IsFrozen) return;
+            if (IsFrozen || IsStunned) return;
 
             // Re-evaluated every frame so the flyer slows down as soon as something is in range.
             lockedTarget = FindTarget();

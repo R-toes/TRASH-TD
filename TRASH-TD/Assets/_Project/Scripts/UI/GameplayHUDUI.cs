@@ -57,6 +57,7 @@ namespace TrashTD.UI
         private Text selectedOperatorNameText;
         private Text selectedOperatorSkillDescriptionText;
         private Text selectedOperatorHealthText;
+        private Text selectedOperatorAtkText;
         private Text selectedOperatorRarityText;
         private Image selectedOperatorHealthFill;
         private RectTransform selectedOperatorHealthFillRect;
@@ -292,7 +293,7 @@ namespace TrashTD.UI
             labelRect.anchorMin = new Vector2(0.5f, 0.5f);
             labelRect.anchorMax = new Vector2(0.5f, 0.5f);
             labelRect.pivot = new Vector2(0.5f, 0.5f);
-            labelRect.sizeDelta = new Vector2(250f, 84f);
+            labelRect.sizeDelta = new Vector2(250f, 104f);
 
             Image background = selectedOperatorLabelRoot.GetComponent<Image>();
             background.color = new Color(0.025f, 0.035f, 0.045f, 0.92f);
@@ -333,8 +334,13 @@ namespace TrashTD.UI
             selectedOperatorUpgradeBadge = CreateUpgradeBadge(selectedOperatorLabelRoot.transform, "SelectedOperatorUpgradeBadge", new Vector2(38f, 18f), new Vector2(10f, -29f));
             selectedOperatorUpgradeBadgeGraphic = selectedOperatorUpgradeBadge.GetComponentInChildren<UpgradeArrowGraphic>();
 
+            selectedOperatorAtkText = CreateText(selectedOperatorLabelRoot.transform, "Atk", string.Empty, 14, TextAnchor.MiddleLeft);
+            selectedOperatorAtkText.color = new Color(1f, 0.72f, 0.35f, 1f);
+            SetPosition(selectedOperatorAtkText.GetComponent<RectTransform>(), new Vector2(10f, 26f), Vector2.zero, new Vector2(120f, 20f), Vector2.zero);
+            selectedOperatorAtkText.raycastTarget = false;
+
             selectedOperatorHealthText = CreateText(selectedOperatorLabelRoot.transform, "Health", string.Empty, 14, TextAnchor.MiddleLeft);
-            SetPosition(selectedOperatorHealthText.GetComponent<RectTransform>(), new Vector2(10f, 3f), Vector2.zero, new Vector2(84f, 20f), Vector2.zero);
+            SetPosition(selectedOperatorHealthText.GetComponent<RectTransform>(), new Vector2(10f, 6f), Vector2.zero, new Vector2(88f, 20f), Vector2.zero);
             selectedOperatorHealthText.raycastTarget = false;
 
             GameObject healthTrack = new GameObject("HealthTrack", typeof(RectTransform), typeof(Image));
@@ -342,7 +348,7 @@ namespace TrashTD.UI
             Image healthTrackImage = healthTrack.GetComponent<Image>();
             healthTrackImage.color = new Color(0.15f, 0.17f, 0.19f, 1f);
             healthTrackImage.raycastTarget = false;
-            SetPosition(healthTrack.GetComponent<RectTransform>(), new Vector2(100f, 7f), Vector2.zero, new Vector2(138f, 12f), Vector2.zero);
+            SetPosition(healthTrack.GetComponent<RectTransform>(), new Vector2(102f, 10f), Vector2.zero, new Vector2(138f, 12f), Vector2.zero);
 
             // The fill is width-driven (anchors) because an Image set to "Filled" with no sprite
             // ignores fillAmount and always draws full.
@@ -504,6 +510,7 @@ namespace TrashTD.UI
             string operatorName,
             int currentHP,
             int maxHP,
+            int currentATK,
             OperatorRarity rarity,
             OperatorRarity baseRarity,
             string skillDescription,
@@ -514,8 +521,8 @@ namespace TrashTD.UI
 
             bool hasSkillDescription = !string.IsNullOrWhiteSpace(skillDescription);
             selectedOperatorLabelRoot.GetComponent<RectTransform>().sizeDelta = hasSkillDescription
-                ? new Vector2(300f, 156f)
-                : new Vector2(250f, 84f);
+                ? new Vector2(300f, 178f)
+                : new Vector2(250f, 104f);
             selectedOperatorSkillDescriptionText.text = skillDescription;
             selectedOperatorSkillDescriptionText.gameObject.SetActive(hasSkillDescription);
 
@@ -524,6 +531,10 @@ namespace TrashTD.UI
             selectedOperatorUpgradeBadge.SetActive(upgradeLevels > 0);
             float healthRatio = maxHP > 0 ? Mathf.Clamp01((float)currentHP / maxHP) : 0f;
             selectedOperatorHealthText.text = $"HP {currentHP} / {maxHP}";
+            if (selectedOperatorAtkText != null)
+            {
+                selectedOperatorAtkText.text = $"ATK {currentATK}";
+            }
             selectedOperatorRarityText.text = new string('★', Mathf.Clamp((int)rarity, 1, 5));
 
             selectedHealthTarget = healthRatio;
@@ -539,6 +550,18 @@ namespace TrashTD.UI
                 : healthRatio <= 0.6f
                     ? new Color(1f, 0.75f, 0.15f, 1f)
                     : new Color(0.25f, 0.95f, 0.36f, 1f);
+        }
+
+        public void SetSelectedOperatorName(
+            string operatorName,
+            int currentHP,
+            int maxHP,
+            OperatorRarity rarity,
+            OperatorRarity baseRarity,
+            string skillDescription,
+            Vector3 worldPosition)
+        {
+            SetSelectedOperatorName(operatorName, currentHP, maxHP, 0, rarity, baseRarity, skillDescription, worldPosition);
         }
 
         private void ApplyHealthFill()
@@ -568,6 +591,7 @@ namespace TrashTD.UI
                 selectedOperator.Data.operatorName,
                 selectedOperator.CurrentHP,
                 selectedOperator.MaxHP,
+                selectedOperator.CurrentATK,
                 selectedOperator.CurrentRarity,
                 selectedOperator.Data.baseRarity,
                 selectedOperator.Data.skillDescription,
