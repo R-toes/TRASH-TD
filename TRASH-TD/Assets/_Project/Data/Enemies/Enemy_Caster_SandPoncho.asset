@@ -22,6 +22,7 @@ MonoBehaviour:
   moveSpeed: 0.65
   damageType: 1
   attackProjectileColor: {r: 0.95, g: 0.72, b: 0.34, a: 1}
+  usesSandProjectileVisual: 1
   attackInterval: 2
   attackRange: 0
   isUnblockable: 1

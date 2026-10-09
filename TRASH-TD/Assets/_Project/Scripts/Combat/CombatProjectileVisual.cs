@@ -6,6 +6,7 @@ namespace TrashTD.Combat
     public sealed class CombatProjectileVisual : MonoBehaviour
     {
         private static Sprite sharedProjectileSprite;
+        private static Sprite sharedSandProjectileSprite;
         private static Material sharedTrailMaterial;
 
         private Vector3 targetPosition;
@@ -26,13 +27,48 @@ namespace TrashTD.Combat
             bool burstOnImpact = false,
             Action onImpact = null)
         {
+            Spawn(start, target, GetProjectileSprite(), color, color, speed, size, trailWidth, burstOnImpact, onImpact);
+        }
+
+        public static void FireSand(
+            Vector3 start,
+            Vector3 target,
+            Color trailColor,
+            float speed,
+            Action onImpact = null)
+        {
+            Spawn(
+                start,
+                target,
+                GetSandProjectileSprite(),
+                Color.white,
+                trailColor,
+                speed,
+                0.4f,
+                0.15f,
+                false,
+                onImpact);
+        }
+
+        private static void Spawn(
+            Vector3 start,
+            Vector3 target,
+            Sprite projectileSprite,
+            Color projectileColor,
+            Color trailColor,
+            float speed,
+            float size,
+            float trailWidth,
+            bool burstOnImpact,
+            Action onImpact)
+        {
             GameObject projectile = new GameObject("CombatProjectileVisual");
             projectile.transform.position = start;
             projectile.transform.localScale = Vector3.one * size;
 
             SpriteRenderer spriteRenderer = projectile.AddComponent<SpriteRenderer>();
-            spriteRenderer.sprite = GetProjectileSprite();
-            spriteRenderer.color = color;
+            spriteRenderer.sprite = projectileSprite;
+            spriteRenderer.color = projectileColor;
             spriteRenderer.sortingOrder = 40;
 
             TrailRenderer trail = projectile.AddComponent<TrailRenderer>();
@@ -43,7 +79,7 @@ namespace TrashTD.Combat
             trail.numCornerVertices = 3;
             trail.sharedMaterial = GetTrailMaterial();
             trail.sortingOrder = 39;
-            trail.colorGradient = CreateTrailGradient(color);
+            trail.colorGradient = CreateTrailGradient(trailColor);
 
             CombatProjectileVisual visual = projectile.AddComponent<CombatProjectileVisual>();
             visual.targetPosition = target;
@@ -147,6 +183,62 @@ namespace TrashTD.Combat
                 new Vector2(0.5f, 0.5f),
                 100f);
             return sharedProjectileSprite;
+        }
+
+        private static Sprite GetSandProjectileSprite()
+        {
+            if (sharedSandProjectileSprite != null) return sharedSandProjectileSprite;
+
+            const int textureSize = 32;
+            var texture = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false)
+            {
+                name = "Sand Projectile Texture",
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            Vector2 center = new Vector2((textureSize - 1) * 0.5f, (textureSize - 1) * 0.5f);
+            Color[] sandTones =
+            {
+                new Color(0.82f, 0.57f, 0.28f),
+                new Color(0.91f, 0.68f, 0.37f),
+                new Color(0.98f, 0.79f, 0.49f),
+                new Color(1f, 0.87f, 0.61f)
+            };
+
+            for (int y = 0; y < textureSize; y++)
+            {
+                for (int x = 0; x < textureSize; x++)
+                {
+                    float edgeVariation = (GetPixelNoise(x, y) - 0.5f) * 2.5f;
+                    if ((new Vector2(x, y) - center).magnitude > 13f + edgeVariation)
+                    {
+                        texture.SetPixel(x, y, Color.clear);
+                        continue;
+                    }
+
+                    float grain = GetPixelNoise(x + 37, y + 19);
+                    int toneIndex = grain < 0.18f ? 0 : grain < 0.58f ? 1 : grain < 0.88f ? 2 : 3;
+                    texture.SetPixel(x, y, sandTones[toneIndex]);
+                }
+            }
+
+            texture.Apply();
+            sharedSandProjectileSprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, textureSize, textureSize),
+                new Vector2(0.5f, 0.5f),
+                100f);
+            return sharedSandProjectileSprite;
+        }
+
+        private static float GetPixelNoise(int x, int y)
+        {
+            unchecked
+            {
+                uint hash = (uint)(x * 374761393 + y * 668265263);
+                hash = (hash ^ (hash >> 13)) * 1274126177;
+                return (hash ^ (hash >> 16)) / (float)uint.MaxValue;
+            }
         }
 
         private static Material GetTrailMaterial()

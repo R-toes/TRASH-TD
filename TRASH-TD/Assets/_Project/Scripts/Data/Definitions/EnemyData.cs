@@ -42,6 +42,9 @@ namespace TrashTD.Data
         [Tooltip("Projectile tint for ranged attacks against operators")]
         public Color attackProjectileColor = new Color(0.55f, 0.9f, 0.3f);
 
+        [Tooltip("Use a thick, granular sand projectile for enemy attacks")]
+        public bool usesSandProjectileVisual;
+
         [Tooltip("Attack interval in seconds (for enemies that attack)")]
         public float attackInterval = 2.0f;
 

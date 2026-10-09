@@ -181,6 +181,21 @@ MonoBehaviour:
       spawnInterval: 2.2
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
   - waveName: 'Wave 6: Toxic Surge'
     preWaveDelay: 3.52
     entries:
@@ -198,6 +213,36 @@ MonoBehaviour:
       count: 2
       spawnInterval: 2.16
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 7: Debris Swarm'
     preWaveDelay: 3.44
@@ -217,6 +262,36 @@ MonoBehaviour:
       spawnInterval: 2.12
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 2
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 2.4
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 2.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 8: Debris Swarm'
     preWaveDelay: 3.36
     entries:
@@ -234,6 +309,36 @@ MonoBehaviour:
       count: 2
       spawnInterval: 2.08
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 9: Toxic Surge'
     preWaveDelay: 3.28
@@ -253,6 +358,36 @@ MonoBehaviour:
       spawnInterval: 2.04
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 10: Heavy Incursion'
     preWaveDelay: 3.2
     entries:
@@ -270,6 +405,36 @@ MonoBehaviour:
       count: 2
       spawnInterval: 2
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 4
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 4.4
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 4.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
       spawnPointIndex: 2
   wavesNormal:
   - waveName: 'Wave 1: Sludge Scouts'
@@ -377,6 +542,21 @@ MonoBehaviour:
       spawnInterval: 1.95
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
   - waveName: 'Wave 6: Toxic Surge'
     preWaveDelay: 2.77
     entries:
@@ -394,6 +574,36 @@ MonoBehaviour:
       count: 2
       spawnInterval: 1.91
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 7: Debris Swarm'
     preWaveDelay: 2.69
@@ -413,6 +623,36 @@ MonoBehaviour:
       spawnInterval: 1.87
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 2
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 2.4
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 2.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 8: Debris Swarm'
     preWaveDelay: 2.61
     entries:
@@ -430,6 +670,36 @@ MonoBehaviour:
       count: 2
       spawnInterval: 1.83
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 9: Toxic Surge'
     preWaveDelay: 2.53
@@ -449,6 +719,36 @@ MonoBehaviour:
       spawnInterval: 1.79
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 10: Heavy Incursion'
     preWaveDelay: 2.45
     entries:
@@ -466,6 +766,36 @@ MonoBehaviour:
       count: 3
       spawnInterval: 1.75
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 4
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 4.4
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 4.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
       spawnPointIndex: 2
   - waveName: 'Wave 11: Debris Swarm'
     preWaveDelay: 2.37
@@ -485,6 +815,36 @@ MonoBehaviour:
       spawnInterval: 1.71
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 12: Toxic Surge'
     preWaveDelay: 2.29
     entries:
@@ -502,6 +862,36 @@ MonoBehaviour:
       count: 3
       spawnInterval: 1.67
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 13: Debris Swarm'
     preWaveDelay: 2.21
@@ -521,6 +911,36 @@ MonoBehaviour:
       spawnInterval: 1.63
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 14: Debris Swarm'
     preWaveDelay: 2.13
     entries:
@@ -538,6 +958,36 @@ MonoBehaviour:
       count: 3
       spawnInterval: 1.59
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 15: Heavy Incursion'
     preWaveDelay: 2.05
@@ -557,6 +1007,36 @@ MonoBehaviour:
       spawnInterval: 1.55
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 16: Debris Swarm'
     preWaveDelay: 1.97
     entries:
@@ -574,6 +1054,36 @@ MonoBehaviour:
       count: 3
       spawnInterval: 1.51
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 17: Debris Swarm'
     preWaveDelay: 1.89
@@ -593,6 +1103,36 @@ MonoBehaviour:
       spawnInterval: 1.47
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 18: Toxic Surge'
     preWaveDelay: 1.81
     entries:
@@ -610,6 +1150,36 @@ MonoBehaviour:
       count: 3
       spawnInterval: 1.43
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 19: Debris Swarm'
     preWaveDelay: 1.73
@@ -629,6 +1199,36 @@ MonoBehaviour:
       spawnInterval: 1.39
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 20: Heavy Incursion'
     preWaveDelay: 1.65
     entries:
@@ -646,6 +1246,36 @@ MonoBehaviour:
       count: 4
       spawnInterval: 1.35
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   wavesHard:
   - waveName: 'Wave 1: Advance Swarm'
@@ -768,6 +1398,21 @@ MonoBehaviour:
       spawnInterval: 1.7
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
   - waveName: 'Wave 6: Toxic Surge'
     preWaveDelay: 2.02
     entries:
@@ -785,6 +1430,36 @@ MonoBehaviour:
       count: 2
       spawnInterval: 1.66
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 7: Debris Swarm'
     preWaveDelay: 1.94
@@ -804,6 +1479,36 @@ MonoBehaviour:
       spawnInterval: 1.62
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 2
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 2.4
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 2.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 8: Debris Swarm'
     preWaveDelay: 1.86
     entries:
@@ -821,6 +1526,36 @@ MonoBehaviour:
       count: 3
       spawnInterval: 1.58
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 9: Toxic Surge'
     preWaveDelay: 1.78
@@ -840,6 +1575,36 @@ MonoBehaviour:
       spawnInterval: 1.54
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 10: Heavy Incursion'
     preWaveDelay: 1.7
     entries:
@@ -857,6 +1622,36 @@ MonoBehaviour:
       count: 3
       spawnInterval: 1.5
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 4
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 4.4
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1
+      startDelay: 4.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
       spawnPointIndex: 2
   - waveName: 'Wave 11: Debris Swarm'
     preWaveDelay: 1.62
@@ -876,6 +1671,36 @@ MonoBehaviour:
       spawnInterval: 1.46
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 12: Toxic Surge'
     preWaveDelay: 1.54
     entries:
@@ -893,6 +1718,36 @@ MonoBehaviour:
       count: 3
       spawnInterval: 1.42
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 13: Debris Swarm'
     preWaveDelay: 1.46
@@ -912,6 +1767,36 @@ MonoBehaviour:
       spawnInterval: 1.38
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 14: Debris Swarm'
     preWaveDelay: 1.38
     entries:
@@ -929,6 +1814,36 @@ MonoBehaviour:
       count: 3
       spawnInterval: 1.34
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 15: Heavy Incursion'
     preWaveDelay: 1.3
@@ -948,6 +1863,36 @@ MonoBehaviour:
       spawnInterval: 1.3
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 16: Debris Swarm'
     preWaveDelay: 1.22
     entries:
@@ -965,6 +1910,36 @@ MonoBehaviour:
       count: 3
       spawnInterval: 1.26
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 17: Debris Swarm'
     preWaveDelay: 1.14
@@ -984,6 +1959,36 @@ MonoBehaviour:
       spawnInterval: 1.22
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 18: Toxic Surge'
     preWaveDelay: 1.06
     entries:
@@ -1001,6 +2006,36 @@ MonoBehaviour:
       count: 4
       spawnInterval: 1.18
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 19: Debris Swarm'
     preWaveDelay: 1
@@ -1020,6 +2055,36 @@ MonoBehaviour:
       spawnInterval: 1.14
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 20: Heavy Incursion'
     preWaveDelay: 1
     entries:
@@ -1037,6 +2102,36 @@ MonoBehaviour:
       count: 4
       spawnInterval: 1.1
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 21: Toxic Surge'
     preWaveDelay: 1
@@ -1056,6 +2151,36 @@ MonoBehaviour:
       spawnInterval: 1.06
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 22: Debris Swarm'
     preWaveDelay: 1
     entries:
@@ -1073,6 +2198,36 @@ MonoBehaviour:
       count: 4
       spawnInterval: 1.02
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 23: Debris Swarm'
     preWaveDelay: 1
@@ -1092,6 +2247,36 @@ MonoBehaviour:
       spawnInterval: 0.98
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 24: Toxic Surge'
     preWaveDelay: 1
     entries:
@@ -1109,6 +2294,36 @@ MonoBehaviour:
       count: 4
       spawnInterval: 0.94
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 25: Heavy Incursion'
     preWaveDelay: 1
@@ -1128,6 +2343,36 @@ MonoBehaviour:
       spawnInterval: 0.9
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 26: Debris Swarm'
     preWaveDelay: 1
     entries:
@@ -1145,6 +2390,36 @@ MonoBehaviour:
       count: 5
       spawnInterval: 0.86
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 27: Toxic Surge'
     preWaveDelay: 1
@@ -1164,6 +2439,36 @@ MonoBehaviour:
       spawnInterval: 0.82
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 28: Debris Swarm'
     preWaveDelay: 1
     entries:
@@ -1181,6 +2486,36 @@ MonoBehaviour:
       count: 5
       spawnInterval: 0.78
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   - waveName: 'Wave 29: Debris Swarm'
     preWaveDelay: 1
@@ -1200,6 +2535,36 @@ MonoBehaviour:
       spawnInterval: 0.74
       startDelay: 0.8
       spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
+      spawnPointIndex: 2
   - waveName: 'Wave 30: Heavy Incursion'
     preWaveDelay: 1
     entries:
@@ -1217,6 +2582,36 @@ MonoBehaviour:
       count: 5
       spawnInterval: 0.7
       startDelay: 0.8
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 1.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.25
+      startDelay: 2.3
+      spawnPointIndex: 2
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 2.9
+      spawnPointIndex: 1
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      startDelay: 3.3
       spawnPointIndex: 2
   timeLimit: 0
   threeStarCondition: Clear with no life points lost

@@ -19,6 +19,8 @@ namespace TrashTD.Enemies
     /// </summary>
     public abstract class EnemyBase : MonoBehaviour
     {
+        private const float RangedAttackStopDurationSeconds = 0.75f;
+
         [Header("Enemy Data")]
         [SerializeField] protected EnemyData data;
 
@@ -47,6 +49,7 @@ namespace TrashTD.Enemies
         protected OperatorBase blockingOperator;
         protected bool isDead;
         protected float attackTimer;
+        private float rangedAttackStopTimer;
 
         private float chillAmount;
         private float slowTimer;
@@ -129,6 +132,7 @@ namespace TrashTD.Enemies
             pushbackElapsed = 0f;
             isDead = false;
             attackTimer = 0f;
+            rangedAttackStopTimer = 0f;
             currentPathIndex = 0;
             trapDamageTimer = 0f;
         }
@@ -201,6 +205,12 @@ namespace TrashTD.Enemies
                 return;
             }
 
+            if (rangedAttackStopTimer > 0f)
+            {
+                rangedAttackStopTimer = Mathf.Max(0f, rangedAttackStopTimer - deltaTime);
+                return;
+            }
+
             attackTimer += deltaTime;
             float attackInterval = data != null
                 ? Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval)
@@ -212,6 +222,7 @@ namespace TrashTD.Enemies
                 if (target != null)
                 {
                     attackTimer = 0f;
+                    rangedAttackStopTimer = RangedAttackStopDurationSeconds;
                     AttackOperator(target);
                     return;
                 }
@@ -294,19 +305,35 @@ namespace TrashTD.Enemies
 
         private void AttackOperator(OperatorBase target)
         {
+            System.Action onImpact = () =>
+            {
+                if (target != null && target.IsDeployed && data != null)
+                    target.TryTakeAttackDamage(currentATK, data.damageType, this);
+            };
+
+            Color projectileColor = data != null
+                ? data.attackProjectileColor
+                : new Color(0.55f, 0.9f, 0.3f);
+            if (data != null && data.usesSandProjectileVisual)
+            {
+                CombatProjectileVisual.FireSand(
+                    transform.position,
+                    target.transform.position,
+                    projectileColor,
+                    8f,
+                    onImpact);
+                return;
+            }
+
             CombatProjectileVisual.Fire(
                 transform.position,
                 target.transform.position,
-                data != null ? data.attackProjectileColor : new Color(0.55f, 0.9f, 0.3f),
+                projectileColor,
                 8f,
                 0.1f,
                 0.05f,
                 false,
-                () =>
-                {
-                    if (target != null && target.IsDeployed && data != null)
-                        target.TryTakeAttackDamage(currentATK, data.damageType, this);
-                });
+                onImpact);
         }
 
         private void UpdateTrapDamage(float deltaTime)

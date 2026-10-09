@@ -759,6 +759,7 @@ namespace TrashTD.Editor
             sandPoncho.damageType = DamageType.Arts;
             sandPoncho.operatorAttackMissChance = 0.2f;
             sandPoncho.attackProjectileColor = new Color(0.95f, 0.72f, 0.34f);
+            sandPoncho.usesSandProjectileVisual = true;
             sandPoncho.animationFrames = LoadSpriteFrames(
                 "Sand Poncho Enemy Sheet.png",
                 "Sand Poncho Enemy Sheet",

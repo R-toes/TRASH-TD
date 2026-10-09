@@ -86,7 +86,18 @@ namespace TrashTD.Systems
                     if (spriteRenderer == null)
                         spriteRenderer = enemyObj.GetComponentInChildren<SpriteRenderer>();
                     if (spriteRenderer != null)
+                    {
+                        bool overridesPrefabSprite = spriteRenderer.sprite != enemyData.sprite;
+                        if (overridesPrefabSprite)
+                        {
+                            GruntSpriteAnimation prefabAnimation =
+                                enemyObj.GetComponentInChildren<GruntSpriteAnimation>();
+                            if (prefabAnimation != null)
+                                prefabAnimation.enabled = false;
+                        }
+
                         spriteRenderer.sprite = enemyData.sprite;
+                    }
                 }
             }
             else
