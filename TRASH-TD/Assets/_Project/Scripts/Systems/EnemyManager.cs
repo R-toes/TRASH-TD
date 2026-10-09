@@ -80,6 +80,14 @@ namespace TrashTD.Systems
             if (enemyData.enemyPrefab != null)
             {
                 enemyObj = Instantiate(enemyData.enemyPrefab, path[0], Quaternion.identity);
+                if (enemyData.sprite != null)
+                {
+                    SpriteRenderer spriteRenderer = enemyObj.GetComponent<SpriteRenderer>();
+                    if (spriteRenderer == null)
+                        spriteRenderer = enemyObj.GetComponentInChildren<SpriteRenderer>();
+                    if (spriteRenderer != null)
+                        spriteRenderer.sprite = enemyData.sprite;
+                }
             }
             else
             {

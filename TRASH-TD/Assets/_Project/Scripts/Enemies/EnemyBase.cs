@@ -54,6 +54,9 @@ namespace TrashTD.Enemies
         private float speedBeforeChill;
         private float chillSlowMultiplier = 1f;
         private bool isFrozen;
+        private SpriteRenderer[] animationRenderers;
+        private int animationFrameIndex;
+        private float animationFrameTimer;
         private SpriteRenderer[] chillRenderers;
         private Color[] originalRendererColors;
 
@@ -101,6 +104,10 @@ namespace TrashTD.Enemies
         public virtual void Initialize(EnemyData enemyData, int difficultyLevel)
         {
             data = enemyData;
+            animationRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+            animationFrameIndex = 0;
+            animationFrameTimer = 0f;
+            ApplyAnimationFrame();
             maxHP = data.GetScaledHP(difficultyLevel);
             currentHP = maxHP;
             currentATK = data.GetScaledATK(difficultyLevel);
@@ -153,6 +160,7 @@ namespace TrashTD.Enemies
         {
             if (isDead) return;
 
+            UpdateSpriteAnimation(Time.deltaTime);
             UpdateTrapDamage(Time.deltaTime);
             if (isDead) return;
 
@@ -180,6 +188,7 @@ namespace TrashTD.Enemies
             if (isDead) return;
 
             float deltaTime = Time.deltaTime;
+            UpdateSpriteAnimation(deltaTime);
             UpdateTrapDamage(deltaTime);
             if (isDead) return;
 
@@ -209,6 +218,38 @@ namespace TrashTD.Enemies
             }
 
             MoveAlongPath();
+        }
+
+        private void UpdateSpriteAnimation(float deltaTime)
+        {
+            if (data == null || data.animationFrames == null || data.animationFrames.Length <= 1)
+                return;
+
+            float frameDuration = 1f / Mathf.Max(0.01f, data.animationFrameRate);
+            animationFrameTimer += deltaTime;
+            while (animationFrameTimer >= frameDuration)
+            {
+                animationFrameTimer -= frameDuration;
+                animationFrameIndex = (animationFrameIndex + 1) % data.animationFrames.Length;
+                ApplyAnimationFrame();
+            }
+        }
+
+        private void ApplyAnimationFrame()
+        {
+            if (data == null || data.animationFrames == null ||
+                animationFrameIndex >= data.animationFrames.Length ||
+                data.animationFrames[animationFrameIndex] == null)
+                return;
+
+            if (animationRenderers == null)
+                animationRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+
+            for (int i = 0; i < animationRenderers.Length; i++)
+            {
+                if (animationRenderers[i] != null)
+                    animationRenderers[i].sprite = data.animationFrames[animationFrameIndex];
+            }
         }
 
         private OperatorBase FindOperatorTarget(bool prioritizeRangedOperators)
@@ -256,7 +297,7 @@ namespace TrashTD.Enemies
             CombatProjectileVisual.Fire(
                 transform.position,
                 target.transform.position,
-                new Color(0.55f, 0.9f, 0.3f),
+                data != null ? data.attackProjectileColor : new Color(0.55f, 0.9f, 0.3f),
                 8f,
                 0.1f,
                 0.05f,

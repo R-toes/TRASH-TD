@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f34436990ad48f4d90f0736ce7dcdd3, type: 3}
+  m_Name: Enemy_Caster_SandPoncho
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.EnemyData
+  enemyName: Sand Poncho
+  archetype: 3
+  movementType: 0
+  baseHP: 110
+  baseATK: 35
+  baseDEF: 10
+  baseRES: 15
+  moveSpeed: 0.65
+  damageType: 1
+  attackProjectileColor: {r: 0.95, g: 0.72, b: 0.34, a: 1}
+  attackInterval: 2
+  attackRange: 0
+  isUnblockable: 1
+  operatorAttackMissChance: 0.2
+  blockWeight: 1
+  lifePointCost: 1
+  sprite: {fileID: -561033689589369215, guid: dbd6c6cbe4229bc4c8ac9e694ca534f8, type: 3}
+  animationFrames:
+  - {fileID: -561033689589369215, guid: dbd6c6cbe4229bc4c8ac9e694ca534f8, type: 3}
+  - {fileID: 5187327798844838018, guid: dbd6c6cbe4229bc4c8ac9e694ca534f8, type: 3}
+  - {fileID: 4458556078292443009, guid: dbd6c6cbe4229bc4c8ac9e694ca534f8, type: 3}
+  - {fileID: -3353443825145533674, guid: dbd6c6cbe4229bc4c8ac9e694ca534f8, type: 3}
+  - {fileID: -659822038956385213, guid: dbd6c6cbe4229bc4c8ac9e694ca534f8, type: 3}
+  - {fileID: 6489053805307227836, guid: dbd6c6cbe4229bc4c8ac9e694ca534f8, type: 3}
+  - {fileID: -3988462429546311368, guid: dbd6c6cbe4229bc4c8ac9e694ca534f8, type: 3}
+  - {fileID: 1859343815307287720, guid: dbd6c6cbe4229bc4c8ac9e694ca534f8, type: 3}
+  animationFrameRate: 8
+  enemyPrefab: {fileID: 3448856487277953290, guid: ae11688551e0f1248af04e0224187310, type: 3}

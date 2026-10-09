@@ -26,12 +26,20 @@ namespace TrashTD.Core.GameLoop
         private bool isSpawningWave = false;
         private bool allWavesSpawned = false;
         private int difficultyLevel = 1;
+        private int sandboxWaveNumber;
+        private int sandboxSpawnPointCount;
+        private int sandboxSpawnCursor;
+        private bool isSandboxStage;
+        private Coroutine sandboxSpawnCoroutine;
+
+        private const float SandboxQueueSpawnIntervalSeconds = 1f;
 
         // Cached paths: one ground route per spawn, shared by every enemy movement type.
         private readonly Dictionary<string, List<Vector3>> pathCache = new Dictionary<string, List<Vector3>>();
 
         public int CurrentWaveNumber => currentWaveIndex + 1;
         public int TotalWaves => waves != null ? waves.Length : 0;
+        public int SandboxWaveNumber => sandboxWaveNumber;
         public bool IsActive { get; private set; } = false;
         public bool IsWaveInProgress { get; private set; } = false;
 
@@ -62,6 +70,11 @@ namespace TrashTD.Core.GameLoop
 
             waves = stageData.GetWaves(difficulty);
             difficultyLevel = (int)difficulty + 1;
+            isSandboxStage = stageData.stageId == "SANDBOX";
+            sandboxWaveNumber = 0;
+            sandboxSpawnPointCount = stageData.spawnPoints != null ? stageData.spawnPoints.Length : 0;
+            sandboxSpawnCursor = 0;
+            sandboxSpawnCoroutine = null;
             currentWaveIndex = -1;
             allWavesSpawned = false;
             isSpawningWave = false;
@@ -163,6 +176,84 @@ namespace TrashTD.Core.GameLoop
         public void SetWaveIndex(int index)
         {
             currentWaveIndex = index - 1; // StartNextWave will increment
+        }
+
+        public bool SpawnSandboxEnemyNow(EnemyData enemyData)
+        {
+            if (!isSandboxStage || !IsWaveInProgress || enemyData == null)
+                return false;
+
+            return TrySpawnSandboxEnemy(enemyData);
+        }
+
+        public bool StartSandboxWave(IReadOnlyList<EnemyData> queuedEnemies)
+        {
+            if (!isSandboxStage || IsWaveInProgress)
+                return false;
+
+            sandboxWaveNumber++;
+            IsWaveInProgress = true;
+            isSpawningWave = true;
+            sandboxSpawnCoroutine = StartCoroutine(SpawnSandboxQueueRoutine(
+                queuedEnemies != null ? new List<EnemyData>(queuedEnemies) : new List<EnemyData>()));
+            return true;
+        }
+
+        public void EndSandboxWave()
+        {
+            if (!isSandboxStage)
+                return;
+
+            if (sandboxSpawnCoroutine != null)
+            {
+                StopCoroutine(sandboxSpawnCoroutine);
+                sandboxSpawnCoroutine = null;
+            }
+
+            isSpawningWave = false;
+            IsWaveInProgress = false;
+            if (enemyManager != null)
+                enemyManager.ClearAllForSandbox();
+        }
+
+        private IEnumerator SpawnSandboxQueueRoutine(List<EnemyData> queuedEnemies)
+        {
+            for (int i = 0; i < queuedEnemies.Count; i++)
+            {
+                if (queuedEnemies[i] != null)
+                    TrySpawnSandboxEnemy(queuedEnemies[i]);
+
+                if (i < queuedEnemies.Count - 1)
+                    yield return new WaitForSeconds(SandboxQueueSpawnIntervalSeconds);
+            }
+
+            isSpawningWave = false;
+            sandboxSpawnCoroutine = null;
+        }
+
+        private bool TrySpawnSandboxEnemy(EnemyData enemyData)
+        {
+            if (enemyManager == null)
+                enemyManager = FindFirstObjectByType<EnemyManager>();
+            if (enemyManager == null)
+            {
+                Debug.LogError("WaveManager: Cannot spawn sandbox enemy without an EnemyManager.");
+                return false;
+            }
+
+            for (int i = 0; i < sandboxSpawnPointCount; i++)
+            {
+                int spawnIndex = (sandboxSpawnCursor + i) % sandboxSpawnPointCount;
+                if (!pathCache.TryGetValue(GetPathKey(spawnIndex), out List<Vector3> path) ||
+                    path == null || path.Count == 0)
+                    continue;
+
+                sandboxSpawnCursor = (spawnIndex + 1) % sandboxSpawnPointCount;
+                return enemyManager.SpawnEnemy(enemyData, path, difficultyLevel) != null;
+            }
+
+            Debug.LogError("WaveManager: Cannot spawn sandbox enemy because no valid spawn path is available.");
+            return false;
         }
 
         private IEnumerator WaveProgressionRoutine()

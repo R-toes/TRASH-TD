@@ -39,6 +39,9 @@ namespace TrashTD.Data
         [Tooltip("Type of damage dealt by this enemy")]
         public DamageType damageType = DamageType.Physical;
 
+        [Tooltip("Projectile tint for ranged attacks against operators")]
+        public Color attackProjectileColor = new Color(0.55f, 0.9f, 0.3f);
+
         [Tooltip("Attack interval in seconds (for enemies that attack)")]
         public float attackInterval = 2.0f;
 
@@ -64,6 +67,13 @@ namespace TrashTD.Data
         [Header("Visuals")]
         [Tooltip("Sprite for enemy display")]
         public Sprite sprite;
+
+        [Tooltip("Optional looping animation frames for this enemy")]
+        public Sprite[] animationFrames;
+
+        [Tooltip("Playback speed for optional animation frames")]
+        [Min(0.01f)]
+        public float animationFrameRate = 8f;
 
         [Tooltip("Prefab to instantiate when spawning")]
         public GameObject enemyPrefab;
