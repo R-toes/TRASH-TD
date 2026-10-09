@@ -12,7 +12,7 @@ namespace TrashTD.Operators
     /// Mossmo — 3-Star Defender.
     /// Does not attack enemies, but blocks up to 3 units.
     /// Every time he takes damage, he heals up to 2 operators (including himself)
-    /// within adjacent tiles for ~50% of NurseBot's healing power.
+    /// within adjacent tiles for ~50% of Coalesce's healing power.
     /// </summary>
     public class MossmoOperator : DefenderOperator, IHealer
     {

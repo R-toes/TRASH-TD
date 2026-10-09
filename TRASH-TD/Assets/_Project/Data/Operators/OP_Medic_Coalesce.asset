@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
-  m_Name: OP_Medic_NurseBot
+  m_Name: OP_Medic_Coalesce
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
-  operatorName: NurseBot
+  operatorName: Coalesce
   operatorClass: 4
   baseRarity: 1
   position: 1
@@ -44,5 +44,5 @@ MonoBehaviour:
   chillFreezeDuration: 1.5
   dpCost: 12
   redeployCooldown: 60
-  portrait: {fileID: 5227333541322342438, guid: 6fc58da2cd538b343935feeb99ddb22f, type: 3}
+  portrait: {fileID: 5782545627494194576, guid: f26a24a4ad79fce45af8f08f47304ae1, type: 3}
   operatorPrefab: {fileID: 6549728481407477408, guid: 0f7e6f41325b4fd8ac97245ace7d879b, type: 3}

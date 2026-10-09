@@ -1,13 +1,19 @@
 fileFormatVersion: 2
-guid: 98e7a721d66dd4c48acc4d1cf6e1541e
+guid: f26a24a4ad79fce45af8f08f47304ae1
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -705202181
-    second: Scrapper-Sheet_0
+      213: 5782545627494194576
+    second: Coalesce-Sheet_0
   - first:
-      213: 2064664623
-    second: Scrapper-Sheet_1
+      213: -3783028536660642273
+    second: Coalesce-Sheet_1
+  - first:
+      213: -3766465604197564090
+    second: Coalesce-Sheet_2
+  - first:
+      213: 3203691655432830451
+    second: Coalesce-Sheet_3
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -105,7 +111,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Scrapper-Sheet_0
+      name: Coalesce-Sheet_0
       rect:
         serializedVersion: 2
         x: 0
@@ -118,16 +124,16 @@ TextureImporter:
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 1736090d8cca37f40ada10ce66aa80e9
-      internalID: -705202181
+      spriteID: 09d97486c9abf3050800000000000000
+      internalID: 5782545627494194576
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Scrapper-Sheet_1
+      name: Coalesce-Sheet_1
       rect:
         serializedVersion: 2
         x: 32
@@ -140,10 +146,54 @@ TextureImporter:
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: bdda531b949639842952ab0f3f2736a8
-      internalID: 2064664623
+      spriteID: f163d29d69bff7bc0800000000000000
+      internalID: -3783028536660642273
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Coalesce-Sheet_2
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 641c3131d73dabbc0800000000000000
+      internalID: -3766465604197564090
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Coalesce-Sheet_3
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3fdf4f3369cc57c20800000000000000
+      internalID: 3203691655432830451
       vertices: []
       indices: 
       edges: []
@@ -152,7 +202,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 877ded02486778443950163cd0f59057
+    spriteID: 50e3902fe051ca844b4031e930287655
     internalID: 0
     vertices: []
     indices: 
@@ -164,8 +214,10 @@ TextureImporter:
       - key: SpriteEditor.SliceSettings
         value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":32.0,"y":32.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":1,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
-      Scrapper-Sheet_0: -705202181
-      Scrapper-Sheet_1: 2064664623
+      Coalesce-Sheet_0: 5782545627494194576
+      Coalesce-Sheet_1: -3783028536660642273
+      Coalesce-Sheet_2: -3766465604197564090
+      Coalesce-Sheet_3: 3203691655432830451
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

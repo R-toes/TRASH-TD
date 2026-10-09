@@ -19,7 +19,7 @@ MonoBehaviour:
   roleTags:
   - Defense
   - Retaliation
-  baseHP: 240
+  baseHP: 130
   baseATK: 40
   baseDEF: 36
   baseRES: 5
@@ -42,4 +42,3 @@ MonoBehaviour:
   redeployCooldown: 60
   portrait: {fileID: -5567693554339136048, guid: 729ff55dbb36a314f90b25846c7777e1, type: 3}
   operatorPrefab: {fileID: 7120733290429841632, guid: e8f7a6b5c4d32109876543210abcdef2, type: 3}
-

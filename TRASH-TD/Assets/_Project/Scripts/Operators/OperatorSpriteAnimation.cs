@@ -28,14 +28,63 @@ namespace TrashTD.Operators
                 TryResolveFramesFromTexture();
             }
 
-            if (!HasValidFrames())
+            if (HasValidFrames())
             {
-                Debug.LogError($"{nameof(OperatorSpriteAnimation)} requires at least two assigned sprites.", this);
-                enabled = false;
-                return;
+                spriteRenderer.sprite = frames[0];
+            }
+        }
+
+        private void Start()
+        {
+            if (spriteRenderer == null)
+            {
+                spriteRenderer = GetComponent<SpriteRenderer>();
             }
 
-            spriteRenderer.sprite = frames[0];
+            if (!HasValidFrames() || (spriteRenderer != null && spriteRenderer.sprite == null))
+            {
+                Sprite fallback = null;
+                if (TryGetComponent<OperatorBase>(out var op) && op != null && op.Data != null)
+                {
+                    fallback = op.Data.portrait;
+                }
+                RefreshFromOperatorDataOrRenderer(fallback);
+            }
+        }
+
+        public void RefreshFromOperatorDataOrRenderer(Sprite fallbackSprite = null)
+        {
+            if (spriteRenderer == null)
+            {
+                spriteRenderer = GetComponent<SpriteRenderer>();
+            }
+
+            if (spriteRenderer == null) return;
+
+            if (spriteRenderer.sprite == null && fallbackSprite != null)
+            {
+                spriteRenderer.sprite = fallbackSprite;
+            }
+
+            if (ShouldResolveFramesFromTexture())
+            {
+                TryResolveFramesFromTexture();
+            }
+
+            if (HasValidFrames())
+            {
+                if (spriteRenderer.sprite == null)
+                {
+                    spriteRenderer.sprite = frames[0];
+                }
+                enabled = true;
+            }
+            else if (fallbackSprite != null)
+            {
+                frames = new Sprite[] { fallbackSprite, fallbackSprite };
+                spriteRenderer.sprite = fallbackSprite;
+                enabled = true;
+            }
         }
 
         private bool HasValidFrames()
@@ -81,7 +130,7 @@ namespace TrashTD.Operators
 
             Texture2D texture = spriteRenderer.sprite.texture;
             int frameCount = Mathf.RoundToInt((float)texture.width / texture.height);
-            if (texture.name.ToLowerInvariant().Contains("basurocket") || texture.name.ToLowerInvariant().Contains("progeny") || texture.name.ToLowerInvariant().Contains("stag-ger") || texture.name.ToLowerInvariant().Contains("stagger") || texture.name.ToLowerInvariant().Contains("thornchin"))
+            if (texture.name.ToLowerInvariant().Contains("basurocket") || texture.name.ToLowerInvariant().Contains("progeny") || texture.name.ToLowerInvariant().Contains("stag-ger") || texture.name.ToLowerInvariant().Contains("stagger") || texture.name.ToLowerInvariant().Contains("thornchin") || texture.name.ToLowerInvariant().Contains("coalesce"))
             {
                 frameCount = 4;
             }

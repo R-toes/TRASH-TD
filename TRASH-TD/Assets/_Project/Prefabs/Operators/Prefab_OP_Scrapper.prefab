@@ -79,10 +79,9 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
-  m_SortingLayer: 0
   m_SortingOrder: 5
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 1599149998988324922, guid: 294e8aa424faa2f40a000afdd2d9187d, type: 3}
+  m_Sprite: {fileID: -705202181, guid: 98e7a721d66dd4c48acc4d1cf6e1541e, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -119,5 +118,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
   frames:
-  - {fileID: 1599149998988324922, guid: 294e8aa424faa2f40a000afdd2d9187d, type: 3}
-  - {fileID: 4186267449580407114, guid: 294e8aa424faa2f40a000afdd2d9187d, type: 3}
+  - {fileID: -705202181, guid: 98e7a721d66dd4c48acc4d1cf6e1541e, type: 3}
+  - {fileID: 2064664623, guid: 98e7a721d66dd4c48acc4d1cf6e1541e, type: 3}

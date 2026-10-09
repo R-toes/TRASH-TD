@@ -76,7 +76,7 @@ namespace TrashTD.Editor
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Sniper_Basurocket.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Pyrolite.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Chillpath.asset"),
-                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_NurseBot.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Coalesce.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Bubblets.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Progeny.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Stagger.asset"),
@@ -202,12 +202,14 @@ namespace TrashTD.Editor
         private static void GenerateOperators()
         {
             // 1. Guard (Scrapper)
-            var guardSprite = LoadSprite("Scrapper-Sheet.png", "Scrapper-Sheet_0") ?? LoadSprite("tex_op_guard.png");
-            var guardPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Scrapper", guardSprite, OperatorClass.Guard);
+            var scrapperFrame0 = LoadSprite("Scrapper-Sheet.png", "Scrapper-Sheet_0") ?? LoadSprite("Scrapper-Sheet.png", "Scrapper_0") ?? LoadSprite("tex_op_guard.png");
+            var scrapperFrame1 = LoadSprite("Scrapper-Sheet.png", "Scrapper-Sheet_1") ?? LoadSprite("Scrapper-Sheet.png", "Scrapper_1");
+            var scrapperFrames = scrapperFrame1 != null ? new[] { scrapperFrame0, scrapperFrame1 } : new[] { scrapperFrame0 };
+            var guardPrefab = CreateScrapperPrefab(scrapperFrames);
             CreateOperator("OP_Guard_Scrapper", "Scrapper", OperatorClass.Guard, OperatorPosition.Melee, OperatorRarity.Star1,
-                hp: 140, atk: 65, def: 20, res: 0, blockCount: 2, range: 2, interval: 1.1f, dp: 10,
+                hp: 140, atk: 85, def: 20, res: 0, blockCount: 1, range: 2, interval: 1.1f, dp: 10,
                 new[] { new Vector2Int(1, 0), new Vector2Int(2, 0) },
-                guardSprite, guardPrefab);
+                scrapperFrame0, guardPrefab);
 
             var echosquireFrameOne = LoadSprite("Echosquire-Sheet.png", "Echosquire-Sheet_0");
             var echosquireFrameTwo = LoadSprite("Echosquire-Sheet.png", "Echosquire-Sheet_1");
@@ -411,10 +413,16 @@ namespace TrashTD.Editor
             caster.damageType = DamageType.Arts;
             EditorUtility.SetDirty(caster);
 
-            // 5. Medic (NurseBot)
-            var medicSprite = LoadSprite("NurseBot-Sheet.png", "NurseBot-Sheet_0") ?? LoadSprite("tex_op_medic.png");
-            var medicPrefab = CreateOrGetOperatorPrefab("Prefab_OP_NurseBot", medicSprite, OperatorClass.Medic);
-            CreateOperator("OP_Medic_NurseBot", "NurseBot", OperatorClass.Medic, OperatorPosition.Ranged, OperatorRarity.Star1,
+            // 5. Medic (Coalesce)
+            var coalesceFrame0 = LoadSprite("Coalesce-Sheet.png", "Coalesce-Sheet_0");
+            var coalesceFrame1 = LoadSprite("Coalesce-Sheet.png", "Coalesce-Sheet_1");
+            var coalesceFrame2 = LoadSprite("Coalesce-Sheet.png", "Coalesce-Sheet_2");
+            var coalesceFrame3 = LoadSprite("Coalesce-Sheet.png", "Coalesce-Sheet_3");
+            var coalesceFrames = (coalesceFrame0 != null && coalesceFrame1 != null && coalesceFrame2 != null && coalesceFrame3 != null)
+                ? new[] { coalesceFrame0, coalesceFrame1, coalesceFrame2, coalesceFrame3 }
+                : (coalesceFrame0 != null ? new[] { coalesceFrame0 } : null);
+            var coalescePrefab = CreateCoalescePrefab(coalesceFrames);
+            CreateOperator("OP_Medic_Coalesce", "Coalesce", OperatorClass.Medic, OperatorPosition.Ranged, OperatorRarity.Star1,
                 hp: 90, atk: 55, def: 12, res: 15, blockCount: 0, range: 2, interval: 1.8f, dp: 12,
                 new[]
                 {
@@ -423,7 +431,7 @@ namespace TrashTD.Editor
                     new Vector2Int(0, 1), new Vector2Int(0, -1),
                     new Vector2Int(1, 1), new Vector2Int(-1, -1)
                 },
-                medicSprite, medicPrefab);
+                coalesceFrame0 ?? LoadSprite("tex_op_medic.png"), coalescePrefab);
 
             // 5b. Medic (Bubblets)
             var bubbletsFrameOne = LoadSprite("Bubblets-Sheet.png", "Bubblets-Sheet_0");
@@ -686,6 +694,76 @@ namespace TrashTD.Editor
             spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
             spriteRenderer.sortingOrder = 5;
             go.AddComponent<ThornchinOperator>();
+            var animation = go.AddComponent<OperatorSpriteAnimation>();
+            animation.Configure(frames);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        private static GameObject CreateScrapperPrefab(Sprite[] frames)
+        {
+            const string prefabName = "Prefab_OP_Scrapper";
+            string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null)
+            {
+                var existingAnim = existing.GetComponent<OperatorSpriteAnimation>();
+                if (existingAnim == null)
+                {
+                    existingAnim = existing.AddComponent<OperatorSpriteAnimation>();
+                }
+                existingAnim.Configure(frames);
+                var existingSr = existing.GetComponent<SpriteRenderer>();
+                if (existingSr != null && frames != null && frames.Length > 0 && frames[0] != null)
+                {
+                    existingSr.sprite = frames[0];
+                }
+                EditorUtility.SetDirty(existing);
+                return existing;
+            }
+
+            var go = new GameObject(prefabName);
+            var spriteRenderer = go.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
+            spriteRenderer.sortingOrder = 5;
+            go.AddComponent<GuardOperator>();
+            var animation = go.AddComponent<OperatorSpriteAnimation>();
+            animation.Configure(frames);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        private static GameObject CreateCoalescePrefab(Sprite[] frames)
+        {
+            const string prefabName = "Prefab_OP_Coalesce";
+            string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null)
+            {
+                var existingAnim = existing.GetComponent<OperatorSpriteAnimation>();
+                if (existingAnim == null)
+                {
+                    existingAnim = existing.AddComponent<OperatorSpriteAnimation>();
+                }
+                existingAnim.Configure(frames);
+                var existingSr = existing.GetComponent<SpriteRenderer>();
+                if (existingSr != null && frames != null && frames.Length > 0 && frames[0] != null)
+                {
+                    existingSr.sprite = frames[0];
+                }
+                EditorUtility.SetDirty(existing);
+                return existing;
+            }
+
+            var go = new GameObject(prefabName);
+            var spriteRenderer = go.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
+            spriteRenderer.sortingOrder = 5;
+            go.AddComponent<MedicOperator>();
             var animation = go.AddComponent<OperatorSpriteAnimation>();
             animation.Configure(frames);
 

@@ -78,6 +78,19 @@ namespace TrashTD.Operators
             isDeployed = false;
 
             ApplyFacingVisuals();
+
+            // Safety net: ensure sprite is visible even if prefab asset reference was broken
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr != null && (sr.sprite == null || sr.sprite.texture == null) && data != null && data.portrait != null)
+            {
+                sr.sprite = data.portrait;
+            }
+
+            var anim = GetComponent<OperatorSpriteAnimation>();
+            if (anim != null)
+            {
+                anim.RefreshFromOperatorDataOrRenderer(data?.portrait);
+            }
         }
 
         public void SetFacing(OperatorFacing newFacing)
