@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f34436990ad48f4d90f0736ce7dcdd3, type: 3}
+  m_Name: Enemy_Tank_SandHulk
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.EnemyData
+  enemyName: Sand Hulk
+  archetype: 2
+  movementType: 0
+  baseHP: 750
+  baseATK: 65
+  baseDEF: 35
+  baseRES: 5
+  moveSpeed: 0.45
+  damageType: 0
+  attackProjectileColor: {r: 0.55, g: 0.9, b: 0.3, a: 1}
+  usesSandProjectileVisual: 0
+  attackInterval: 2
+  attackRange: 0
+  frontAreaAttackTiles: 2
+  isUnblockable: 0
+  operatorAttackMissChance: 0.2
+  blockWeight: 1
+  lifePointCost: 1
+  sprite: {fileID: -3847443780664243686, guid: 02dd4e362649dc646806b318f6e38915, type: 3}
+  animationFrames:
+  - {fileID: -3847443780664243686, guid: 02dd4e362649dc646806b318f6e38915, type: 3}
+  - {fileID: -7239301048587478029, guid: 02dd4e362649dc646806b318f6e38915, type: 3}
+  - {fileID: -5867279685221448477, guid: 02dd4e362649dc646806b318f6e38915, type: 3}
+  - {fileID: -3156805902980749810, guid: 02dd4e362649dc646806b318f6e38915, type: 3}
+  - {fileID: 4746812074948009343, guid: 02dd4e362649dc646806b318f6e38915, type: 3}
+  - {fileID: 318725585519100386, guid: 02dd4e362649dc646806b318f6e38915, type: 3}
+  - {fileID: -5737360354633307968, guid: 02dd4e362649dc646806b318f6e38915, type: 3}
+  - {fileID: -4254098486969535426, guid: 02dd4e362649dc646806b318f6e38915, type: 3}
+  animationFrameRate: 8
+  visualScale: 2
+  visualOffset: {x: 0.15, y: 0.2, z: 0}
+  enemyPrefab: {fileID: 4017071742725256548, guid: 872d7c9dd24e93e418eb40ce59b3629e, type: 3}

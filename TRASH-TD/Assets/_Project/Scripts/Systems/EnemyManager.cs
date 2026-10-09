@@ -80,6 +80,12 @@ namespace TrashTD.Systems
             if (enemyData.enemyPrefab != null)
             {
                 enemyObj = Instantiate(enemyData.enemyPrefab, path[0], Quaternion.identity);
+                if (enemyData.visualScale > 0f && !Mathf.Approximately(enemyData.visualScale, 1f))
+                    enemyObj.transform.localScale *= enemyData.visualScale;
+
+                if (enemyData.visualOffset != Vector3.zero)
+                    OffsetEnemyVisual(enemyObj, enemyData);
+
                 if (enemyData.sprite != null)
                 {
                     SpriteRenderer spriteRenderer = enemyObj.GetComponent<SpriteRenderer>();
@@ -94,6 +100,11 @@ namespace TrashTD.Systems
                                 enemyObj.GetComponentInChildren<GruntSpriteAnimation>();
                             if (prefabAnimation != null)
                                 prefabAnimation.enabled = false;
+
+                            TankSpriteAnimation tankAnimation =
+                                enemyObj.GetComponentInChildren<TankSpriteAnimation>();
+                            if (tankAnimation != null)
+                                tankAnimation.enabled = false;
                         }
 
                         spriteRenderer.sprite = enemyData.sprite;
@@ -130,6 +141,27 @@ namespace TrashTD.Systems
             OnEnemySpawned?.Invoke(enemyComp);
 
             return enemyComp;
+        }
+
+        private static void OffsetEnemyVisual(GameObject enemyObject, EnemyData enemyData)
+        {
+            SpriteRenderer sourceRenderer = enemyObject.GetComponent<SpriteRenderer>();
+            if (sourceRenderer == null) return;
+
+            sourceRenderer.enabled = false;
+            var visualObject = new GameObject("EnemyVisual");
+            visualObject.transform.SetParent(enemyObject.transform, false);
+            visualObject.transform.localPosition = enemyData.visualOffset;
+
+            SpriteRenderer visualRenderer = visualObject.AddComponent<SpriteRenderer>();
+            visualRenderer.sprite = enemyData.sprite != null ? enemyData.sprite : sourceRenderer.sprite;
+            visualRenderer.color = sourceRenderer.color;
+            visualRenderer.sharedMaterial = sourceRenderer.sharedMaterial;
+            visualRenderer.sortingLayerID = sourceRenderer.sortingLayerID;
+            visualRenderer.sortingOrder = sourceRenderer.sortingOrder;
+            visualRenderer.flipX = sourceRenderer.flipX;
+            visualRenderer.flipY = sourceRenderer.flipY;
+            visualRenderer.maskInteraction = sourceRenderer.maskInteraction;
         }
 
         private EnemyBase AddArchetypeComponent(GameObject obj, EnemyArchetype archetype)

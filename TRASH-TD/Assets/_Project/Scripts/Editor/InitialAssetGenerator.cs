@@ -824,6 +824,26 @@ namespace TrashTD.Editor
                 hp: 350, atk: 45, def: 35, res: 5, speed: 0.6f, isUnblockable: false,
                 tankSprite, tankPrefab);
 
+            var sandHulkFrames = LoadSpriteFrames("Sand Hulk Sheet.png", "Sand Hulk Sheet", 8);
+            bool hasAllSandHulkFrames = true;
+            for (int i = 0; i < sandHulkFrames.Length; i++)
+                hasAllSandHulkFrames &= sandHulkFrames[i] != null;
+
+            if (hasAllSandHulkFrames)
+            {
+                var sandHulk = CreateEnemy("Enemy_Tank_SandHulk", "Sand Hulk", EnemyArchetype.Tank,
+                    EnemyMovementType.Ground, hp: 750, atk: 45, def: 35, res: 5, speed: 0.45f,
+                    isUnblockable: false, sandHulkFrames[0], tankPrefab);
+                sandHulk.damageType = DamageType.Physical;
+                sandHulk.operatorAttackMissChance = 0.2f;
+                sandHulk.frontAreaAttackTiles = 2;
+                sandHulk.animationFrames = sandHulkFrames;
+                sandHulk.animationFrameRate = 8f;
+                sandHulk.visualScale = 2f;
+                sandHulk.visualOffset = new Vector3(0.15f, 0.2f, 0f);
+                EditorUtility.SetDirty(sandHulk);
+            }
+
             var casterSprite = LoadSprite("tex_enemy_caster.png");
             var casterPrefab = CreateOrGetEnemyPrefab("Prefab_Enemy_Caster", casterSprite, EnemyArchetype.Caster);
             CreateEnemy("Enemy_Caster_Smog", "Smog Caster", EnemyArchetype.Caster, EnemyMovementType.Ground,

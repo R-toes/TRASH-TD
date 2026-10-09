@@ -6,6 +6,17 @@ namespace TrashTD.Enemies
     /// </summary>
     public class TankEnemy : EnemyBase
     {
+        protected override void Update()
+        {
+            if (data != null && data.frontAreaAttackTiles > 0)
+            {
+                UpdateFrontalAreaAttackBehavior(data.frontAreaAttackTiles);
+                return;
+            }
+
+            base.Update();
+        }
+
         public override void Initialize(Data.EnemyData enemyData, int difficultyLevel)
         {
             base.Initialize(enemyData, difficultyLevel);

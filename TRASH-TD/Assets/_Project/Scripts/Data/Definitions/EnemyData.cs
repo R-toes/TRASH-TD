@@ -51,6 +51,10 @@ namespace TrashTD.Data
         [Tooltip("Attack range in grid cells (0 = melee only)")]
         public int attackRange = 0;
 
+        [Min(0)]
+        [Tooltip("For tanks, attack operators in this many tiles directly ahead")]
+        public int frontAreaAttackTiles;
+
         [Header("Blocking")]
         [Tooltip("If true, this enemy cannot be blocked by operators")]
         public bool isUnblockable = false;
@@ -77,6 +81,13 @@ namespace TrashTD.Data
         [Tooltip("Playback speed for optional animation frames")]
         [Min(0.01f)]
         public float animationFrameRate = 8f;
+
+        [Min(0.01f)]
+        [Tooltip("Visual scale multiplier applied to the enemy prefab")]
+        public float visualScale = 1f;
+
+        [Tooltip("Local offset for the enemy sprite without changing its path position")]
+        public Vector3 visualOffset;
 
         [Tooltip("Prefab to instantiate when spawning")]
         public GameObject enemyPrefab;

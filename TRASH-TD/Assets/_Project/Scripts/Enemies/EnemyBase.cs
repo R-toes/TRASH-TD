@@ -19,6 +19,18 @@ namespace TrashTD.Enemies
     /// </summary>
     public abstract class EnemyBase : MonoBehaviour
     {
+        private struct FrontAttackTarget
+        {
+            public OperatorBase Operator;
+            public int Distance;
+
+            public FrontAttackTarget(OperatorBase target, int distance)
+            {
+                Operator = target;
+                Distance = distance;
+            }
+        }
+
         private const float RangedAttackStopDurationSeconds = 0.75f;
 
         [Header("Enemy Data")]
@@ -229,6 +241,141 @@ namespace TrashTD.Enemies
             }
 
             MoveAlongPath();
+        }
+
+        protected void UpdateFrontalAreaAttackBehavior(int tileRange)
+        {
+            if (isDead) return;
+
+            float deltaTime = Time.deltaTime;
+            UpdateSpriteAnimation(deltaTime);
+            UpdateTrapDamage(deltaTime);
+            if (isDead) return;
+
+            UpdateChillStatus(deltaTime);
+            if (isFrozen) return;
+
+            if (isPushingBack)
+            {
+                UpdatePushback();
+                return;
+            }
+
+            attackTimer += deltaTime;
+            float attackInterval = data != null
+                ? Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval)
+                : float.PositiveInfinity;
+
+            if (attackTimer >= attackInterval)
+            {
+                Vector2Int direction = GetPathForwardDirection();
+                bool includeBlockingTile = isBlocked && blockingOperator != null;
+                List<FrontAttackTarget> targets =
+                    FindOperatorsInFront(tileRange, direction, includeBlockingTile);
+                if (includeBlockingTile && !ContainsOperator(targets, blockingOperator))
+                    targets.Add(new FrontAttackTarget(blockingOperator, 1));
+
+                if (targets.Count > 0)
+                {
+                    attackTimer = 0f;
+                    PlayFrontalSlamVisual(direction, tileRange, includeBlockingTile);
+                    for (int i = 0; i < targets.Count; i++)
+                    {
+                        FrontAttackTarget frontTarget = targets[i];
+                        OperatorBase target = frontTarget.Operator;
+                        if (target != null && target.IsDeployed)
+                        {
+                            int damage = frontTarget.Distance == 2
+                                ? Mathf.RoundToInt(currentATK * 0.5f)
+                                : currentATK;
+                            target.TakeDamage(damage, data.damageType, this);
+                        }
+                    }
+
+                    return;
+                }
+            }
+
+            if (!isBlocked)
+                MoveAlongPath();
+        }
+
+        private List<FrontAttackTarget> FindOperatorsInFront(
+            int tileRange,
+            Vector2Int direction,
+            bool includeBlockingTile)
+        {
+            var targets = new List<FrontAttackTarget>();
+            if (tileRange <= 0 || path == null || gridManager == null ||
+                OperatorManager.Instance == null || direction == Vector2Int.zero)
+                return targets;
+
+            Vector2Int enemyCell = gridManager.WorldToGridPosition(transform.position);
+            var deployedOperators = OperatorManager.Instance.DeployedOperators;
+            for (int i = 0; i < deployedOperators.Count; i++)
+            {
+                OperatorBase op = deployedOperators[i];
+                if (op == null || !op.IsDeployed || op.DeployedCell == null)
+                    continue;
+
+                Vector2Int offset = op.DeployedCell.GridPosition - enemyCell;
+                int tileDistance = offset.x * direction.x + offset.y * direction.y;
+                int minimumDistance = includeBlockingTile ? 0 : 1;
+                if (tileDistance >= minimumDistance &&
+                    tileDistance < minimumDistance + tileRange &&
+                    offset == direction * tileDistance)
+                {
+                    targets.Add(new FrontAttackTarget(op, tileDistance - minimumDistance + 1));
+                }
+            }
+
+            return targets;
+        }
+
+        private Vector2Int GetPathForwardDirection()
+        {
+            if (path == null) return Vector2Int.zero;
+
+            for (int i = currentPathIndex; i < path.Count; i++)
+            {
+                Vector3 waypointOffset = path[i] - transform.position;
+                if (waypointOffset.sqrMagnitude <= 0.0001f)
+                    continue;
+
+                if (Mathf.Abs(waypointOffset.x) >= Mathf.Abs(waypointOffset.y))
+                    return new Vector2Int(waypointOffset.x >= 0f ? 1 : -1, 0);
+                return new Vector2Int(0, waypointOffset.y >= 0f ? 1 : -1);
+            }
+
+            return Vector2Int.zero;
+        }
+
+        private static bool ContainsOperator(List<FrontAttackTarget> targets, OperatorBase target)
+        {
+            for (int i = 0; i < targets.Count; i++)
+            {
+                if (targets[i].Operator == target)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void PlayFrontalSlamVisual(
+            Vector2Int direction,
+            int tileRange,
+            bool includeBlockingTile)
+        {
+            if (gridManager == null || direction == Vector2Int.zero || tileRange <= 0)
+                return;
+
+            Vector2Int enemyCell = gridManager.WorldToGridPosition(transform.position);
+            Vector3 center = gridManager.GridToWorldPosition(enemyCell) +
+                new Vector3(direction.x, direction.y, 0f) *
+                (gridManager.CellSize *
+                    (includeBlockingTile ? tileRange - 1 : tileRange + 1) * 0.5f);
+
+            Combat.SandHulkSlamVisual.Play(center, direction, gridManager.CellSize, tileRange);
         }
 
         private void UpdateSpriteAnimation(float deltaTime)
