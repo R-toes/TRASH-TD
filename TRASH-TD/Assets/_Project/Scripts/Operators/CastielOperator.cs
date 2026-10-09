@@ -95,7 +95,8 @@ namespace TrashTD.Operators
             if (lockDuration < LockStepDuration * 2f) return 15;
             if (lockDuration < LockStepDuration * 3f) return 30;
             if (lockDuration < LockStepDuration * 4f) return 80;
-            return 100;
+            if (lockDuration < LockStepDuration * 5f) return 100;
+            return 150;
         }
 
         private void ApplyBeamTick()

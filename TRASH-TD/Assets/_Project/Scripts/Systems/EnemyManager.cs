@@ -25,6 +25,19 @@ namespace TrashTD.Systems
         public IReadOnlyList<EnemyBase> ActiveEnemies => activeEnemies;
         public int ActiveEnemyCount => activeEnemies.Count;
 
+        /// <summary>
+        /// Kill every active enemy through the normal death path (releases blockers, fires OnEnemyDied).
+        /// </summary>
+        public void ClearAllForSandbox()
+        {
+            var active = new List<EnemyBase>(activeEnemies);
+            for (int i = 0; i < active.Count; i++)
+            {
+                if (active[i] != null) active[i].ForceKill();
+            }
+            activeEnemies.RemoveAll(enemy => enemy == null);
+        }
+
         public event Action<EnemyBase> OnEnemySpawned;
         public event Action<EnemyBase> OnEnemyDied;
         public event Action<EnemyBase> OnEnemyReachedExit;

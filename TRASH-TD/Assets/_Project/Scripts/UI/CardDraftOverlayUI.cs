@@ -392,6 +392,11 @@ namespace TrashTD.UI
             if (overlayRoot != null) overlayRoot.SetActive(false);
         }
 
+        public void HideForSandbox()
+        {
+            HideDraftOverlayImmediately();
+        }
+
         // ============================
         // Card Display
         // ============================
@@ -1316,6 +1321,13 @@ namespace TrashTD.UI
             developerPickerPopulated = true;
             developerPickerRoot.SetActive(true);
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public void OpenDeveloperOperatorPicker()
+        {
+            ShowDeveloperPicker();
+        }
+#endif
 
         private void SelectDeveloperOperator(OperatorData operatorData)
         {

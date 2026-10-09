@@ -171,7 +171,7 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             int damage = Combat.DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
-            target.TryTakeAttackDamage(damage, data.damageType, this);
+            target.TryTakeAttackDamage(damage, data.damageType);
         }
 
         protected void PlayAttackSound()
@@ -264,11 +264,19 @@ namespace TrashTD.Operators
             {
                 attackTimer = 0f;
                 currentTarget = FindTarget();
-                if (CanTargetEnemy(currentTarget))
+                if (currentTarget != null && CanAttackTarget(currentTarget))
                 {
                     Attack(currentTarget);
                 }
             }
+        }
+
+        protected virtual bool CanAttackTarget(EnemyBase target)
+        {
+            if (target == null || target.IsDead) return false;
+            return target.MovementType != EnemyMovementType.Air ||
+                   data.position == OperatorPosition.Ranged ||
+                   data.operatorClass == OperatorClass.Caster;
         }
 
         // ========================
@@ -281,13 +289,6 @@ namespace TrashTD.Operators
         /// </summary>
         protected abstract EnemyBase FindTarget();
 
-        protected bool CanTargetEnemy(EnemyBase enemy)
-        {
-            return enemy != null && !enemy.IsDead &&
-                (data == null || data.position != OperatorPosition.Melee ||
-                 enemy.MovementType != TrashTD.Data.EnemyMovementType.Air);
-        }
-
         // ========================
         // Damage Handling
         // ========================
@@ -295,7 +296,7 @@ namespace TrashTD.Operators
         /// <summary>
         /// Take damage from an enemy or effect.
         /// </summary>
-        public virtual void TakeDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
+        public virtual void TakeDamage(int rawATK, DamageType damageType)
         {
             if (currentHP <= 0 || rawATK <= 0) return;
 
@@ -322,12 +323,12 @@ namespace TrashTD.Operators
             }
         }
 
-        public bool TryTakeAttackDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
+        public bool TryTakeAttackDamage(int rawATK, DamageType damageType)
         {
             if (!Combat.StageCombatModifiers.TryAttackHit(transform.position))
                 return false;
 
-            TakeDamage(rawATK, damageType, attacker);
+            TakeDamage(rawATK, damageType);
             return true;
         }
 

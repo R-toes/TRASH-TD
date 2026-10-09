@@ -86,6 +86,7 @@ namespace TrashTD.UI
         private GridManager gridManager;
         private OperatorManager operatorManager;
         private StageBootstrapper stageBootstrapper;
+        private TrashTD.Development.SandboxController sandboxController;
 
         private int selectedDeckSlot = -1;
 
@@ -146,6 +147,7 @@ namespace TrashTD.UI
             gridManager = FindFirstObjectByType<GridManager>();
             operatorManager = FindFirstObjectByType<OperatorManager>();
             stageBootstrapper = FindFirstObjectByType<StageBootstrapper>();
+            sandboxController = FindFirstObjectByType<TrashTD.Development.SandboxController>();
 
             sfxSource = gameObject.AddComponent<AudioSource>();
             sfxSource.playOnAwake = false;
@@ -738,7 +740,8 @@ namespace TrashTD.UI
             var bar = new GameObject("GameSpeedBar", typeof(RectTransform), typeof(Image));
             bar.transform.SetParent(root, false);
             var barRect = bar.GetComponent<RectTransform>();
-            SetPosition(barRect, new Vector2(-24f, 116f), new Vector2(1f, 0f), new Vector2(246f, 54f), new Vector2(1f, 0f));
+            // Sits just above the 170px deck bar so it never covers the Start Wave button.
+            SetPosition(barRect, new Vector2(-24f, 184f), new Vector2(1f, 0f), new Vector2(246f, 54f), new Vector2(1f, 0f));
             bar.GetComponent<Image>().color = BarColor;
 
             var outline = bar.AddComponent<Outline>();
@@ -1081,6 +1084,14 @@ namespace TrashTD.UI
         {
             if (gameManager == null) return;
 
+            if (sandboxController != null)
+            {
+                if (phaseText != null) phaseText.text = "QA SANDBOX";
+                phaseColorTarget = PrepColor;
+                SetSandboxWaveButton(waveManager != null && waveManager.IsWaveInProgress);
+                return;
+            }
+
             StagePhase phase = gameManager.CurrentPhase;
 
             switch (phase)
@@ -1319,6 +1330,11 @@ namespace TrashTD.UI
 
         private void StartWave()
         {
+            if (sandboxController != null)
+            {
+                sandboxController.ToggleWave();
+                return;
+            }
             if (gameManager == null || waveManager == null) return;
             if (gameManager.CurrentPhase != StagePhase.Preparation) return;
 
@@ -1328,6 +1344,31 @@ namespace TrashTD.UI
             // Set wave index and start
             waveManager.SetWaveIndex(gameManager.GetCurrentWaveIndex());
             waveManager.StartNextWave();
+        }
+
+        public void RegisterSandboxController(TrashTD.Development.SandboxController controller)
+        {
+            sandboxController = controller;
+            SetSandboxWaveButton(waveManager != null && waveManager.IsWaveInProgress);
+        }
+
+        /// <summary>
+        /// Parents the sandbox control panel onto the HUD canvas, below the pause overlay.
+        /// </summary>
+        public void AttachSandboxPanel(RectTransform panel)
+        {
+            if (panel == null || canvas == null) return;
+            panel.SetParent(canvas.transform, false);
+            if (pausePanel != null)
+                panel.SetSiblingIndex(pausePanel.transform.GetSiblingIndex());
+        }
+
+        public void SetSandboxWaveButton(bool active)
+        {
+            if (startWaveButton == null) return;
+            startWaveButton.interactable = true;
+            if (startWaveButtonText != null)
+                startWaveButtonText.text = active ? "END\nWAVE" : "START\nWAVE";
         }
 
         private void PauseGame()
@@ -1397,7 +1438,7 @@ namespace TrashTD.UI
         {
             if (waveText != null)
             {
-                waveText.text = $"WAVE {current}/{total}";
+                waveText.text = total > 0 ? $"WAVE {current}/{total}" : $"WAVE {current}";
                 Punch(waveText);
             }
         }
@@ -1423,6 +1464,7 @@ namespace TrashTD.UI
 
         private void HandleLPChanged(int current, int max)
         {
+            if (sandboxController != null) return;
             UpdateLivesDisplay(current, max);
         }
 
@@ -1454,6 +1496,21 @@ namespace TrashTD.UI
             {
                 int count = enemyManager.ActiveEnemyCount;
                 enemyText.text = count == 1 ? "1 ENEMY" : $"{count} ENEMIES";
+            }
+
+            if (sandboxController != null)
+            {
+                // Sandbox has no wave count, squad cap or life loss; avoid "x/2147483647" style overflow.
+                if (waveText != null && waveManager != null)
+                    waveText.text = $"WAVE {Mathf.Max(1, waveManager.SandboxWaveNumber)}";
+                if (lpText != null)
+                    lpText.text = "LIVES LOCKED";
+                if (squadCountText != null && operatorManager != null)
+                {
+                    squadCountText.text = $"SQUAD {operatorManager.DeployedCount}";
+                    squadCountText.color = Color.white;
+                }
+                return;
             }
 
             if (waveText != null && waveManager != null && waveManager.TotalWaves > 0)

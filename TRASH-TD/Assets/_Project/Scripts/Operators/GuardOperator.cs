@@ -81,7 +81,7 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             int damage = DamageCalculator.CalculateDamage(attackPower, GetTargetMitigation(target));
-            target.TryTakeAttackDamage(damage, data.damageType, this);
+            target.TryTakeAttackDamage(damage, data.damageType);
         }
 
         private bool HasAdjacentOperator()
@@ -121,11 +121,11 @@ namespace TrashTD.Operators
             isolationAuraOuter = CreateAuraLayer(
                 "IsolationAuraOuter",
                 operatorSpriteRenderer.sortingOrder - 2,
-                new Color(0.28f, 0.025f, 0.035f, 0.34f));
+                new Color(1f, 0.12f, 0.015f, 0.82f));
             isolationAuraInner = CreateAuraLayer(
                 "IsolationAuraInner",
                 operatorSpriteRenderer.sortingOrder - 1,
-                new Color(0.4f, 0.045f, 0.055f, 0.24f));
+                new Color(1f, 0.55f, 0.06f, 0.72f));
         }
 
         private SpriteRenderer CreateAuraLayer(string objectName, int sortingOrder, Color color)
@@ -181,8 +181,8 @@ namespace TrashTD.Operators
             isolationAuraOuter.transform.localPosition = new Vector3(0f, Mathf.Sin(time * 7f) * 0.012f, 0.01f);
             isolationAuraInner.transform.localPosition = new Vector3(0f, Mathf.Sin(time * 9f + 1f) * 0.008f, 0.005f);
 
-            Color outerColor = new Color(0.28f, Mathf.Lerp(0.02f, 0.055f, pulse), 0.035f, 0.24f + pulse * 0.12f);
-            Color innerColor = new Color(0.4f, Mathf.Lerp(0.035f, 0.075f, pulse), 0.055f, 0.16f + pulse * 0.12f);
+            Color outerColor = new Color(1f, Mathf.Lerp(0.06f, 0.22f, pulse), 0.015f, 0.7f + pulse * 0.22f);
+            Color innerColor = new Color(1f, Mathf.Lerp(0.28f, 0.72f, pulse), 0.06f, 0.45f + pulse * 0.35f);
             isolationAuraOuter.color = outerColor;
             isolationAuraInner.color = innerColor;
         }
@@ -215,7 +215,7 @@ namespace TrashTD.Operators
                 if (gridManager != null)
                 {
                     var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
-                    var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells, data.position);
+                    var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells);
 
                     EnemyBase lowestHP = null;
                     int lowestHPValue = int.MaxValue;
@@ -223,7 +223,8 @@ namespace TrashTD.Operators
                     for (int i = 0; i < candidates.Count; i++)
                     {
                         var enemy = candidates[i];
-                        if (CanTargetEnemy(enemy) && enemy.CurrentHP < lowestHPValue)
+                        // Skip flyers melee guards can't reach so they don't lock onto them over ground enemies.
+                        if (enemy != null && CanAttackTarget(enemy) && enemy.CurrentHP < lowestHPValue)
                         {
                             lowestHP = enemy;
                             lowestHPValue = enemy.CurrentHP;
