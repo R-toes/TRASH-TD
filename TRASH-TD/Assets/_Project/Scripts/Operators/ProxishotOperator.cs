@@ -24,7 +24,7 @@ namespace TrashTD.Operators
             if (gridManager == null) return;
 
             var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
-            var targets = EnemyManager.Instance.GetEnemiesInCells(rangeCells);
+            var targets = EnemyManager.Instance.GetEnemiesInCells(rangeCells, data.position);
             if (targets.Count == 0) return;
 
             Vector3 facingDirection = GetFacingDirection();
@@ -73,7 +73,7 @@ namespace TrashTD.Operators
                 if (inRangeTarget == null || inRangeTarget.IsDead) continue;
 
                 int damage = DamageCalculator.CalculateDamage(currentATK, inRangeTarget.CurrentDEF);
-                inRangeTarget.TryTakeAttackDamage(damage, DamageType.Physical);
+                inRangeTarget.TryTakeAttackDamage(damage, DamageType.Physical, this);
             }
         }
 

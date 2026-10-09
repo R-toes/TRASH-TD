@@ -162,6 +162,16 @@ namespace TrashTD.Systems
         /// </summary>
         public List<EnemyBase> GetEnemiesInCells(IEnumerable<GridCell> cells)
         {
+            return GetEnemiesInCells(cells, true);
+        }
+
+        public List<EnemyBase> GetEnemiesInCells(IEnumerable<GridCell> cells, OperatorPosition operatorPosition)
+        {
+            return GetEnemiesInCells(cells, operatorPosition != OperatorPosition.Melee);
+        }
+
+        private List<EnemyBase> GetEnemiesInCells(IEnumerable<GridCell> cells, bool canTargetAir)
+        {
             var result = new List<EnemyBase>();
             if (cells == null || gridManager == null) return result;
 
@@ -174,6 +184,7 @@ namespace TrashTD.Systems
             foreach (var enemy in activeEnemies)
             {
                 if (enemy == null || enemy.IsDead) continue;
+                if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air) continue;
                 Vector2Int pos = gridManager.WorldToGridPosition(enemy.transform.position);
                 if (cellSet.Contains(pos))
                 {
@@ -189,12 +200,23 @@ namespace TrashTD.Systems
         /// </summary>
         public List<EnemyBase> GetEnemiesInRadius(Vector3 center, float radius)
         {
+            return GetEnemiesInRadius(center, radius, true);
+        }
+
+        public List<EnemyBase> GetEnemiesInRadius(Vector3 center, float radius, OperatorPosition operatorPosition)
+        {
+            return GetEnemiesInRadius(center, radius, operatorPosition != OperatorPosition.Melee);
+        }
+
+        private List<EnemyBase> GetEnemiesInRadius(Vector3 center, float radius, bool canTargetAir)
+        {
             var result = new List<EnemyBase>();
             float sqrRadius = radius * radius;
 
             foreach (var enemy in activeEnemies)
             {
                 if (enemy == null || enemy.IsDead) continue;
+                if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air) continue;
                 if ((enemy.transform.position - center).sqrMagnitude <= sqrRadius)
                 {
                     result.Add(enemy);

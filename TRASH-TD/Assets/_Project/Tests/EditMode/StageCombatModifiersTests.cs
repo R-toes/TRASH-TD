@@ -72,5 +72,32 @@ namespace TrashTD.Tests
                 UnityEngine.Random.state = previousRandomState;
             }
         }
+
+        [Test]
+        public void TargetMissChance_MissesApproximatelyFortyPercentOfAttacks()
+        {
+            Assert.IsTrue(StageCombatModifiers.TryAttackHit(0f));
+            Assert.IsFalse(StageCombatModifiers.TryAttackHit(1f));
+
+            UnityEngine.Random.State previousRandomState = UnityEngine.Random.state;
+            try
+            {
+                UnityEngine.Random.InitState(42);
+                int misses = 0;
+                const int attempts = 10000;
+
+                for (int i = 0; i < attempts; i++)
+                {
+                    if (!StageCombatModifiers.TryAttackHit(0.4f))
+                        misses++;
+                }
+
+                Assert.That(misses, Is.InRange(3900, 4100));
+            }
+            finally
+            {
+                UnityEngine.Random.state = previousRandomState;
+            }
+        }
     }
 }

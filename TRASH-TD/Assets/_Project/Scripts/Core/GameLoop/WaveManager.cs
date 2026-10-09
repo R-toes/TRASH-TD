@@ -27,7 +27,7 @@ namespace TrashTD.Core.GameLoop
         private bool allWavesSpawned = false;
         private int difficultyLevel = 1;
 
-        // Cached paths: [spawnIndex, exitIndex, movementType]
+        // Cached paths: one ground route per spawn, shared by every enemy movement type.
         private readonly Dictionary<string, List<Vector3>> pathCache = new Dictionary<string, List<Vector3>>();
 
         public int CurrentWaveNumber => currentWaveIndex + 1;
@@ -100,8 +100,7 @@ namespace TrashTD.Core.GameLoop
                         {
                             worldPath.Add(gridManager.GridToWorldPosition(pathData.waypoints[i]));
                         }
-                        pathCache[GetPathKey(s, EnemyMovementType.Ground)] = worldPath;
-                        pathCache[GetPathKey(s, EnemyMovementType.Air)] = worldPath;
+                        pathCache[GetPathKey(s)] = worldPath;
                         continue;
                     }
 
@@ -111,11 +110,8 @@ namespace TrashTD.Core.GameLoop
                         var spawnPos = stageData.spawnPoints[s];
                         var exitPos = stageData.exitPoints[e];
 
-                        var groundPath = pathfinder.FindPath(spawnPos, exitPos, EnemyMovementType.Ground);
-                        if (groundPath != null) pathCache[GetPathKey(s, EnemyMovementType.Ground)] = groundPath;
-
-                        var airPath = pathfinder.FindPath(spawnPos, exitPos, EnemyMovementType.Air);
-                        if (airPath != null) pathCache[GetPathKey(s, EnemyMovementType.Air)] = airPath;
+                        var path = pathfinder.FindPath(spawnPos, exitPos, EnemyMovementType.Ground);
+                        if (path != null) pathCache[GetPathKey(s)] = path;
                     }
                 }
             }
@@ -123,25 +119,17 @@ namespace TrashTD.Core.GameLoop
             // 2. Fallback for any spawn points not covered by explicit paths
             for (int s = 0; s < stageData.spawnPoints.Length; s++)
             {
-                string groundKey = GetPathKey(s, EnemyMovementType.Ground);
-                if (!pathCache.ContainsKey(groundKey))
+                string pathKey = GetPathKey(s);
+                if (!pathCache.ContainsKey(pathKey))
                 {
                     var spawnPos = stageData.spawnPoints[s];
-                    var groundPath = pathfinder.FindBestPath(spawnPos, stageData.exitPoints, EnemyMovementType.Ground);
-                    if (groundPath != null) pathCache[groundKey] = groundPath;
-                }
-
-                string airKey = GetPathKey(s, EnemyMovementType.Air);
-                if (!pathCache.ContainsKey(airKey))
-                {
-                    var spawnPos = stageData.spawnPoints[s];
-                    var airPath = pathfinder.FindBestPath(spawnPos, stageData.exitPoints, EnemyMovementType.Air);
-                    if (airPath != null) pathCache[airKey] = airPath;
+                    var path = pathfinder.FindBestPath(spawnPos, stageData.exitPoints, EnemyMovementType.Ground);
+                    if (path != null) pathCache[pathKey] = path;
                 }
             }
         }
 
-        private string GetPathKey(int spawnIndex, EnemyMovementType movementType) => $"{spawnIndex}_{movementType}";
+        private string GetPathKey(int spawnIndex) => $"{spawnIndex}";
 
         /// <summary>
         /// Start wave progression (all waves in sequence — legacy mode).
@@ -296,7 +284,7 @@ namespace TrashTD.Core.GameLoop
                 yield return new WaitForSeconds(entry.startDelay);
             }
 
-            string pathKey = GetPathKey(entry.spawnPointIndex, entry.enemyData.movementType);
+            string pathKey = GetPathKey(entry.spawnPointIndex);
             if (!pathCache.TryGetValue(pathKey, out var path) || path == null || path.Count == 0)
             {
                 yield break;

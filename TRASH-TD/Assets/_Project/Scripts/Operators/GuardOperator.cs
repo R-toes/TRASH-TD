@@ -81,7 +81,7 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             int damage = DamageCalculator.CalculateDamage(attackPower, GetTargetMitigation(target));
-            target.TryTakeAttackDamage(damage, data.damageType);
+            target.TryTakeAttackDamage(damage, data.damageType, this);
         }
 
         private bool HasAdjacentOperator()
@@ -215,7 +215,7 @@ namespace TrashTD.Operators
                 if (gridManager != null)
                 {
                     var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
-                    var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells);
+                    var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells, data.position);
 
                     EnemyBase lowestHP = null;
                     int lowestHPValue = int.MaxValue;
@@ -223,7 +223,7 @@ namespace TrashTD.Operators
                     for (int i = 0; i < candidates.Count; i++)
                     {
                         var enemy = candidates[i];
-                        if (enemy != null && !enemy.IsDead && enemy.CurrentHP < lowestHPValue)
+                        if (CanTargetEnemy(enemy) && enemy.CurrentHP < lowestHPValue)
                         {
                             lowestHP = enemy;
                             lowestHPValue = enemy.CurrentHP;

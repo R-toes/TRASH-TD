@@ -87,8 +87,7 @@ namespace TrashTD.Operators
             AudioManager.Instance?.PlaySfx(SfxId.GameplayMeleeAttack);
 
             int damage = DamageCalculator.CalculateDamage(currentATK, target.CurrentDEF);
-            target.TryTakeAttackDamage(damage, data != null ? data.damageType : DamageType.Physical);
+            target.TryTakeAttackDamage(damage, data != null ? data.damageType : DamageType.Physical, this);
         }
     }
 }
-

@@ -31,7 +31,7 @@ namespace TrashTD.Operators
             Vector2Int impactPosition = gridManager.WorldToGridPosition(target.transform.position);
             List<GridCell> blastCells = GetBlastCells(gridManager, impactPosition);
 
-            if (EnemyManager.Instance.GetEnemiesInCells(blastCells).Count == 0)
+            if (EnemyManager.Instance.GetEnemiesInCells(blastCells, data.position).Count == 0)
                 return;
 
             PlayAttackSound();
@@ -58,7 +58,7 @@ namespace TrashTD.Operators
                 blastCellPositions.Add(blastCells[i].WorldPosition);
             AoeBlastVisual.PlayCells(blastCellPositions, gridManager.CellSize, BlastColor);
 
-            List<EnemyBase> blastTargets = EnemyManager.Instance.GetEnemiesInCells(blastCells);
+            List<EnemyBase> blastTargets = EnemyManager.Instance.GetEnemiesInCells(blastCells, data.position);
             HashSet<EnemyBase> uniqueTargets = new HashSet<EnemyBase>();
             for (int i = 0; i < blastTargets.Count; i++)
             {
@@ -68,7 +68,7 @@ namespace TrashTD.Operators
 
                 int damage = Mathf.RoundToInt(currentATK * BlastDamageMultiplier);
                 damage = DamageCalculator.CalculateDamage(damage, blastTarget.CurrentDEF);
-                blastTarget.TryTakeAttackDamage(damage, DamageType.Physical);
+                blastTarget.TryTakeAttackDamage(damage, DamageType.Physical, this);
             }
         }
 

@@ -5,6 +5,7 @@ using TrashTD.Core.Grid;
 using TrashTD.Core.Pathfinding;
 using TrashTD.Data;
 using TrashTD.Operators;
+using TrashTD.Systems;
 
 namespace TrashTD.Enemies
 {
@@ -172,6 +173,99 @@ namespace TrashTD.Enemies
                 // Move along path
                 MoveAlongPath();
             }
+        }
+
+        protected void UpdateRangedBehavior(bool prioritizeRangedOperators)
+        {
+            if (isDead) return;
+
+            float deltaTime = Time.deltaTime;
+            UpdateTrapDamage(deltaTime);
+            if (isDead) return;
+
+            UpdateChillStatus(deltaTime);
+            if (isFrozen) return;
+
+            if (isPushingBack)
+            {
+                UpdatePushback();
+                return;
+            }
+
+            attackTimer += deltaTime;
+            float attackInterval = data != null
+                ? Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval)
+                : float.PositiveInfinity;
+
+            if (attackTimer >= attackInterval)
+            {
+                OperatorBase target = FindOperatorTarget(prioritizeRangedOperators);
+                if (target != null)
+                {
+                    attackTimer = 0f;
+                    AttackOperator(target);
+                    return;
+                }
+            }
+
+            MoveAlongPath();
+        }
+
+        private OperatorBase FindOperatorTarget(bool prioritizeRangedOperators)
+        {
+            if (OperatorManager.Instance == null || data == null) return null;
+
+            float range = data.attackRange > 0 ? data.attackRange : 2.5f;
+            float sqrRange = range * range;
+            OperatorBase preferredTarget = null;
+            OperatorBase fallbackTarget = null;
+            float preferredSqrDistance = float.MaxValue;
+            float fallbackSqrDistance = float.MaxValue;
+            var deployed = OperatorManager.Instance.DeployedOperators;
+
+            for (int i = 0; i < deployed.Count; i++)
+            {
+                OperatorBase op = deployed[i];
+                if (op == null || !op.IsDeployed) continue;
+
+                float sqrDistance = (op.transform.position - transform.position).sqrMagnitude;
+                if (sqrDistance > sqrRange) continue;
+
+                bool isPreferred = op.Data != null &&
+                    (op.Data.position == OperatorPosition.Ranged) == prioritizeRangedOperators;
+                if (isPreferred)
+                {
+                    if (sqrDistance < preferredSqrDistance)
+                    {
+                        preferredSqrDistance = sqrDistance;
+                        preferredTarget = op;
+                    }
+                }
+                else if (sqrDistance < fallbackSqrDistance)
+                {
+                    fallbackSqrDistance = sqrDistance;
+                    fallbackTarget = op;
+                }
+            }
+
+            return preferredTarget != null ? preferredTarget : fallbackTarget;
+        }
+
+        private void AttackOperator(OperatorBase target)
+        {
+            CombatProjectileVisual.Fire(
+                transform.position,
+                target.transform.position,
+                new Color(0.55f, 0.9f, 0.3f),
+                8f,
+                0.1f,
+                0.05f,
+                false,
+                () =>
+                {
+                    if (target != null && target.IsDeployed && data != null)
+                        target.TryTakeAttackDamage(currentATK, data.damageType, this);
+                });
         }
 
         private void UpdateTrapDamage(float deltaTime)
@@ -363,10 +457,22 @@ namespace TrashTD.Enemies
             }
         }
 
-        public bool TryTakeAttackDamage(int damage, DamageType damageType)
+        public bool TryTakeAttackDamage(int damage, DamageType damageType, OperatorBase attacker = null)
         {
+            if (attacker != null && attacker.Data != null &&
+                attacker.Data.position == OperatorPosition.Melee &&
+                data != null && data.movementType == EnemyMovementType.Air)
+                return false;
+
             if (!Combat.StageCombatModifiers.TryAttackHit(transform.position))
                 return false;
+
+            if (data != null && data.operatorAttackMissChance > 0f &&
+                !Combat.StageCombatModifiers.TryAttackHit(data.operatorAttackMissChance))
+            {
+                FloatingCombatNumber.ShowMiss(transform.position);
+                return false;
+            }
 
             TakeDamage(damage, damageType);
             return true;

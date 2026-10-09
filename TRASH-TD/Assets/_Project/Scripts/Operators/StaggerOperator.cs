@@ -66,7 +66,7 @@ namespace TrashTD.Operators
                         new Color(1f, 0.45f, 0.1f, 1f));
 
                     int damage = DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(enemy));
-                    enemy.TryTakeAttackDamage(damage, data.damageType);
+                    enemy.TryTakeAttackDamage(damage, data.damageType, this);
                 }
 
                 return;
@@ -80,7 +80,7 @@ namespace TrashTD.Operators
                 new Color(1f, 0.78f, 0.3f, 1f));
 
             int singleDamage = DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
-            target.TryTakeAttackDamage(singleDamage, data.damageType);
+            target.TryTakeAttackDamage(singleDamage, data.damageType, this);
         }
 
         /// <summary>
@@ -151,7 +151,7 @@ namespace TrashTD.Operators
                     // Check all enemies physically inside these reach cells (must be blocked)
                     if (EnemyManager.Instance != null)
                     {
-                        List<EnemyBase> cellEnemies = EnemyManager.Instance.GetEnemiesInCells(reachCells);
+                        List<EnemyBase> cellEnemies = EnemyManager.Instance.GetEnemiesInCells(reachCells, data.position);
                         for (int e = 0; e < cellEnemies.Count; e++)
                         {
                             EnemyBase enemy = cellEnemies[e];
@@ -222,7 +222,7 @@ namespace TrashTD.Operators
                 targetCells.Add(deployedCell);
             }
 
-            var candidates = EnemyManager.Instance.GetEnemiesInCells(targetCells);
+            var candidates = EnemyManager.Instance.GetEnemiesInCells(targetCells, data.position);
 
             EnemyBase lowestHP = null;
             int lowestHPValue = int.MaxValue;

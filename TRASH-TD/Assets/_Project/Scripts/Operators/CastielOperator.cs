@@ -65,7 +65,7 @@ namespace TrashTD.Operators
             if (gridManager == null) return null;
 
             var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
-            var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells);
+            var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells, data.position);
             if (candidates == null || candidates.Count == 0)
             {
                 ResetLock();
@@ -103,7 +103,7 @@ namespace TrashTD.Operators
             if (lockedTarget == null || lockedTarget.IsDead) return;
 
             int damage = GetCurrentBeamDamage();
-            lockedTarget.TryTakeAttackDamage(damage, DamageType.Arts);
+            lockedTarget.TryTakeAttackDamage(damage, DamageType.Arts, this);
             lockDuration += DamageTickInterval;
         }
 

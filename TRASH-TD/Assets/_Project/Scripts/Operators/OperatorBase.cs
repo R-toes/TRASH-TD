@@ -171,7 +171,7 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             int damage = Combat.DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
-            target.TryTakeAttackDamage(damage, data.damageType);
+            target.TryTakeAttackDamage(damage, data.damageType, this);
         }
 
         protected void PlayAttackSound()
@@ -264,7 +264,7 @@ namespace TrashTD.Operators
             {
                 attackTimer = 0f;
                 currentTarget = FindTarget();
-                if (currentTarget != null)
+                if (CanTargetEnemy(currentTarget))
                 {
                     Attack(currentTarget);
                 }
@@ -280,6 +280,13 @@ namespace TrashTD.Operators
         /// class-specific targeting priority (e.g., lowest HP, closest, etc).
         /// </summary>
         protected abstract EnemyBase FindTarget();
+
+        protected bool CanTargetEnemy(EnemyBase enemy)
+        {
+            return enemy != null && !enemy.IsDead &&
+                (data == null || data.position != OperatorPosition.Melee ||
+                 enemy.MovementType != TrashTD.Data.EnemyMovementType.Air);
+        }
 
         // ========================
         // Damage Handling

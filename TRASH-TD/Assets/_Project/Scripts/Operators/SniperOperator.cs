@@ -34,7 +34,7 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             int damage = Combat.DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
-            target.TryTakeAttackDamage(damage, data.damageType);
+            target.TryTakeAttackDamage(damage, data.damageType, this);
         }
 
         protected override EnemyBase FindTarget()
@@ -46,7 +46,7 @@ namespace TrashTD.Operators
             if (gridManager == null) return null;
 
             var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
-            var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells);
+            var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells, data.position);
             if (candidates == null || candidates.Count == 0) return null;
 
             EnemyBase bestTarget = null;

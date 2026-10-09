@@ -49,6 +49,11 @@ namespace TrashTD.Data
         [Tooltip("If true, this enemy cannot be blocked by operators")]
         public bool isUnblockable = false;
 
+        [Header("Special Abilities")]
+        [Range(0f, 1f)]
+        [Tooltip("Chance for an operator's attack to miss this enemy")]
+        public float operatorAttackMissChance = 0f;
+
         [Tooltip("Weight — how many 'block slots' this enemy occupies (usually 1)")]
         public int blockWeight = 1;
 
@@ -62,9 +67,6 @@ namespace TrashTD.Data
 
         [Tooltip("Prefab to instantiate when spawning")]
         public GameObject enemyPrefab;
-
-        // TODO: Special abilities per archetype — GDD lists counters but not
-        // specific enemy skills. Awaiting design input.
 
         /// <summary>
         /// Get stats scaled by difficulty level multiplier.

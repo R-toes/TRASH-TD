@@ -183,7 +183,9 @@ namespace TrashTD.Operators
                 if (currentCell != null) checkCells.Add(currentCell);
                 if (frontCell != null) checkCells.Add(frontCell);
 
-                var inCells = EnemyManager.Instance.GetEnemiesInCells(checkCells);
+                var inCells = EnemyManager.Instance.GetEnemiesInCells(
+                    checkCells,
+                    recipient != null && recipient.Data != null ? recipient.Data.position : OperatorPosition.Ranged);
                 if (inCells != null)
                 {
                     for (int i = 0; i < inCells.Count; i++)
@@ -219,7 +221,7 @@ namespace TrashTD.Operators
                 if (enemy == null || enemy.IsDead) continue;
 
                 int calculated = DamageCalculator.CalculateDamage(damageValue, enemy.CurrentRES);
-                enemy.TryTakeAttackDamage(calculated, DamageType.Arts);
+                enemy.TryTakeAttackDamage(calculated, DamageType.Arts, recipient);
             }
         }
 
@@ -295,4 +297,3 @@ namespace TrashTD.Operators
         }
     }
 }
-

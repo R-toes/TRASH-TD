@@ -37,7 +37,7 @@ namespace TrashTD.Operators
                 return false;
 
             int damage = DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
-            if (!target.TryTakeAttackDamage(damage, Data.damageType))
+            if (!target.TryTakeAttackDamage(damage, Data.damageType, this))
                 return false;
 
             hitsSinceKnockback++;

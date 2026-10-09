@@ -25,6 +25,14 @@ namespace TrashTD.Combat
             return !IsSandstormActive || Random.value >= SandstormMissChance;
         }
 
+        public static bool TryAttackHit(float missChance)
+        {
+            missChance = Mathf.Clamp01(missChance);
+            if (missChance <= 0f) return true;
+            if (missChance >= 1f) return false;
+            return Random.value >= missChance;
+        }
+
         public static bool TryAttackHit(Vector3 targetPosition)
         {
             if (TryAttackHit()) return true;

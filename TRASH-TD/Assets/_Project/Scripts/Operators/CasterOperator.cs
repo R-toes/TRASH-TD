@@ -35,7 +35,7 @@ namespace TrashTD.Operators
             if (gridManager == null) return null;
 
             var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
-            var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells);
+            var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells, data.position);
             if (candidates == null || candidates.Count == 0) return null;
 
             EnemyBase bestTarget = null;
@@ -47,7 +47,7 @@ namespace TrashTD.Operators
                 var candidate = candidates[i];
                 if (candidate == null || candidate.IsDead) continue;
 
-                var splashGroup = EnemyManager.Instance.GetEnemiesInRadius(candidate.transform.position, splashRadius);
+                var splashGroup = EnemyManager.Instance.GetEnemiesInRadius(candidate.transform.position, splashRadius, data.position);
                 int count = splashGroup != null ? splashGroup.Count : 1;
 
                 if (candidate.CurrentDEF > highestDefense ||
@@ -102,7 +102,7 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             int chillDamage = DamageCalculator.CalculateDamage(currentATK, target.CurrentRES);
-            if (!target.TryTakeAttackDamage(chillDamage, DamageType.Arts)) return;
+            if (!target.TryTakeAttackDamage(chillDamage, DamageType.Arts, this)) return;
             target.ApplyChill(data.chillPerHit, data.chillSlowMultiplier, data.chillSlowDuration,
                 data.chillFreezeThreshold, data.chillFreezeDuration);
         }
@@ -114,13 +114,14 @@ namespace TrashTD.Operators
             int primaryATK = GetArmorAdjustedAttack(currentATK, target);
             target.TryTakeAttackDamage(
                 DamageCalculator.CalculateDamage(primaryATK, target.CurrentRES),
-                DamageType.Arts);
+                DamageType.Arts,
+                this);
 
             if (EnemyManager.Instance == null || splashRadius <= 0f) return;
 
             AoeBlastVisual.PlayCircle(target.transform.position, splashRadius, new Color(0.74f, 0.38f, 1f, 0.5f));
 
-            var splashTargets = EnemyManager.Instance.GetEnemiesInRadius(target.transform.position, splashRadius);
+            var splashTargets = EnemyManager.Instance.GetEnemiesInRadius(target.transform.position, splashRadius, data.position);
             int secondaryAtk = Mathf.RoundToInt(currentATK * splashDamageRatio);
             for (int i = 0; i < splashTargets.Count; i++)
             {
@@ -129,7 +130,7 @@ namespace TrashTD.Operators
 
                 int armorAdjustedSplashATK = GetArmorAdjustedAttack(secondaryAtk, splashTarget);
                 int splashDmg = DamageCalculator.CalculateDamage(armorAdjustedSplashATK, splashTarget.CurrentRES);
-                splashTarget.TryTakeAttackDamage(splashDmg, DamageType.Arts);
+                splashTarget.TryTakeAttackDamage(splashDmg, DamageType.Arts, this);
             }
         }
 

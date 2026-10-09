@@ -1,7 +1,4 @@
-using UnityEngine;
-using TrashTD.Combat;
 using TrashTD.Operators;
-using TrashTD.Systems;
 
 namespace TrashTD.Enemies
 {
@@ -11,67 +8,14 @@ namespace TrashTD.Enemies
     /// </summary>
     public class EnemyCaster : EnemyBase
     {
+        protected override void Update()
+        {
+            UpdateRangedBehavior(prioritizeRangedOperators: false);
+        }
+
         public override void OnBlocked(OperatorBase blocker)
         {
             // Enemy casters are immune to blocking per GDD 1.4.4 & 1.5
-        }
-
-        protected override void Update()
-        {
-            if (isDead) return;
-
-            // Continues moving along path unimpeded
-            MoveAlongPath();
-
-            // Attacks operators at range while moving
-            attackTimer += Time.deltaTime;
-            if (attackTimer >= Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval))
-            {
-                attackTimer = 0f;
-                AttackNearestOperator();
-            }
-        }
-
-        private void AttackNearestOperator()
-        {
-            if (OperatorManager.Instance == null || data == null) return;
-
-            float range = data.attackRange > 0 ? data.attackRange : 2.5f;
-            float sqrRange = range * range;
-
-            OperatorBase closest = null;
-            float closestSqrDist = float.MaxValue;
-
-            var deployed = OperatorManager.Instance.DeployedOperators;
-            for (int i = 0; i < deployed.Count; i++)
-            {
-                var op = deployed[i];
-                if (op == null || !op.IsDeployed) continue;
-
-                float sqrDist = (op.transform.position - transform.position).sqrMagnitude;
-                if (sqrDist <= sqrRange && sqrDist < closestSqrDist)
-                {
-                    closestSqrDist = sqrDist;
-                    closest = op;
-                }
-            }
-
-            if (closest != null)
-            {
-                CombatProjectileVisual.Fire(
-                    transform.position,
-                    closest.transform.position,
-                    new Color(0.55f, 0.9f, 0.3f),
-                    8f,
-                    0.1f,
-                    0.05f,
-                    false,
-                    () =>
-                    {
-                        if (closest != null && closest.IsDeployed)
-                            closest.TryTakeAttackDamage(currentATK, data.damageType, this);
-                    });
-            }
         }
     }
 }

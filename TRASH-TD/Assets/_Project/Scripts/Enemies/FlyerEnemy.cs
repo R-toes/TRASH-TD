@@ -1,20 +1,16 @@
 namespace TrashTD.Enemies
 {
     /// <summary>
-    /// Flyer enemy — ignores ground path (GDD 1.5).
-    /// Uses Air movement type, flies directly toward exit.
-    /// Countered by anti-air (ranged) units only.
+    /// Flyer enemy — follows the shared ground route but remains an air target.
+    /// Countered by ranged operators.
     /// 
     /// Movement type is set to Air via EnemyData.movementType.
-    /// The A* pathfinder handles air pathing separately (GDD 1.4.2).
     /// </summary>
     public class FlyerEnemy : EnemyBase
     {
-        public override void Initialize(Data.EnemyData enemyData, int difficultyLevel)
+        protected override void Update()
         {
-            base.Initialize(enemyData, difficultyLevel);
-            // Ensure movement type is Air (should already be set in EnemyData)
-            // Flyers use the air pathfinding mode which ignores ground obstacles
+            UpdateRangedBehavior(prioritizeRangedOperators: true);
         }
 
         /// <summary>
