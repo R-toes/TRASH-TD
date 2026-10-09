@@ -205,7 +205,7 @@ namespace TrashTD.Enemies
         protected void PlayAirMeleeAttack(OperatorBase target)
         {
             MeleeSwipeVisual.Play(transform.position, target.transform.position, new Color(1f, 0.3f, 0.18f, 1f));
-            target.TryTakeAttackDamage(CurrentATK, Data.damageType);
+            target.TryTakeAttackDamage(CurrentATK, Data.damageType, this);
         }
 
         /// <summary>
@@ -231,7 +231,7 @@ namespace TrashTD.Enemies
 
             Vector3 impactPoint = target.transform.position;
             float radius = CellSize * blastRadiusInTiles;
-            target.TryTakeAttackDamage(CurrentATK, Data.damageType);
+            target.TryTakeAttackDamage(CurrentATK, Data.damageType, this);
             AoeBlastVisual.PlayCircle(impactPoint, radius, new Color(0.7f, 0.4f, 1f, 0.35f));
 
             if (OperatorManager.Instance == null) return;
@@ -247,7 +247,7 @@ namespace TrashTD.Enemies
                 Vector3 offset = collateral.transform.position - impactPoint;
                 offset.z = 0f;
                 if (offset.sqrMagnitude <= radius * radius)
-                    collateral.TryTakeAttackDamage(collateralATK, Data.damageType);
+                    collateral.TryTakeAttackDamage(collateralATK, Data.damageType, this);
             }
         }
 

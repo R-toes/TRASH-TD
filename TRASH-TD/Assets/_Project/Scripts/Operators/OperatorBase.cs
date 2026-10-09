@@ -54,6 +54,7 @@ namespace TrashTD.Operators
         public OperatorFacing Facing => facing;
         public OperatorClass OperatorClass => data.operatorClass;
         public virtual bool CanReceiveHealing => true;
+        public virtual bool CanHitAir => data != null && (data.position == OperatorPosition.Ranged || data.operatorClass == OperatorClass.Caster);
         public IReadOnlyList<EnemyBase> BlockedEnemies => blockedEnemies;
 
         /// <summary>
@@ -287,9 +288,7 @@ namespace TrashTD.Operators
         protected virtual bool CanAttackTarget(EnemyBase target)
         {
             if (target == null || target.IsDead) return false;
-            return target.MovementType != EnemyMovementType.Air ||
-                   data.position == OperatorPosition.Ranged ||
-                   data.operatorClass == OperatorClass.Caster;
+            return target.MovementType != EnemyMovementType.Air || CanHitAir;
         }
 
         // ========================

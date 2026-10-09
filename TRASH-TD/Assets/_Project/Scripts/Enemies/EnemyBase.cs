@@ -525,9 +525,11 @@ namespace TrashTD.Enemies
             }
         }
 
-        public bool TryTakeAttackDamage(int damage, DamageType damageType, OperatorBase attacker = null)
+        public bool TryTakeAttackDamage(int damage, DamageType damageType, OperatorBase attacker = null, bool canHitAir = false)
         {
-            if (attacker != null && attacker.Data != null &&
+            bool bypassAirImmunity = canHitAir || (attacker != null && attacker.CanHitAir);
+            if (!bypassAirImmunity &&
+                attacker != null && attacker.Data != null &&
                 attacker.Data.position == OperatorPosition.Melee &&
                 data != null && data.movementType == EnemyMovementType.Air)
                 return false;

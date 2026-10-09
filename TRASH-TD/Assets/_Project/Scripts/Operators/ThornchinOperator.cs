@@ -26,13 +26,37 @@ namespace TrashTD.Operators
             {
                 Retaliate(attacker);
             }
-            else if (attacker == null && hpBefore > hpAfter && blockedEnemies.Count > 0)
+            else if (attacker == null && hpBefore > hpAfter)
             {
-                // Fallback for damage sources without an explicit attacker reference
-                EnemyBase primaryBlocked = blockedEnemies[0];
-                if (primaryBlocked != null && !primaryBlocked.IsDead)
+                if (blockedEnemies.Count > 0)
                 {
-                    Retaliate(primaryBlocked);
+                    EnemyBase primaryBlocked = blockedEnemies[0];
+                    if (primaryBlocked != null && !primaryBlocked.IsDead)
+                    {
+                        Retaliate(primaryBlocked);
+                    }
+                }
+                else if (Systems.EnemyManager.Instance != null && Systems.EnemyManager.Instance.ActiveEnemies.Count > 0)
+                {
+                    // Fallback for unreferenced attackers (e.g. ranged or flying attackers where reference was omitted)
+                    EnemyBase nearest = null;
+                    float nearestDistSq = float.MaxValue;
+                    var enemies = Systems.EnemyManager.Instance.ActiveEnemies;
+                    for (int i = 0; i < enemies.Count; i++)
+                    {
+                        var e = enemies[i];
+                        if (e == null || e.IsDead) continue;
+                        float distSq = (e.transform.position - transform.position).sqrMagnitude;
+                        if (distSq < nearestDistSq && distSq <= 36f)
+                        {
+                            nearestDistSq = distSq;
+                            nearest = e;
+                        }
+                    }
+                    if (nearest != null)
+                    {
+                        Retaliate(nearest);
+                    }
                 }
             }
         }
@@ -87,7 +111,7 @@ namespace TrashTD.Operators
             AudioManager.Instance?.PlaySfx(SfxId.GameplayMeleeAttack);
 
             int damage = DamageCalculator.CalculateDamage(currentATK, target.CurrentDEF);
-            target.TryTakeAttackDamage(damage, data != null ? data.damageType : DamageType.Physical, this);
+            target.TryTakeAttackDamage(damage, data != null ? data.damageType : DamageType.Physical, this, canHitAir: true);
         }
     }
 }
