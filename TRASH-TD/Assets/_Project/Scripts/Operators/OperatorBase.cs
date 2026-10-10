@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TrashTD.Audio;
 using TrashTD.Combat;
+using TrashTD.Core.GameLoop;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
 using TrashTD.Enemies;
@@ -56,6 +57,8 @@ namespace TrashTD.Operators
         public virtual bool CanReceiveHealing => true;
         public virtual bool CanHitAir => data != null && (data.position == OperatorPosition.Ranged || data.operatorClass == OperatorClass.Caster);
         public IReadOnlyList<EnemyBase> BlockedEnemies => blockedEnemies;
+        protected bool IsInPreparationPhase =>
+            GameManager.Instance != null && GameManager.Instance.CurrentPhase == StagePhase.Preparation;
 
         /// <summary>
         /// Initialize this operator with data and rarity.
@@ -310,7 +313,7 @@ namespace TrashTD.Operators
         /// </summary>
         public virtual void TakeDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
         {
-            if (currentHP <= 0 || rawATK <= 0) return;
+            if (IsInPreparationPhase || currentHP <= 0 || rawATK <= 0) return;
 
             var shield = GetComponent<BubbleShield>();
             if (shield != null && shield.TryConsume(rawATK, damageType))
@@ -337,6 +340,7 @@ namespace TrashTD.Operators
 
         public bool TryTakeAttackDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
         {
+            if (IsInPreparationPhase) return false;
             if (!Combat.StageCombatModifiers.TryAttackHit(transform.position))
                 return false;
 
@@ -349,7 +353,7 @@ namespace TrashTD.Operators
         /// </summary>
         public void Heal(int amount)
         {
-            if (!CanReceiveHealing) return;
+            if (IsInPreparationPhase || !CanReceiveHealing) return;
             ApplyHealing(amount);
         }
 
@@ -360,7 +364,7 @@ namespace TrashTD.Operators
 
         private void ApplyHealing(int amount)
         {
-            if (amount <= 0 || currentHP <= 0) return;
+            if (IsInPreparationPhase || amount <= 0 || currentHP <= 0) return;
 
             int previousHP = currentHP;
             currentHP = Mathf.Min(currentHP + amount, maxHP);

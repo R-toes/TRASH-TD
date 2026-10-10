@@ -94,6 +94,8 @@ namespace TrashTD.UI
         private CardDraftSystem draftSystem;
         private PlayerDeck playerDeck;
         private GameManager gameManager;
+        private GameplayHUDUI gameplayHudUI;
+        private bool waitingForEnvironmentBriefing;
 
         // --- Card UI ---
         private GameObject[] cardPanels = new GameObject[3];
@@ -108,6 +110,8 @@ namespace TrashTD.UI
         private MenuButtonFeedback[] cardFeedbacks = new MenuButtonFeedback[3];
         private Image[] cardAccents = new Image[3];
         private Outline[] portraitFrames = new Outline[3];
+        private Image[] classBadgeBackgrounds = new Image[3];
+        private Image[] classBadgeIcons = new Image[3];
         private Text[] portraitFallbackTexts = new Text[3];
         private Text[] selectHintTexts = new Text[3];
 
@@ -115,6 +119,7 @@ namespace TrashTD.UI
         private sealed class Chip
         {
             public Image bg;
+            public Image icon;
             public Outline outline;
             public Text text;
         }
@@ -195,6 +200,9 @@ namespace TrashTD.UI
             draftSystem = FindFirstObjectByType<CardDraftSystem>();
             playerDeck = FindFirstObjectByType<PlayerDeck>();
             gameManager = FindFirstObjectByType<GameManager>();
+            gameplayHudUI = FindFirstObjectByType<GameplayHUDUI>();
+            if (gameplayHudUI != null)
+                gameplayHudUI.EnvironmentBriefingDismissed += HandleEnvironmentBriefingDismissed;
 
             sfxSource = gameObject.AddComponent<AudioSource>();
             sfxSource.playOnAwake = false;
@@ -256,11 +264,16 @@ namespace TrashTD.UI
                 draftSystem.OnCardsOffered -= HandleCardsOffered;
             }
 
+            if (gameplayHudUI != null)
+                gameplayHudUI.EnvironmentBriefingDismissed -= HandleEnvironmentBriefingDismissed;
+
             SceneManager.activeSceneChanged -= HandleActiveSceneChanged;
         }
 
         private void HandleKeyboardShortcuts()
         {
+            if (gameplayHudUI != null && gameplayHudUI.IsEnvironmentBriefingActive) return;
+
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             if (keyboard == null) return;
 
@@ -312,6 +325,13 @@ namespace TrashTD.UI
             }
         }
 
+        private void HandleEnvironmentBriefingDismissed()
+        {
+            if (!waitingForEnvironmentBriefing || !IsActiveGameplayCardPick()) return;
+            waitingForEnvironmentBriefing = false;
+            ShowDraftOverlay();
+        }
+
         private void HandleActiveSceneChanged(Scene previousScene, Scene activeScene)
         {
             if (activeScene != gameObject.scene)
@@ -327,6 +347,15 @@ namespace TrashTD.UI
                 HideDraftOverlayImmediately();
                 return;
             }
+
+            if (gameplayHudUI != null && gameplayHudUI.ShouldBlockDraftOverlay)
+            {
+                waitingForEnvironmentBriefing = true;
+                HideDraftOverlayImmediately();
+                return;
+            }
+
+            waitingForEnvironmentBriefing = false;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (developerPickerRoot != null) developerPickerRoot.SetActive(false);
@@ -430,6 +459,8 @@ namespace TrashTD.UI
                     portraitBgImages[i].color = Color.Lerp(PORTRAIT_BG, rarityColor, 0.10f);
                     portraitFrames[i].effectColor = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.6f);
                     cardFeedbacks[i].glowColor = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.95f);
+                    classBadgeBackgrounds[i].color = GetClassColor(opData.operatorClass);
+                    classBadgeIcons[i].sprite = GameplayHUDUI.GetClassIconSprite(opData.operatorClass);
 
                     SetPortrait(i, opData);
                 }
@@ -539,6 +570,7 @@ namespace TrashTD.UI
 
             // Type chips: class / position / damage type
             SetChip(detailClassChip, op.operatorClass.ToString().ToUpper(), GetClassColor(op.operatorClass));
+            detailClassChip.icon.sprite = GameplayHUDUI.GetClassIconSprite(op.operatorClass);
             bool isMelee = op.position == OperatorPosition.Melee;
             SetChip(detailPositionChip, isMelee ? "MELEE" : "RANGED", isMelee ? MELEE_COLOR : RANGED_COLOR);
             GetDamageType(op, out string damageLabel, out Color damageColor);
@@ -1414,6 +1446,32 @@ namespace TrashTD.UI
             portraitImages[index].color = Color.white;
             portraitImages[index].raycastTarget = false;
 
+            var classBadge = new GameObject($"ClassBadge_{index}", typeof(RectTransform), typeof(Image), typeof(Outline));
+            classBadge.transform.SetParent(portraitBg.transform, false);
+            RectTransform classBadgeRect = classBadge.GetComponent<RectTransform>();
+            classBadgeRect.anchorMin = new Vector2(0f, 1f);
+            classBadgeRect.anchorMax = new Vector2(0f, 1f);
+            classBadgeRect.pivot = new Vector2(0f, 1f);
+            classBadgeRect.anchoredPosition = new Vector2(10f, -10f);
+            classBadgeRect.sizeDelta = new Vector2(50f, 50f);
+            classBadgeBackgrounds[index] = classBadge.GetComponent<Image>();
+            classBadgeBackgrounds[index].raycastTarget = false;
+            Outline badgeOutline = classBadge.GetComponent<Outline>();
+            badgeOutline.effectColor = new Color(0.02f, 0.025f, 0.035f, 0.95f);
+            badgeOutline.effectDistance = new Vector2(2f, -2f);
+            badgeOutline.useGraphicAlpha = false;
+
+            var classIconObject = new GameObject($"ClassIcon_{index}", typeof(RectTransform), typeof(Image));
+            classIconObject.transform.SetParent(classBadge.transform, false);
+            classBadgeIcons[index] = classIconObject.GetComponent<Image>();
+            classBadgeIcons[index].preserveAspect = true;
+            classBadgeIcons[index].raycastTarget = false;
+            RectTransform classIconRect = classBadgeIcons[index].rectTransform;
+            classIconRect.anchorMin = Vector2.zero;
+            classIconRect.anchorMax = Vector2.one;
+            classIconRect.offsetMin = new Vector2(8f, 8f);
+            classIconRect.offsetMax = new Vector2(-8f, -8f);
+
             // --- Name (bottom) ---
             nameTexts[index] = MakeText(cardObj.transform, $"Name_{index}", "", 26,
                 TextAnchor.MiddleCenter, Color.white);
@@ -1504,7 +1562,7 @@ namespace TrashTD.UI
 
             // Type chips (class / position / damage type)
             float chipWidth = (innerWidth - 24f) / 3f;
-            detailClassChip = CreateChip(content, "ClassChip", margin, 114f, chipWidth, 34f);
+            detailClassChip = CreateChip(content, "ClassChip", margin, 114f, chipWidth, 34f, true);
             detailPositionChip = CreateChip(content, "PositionChip", margin + chipWidth + 12f, 114f, chipWidth, 34f);
             detailDamageChip = CreateChip(content, "DamageChip", margin + (chipWidth + 12f) * 2f, 114f, chipWidth, 34f);
 
@@ -1551,7 +1609,7 @@ namespace TrashTD.UI
             detailContentRoot.SetActive(false);
         }
 
-        private Chip CreateChip(Transform parent, string name, float x, float y, float width, float height)
+        private Chip CreateChip(Transform parent, string name, float x, float y, float width, float height, bool showIcon = false)
         {
             var chip = new Chip();
 
@@ -1567,12 +1625,38 @@ namespace TrashTD.UI
             chip.outline.effectDistance = new Vector2(1.5f, -1.5f);
             chip.outline.effectColor = new Color(1f, 1f, 1f, 0.2f);
 
+            if (showIcon)
+            {
+                var iconObject = new GameObject("ClassIcon", typeof(RectTransform), typeof(Image));
+                iconObject.transform.SetParent(obj.transform, false);
+                chip.icon = iconObject.GetComponent<Image>();
+                chip.icon.preserveAspect = true;
+                chip.icon.raycastTarget = false;
+                RectTransform iconRect = chip.icon.rectTransform;
+                iconRect.anchorMin = new Vector2(0f, 0.5f);
+                iconRect.anchorMax = new Vector2(0f, 0.5f);
+                iconRect.pivot = new Vector2(0f, 0.5f);
+                iconRect.anchoredPosition = new Vector2(8f, 0f);
+                iconRect.sizeDelta = new Vector2(22f, 22f);
+            }
+
             chip.text = MakeText(obj.transform, "Label", "", 13, TextAnchor.MiddleCenter, Color.white);
             chip.text.fontStyle = FontStyle.Bold;
             chip.text.resizeTextForBestFit = true;
             chip.text.resizeTextMinSize = 9;
             chip.text.resizeTextMaxSize = 13;
-            StretchFill(chip.text.rectTransform);
+            if (showIcon)
+            {
+                RectTransform textRect = chip.text.rectTransform;
+                textRect.anchorMin = Vector2.zero;
+                textRect.anchorMax = Vector2.one;
+                textRect.offsetMin = new Vector2(32f, 0f);
+                textRect.offsetMax = new Vector2(-4f, 0f);
+            }
+            else
+            {
+                StretchFill(chip.text.rectTransform);
+            }
 
             return chip;
         }

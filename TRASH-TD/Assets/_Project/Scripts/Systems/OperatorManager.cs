@@ -19,7 +19,6 @@ namespace TrashTD.Systems
         [SerializeField] private GridManager gridManager;
 
         private readonly List<OperatorBase> deployedOperators = new List<OperatorBase>();
-        private readonly Dictionary<string, int> redeployCooldownRounds = new Dictionary<string, int>();
 
         public IReadOnlyList<OperatorBase> DeployedOperators => deployedOperators;
         public int DeployedCount => deployedOperators.Count;
@@ -65,46 +64,16 @@ namespace TrashTD.Systems
         }
 
         /// <summary>
-        /// Check if an operator is on redeployment cooldown.
+        /// Attempts to deploy the specified deck card to the given grid coordinates.
         /// </summary>
-        public bool IsOnRedeployCooldown(string operatorName)
-        {
-            return redeployCooldownRounds.TryGetValue(operatorName, out int rounds) && rounds > 0;
-        }
-
-        public int GetRemainingRedeployCooldownRounds(string operatorName)
-        {
-            return redeployCooldownRounds.TryGetValue(operatorName, out int rounds) ? Mathf.Max(0, rounds) : 0;
-        }
-
-        public void AdvanceRedeployCooldownsOneRound()
-        {
-            if (redeployCooldownRounds.Count == 0) return;
-
-            var keys = new List<string>(redeployCooldownRounds.Keys);
-            foreach (string key in keys)
-            {
-                int roundsRemaining = redeployCooldownRounds[key] - 1;
-                if (roundsRemaining <= 0) redeployCooldownRounds.Remove(key);
-                else redeployCooldownRounds[key] = roundsRemaining;
-            }
-        }
-
-        /// <summary>
-        /// Attempts to deploy an operator instance to the specified grid coordinates.
-        /// </summary>
-        public bool TryDeployOperator(OperatorData opData, OperatorRarity rarity, Vector2Int gridPos, out OperatorBase deployedInstance)
-        {
-            return TryDeployOperator(opData, rarity, gridPos, OperatorFacing.Right, out deployedInstance);
-        }
-
-        public bool TryDeployOperator(OperatorData opData, OperatorRarity rarity, Vector2Int gridPos, OperatorFacing facing, out OperatorBase deployedInstance)
+        public bool TryDeployOperator(DraftCard card, Vector2Int gridPos, OperatorFacing facing, out OperatorBase deployedInstance)
         {
             deployedInstance = null;
 
+            if (card == null || card.cooldownRoundsRemaining > 0) return false;
+            OperatorData opData = card.operatorData;
             if (opData == null || gridManager == null) return false;
             if (deployedOperators.Count >= SquadLimit) return false;
-            if (IsOnRedeployCooldown(opData.operatorName)) return false;
 
             GridCell targetCell = gridManager.GetCell(gridPos);
             if (targetCell == null || !targetCell.CanDeploy(opData.position)) return false;
@@ -137,7 +106,7 @@ namespace TrashTD.Systems
                 opComp = AddClassComponent(opObj, opData);
             }
 
-            opComp.Initialize(opData, rarity, facing);
+            opComp.Initialize(opData, card.rarity, facing);
             if (!opComp.Deploy(targetCell))
             {
                 Destroy(opObj);
@@ -246,13 +215,7 @@ namespace TrashTD.Systems
 
             if (SelectedOperator == op) SelectOperator(null);
 
-            int cooldownRounds = 0;
-            if (op.Data != null)
-            {
-                cooldownRounds = GetRetreatCooldownRounds(op.OperatorClass);
-                if (cooldownRounds > 0) redeployCooldownRounds[op.Data.operatorName] = cooldownRounds;
-                else redeployCooldownRounds.Remove(op.Data.operatorName);
-            }
+            int cooldownRounds = op.Data != null ? GetRetreatCooldownRounds(op.OperatorClass) : 0;
 
             DraftCard returnedCard = op.Data != null
                 ? new DraftCard(op.Data, op.CurrentRarity, cooldownRounds)
@@ -325,7 +288,6 @@ namespace TrashTD.Systems
                 }
             }
             deployedOperators.Clear();
-            redeployCooldownRounds.Clear();
         }
     }
 }

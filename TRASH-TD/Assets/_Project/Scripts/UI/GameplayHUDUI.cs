@@ -25,6 +25,10 @@ namespace TrashTD.UI
     public class GameplayHUDUI : MonoBehaviour
     {
         private const int DeckSlotCount = 8;
+        private static Sprite cooldownClockSprite;
+        private static Sprite waveMarkSprite;
+        private static Sprite enemySkullSprite;
+        private static readonly Dictionary<OperatorClass, Sprite> ClassIconSprites = new Dictionary<OperatorClass, Sprite>();
 
         // ── Palette ──────────────────────────────────────────
         private static readonly Color AccentColor = new Color(0.18f, 0.82f, 0.45f, 1f);
@@ -48,12 +52,19 @@ namespace TrashTD.UI
         private Canvas canvas;
         private GameObject pausePanel;
         private GameObject stageInfoPanel;
+        private Text phaseHeaderText;
         private Text waveText;
+        private Image waveIconImage;
         private Text enemyText;
+        private Image enemyIconImage;
         private Text lpText;
         private Text phaseText;
         private Text squadCountText;
         private GameObject selectedOperatorLabelRoot;
+        private GameObject environmentBriefingPanel;
+        private Text environmentBriefingTitle;
+        private Text environmentBriefingDescription;
+        private bool environmentBriefingDismissed;
         private Text selectedOperatorNameText;
         private Text selectedOperatorSkillDescriptionText;
         private Text selectedOperatorHealthText;
@@ -63,6 +74,21 @@ namespace TrashTD.UI
         private RectTransform selectedOperatorHealthFillRect;
         private GameObject selectedOperatorUpgradeBadge;
         private UpgradeArrowGraphic selectedOperatorUpgradeBadgeGraphic;
+        private Button selectedOperatorShowMoreButton;
+        private GameObject selectedOperatorDetailsPanel;
+        private Image selectedOperatorDetailsAccent;
+        private Image selectedOperatorDetailsPortrait;
+        private Image selectedOperatorDetailsClassIcon;
+        private Text selectedOperatorDetailsName;
+        private Text[] selectedOperatorDetailsChipLabels;
+        private Image[] selectedOperatorDetailsChipBackgrounds;
+        private Outline[] selectedOperatorDetailsChipOutlines;
+        private Text selectedOperatorDetailsRarity;
+        private Text[] selectedOperatorDetailsStatValues;
+        private Text selectedOperatorDetailsRoles;
+        private Text selectedOperatorDetailsSkillHeading;
+        private Text selectedOperatorDetailsSkill;
+        private OperatorBase selectedOperatorDetailsTarget;
         private GameObject placementControlsRoot;
         private Button retreatOperatorButton;
         private Button placementConfirmButton;
@@ -77,6 +103,12 @@ namespace TrashTD.UI
         private Button[] deckButtons;
         private Text[] deckButtonLabels;
         private Image[] deckButtonImages;
+        private Image[] deckPortraitImages;
+        private Image[] deckClassBadgeImages;
+        private Image[] deckClassIconImages;
+        private GameObject[] deckClassBadges;
+        private GameObject[] deckCooldownBadges;
+        private Text[] deckCooldownLabels;
         private GameObject[] deckUpgradeBadges;
         private UpgradeArrowGraphic[] deckUpgradeBadgeLabels;
         private CardDraftSystem draftSystem;
@@ -90,6 +122,18 @@ namespace TrashTD.UI
         private TrashTD.Development.SandboxController sandboxController;
 
         private int selectedDeckSlot = -1;
+        public bool IsEnvironmentBriefingActive => environmentBriefingPanel != null && environmentBriefingPanel.activeSelf;
+        public bool ShouldBlockDraftOverlay
+        {
+            get
+            {
+                if (environmentBriefingDismissed || gameManager == null || gameManager.CurrentStage == null) return false;
+                string stageId = gameManager.CurrentStage.stageId;
+                return stageId == "STAGE_03" || stageId == "STAGE_06";
+            }
+        }
+
+        public event System.Action EnvironmentBriefingDismissed;
 
         // Feedback components
         private MenuButtonFeedback[] deckFeedbacks;
@@ -108,6 +152,11 @@ namespace TrashTD.UI
         private Text phaseBannerTitle;
         private Text phaseBannerSubtitle;
         private Image[] phaseBannerLines;
+        private RectTransform cooldownToastRect;
+        private CanvasGroup cooldownToastGroup;
+        private Text cooldownToastTitle;
+        private Text cooldownToastMessage;
+        private Coroutine cooldownToastRoutine;
         private CanvasGroup pauseGroup;
         private RectTransform pauseCard;
 
@@ -207,6 +256,7 @@ namespace TrashTD.UI
             UpdatePhaseUI(false);
 
             StartCoroutine(IntroRoutine());
+            StartCoroutine(ShowEnvironmentBriefingWhenReady());
         }
 
         private void Update()
@@ -268,8 +318,11 @@ namespace TrashTD.UI
             CreateTrashDropZone(root);
             CreateDiscardConfirmationPanel(root);
             CreatePhaseBanner(root);
+            CreateEnvironmentBriefing(root);
             CreatePlacementControls(root);
             CreateSelectedOperatorLabel(root);
+            CreateSelectedOperatorDetailsPanel(root);
+            CreateCooldownToast(root);
             CreatePausePanel(root); // last, so it renders above everything else
         }
 
@@ -334,6 +387,15 @@ namespace TrashTD.UI
             selectedOperatorUpgradeBadge = CreateUpgradeBadge(selectedOperatorLabelRoot.transform, "SelectedOperatorUpgradeBadge", new Vector2(38f, 18f), new Vector2(10f, -29f));
             selectedOperatorUpgradeBadgeGraphic = selectedOperatorUpgradeBadge.GetComponentInChildren<UpgradeArrowGraphic>();
 
+            selectedOperatorShowMoreButton = CreateButton(selectedOperatorLabelRoot.transform, "ShowOperatorDetailsButton", "SHOW MORE", new Vector2(102f, 24f));
+            SetPosition(selectedOperatorShowMoreButton.GetComponent<RectTransform>(), new Vector2(0f, -112f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 1f));
+            Text showMoreLabel = selectedOperatorShowMoreButton.GetComponentInChildren<Text>();
+            showMoreLabel.fontSize = 11;
+            showMoreLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
+            showMoreLabel.verticalOverflow = VerticalWrapMode.Truncate;
+            StyleButton(selectedOperatorShowMoreButton, DarkButton, PrepColor, 1.08f);
+            selectedOperatorShowMoreButton.onClick.AddListener(ToggleSelectedOperatorDetails);
+
             selectedOperatorAtkText = CreateText(selectedOperatorLabelRoot.transform, "Atk", string.Empty, 14, TextAnchor.MiddleLeft);
             selectedOperatorAtkText.color = new Color(1f, 0.72f, 0.35f, 1f);
             SetPosition(selectedOperatorAtkText.GetComponent<RectTransform>(), new Vector2(10f, 26f), Vector2.zero, new Vector2(120f, 20f), Vector2.zero);
@@ -372,6 +434,215 @@ namespace TrashTD.UI
 
             selectedOperatorLabelRoot.SetActive(false);
             retreatOperatorButton.gameObject.SetActive(false);
+        }
+
+        private void CreateSelectedOperatorDetailsPanel(Transform root)
+        {
+            selectedOperatorDetailsPanel = new GameObject(
+                "SelectedOperatorDetailsPanel",
+                typeof(RectTransform),
+                typeof(Image),
+                typeof(Outline));
+            selectedOperatorDetailsPanel.transform.SetParent(root, false);
+
+            RectTransform panelRect = selectedOperatorDetailsPanel.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(1f, 0.5f);
+            panelRect.anchorMax = new Vector2(1f, 0.5f);
+            panelRect.pivot = new Vector2(1f, 0.5f);
+            panelRect.sizeDelta = new Vector2(500f, 640f);
+            panelRect.anchoredPosition = new Vector2(-24f, 0f);
+
+            Image panelImage = selectedOperatorDetailsPanel.GetComponent<Image>();
+            panelImage.color = new Color(0.045f, 0.055f, 0.075f, 0.96f);
+            panelImage.raycastTarget = true;
+            Outline panelOutline = selectedOperatorDetailsPanel.GetComponent<Outline>();
+            panelOutline.effectColor = new Color(1f, 1f, 1f, 0.06f);
+            panelOutline.effectDistance = new Vector2(2f, -2f);
+
+            var accent = new GameObject("DetailAccent", typeof(RectTransform), typeof(Image));
+            accent.transform.SetParent(selectedOperatorDetailsPanel.transform, false);
+            RectTransform accentRect = accent.GetComponent<RectTransform>();
+            accentRect.anchorMin = new Vector2(0f, 1f);
+            accentRect.anchorMax = new Vector2(1f, 1f);
+            accentRect.pivot = new Vector2(0.5f, 1f);
+            accentRect.sizeDelta = new Vector2(0f, 4f);
+            selectedOperatorDetailsAccent = accent.GetComponent<Image>();
+            selectedOperatorDetailsAccent.color = new Color(0.18f, 0.82f, 0.45f, 0.35f);
+            selectedOperatorDetailsAccent.raycastTarget = false;
+
+            Transform content = selectedOperatorDetailsPanel.transform;
+
+            const float detailsMargin = 28f;
+            const float detailsInnerWidth = 444f;
+            var portraitObject = new GameObject("OperatorPortrait", typeof(RectTransform), typeof(Image));
+            portraitObject.transform.SetParent(content, false);
+            selectedOperatorDetailsPortrait = portraitObject.GetComponent<Image>();
+            selectedOperatorDetailsPortrait.preserveAspect = true;
+            selectedOperatorDetailsPortrait.raycastTarget = false;
+            selectedOperatorDetailsPortrait.color = Color.white;
+            SetPosition(selectedOperatorDetailsPortrait.rectTransform, new Vector2(-detailsMargin, -16f), new Vector2(1f, 1f), new Vector2(72f, 88f), new Vector2(1f, 1f));
+
+            selectedOperatorDetailsName = CreateText(content, "OperatorName", string.Empty, 32, TextAnchor.MiddleLeft);
+            selectedOperatorDetailsName.fontStyle = FontStyle.Bold;
+            selectedOperatorDetailsName.resizeTextForBestFit = true;
+            selectedOperatorDetailsName.resizeTextMinSize = 18;
+            selectedOperatorDetailsName.resizeTextMaxSize = 32;
+            selectedOperatorDetailsName.raycastTarget = false;
+            SetPosition(selectedOperatorDetailsName.rectTransform, new Vector2(detailsMargin, -28f), new Vector2(0f, 1f), new Vector2(detailsInnerWidth - 90f, 42f), new Vector2(0f, 1f));
+
+            selectedOperatorDetailsRarity = CreateText(content, "Rarity", string.Empty, 22, TextAnchor.MiddleLeft);
+            selectedOperatorDetailsRarity.raycastTarget = false;
+            SetPosition(selectedOperatorDetailsRarity.rectTransform, new Vector2(detailsMargin, -72f), new Vector2(0f, 1f), new Vector2(detailsInnerWidth - 90f, 28f), new Vector2(0f, 1f));
+
+            selectedOperatorDetailsChipBackgrounds = new Image[3];
+            selectedOperatorDetailsChipLabels = new Text[3];
+            selectedOperatorDetailsChipOutlines = new Outline[3];
+            float detailChipWidth = (detailsInnerWidth - 24f) / 3f;
+            for (int i = 0; i < selectedOperatorDetailsChipLabels.Length; i++)
+            {
+                var chip = new GameObject($"TypeChip_{i}", typeof(RectTransform), typeof(Image), typeof(Outline));
+                chip.transform.SetParent(content, false);
+                float chipX = detailsMargin + (detailChipWidth + 12f) * i;
+                SetPosition(chip.GetComponent<RectTransform>(), new Vector2(chipX, -114f), new Vector2(0f, 1f), new Vector2(detailChipWidth, 34f), new Vector2(0f, 1f));
+                selectedOperatorDetailsChipBackgrounds[i] = chip.GetComponent<Image>();
+                selectedOperatorDetailsChipBackgrounds[i].color = new Color(0.07f, 0.085f, 0.115f, 1f);
+                selectedOperatorDetailsChipBackgrounds[i].raycastTarget = false;
+                selectedOperatorDetailsChipOutlines[i] = chip.GetComponent<Outline>();
+                selectedOperatorDetailsChipOutlines[i].effectDistance = new Vector2(1.5f, -1.5f);
+                selectedOperatorDetailsChipOutlines[i].effectColor = new Color(1f, 1f, 1f, 0.2f);
+
+                if (i == 0)
+                {
+                    var iconObject = new GameObject("ClassIcon", typeof(RectTransform), typeof(Image));
+                    iconObject.transform.SetParent(chip.transform, false);
+                    selectedOperatorDetailsClassIcon = iconObject.GetComponent<Image>();
+                    selectedOperatorDetailsClassIcon.preserveAspect = true;
+                    selectedOperatorDetailsClassIcon.raycastTarget = false;
+                    SetPosition(selectedOperatorDetailsClassIcon.rectTransform, new Vector2(8f, 0f), new Vector2(0f, 0.5f), new Vector2(22f, 22f), new Vector2(0f, 0.5f));
+                }
+
+                selectedOperatorDetailsChipLabels[i] = CreateText(chip.transform, $"Label_{i}", string.Empty, 13, TextAnchor.MiddleCenter);
+                selectedOperatorDetailsChipLabels[i].fontStyle = FontStyle.Bold;
+                selectedOperatorDetailsChipLabels[i].resizeTextForBestFit = true;
+                selectedOperatorDetailsChipLabels[i].resizeTextMinSize = 9;
+                selectedOperatorDetailsChipLabels[i].resizeTextMaxSize = 13;
+                selectedOperatorDetailsChipLabels[i].raycastTarget = false;
+                RectTransform chipTextRect = selectedOperatorDetailsChipLabels[i].rectTransform;
+                chipTextRect.anchorMin = Vector2.zero;
+                chipTextRect.anchorMax = Vector2.one;
+                chipTextRect.offsetMin = new Vector2(i == 0 ? 32f : 0f, 0f);
+                chipTextRect.offsetMax = new Vector2(-4f, 0f);
+            }
+
+            selectedOperatorDetailsRoles = CreateText(content, "Roles", string.Empty, 12, TextAnchor.MiddleLeft);
+            selectedOperatorDetailsRoles.fontStyle = FontStyle.Normal;
+            selectedOperatorDetailsRoles.resizeTextForBestFit = true;
+            selectedOperatorDetailsRoles.resizeTextMinSize = 9;
+            selectedOperatorDetailsRoles.resizeTextMaxSize = 12;
+            selectedOperatorDetailsRoles.raycastTarget = false;
+            SetPosition(selectedOperatorDetailsRoles.rectTransform, new Vector2(detailsMargin, -156f), new Vector2(0f, 1f), new Vector2(detailsInnerWidth, 22f), new Vector2(0f, 1f));
+
+            CreateOperatorDetailsDivider(content, detailsMargin, detailsInnerWidth, 190f);
+
+            Text statsHeading = CreateText(content, "StatsHeading", "STATS", 11, TextAnchor.MiddleLeft);
+            statsHeading.color = new Color(0.6f, 0.65f, 0.7f, 1f);
+            statsHeading.raycastTarget = false;
+            statsHeading.fontStyle = FontStyle.Bold;
+            SetPosition(statsHeading.rectTransform, new Vector2(detailsMargin, -202f), new Vector2(0f, 1f), new Vector2(detailsInnerWidth, 18f), new Vector2(0f, 1f));
+
+            selectedOperatorDetailsStatValues = new Text[6];
+            Color[] statColors =
+            {
+                new Color(0.35f, 0.85f, 0.45f, 1f),
+                new Color(0.95f, 0.40f, 0.35f, 1f),
+                new Color(0.35f, 0.60f, 1f, 1f),
+                new Color(0.70f, 0.45f, 1f, 1f),
+                new Color(1f, 0.8f, 0.3f, 1f),
+                new Color(0.4f, 0.85f, 0.9f, 1f)
+            };
+            string[] statNames = { "HP", "ATK", "DEF", "RES", "BLOCK", "ATK SPD" };
+            float tileWidth = (detailsInnerWidth - 12f) / 2f;
+            float tileHeight = 62f;
+            float rowStep = tileHeight + 8f;
+            float gridTop = 226f;
+            float rightX = detailsMargin + tileWidth + 12f;
+            for (int i = 0; i < selectedOperatorDetailsStatValues.Length; i++)
+            {
+                int row = i / 2;
+                float x = i % 2 == 0 ? detailsMargin : rightX;
+                selectedOperatorDetailsStatValues[i] = CreateOperatorDetailStatTile(
+                    content,
+                    statNames[i],
+                    statColors[i],
+                    x,
+                    gridTop + rowStep * row,
+                    tileWidth,
+                    tileHeight);
+            }
+
+            selectedOperatorDetailsSkillHeading = CreateText(content, "SkillHeading", "ABILITY", 11, TextAnchor.MiddleLeft);
+            selectedOperatorDetailsSkillHeading.color = new Color(0.6f, 0.65f, 0.7f, 1f);
+            selectedOperatorDetailsSkillHeading.raycastTarget = false;
+            selectedOperatorDetailsSkillHeading.fontStyle = FontStyle.Bold;
+            SetPosition(selectedOperatorDetailsSkillHeading.rectTransform, new Vector2(detailsMargin, -450f), new Vector2(0f, 1f), new Vector2(detailsInnerWidth, 18f), new Vector2(0f, 1f));
+
+            selectedOperatorDetailsSkill = CreateText(content, "SkillDescription", string.Empty, 15, TextAnchor.UpperLeft);
+            selectedOperatorDetailsSkill.fontStyle = FontStyle.Normal;
+            selectedOperatorDetailsSkill.lineSpacing = 1.25f;
+            selectedOperatorDetailsSkill.resizeTextForBestFit = true;
+            selectedOperatorDetailsSkill.resizeTextMinSize = 11;
+            selectedOperatorDetailsSkill.resizeTextMaxSize = 15;
+            selectedOperatorDetailsSkill.horizontalOverflow = HorizontalWrapMode.Wrap;
+            selectedOperatorDetailsSkill.verticalOverflow = VerticalWrapMode.Truncate;
+            selectedOperatorDetailsSkill.color = new Color(0.88f, 0.92f, 0.96f, 1f);
+            selectedOperatorDetailsSkill.raycastTarget = false;
+            SetPosition(selectedOperatorDetailsSkill.rectTransform, new Vector2(detailsMargin, -474f), new Vector2(0f, 1f), new Vector2(detailsInnerWidth, 134f), new Vector2(0f, 1f));
+
+            selectedOperatorDetailsPanel.SetActive(false);
+        }
+
+        private Text CreateOperatorDetailStatTile(Transform parent, string label, Color accentColor, float x, float y, float width, float height)
+        {
+            var tile = new GameObject($"Stat_{label}", typeof(RectTransform), typeof(Image));
+            tile.transform.SetParent(parent, false);
+            SetPosition(tile.GetComponent<RectTransform>(), new Vector2(x, -y), new Vector2(0f, 1f), new Vector2(width, height), new Vector2(0f, 1f));
+            tile.GetComponent<Image>().color = new Color(0.07f, 0.085f, 0.115f, 1f);
+            tile.GetComponent<Image>().raycastTarget = false;
+
+            var bar = new GameObject("Bar", typeof(RectTransform), typeof(Image));
+            bar.transform.SetParent(tile.transform, false);
+            RectTransform barRect = bar.GetComponent<RectTransform>();
+            barRect.anchorMin = new Vector2(0f, 0f);
+            barRect.anchorMax = new Vector2(0f, 1f);
+            barRect.pivot = new Vector2(0f, 0.5f);
+            barRect.sizeDelta = new Vector2(4f, 0f);
+            barRect.anchoredPosition = Vector2.zero;
+            Image barImage = bar.GetComponent<Image>();
+            barImage.color = accentColor;
+            barImage.raycastTarget = false;
+
+            Text labelText = CreateText(tile.transform, "Label", label, 11, TextAnchor.MiddleLeft);
+            labelText.color = new Color(0.6f, 0.65f, 0.7f, 1f);
+            labelText.raycastTarget = false;
+            labelText.fontStyle = FontStyle.Bold;
+            SetPosition(labelText.rectTransform, new Vector2(18f, -8f), new Vector2(0f, 1f), new Vector2(width - 28f, 18f), new Vector2(0f, 1f));
+
+            Text valueText = CreateText(tile.transform, "Value", "0", 26, TextAnchor.MiddleLeft);
+            valueText.color = new Color(0.95f, 0.95f, 0.98f, 1f);
+            valueText.raycastTarget = false;
+            valueText.fontStyle = FontStyle.Bold;
+            SetPosition(valueText.rectTransform, new Vector2(18f, -26f), new Vector2(0f, 1f), new Vector2(width - 28f, 32f), new Vector2(0f, 1f));
+            return valueText;
+        }
+
+        private static void CreateOperatorDetailsDivider(Transform parent, float margin, float width, float top)
+        {
+            var divider = new GameObject("DetailsDivider", typeof(RectTransform), typeof(Image));
+            divider.transform.SetParent(parent, false);
+            SetPosition(divider.GetComponent<RectTransform>(), new Vector2(margin, -top), new Vector2(0f, 1f), new Vector2(width, 2f), new Vector2(0f, 1f));
+            Image image = divider.GetComponent<Image>();
+            image.color = new Color(1f, 1f, 1f, 0.08f);
+            image.raycastTarget = false;
         }
 
         private void CreatePlacementControls(Transform root)
@@ -479,6 +750,8 @@ namespace TrashTD.UI
                 selectedLabelShown = false;
                 selectedOperatorLabelRoot.SetActive(false);
                 retreatOperatorButton.gameObject.SetActive(false);
+                selectedOperatorDetailsPanel.SetActive(false);
+                selectedOperatorDetailsTarget = null;
                 return;
             }
 
@@ -492,6 +765,7 @@ namespace TrashTD.UI
             {
                 selectedOperatorLabelRoot.GetComponent<RectTransform>().anchoredPosition = localPosition;
                 selectedOperatorLabelRoot.SetActive(true);
+                selectedOperatorShowMoreButton.gameObject.SetActive(true);
                 RectTransform retreatRect = retreatOperatorButton.GetComponent<RectTransform>();
                 retreatRect.anchoredPosition = localPosition + new Vector2(185f, 0f);
                 retreatOperatorButton.gameObject.SetActive(true);
@@ -521,10 +795,16 @@ namespace TrashTD.UI
 
             bool hasSkillDescription = !string.IsNullOrWhiteSpace(skillDescription);
             selectedOperatorLabelRoot.GetComponent<RectTransform>().sizeDelta = hasSkillDescription
-                ? new Vector2(300f, 178f)
-                : new Vector2(250f, 104f);
+                ? new Vector2(300f, 220f)
+                : new Vector2(300f, 170f);
             selectedOperatorSkillDescriptionText.text = skillDescription;
             selectedOperatorSkillDescriptionText.gameObject.SetActive(hasSkillDescription);
+            SetPosition(
+                selectedOperatorShowMoreButton.GetComponent<RectTransform>(),
+                new Vector2(0f, hasSkillDescription ? -126f : -58f),
+                new Vector2(0.5f, 1f),
+                new Vector2(102f, 24f),
+                new Vector2(0.5f, 1f));
 
             int upgradeLevels = Mathf.Clamp((int)rarity - (int)baseRarity, 0, 2);
             selectedOperatorUpgradeBadgeGraphic.SetArrowCount(upgradeLevels);
@@ -586,6 +866,7 @@ namespace TrashTD.UI
                 return;
             }
 
+            selectedOperatorDetailsTarget = selectedOperator;
             Vector3 labelPosition = selectedOperator.DeployedCell.WorldPosition + Vector3.up * gridManager.CellSize * 0.7f;
             SetSelectedOperatorName(
                 selectedOperator.Data.operatorName,
@@ -596,6 +877,104 @@ namespace TrashTD.UI
                 selectedOperator.Data.baseRarity,
                 selectedOperator.Data.skillDescription,
                 labelPosition);
+        }
+
+        private void ToggleSelectedOperatorDetails()
+        {
+            OperatorBase selectedOperator = operatorManager != null ? operatorManager.SelectedOperator : null;
+            if (selectedOperator == null || selectedOperator.Data == null || selectedOperatorDetailsPanel == null) return;
+
+            bool show = !selectedOperatorDetailsPanel.activeSelf;
+            selectedOperatorDetailsPanel.SetActive(show);
+            if (show) UpdateSelectedOperatorDetails(selectedOperator);
+        }
+
+        private void UpdateSelectedOperatorDetails(OperatorBase op)
+        {
+            if (op == null || op.Data == null) return;
+
+            OperatorData data = op.Data;
+            selectedOperatorDetailsTarget = op;
+            selectedOperatorDetailsPortrait.sprite = data.portrait;
+            selectedOperatorDetailsPortrait.enabled = data.portrait != null;
+            selectedOperatorDetailsPortrait.color = Color.white;
+            selectedOperatorDetailsName.text = data.operatorName;
+            selectedOperatorDetailsClassIcon.sprite = GetClassIconSprite(data.operatorClass);
+            selectedOperatorDetailsChipLabels[0].text = data.operatorClass.ToString().ToUpperInvariant();
+            selectedOperatorDetailsChipLabels[1].text = data.position == OperatorPosition.Melee ? "MELEE" : "RANGED";
+            Color classColor = GetDraftClassColor(data.operatorClass);
+            Color positionColor = data.position == OperatorPosition.Melee
+                ? new Color(0.95f, 0.60f, 0.25f, 1f)
+                : new Color(0.35f, 0.78f, 0.92f, 1f);
+            Color damageColor = data.damageType == DamageType.Arts
+                ? new Color(0.70f, 0.50f, 1.00f, 1f)
+                : new Color(0.90f, 0.45f, 0.35f, 1f);
+            selectedOperatorDetailsChipLabels[2].text = data.damageType == DamageType.Arts ? "ARTS" : "PHYSICAL";
+            Color[] chipColors = { classColor, positionColor, damageColor };
+            Color tileColor = new Color(0.07f, 0.085f, 0.115f, 1f);
+            for (int i = 0; i < chipColors.Length; i++)
+            {
+                selectedOperatorDetailsChipLabels[i].color = Color.Lerp(chipColors[i], Color.white, 0.35f);
+                selectedOperatorDetailsChipBackgrounds[i].color = Color.Lerp(tileColor, chipColors[i], 0.22f);
+                selectedOperatorDetailsChipOutlines[i].effectColor = new Color(chipColors[i].r, chipColors[i].g, chipColors[i].b, 0.55f);
+            }
+
+            int stars = Mathf.Clamp((int)op.CurrentRarity, 1, 5);
+            Color rarityColor = GetOperatorRarityColor(stars);
+            selectedOperatorDetailsAccent.color = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.35f);
+            selectedOperatorDetailsRarity.color = rarityColor;
+            selectedOperatorDetailsRarity.text = new string('★', stars) + "<color=#3C424D>" + new string('☆', 5 - stars) + "</color>";
+            selectedOperatorDetailsStatValues[0].text = data.GetScaledHP(op.CurrentRarity).ToString();
+            selectedOperatorDetailsStatValues[1].text = data.GetScaledATK(op.CurrentRarity).ToString();
+            selectedOperatorDetailsStatValues[2].text = data.GetScaledDEF(op.CurrentRarity).ToString();
+            selectedOperatorDetailsStatValues[3].text = data.GetScaledRES(op.CurrentRarity).ToString();
+            selectedOperatorDetailsStatValues[4].text = data.blockCount.ToString();
+            selectedOperatorDetailsStatValues[5].text = $"{data.attackInterval:0.##}s";
+            selectedOperatorDetailsRoles.text = data.roleTags != null && data.roleTags.Length > 0
+                ? string.Join(" / ", data.roleTags)
+                : GetOperatorDraftDescription(data.operatorClass);
+            bool hasSkill = !string.IsNullOrWhiteSpace(data.skillDescription);
+            selectedOperatorDetailsSkillHeading.gameObject.SetActive(hasSkill);
+            selectedOperatorDetailsSkill.gameObject.SetActive(hasSkill);
+            if (hasSkill) selectedOperatorDetailsSkill.text = data.skillDescription.Trim();
+        }
+
+        private static string GetOperatorDraftDescription(OperatorClass opClass)
+        {
+            return opClass switch
+            {
+                OperatorClass.Guard => "Melee Combatant / Physical DPS",
+                OperatorClass.Defender => "Heavy Defense / Blocks 3",
+                OperatorClass.Sniper => "Ranged Sniper / High Range",
+                OperatorClass.Caster => "Arts Damage / Magic Attacks",
+                OperatorClass.Medic => "Combat Support / Restores HP",
+                _ => "Operator"
+            };
+        }
+
+        private static Color GetDraftClassColor(OperatorClass opClass)
+        {
+            return opClass switch
+            {
+                OperatorClass.Guard => new Color(0.80f, 0.28f, 0.28f, 1f),
+                OperatorClass.Defender => new Color(0.30f, 0.45f, 0.85f, 1f),
+                OperatorClass.Sniper => new Color(0.30f, 0.75f, 0.30f, 1f),
+                OperatorClass.Caster => new Color(0.70f, 0.30f, 0.85f, 1f),
+                OperatorClass.Medic => new Color(0.80f, 0.78f, 0.30f, 1f),
+                _ => new Color(0.5f, 0.7f, 0.9f, 1f)
+            };
+        }
+
+        private static Color GetOperatorRarityColor(int stars)
+        {
+            return stars switch
+            {
+                1 => new Color(0.35f, 0.85f, 0.45f, 1f),
+                2 => new Color(0.35f, 0.65f, 1f, 1f),
+                3 => new Color(1f, 0.82f, 0.25f, 1f),
+                4 => new Color(0.75f, 0.45f, 1f, 1f),
+                _ => new Color(1f, 0.3f, 0.3f, 1f)
+            };
         }
 
         private void CreateTopBar(Transform root)
@@ -642,31 +1021,33 @@ namespace TrashTD.UI
             pauseButton.onClick.AddListener(PauseGame);
             StyleButton(pauseButton, DarkButton, Color.white, 1.08f);
 
-            // Wave text - spaced cleanly to the right of pause button
-            waveText = CreateText(stageInfoPanel.transform, "WaveText", "WAVE 1", 28, TextAnchor.MiddleLeft);
-            SetPosition(waveText.GetComponent<RectTransform>(), new Vector2(95f, -28f), new Vector2(0f, 1f), new Vector2(220f, 32f), new Vector2(0f, 0.5f));
+            phaseHeaderText = CreateText(stageInfoPanel.transform, "PhaseHeaderText", "PHASE", 28, TextAnchor.MiddleLeft);
+            SetPosition(phaseHeaderText.GetComponent<RectTransform>(), new Vector2(95f, -28f), new Vector2(0f, 1f), new Vector2(220f, 32f), new Vector2(0f, 0.5f));
 
-            // Phase text - directly under WaveText
+            // Phase text remains directly below the wave title.
             phaseText = CreateText(stageInfoPanel.transform, "PhaseText", "PREPARATION", 18, TextAnchor.MiddleLeft);
             phaseText.color = PrepColor;
             SetPosition(phaseText.GetComponent<RectTransform>(), new Vector2(95f, -60f), new Vector2(0f, 1f), new Vector2(220f, 26f), new Vector2(0f, 0.5f));
 
-            squadCountText = CreateText(stageInfoPanel.transform, "SquadCountText", "SQUAD 0/8", 18, TextAnchor.MiddleLeft);
-            SetPosition(squadCountText.GetComponent<RectTransform>(), new Vector2(350f, -45f), new Vector2(0f, 1f), new Vector2(190f, 34f), new Vector2(0f, 0.5f));
+            // The wave counter replaces the squad count's former top-bar position.
+            waveIconImage = CreateIconImage(stageInfoPanel.transform, "WaveIcon", GetWaveMarkSprite(), WaveColor, new Vector2(350f, -45f), new Vector2(0f, 1f), new Vector2(44f, 42f), new Vector2(0f, 0.5f));
+            waveText = CreateText(stageInfoPanel.transform, "WaveText", "1/1", 26, TextAnchor.MiddleLeft);
+            SetPosition(waveText.GetComponent<RectTransform>(), new Vector2(398f, -45f), new Vector2(0f, 1f), new Vector2(150f, 40f), new Vector2(0f, 0.5f));
 
-            // Enemy count (center)
-            enemyText = CreateText(stageInfoPanel.transform, "EnemyText", "0 ENEMIES", 24, TextAnchor.MiddleCenter);
-            SetPosition(enemyText.GetComponent<RectTransform>(), new Vector2(0f, -45f), new Vector2(0.5f, 1f), new Vector2(220f, 40f), new Vector2(0.5f, 0.5f));
+            // Enemy count (center) uses a skull icon and a numeric count.
+            enemyIconImage = CreateIconImage(stageInfoPanel.transform, "EnemyIcon", GetEnemySkullSprite(), Color.white, new Vector2(-35f, -45f), new Vector2(0.5f, 1f), new Vector2(36f, 36f), new Vector2(0.5f, 0.5f));
+            enemyText = CreateText(stageInfoPanel.transform, "EnemyText", "0", 24, TextAnchor.MiddleLeft);
+            SetPosition(enemyText.GetComponent<RectTransform>(), new Vector2(8f, -45f), new Vector2(0.5f, 1f), new Vector2(100f, 40f), new Vector2(0f, 0.5f));
 
             // Lives Counter (top-right, 3 lives)
-            lpText = CreateText(stageInfoPanel.transform, "LivesText", "♥ ♥ ♥  (3 LIVES)", 24, TextAnchor.MiddleRight);
+            lpText = CreateText(stageInfoPanel.transform, "LivesText", "♥ ♥ ♥", 24, TextAnchor.MiddleRight);
             lpText.color = LifeColor;
             SetPosition(lpText.GetComponent<RectTransform>(), new Vector2(-25f, -45f), new Vector2(1f, 1f), new Vector2(280f, 45f), new Vector2(1f, 0.5f));
 
             // Texts and progress strip should never eat clicks
+            phaseHeaderText.raycastTarget = false;
             waveText.raycastTarget = false;
             phaseText.raycastTarget = false;
-            squadCountText.raycastTarget = false;
             enemyText.raycastTarget = false;
             lpText.raycastTarget = false;
         }
@@ -705,7 +1086,7 @@ namespace TrashTD.UI
             slotsRect.anchorMin = new Vector2(0f, 0f);
             slotsRect.anchorMax = new Vector2(1f, 1f);
             slotsRect.offsetMin = new Vector2(30f, 15f);
-            slotsRect.offsetMax = new Vector2(-210f, -15f);
+            slotsRect.offsetMax = new Vector2(-420f, -15f);
 
             var layout = slotsContainer.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 10f;
@@ -718,6 +1099,12 @@ namespace TrashTD.UI
             deckButtons = new Button[DeckSlotCount];
             deckButtonLabels = new Text[DeckSlotCount];
             deckButtonImages = new Image[DeckSlotCount];
+            deckPortraitImages = new Image[DeckSlotCount];
+            deckClassBadgeImages = new Image[DeckSlotCount];
+            deckClassIconImages = new Image[DeckSlotCount];
+            deckClassBadges = new GameObject[DeckSlotCount];
+            deckCooldownBadges = new GameObject[DeckSlotCount];
+            deckCooldownLabels = new Text[DeckSlotCount];
             deckUpgradeBadges = new GameObject[DeckSlotCount];
             deckUpgradeBadgeLabels = new UpgradeArrowGraphic[DeckSlotCount];
             deckFeedbacks = new MenuButtonFeedback[DeckSlotCount];
@@ -729,14 +1116,19 @@ namespace TrashTD.UI
                 deckButtons[i] = slotBtn;
                 deckButtonLabels[i] = slotBtn.GetComponentInChildren<Text>();
                 deckButtonImages[i] = slotBtn.GetComponent<Image>();
+                deckPortraitImages[i] = slotBtn.transform.Find("OperatorPortrait").GetComponent<Image>();
+                deckClassBadges[i] = CreateClassBadge(slotBtn.transform, out deckClassBadgeImages[i], out deckClassIconImages[i]);
+                deckCooldownBadges[i] = CreateCooldownBadge(
+                    slotBtn.transform,
+                    out _,
+                    out deckCooldownLabels[i]);
                 deckUpgradeBadges[i] = CreateUpgradeBadge(slotBtn.transform, $"DeckUpgradeBadge_{i + 1}", new Vector2(34f, 18f), new Vector2(-5f, -5f));
                 deckUpgradeBadgeLabels[i] = deckUpgradeBadges[i].GetComponentInChildren<UpgradeArrowGraphic>();
                 slotBtn.onClick.AddListener(() => SelectDeckSlot(slotIndex));
                 var dragHandler = slotBtn.gameObject.AddComponent<DeckSlotDragHandler>();
                 dragHandler.Bind(
                     slotIndex,
-                    () => gameManager != null && gameManager.CurrentPhase == StagePhase.Preparation && playerDeck != null &&
-                        playerDeck.GetCard(slotIndex) != null && playerDeck.GetCard(slotIndex).cooldownRoundsRemaining <= 0,
+                    () => CanDragDeckCard(slotIndex),
                     HandleDeckCardDrag,
                     FinishDeckCardDrag);
 
@@ -757,6 +1149,15 @@ namespace TrashTD.UI
             startWaveButton.GetComponent<Image>().color = ReadyColor;
             startWaveButton.onClick.AddListener(StartWave);
             startWaveFeedback = AttachFeedback(startWaveButton, AccentColor, 1.06f, () => PlaySfx(clickClip, 1.1f));
+
+            squadCountText = CreateText(bar.transform, "SquadCountText", "SQUAD 0/8", 16, TextAnchor.MiddleRight);
+            RectTransform squadRect = squadCountText.GetComponent<RectTransform>();
+            squadRect.anchorMin = new Vector2(1f, 0.5f);
+            squadRect.anchorMax = new Vector2(1f, 0.5f);
+            squadRect.pivot = new Vector2(1f, 0.5f);
+            squadRect.sizeDelta = new Vector2(195f, 54f);
+            squadRect.anchoredPosition = new Vector2(-205f, 0f);
+            squadCountText.raycastTarget = false;
         }
 
         private void CreateSpeedBar(Transform root)
@@ -814,8 +1215,8 @@ namespace TrashTD.UI
             var zone = new GameObject("TrashDropZone", typeof(RectTransform), typeof(Image), typeof(Button));
             zone.transform.SetParent(root, false);
             trashDropZone = zone.GetComponent<RectTransform>();
-            SetPosition(trashDropZone, new Vector2(-335f, 85f), new Vector2(1f, 0f),
-                new Vector2(68f, 68f), new Vector2(1f, 0.5f));
+            SetPosition(trashDropZone, new Vector2(1034f, 85f), Vector2.zero,
+                new Vector2(78f, 92f), new Vector2(0f, 0.5f));
 
             var image = zone.GetComponent<Image>();
             image.color = new Color(0.10f, 0.07f, 0.09f, 0.96f);
@@ -827,12 +1228,18 @@ namespace TrashTD.UI
             var icon = new GameObject("TrashIcon", typeof(RectTransform), typeof(Image));
             icon.transform.SetParent(zone.transform, false);
             var iconRect = icon.GetComponent<RectTransform>();
-            SetPosition(iconRect, Vector2.zero, new Vector2(0.5f, 0.5f),
-                new Vector2(42f, 48f), new Vector2(0.5f, 0.5f));
+            SetPosition(iconRect, new Vector2(0f, 14f), new Vector2(0.5f, 0.5f),
+                new Vector2(38f, 42f), new Vector2(0.5f, 0.5f));
             var iconImage = icon.GetComponent<Image>();
             iconImage.sprite = CreateTrashIconSprite();
             iconImage.color = new Color(1f, 0.35f, 0.38f, 1f);
             iconImage.raycastTarget = false;
+
+            var discardLabel = CreateText(zone.transform, "DiscardLabel", "DISCARD", 10, TextAnchor.MiddleCenter);
+            discardLabel.color = new Color(1f, 0.78f, 0.78f, 1f);
+            discardLabel.raycastTarget = false;
+            SetPosition(discardLabel.GetComponent<RectTransform>(), new Vector2(0f, -31f), new Vector2(0.5f, 0.5f),
+                new Vector2(74f, 20f), new Vector2(0.5f, 0.5f));
 
             var button = zone.GetComponent<Button>();
             button.interactable = false;
@@ -947,16 +1354,362 @@ namespace TrashTD.UI
             image.color = new Color(0.06f, 0.07f, 0.10f, 1f);
             image.type = Image.Type.Simple;
 
-            // Smaller label text for operator name
             var label = button.GetComponentInChildren<Text>();
             if (label != null)
             {
-                label.fontSize = 14;
+                label.fontSize = 12;
                 label.horizontalOverflow = HorizontalWrapMode.Wrap;
                 label.verticalOverflow = VerticalWrapMode.Truncate;
+                label.resizeTextForBestFit = true;
+                label.resizeTextMinSize = 9;
+                label.resizeTextMaxSize = 12;
+                label.color = Color.white;
+
+                RectTransform labelRect = label.GetComponent<RectTransform>();
+                labelRect.anchorMin = new Vector2(0.04f, 0.02f);
+                labelRect.anchorMax = new Vector2(0.96f, 0.30f);
+                labelRect.offsetMin = Vector2.zero;
+                labelRect.offsetMax = Vector2.zero;
+            }
+
+            var portraitObject = new GameObject("OperatorPortrait", typeof(RectTransform), typeof(Image));
+            portraitObject.transform.SetParent(button.transform, false);
+            RectTransform portraitRect = portraitObject.GetComponent<RectTransform>();
+            portraitRect.anchorMin = new Vector2(0.08f, 0.32f);
+            portraitRect.anchorMax = new Vector2(0.92f, 0.94f);
+            portraitRect.offsetMin = Vector2.zero;
+            portraitRect.offsetMax = Vector2.zero;
+
+            Image portraitImage = portraitObject.GetComponent<Image>();
+            portraitImage.preserveAspect = true;
+            portraitImage.raycastTarget = false;
+
+            var labelBackground = new GameObject("OperatorLabelBackground", typeof(RectTransform), typeof(Image));
+            labelBackground.transform.SetParent(button.transform, false);
+            RectTransform labelBackgroundRect = labelBackground.GetComponent<RectTransform>();
+            labelBackgroundRect.anchorMin = new Vector2(0.04f, 0.02f);
+            labelBackgroundRect.anchorMax = new Vector2(0.96f, 0.30f);
+            labelBackgroundRect.offsetMin = Vector2.zero;
+            labelBackgroundRect.offsetMax = Vector2.zero;
+            Image labelBackgroundImage = labelBackground.GetComponent<Image>();
+            labelBackgroundImage.color = new Color(0.02f, 0.025f, 0.035f, 0.9f);
+            labelBackgroundImage.raycastTarget = false;
+
+            if (label != null)
+            {
+                label.transform.SetAsLastSibling();
             }
 
             return button;
+        }
+
+        private GameObject CreateClassBadge(Transform parent, out Image backgroundImage, out Image iconImage)
+        {
+            var badge = new GameObject("ClassBadge", typeof(RectTransform), typeof(Image), typeof(Outline));
+            badge.transform.SetParent(parent, false);
+            RectTransform badgeRect = badge.GetComponent<RectTransform>();
+            badgeRect.anchorMin = new Vector2(1f, 0.36f);
+            badgeRect.anchorMax = new Vector2(1f, 0.36f);
+            badgeRect.pivot = new Vector2(0.5f, 0.5f);
+            badgeRect.sizeDelta = new Vector2(30f, 30f);
+            badgeRect.anchoredPosition = new Vector2(-4f, 0f);
+
+            backgroundImage = badge.GetComponent<Image>();
+            backgroundImage.raycastTarget = false;
+            Outline outline = badge.GetComponent<Outline>();
+            outline.effectColor = new Color(0.02f, 0.025f, 0.035f, 0.95f);
+            outline.effectDistance = new Vector2(1.5f, -1.5f);
+            outline.useGraphicAlpha = false;
+
+            var iconObject = new GameObject("ClassIcon", typeof(RectTransform), typeof(Image));
+            iconObject.transform.SetParent(badge.transform, false);
+            iconImage = iconObject.GetComponent<Image>();
+            iconImage.color = Color.white;
+            iconImage.preserveAspect = true;
+            iconImage.raycastTarget = false;
+            RectTransform iconRect = iconImage.rectTransform;
+            iconRect.anchorMin = Vector2.zero;
+            iconRect.anchorMax = Vector2.one;
+            iconRect.offsetMin = new Vector2(5f, 5f);
+            iconRect.offsetMax = new Vector2(-5f, -5f);
+
+            badge.SetActive(false);
+            return badge;
+        }
+
+        public static Sprite GetClassIconSprite(OperatorClass opClass)
+        {
+            if (ClassIconSprites.TryGetValue(opClass, out Sprite sprite) && sprite != null) return sprite;
+
+            const int size = 48;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.filterMode = FilterMode.Bilinear;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            var pixels = new Color[size * size];
+
+            bool NearLine(float x, float y, Vector2 start, Vector2 end, float thickness)
+            {
+                Vector2 point = new Vector2(x, y);
+                Vector2 line = end - start;
+                float lengthSquared = line.sqrMagnitude;
+                float t = lengthSquared > 0f ? Mathf.Clamp01(Vector2.Dot(point - start, line) / lengthSquared) : 0f;
+                return Vector2.Distance(point, start + line * t) <= thickness;
+            }
+
+            bool NearCircle(float x, float y, Vector2 center, float radius)
+            {
+                return (new Vector2(x, y) - center).sqrMagnitude <= radius * radius;
+            }
+
+            bool IsShield(float x, float y)
+            {
+                if (y < 6f || y > 42f) return false;
+                float outerHalfWidth = y >= 24f ? 17f : Mathf.Lerp(1f, 17f, (y - 6f) / 18f);
+                float innerHalfWidth = y >= 27f ? 12.5f : Mathf.Lerp(0f, 12.5f, (y - 9f) / 18f);
+                bool outer = Mathf.Abs(x - 24f) <= outerHalfWidth;
+                bool inner = y >= 10f && y <= 38f && Mathf.Abs(x - 24f) < innerHalfWidth;
+                return outer && !inner;
+            }
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float px = x + 0.5f;
+                    float py = y + 0.5f;
+                    bool mark = false;
+                    switch (opClass)
+                    {
+                        case OperatorClass.Guard:
+                            mark = NearLine(px, py, new Vector2(12f, 10f), new Vector2(36f, 34f), 2.5f) ||
+                                   NearLine(px, py, new Vector2(30f, 32f), new Vector2(37f, 25f), 2f) ||
+                                   NearLine(px, py, new Vector2(24f, 23f), new Vector2(17f, 30f), 2f) ||
+                                   NearLine(px, py, new Vector2(10f, 11f), new Vector2(17f, 4f), 2f);
+                            break;
+                        case OperatorClass.Defender:
+                            mark = IsShield(px, py);
+                            break;
+                        case OperatorClass.Sniper:
+                            float dx = (px - 18f) / 13f;
+                            float dy = (py - 24f) / 19f;
+                            float ellipse = dx * dx + dy * dy;
+                            mark = (ellipse <= 1f && ellipse >= 0.76f && px <= 21f) ||
+                                   NearLine(px, py, new Vector2(21f, 6f), new Vector2(21f, 42f), 1.5f) ||
+                                   NearLine(px, py, new Vector2(19f, 24f), new Vector2(42f, 24f), 1.5f) ||
+                                   NearLine(px, py, new Vector2(35f, 19f), new Vector2(42f, 24f), 1.5f) ||
+                                   NearLine(px, py, new Vector2(35f, 29f), new Vector2(42f, 24f), 1.5f);
+                            break;
+                        case OperatorClass.Caster:
+                            mark = NearLine(px, py, new Vector2(15f, 5f), new Vector2(31f, 36f), 2.6f) ||
+                                   NearLine(px, py, new Vector2(10f, 15f), new Vector2(20f, 10f), 2f) ||
+                                   ((NearCircle(px, py, new Vector2(31f, 37f), 8f) &&
+                                     !NearCircle(px, py, new Vector2(31f, 37f), 5f)) ||
+                                    (px >= 28f && px <= 34f && py >= 30f && py <= 42f));
+                            break;
+                        case OperatorClass.Medic:
+                            mark = (px >= 19f && px <= 29f && py >= 8f && py <= 40f) ||
+                                   (px >= 8f && px <= 40f && py >= 19f && py <= 29f);
+                            break;
+                    }
+
+                    if (mark) pixels[y * size + x] = Color.white;
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply();
+            sprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), size);
+            ClassIconSprites[opClass] = sprite;
+            return sprite;
+        }
+
+        private GameObject CreateCooldownBadge(Transform parent, out Image clockImage, out Text roundsText)
+        {
+            var badge = new GameObject("CooldownBadge", typeof(RectTransform), typeof(Image));
+            badge.transform.SetParent(parent, false);
+            RectTransform badgeRect = badge.GetComponent<RectTransform>();
+            badgeRect.anchorMin = new Vector2(0f, 1f);
+            badgeRect.anchorMax = new Vector2(0f, 1f);
+            badgeRect.pivot = new Vector2(0f, 1f);
+            badgeRect.sizeDelta = new Vector2(48f, 28f);
+            badgeRect.anchoredPosition = new Vector2(6f, -6f);
+
+            Image background = badge.GetComponent<Image>();
+            background.color = new Color(0.16f, 0.045f, 0.025f, 0.96f);
+            background.raycastTarget = false;
+
+            Outline outline = badge.AddComponent<Outline>();
+            outline.effectColor = new Color(1f, 0.58f, 0.18f, 0.9f);
+            outline.effectDistance = new Vector2(1f, -1f);
+            outline.useGraphicAlpha = false;
+
+            var clockObject = new GameObject("ClockIcon", typeof(RectTransform), typeof(Image));
+            clockObject.transform.SetParent(badge.transform, false);
+            RectTransform clockRect = clockObject.GetComponent<RectTransform>();
+            clockRect.anchorMin = new Vector2(0f, 0.5f);
+            clockRect.anchorMax = new Vector2(0f, 0.5f);
+            clockRect.pivot = new Vector2(0f, 0.5f);
+            clockRect.sizeDelta = new Vector2(18f, 18f);
+            clockRect.anchoredPosition = new Vector2(4f, 0f);
+
+            clockImage = clockObject.GetComponent<Image>();
+            clockImage.sprite = CreateCooldownClockSprite();
+            clockImage.color = new Color(1f, 0.72f, 0.35f, 1f);
+            clockImage.preserveAspect = true;
+            clockImage.raycastTarget = false;
+
+            roundsText = CreateText(badge.transform, "Rounds", "1", 14, TextAnchor.MiddleCenter);
+            RectTransform roundsRect = roundsText.GetComponent<RectTransform>();
+            roundsRect.anchorMin = new Vector2(0.43f, 0f);
+            roundsRect.anchorMax = new Vector2(1f, 1f);
+            roundsRect.offsetMin = Vector2.zero;
+            roundsRect.offsetMax = new Vector2(-2f, 0f);
+            roundsText.color = Color.white;
+            roundsText.raycastTarget = false;
+
+            badge.SetActive(false);
+            return badge;
+        }
+
+        private static Sprite CreateCooldownClockSprite()
+        {
+            if (cooldownClockSprite != null) return cooldownClockSprite;
+
+            const int size = 16;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.filterMode = FilterMode.Point;
+            var pixels = new Color[size * size];
+            for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.clear;
+
+            void Pixel(int x, int y)
+            {
+                if (x >= 0 && x < size && y >= 0 && y < size)
+                {
+                    pixels[y * size + x] = Color.white;
+                }
+            }
+
+            for (int y = 1; y < size - 1; y++)
+            {
+                for (int x = 1; x < size - 1; x++)
+                {
+                    float dx = x - 7.5f;
+                    float dy = y - 7.5f;
+                    float distanceSquared = dx * dx + dy * dy;
+                    if (distanceSquared >= 31f && distanceSquared <= 49f)
+                    {
+                        Pixel(x, y);
+                    }
+                }
+            }
+
+            Pixel(7, 7);
+            Pixel(7, 8);
+            Pixel(7, 9);
+            Pixel(8, 7);
+            Pixel(9, 7);
+
+            texture.SetPixels(pixels);
+            texture.Apply();
+            cooldownClockSprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), size);
+            return cooldownClockSprite;
+        }
+
+        private void CreateCooldownToast(Transform root)
+        {
+            var toast = new GameObject("CooldownToast", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+            toast.transform.SetParent(root, false);
+            cooldownToastRect = toast.GetComponent<RectTransform>();
+            SetPosition(cooldownToastRect, new Vector2(0f, 188f), new Vector2(0.5f, 0f), new Vector2(560f, 76f), new Vector2(0.5f, 0f));
+
+            Image background = toast.GetComponent<Image>();
+            background.color = new Color(0.035f, 0.04f, 0.055f, 0.97f);
+            background.raycastTarget = false;
+
+            Outline outline = toast.AddComponent<Outline>();
+            outline.effectColor = new Color(1f, 0.48f, 0.16f, 0.9f);
+            outline.effectDistance = new Vector2(2f, -2f);
+            outline.useGraphicAlpha = false;
+
+            cooldownToastGroup = toast.GetComponent<CanvasGroup>();
+            cooldownToastGroup.alpha = 0f;
+            cooldownToastGroup.interactable = false;
+            cooldownToastGroup.blocksRaycasts = false;
+
+            cooldownToastTitle = CreateText(toast.transform, "Title", "OPERATOR ON COOLDOWN", 13, TextAnchor.MiddleCenter);
+            cooldownToastTitle.color = new Color(1f, 0.65f, 0.25f, 1f);
+            cooldownToastTitle.raycastTarget = false;
+            SetPosition(cooldownToastTitle.GetComponent<RectTransform>(), new Vector2(0f, -18f), new Vector2(0.5f, 1f), new Vector2(520f, 26f), new Vector2(0.5f, 0.5f));
+
+            cooldownToastMessage = CreateText(toast.transform, "Message", string.Empty, 14, TextAnchor.MiddleCenter);
+            cooldownToastMessage.raycastTarget = false;
+            SetPosition(cooldownToastMessage.GetComponent<RectTransform>(), new Vector2(0f, -49f), new Vector2(0.5f, 1f), new Vector2(520f, 28f), new Vector2(0.5f, 0.5f));
+        }
+
+        public void ShowCooldownWarning(string operatorName, int remainingRounds)
+        {
+            if (remainingRounds <= 0 || cooldownToastGroup == null) return;
+
+            string displayName = string.IsNullOrWhiteSpace(operatorName) ? "OPERATOR" : operatorName.ToUpperInvariant();
+            string roundLabel = remainingRounds == 1 ? "ROUND" : "ROUNDS";
+            cooldownToastMessage.text = $"{displayName} READY IN {remainingRounds} {roundLabel}";
+
+            if (cooldownToastRoutine != null) StopCoroutine(cooldownToastRoutine);
+            cooldownToastRoutine = StartCoroutine(CooldownToastRoutine());
+        }
+
+        private System.Collections.IEnumerator CooldownToastRoutine()
+        {
+            const float fadeDuration = 0.18f;
+            const float visibleDuration = 1.8f;
+            Vector2 shownPosition = new Vector2(0f, 188f);
+            Vector2 hiddenPosition = shownPosition + new Vector2(0f, -18f);
+            cooldownToastRect.anchoredPosition = hiddenPosition;
+            cooldownToastRect.localScale = Vector3.one * 0.94f;
+            cooldownToastGroup.alpha = 0f;
+
+            float elapsed = 0f;
+            while (elapsed < fadeDuration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float progress = Mathf.Clamp01(elapsed / fadeDuration);
+                float eased = EaseOutCubic(progress);
+                cooldownToastGroup.alpha = eased;
+                cooldownToastRect.anchoredPosition = Vector2.Lerp(hiddenPosition, shownPosition, eased);
+                cooldownToastRect.localScale = Vector3.one * Mathf.Lerp(0.94f, 1f, eased);
+                yield return null;
+            }
+
+            cooldownToastGroup.alpha = 1f;
+            cooldownToastRect.anchoredPosition = shownPosition;
+            cooldownToastRect.localScale = Vector3.one;
+            yield return new WaitForSecondsRealtime(visibleDuration);
+
+            elapsed = 0f;
+            while (elapsed < fadeDuration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float progress = Mathf.Clamp01(elapsed / fadeDuration);
+                cooldownToastGroup.alpha = 1f - progress;
+                cooldownToastRect.anchoredPosition = Vector2.Lerp(shownPosition, hiddenPosition, progress);
+                yield return null;
+            }
+
+            cooldownToastGroup.alpha = 0f;
+            cooldownToastRect.anchoredPosition = hiddenPosition;
+            cooldownToastRoutine = null;
+        }
+
+        private bool CanDragDeckCard(int slotIndex)
+        {
+            if (gameManager == null || gameManager.CurrentPhase != StagePhase.Preparation || playerDeck == null) return false;
+
+            DraftCard card = playerDeck.GetCard(slotIndex);
+            if (card == null) return false;
+            if (card.cooldownRoundsRemaining <= 0) return true;
+
+            ShowCooldownWarning(card.operatorData != null ? card.operatorData.operatorName : null, card.cooldownRoundsRemaining);
+            return false;
         }
 
         private GameObject CreateUpgradeBadge(Transform parent, string objectName, Vector2 size, Vector2 position)
@@ -1038,6 +1791,92 @@ namespace TrashTD.UI
             phaseBannerSubtitle.color = TextDim;
             SetPosition(phaseBannerSubtitle.GetComponent<RectTransform>(), new Vector2(0f, -36f), new Vector2(0.5f, 0.5f), new Vector2(1200f, 30f), new Vector2(0.5f, 0.5f));
             phaseBannerSubtitle.raycastTarget = false;
+        }
+
+        private void CreateEnvironmentBriefing(Transform root)
+        {
+            environmentBriefingPanel = new GameObject(
+                "EnvironmentBriefing",
+                typeof(RectTransform),
+                typeof(Image),
+                typeof(Canvas),
+                typeof(GraphicRaycaster));
+            environmentBriefingPanel.transform.SetParent(root, false);
+            Stretch(environmentBriefingPanel.GetComponent<RectTransform>());
+            environmentBriefingPanel.GetComponent<Image>().color = new Color(0.01f, 0.015f, 0.025f, 0.82f);
+
+            Canvas overlayCanvas = environmentBriefingPanel.GetComponent<Canvas>();
+            overlayCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            overlayCanvas.overrideSorting = true;
+            overlayCanvas.sortingOrder = 300;
+
+            GameObject card = new GameObject("BriefingCard", typeof(RectTransform), typeof(Image), typeof(Outline));
+            card.transform.SetParent(environmentBriefingPanel.transform, false);
+            RectTransform cardRect = card.GetComponent<RectTransform>();
+            SetPosition(cardRect, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(680f, 380f), new Vector2(0.5f, 0.5f));
+            card.GetComponent<Image>().color = new Color(0.035f, 0.05f, 0.065f, 1f);
+            Outline cardOutline = card.GetComponent<Outline>();
+            cardOutline.effectColor = new Color(WaveColor.r, WaveColor.g, WaveColor.b, 0.8f);
+            cardOutline.effectDistance = new Vector2(3f, -3f);
+
+            environmentBriefingTitle = CreateText(card.transform, "Title", "ENVIRONMENTAL EFFECT", 30, TextAnchor.MiddleCenter);
+            environmentBriefingTitle.color = WaveColor;
+            SetPosition(environmentBriefingTitle.rectTransform, new Vector2(0f, -40f), new Vector2(0.5f, 1f), new Vector2(600f, 52f), new Vector2(0.5f, 1f));
+            environmentBriefingTitle.raycastTarget = false;
+
+            environmentBriefingDescription = CreateText(card.transform, "Description", string.Empty, 20, TextAnchor.MiddleCenter);
+            environmentBriefingDescription.fontStyle = FontStyle.Normal;
+            environmentBriefingDescription.horizontalOverflow = HorizontalWrapMode.Wrap;
+            environmentBriefingDescription.verticalOverflow = VerticalWrapMode.Truncate;
+            environmentBriefingDescription.color = new Color(0.86f, 0.9f, 0.95f, 1f);
+            SetPosition(environmentBriefingDescription.rectTransform, new Vector2(0f, -100f), new Vector2(0.5f, 1f), new Vector2(560f, 150f), new Vector2(0.5f, 1f));
+            environmentBriefingDescription.raycastTarget = false;
+
+            Button dismissButton = CreateButton(card.transform, "DismissButton", "UNDERSTOOD", new Vector2(250f, 58f));
+            SetPosition(dismissButton.GetComponent<RectTransform>(), new Vector2(0f, 28f), new Vector2(0.5f, 0f), null, new Vector2(0.5f, 0f));
+            StyleButton(dismissButton, ReadyColor, AccentColor, 1.05f);
+            dismissButton.onClick.AddListener(DismissEnvironmentBriefing);
+
+            environmentBriefingPanel.SetActive(false);
+        }
+
+        private IEnumerator ShowEnvironmentBriefingWhenReady()
+        {
+            if (gameManager == null) yield break;
+
+            while (isActiveAndEnabled && gameManager.CurrentStage == null)
+            {
+                yield return null;
+            }
+
+            if (!isActiveAndEnabled || gameManager.CurrentStage == null) yield break;
+            StageData stage = gameManager.CurrentStage;
+            string effectDescription;
+            switch (stage.stageId)
+            {
+                case "STAGE_03":
+                    effectDescription =
+                        "A sandstorm sweeps the battlefield. Attack intervals are 5% shorter, " +
+                        "and each attack has a 10% chance to miss.";
+                    break;
+                case "STAGE_06":
+                    effectDescription =
+                        "Acid rain periodically deals 3 physical damage to deployed operators " +
+                        "and active enemies every 2 seconds. Operators are protected during Preparation.";
+                    break;
+                default:
+                    yield break;
+            }
+
+            environmentBriefingDescription.text = $"{stage.mapName}\n\n{effectDescription}";
+            environmentBriefingPanel.SetActive(true);
+        }
+
+        private void DismissEnvironmentBriefing()
+        {
+            environmentBriefingDismissed = true;
+            if (environmentBriefingPanel != null) environmentBriefingPanel.SetActive(false);
+            EnvironmentBriefingDismissed?.Invoke();
         }
 
         private void CreatePausePanel(Transform root)
@@ -1205,10 +2044,17 @@ namespace TrashTD.UI
                     var card = deck[i];
                     string stars = new string('★', (int)card.rarity);
                     bool isReady = card.cooldownRoundsRemaining <= 0;
-                    deckButtonLabels[i].text = isReady
-                        ? $"{card.operatorData.operatorName}\n{stars}"
-                        : $"{card.operatorData.operatorName}\nREADY IN {card.cooldownRoundsRemaining} ROUND(S)";
-                    deckButtons[i].interactable = isReady;
+                    deckPortraitImages[i].sprite = card.operatorData.portrait;
+                    deckPortraitImages[i].enabled = card.operatorData.portrait != null;
+                    deckPortraitImages[i].color = isReady ? Color.white : new Color(0.55f, 0.55f, 0.55f, 1f);
+                    Color classColor = GetClassColor(card.operatorData.operatorClass);
+                    deckClassBadgeImages[i].color = classColor;
+                    deckClassIconImages[i].sprite = GetClassIconSprite(card.operatorData.operatorClass);
+                    deckClassBadges[i].SetActive(true);
+                    deckButtonLabels[i].text = $"{card.operatorData.operatorName}\n{stars}";
+                    deckButtons[i].interactable = true;
+                    deckCooldownLabels[i].text = card.cooldownRoundsRemaining.ToString();
+                    deckCooldownBadges[i].SetActive(!isReady);
 
                     // Tint based on class for visual differentiation (dimmed while on cooldown).
                     Color slotColor = isReady
@@ -1227,6 +2073,11 @@ namespace TrashTD.UI
                 {
                     Color emptyColor = new Color(0.06f, 0.07f, 0.10f, 0.5f);
                     deckButtonLabels[i].text = "";
+                    deckPortraitImages[i].sprite = null;
+                    deckPortraitImages[i].enabled = false;
+                    deckClassBadges[i].SetActive(false);
+                    deckCooldownLabels[i].text = "";
+                    deckCooldownBadges[i].SetActive(false);
                     deckButtons[i].interactable = false;
                     deckFeedbacks[i].SetBaseColor(emptyColor);
                     deckUpgradeBadges[i].SetActive(false);
@@ -1333,7 +2184,14 @@ namespace TrashTD.UI
             if (playerDeck == null) return;
 
             var card = playerDeck.GetCard(index);
-            if (card == null || card.cooldownRoundsRemaining > 0) return;
+            if (card == null) return;
+            if (card.cooldownRoundsRemaining > 0)
+            {
+                ShowCooldownWarning(
+                    card.operatorData != null ? card.operatorData.operatorName : null,
+                    card.cooldownRoundsRemaining);
+                return;
+            }
 
             // Notify deck and draft system that this card was selected for deployment
             playerDeck.SelectCardForDeployment(index);
@@ -1462,7 +2320,7 @@ namespace TrashTD.UI
         {
             if (waveText != null)
             {
-                waveText.text = total > 0 ? $"WAVE {current}/{total}" : $"WAVE {current}";
+                waveText.text = total > 0 ? $"{current}/{total}" : current.ToString();
                 Punch(waveText);
             }
         }
@@ -1503,7 +2361,7 @@ namespace TrashTD.UI
             string hearts = "";
             for (int i = 0; i < current; i++) hearts += "♥ ";
             for (int i = current; i < total; i++) hearts += "♡ ";
-            lpText.text = $"{hearts.Trim()}  ({current} {(current == 1 ? "LIFE" : "LIVES")})";
+            lpText.text = hearts.Trim();
         }
 
         private void OnLifeLost()
@@ -1518,15 +2376,17 @@ namespace TrashTD.UI
         {
             if (enemyText != null && enemyManager != null)
             {
-                int count = enemyManager.ActiveEnemyCount;
-                enemyText.text = count == 1 ? "1 ENEMY" : $"{count} ENEMIES";
+                enemyText.text = enemyManager.ActiveEnemyCount.ToString();
             }
 
             if (sandboxController != null)
             {
                 // Sandbox has no wave count, squad cap or life loss; avoid "x/2147483647" style overflow.
                 if (waveText != null && waveManager != null)
-                    waveText.text = $"WAVE {Mathf.Max(1, waveManager.SandboxWaveNumber)}";
+                {
+                    int currentWave = Mathf.Max(1, waveManager.SandboxWaveNumber);
+                    waveText.text = currentWave.ToString();
+                }
                 if (lpText != null)
                     lpText.text = "LIVES LOCKED";
                 if (squadCountText != null && operatorManager != null)
@@ -1539,7 +2399,8 @@ namespace TrashTD.UI
 
             if (waveText != null && waveManager != null && waveManager.TotalWaves > 0)
             {
-                waveText.text = $"WAVE {Mathf.Max(1, waveManager.CurrentWaveNumber)}/{waveManager.TotalWaves}";
+                int currentWave = Mathf.Max(1, waveManager.CurrentWaveNumber);
+                waveText.text = $"{currentWave}/{waveManager.TotalWaves}";
             }
 
             if (lpText != null && gameManager != null)
@@ -1883,6 +2744,94 @@ namespace TrashTD.UI
             rect.anchorMax = anchor;
             rect.anchoredPosition = position;
             if (size.HasValue) rect.sizeDelta = size.Value;
+        }
+
+        private static Image CreateIconImage(Transform parent, string objectName, Sprite sprite, Color color, Vector2 position, Vector2 anchor, Vector2 size, Vector2 pivot)
+        {
+            var iconObject = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+            iconObject.transform.SetParent(parent, false);
+            Image image = iconObject.GetComponent<Image>();
+            image.sprite = sprite;
+            image.color = color;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            SetPosition(image.rectTransform, position, anchor, size, pivot);
+            return image;
+        }
+
+        private static Sprite GetWaveMarkSprite()
+        {
+            if (waveMarkSprite != null) return waveMarkSprite;
+
+            const int size = 48;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.filterMode = FilterMode.Bilinear;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            var pixels = new Color[size * size];
+
+            for (int x = 0; x < size; x++)
+            {
+                float t = x / (size - 1f);
+                float centerY = size * 0.5f + Mathf.Sin(t * Mathf.PI * 2f) * size * 0.18f;
+                for (int y = 0; y < size; y++)
+                {
+                    if (x >= 4 && x < size - 4 && Mathf.Abs(y - centerY) <= 2.5f)
+                        pixels[y * size + x] = Color.white;
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply();
+            waveMarkSprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), size);
+            return waveMarkSprite;
+        }
+
+        private static Sprite GetEnemySkullSprite()
+        {
+            if (enemySkullSprite != null) return enemySkullSprite;
+
+            const int size = 64;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.filterMode = FilterMode.Bilinear;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            var pixels = new Color[size * size];
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float nx = (x + 0.5f) / size;
+                    float ny = (y + 0.5f) / size;
+                    float headX = (nx - 0.5f) / 0.35f;
+                    float headY = (ny - 0.63f) / 0.32f;
+                    float jawX = (nx - 0.5f) / 0.23f;
+                    float jawY = (ny - 0.35f) / 0.15f;
+                    bool skull = headX * headX + headY * headY <= 1f ||
+                                 (nx >= 0.29f && nx <= 0.71f && ny >= 0.25f && ny <= 0.43f) ||
+                                 jawX * jawX + jawY * jawY <= 1f;
+
+                    if (!skull) continue;
+
+                    float leftEyeX = (nx - 0.37f) / 0.075f;
+                    float rightEyeX = (nx - 0.63f) / 0.075f;
+                    float eyeY = (ny - 0.59f) / 0.09f;
+                    bool eyeSocket = leftEyeX * leftEyeX + eyeY * eyeY <= 1f ||
+                                     rightEyeX * rightEyeX + eyeY * eyeY <= 1f;
+                    float noseWidth = Mathf.Lerp(0.07f, 0.01f, Mathf.Clamp01((ny - 0.43f) / 0.08f));
+                    bool nose = ny >= 0.43f && ny <= 0.51f && Mathf.Abs(nx - 0.5f) <= noseWidth;
+                    bool teethGap = ny >= 0.22f && ny <= 0.31f &&
+                                    (Mathf.Abs(nx - 0.44f) <= 0.012f ||
+                                     Mathf.Abs(nx - 0.50f) <= 0.012f ||
+                                     Mathf.Abs(nx - 0.56f) <= 0.012f);
+
+                    pixels[y * size + x] = eyeSocket || nose || teethGap ? Color.clear : Color.white;
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply();
+            enemySkullSprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), size);
+            return enemySkullSprite;
         }
 
         private static Sprite CreateTrapezoidSprite()

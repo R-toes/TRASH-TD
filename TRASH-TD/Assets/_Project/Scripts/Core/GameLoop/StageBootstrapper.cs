@@ -410,6 +410,15 @@ namespace TrashTD.Core.GameLoop
         {
             if (!isPlacementPreviewActive || pendingDeployCard == null) return;
 
+            if (pendingDeployCard.cooldownRoundsRemaining > 0)
+            {
+                gameplayHudUI?.ShowCooldownWarning(
+                    pendingDeployCard.operatorData != null ? pendingDeployCard.operatorData.operatorName : null,
+                    pendingDeployCard.cooldownRoundsRemaining);
+                CancelOperatorPlacement();
+                return;
+            }
+
             if (operatorManager == null || (!IsSandbox && operatorManager.IsAtSquadLimit))
             {
                 RefreshPlacementPreview();
@@ -425,8 +434,7 @@ namespace TrashTD.Core.GameLoop
 
             DraftCard deployedCard = pendingDeployCard;
             if (operatorManager == null || !operatorManager.TryDeployOperator(
-                    deployedCard.operatorData,
-                    deployedCard.rarity,
+                    deployedCard,
                     placementGridPosition,
                     placementFacing,
                     out _))
