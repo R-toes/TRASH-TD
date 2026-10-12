@@ -22,9 +22,21 @@ namespace TrashTD.Core.GameLoop
         private const float AcidRainDamageIntervalSeconds = 2f;
         public const int AcidRainDamagePerTick = 3;
         private const int AcidRainDropCount = 140;
+        private const int Stage3BackgroundFrameWidth = 448;
+        private const int Stage3BackgroundFrameHeight = 224;
+        private const float Stage3BackgroundAnimationFrameDuration = 0.12f;
         private static Sprite weatherDotSprite;
         private static Texture2D dustCloudTexture;
         private static Material dustCloudMaterial;
+
+        private sealed class SpriteSheetAnimationState
+        {
+            public SpriteRenderer Renderer;
+            public Sprite[] Frames;
+            public float FrameDuration;
+            public float FrameTimer;
+            public int CurrentFrame;
+        }
 
         [Header("Stage Config")]
         [Tooltip("The stage data asset to load and test")]
@@ -59,6 +71,7 @@ namespace TrashTD.Core.GameLoop
         private GameplayHUDUI gameplayHudUI;
         private readonly List<GameObject> placementPreviewVisuals = new List<GameObject>();
         private readonly List<Transform> acidRainDrops = new List<Transform>();
+        private readonly List<SpriteSheetAnimationState> backgroundAnimations = new List<SpriteSheetAnimationState>();
         private Material placementPreviewMaterial;
         private float weatherDamageTimer;
         private Vector2 acidRainBoundsMin;
@@ -199,7 +212,14 @@ namespace TrashTD.Core.GameLoop
             Vector3 gridBottomLeft = gridManager.GridToWorldPosition(0, 0) - new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f);
             Vector3 targetBottomLeft = gridBottomLeft + new Vector3(stageData.visualTileOffset.x * cellSize, stageData.visualTileOffset.y * cellSize, 0f);
 
-            DrawMapArtworkLayer(gridContainer.transform, stageData.backgroundVisualSprite, "BackgroundArtwork", 0, targetBottomLeft, true);
+            DrawMapArtworkLayer(
+                gridContainer.transform,
+                stageData.backgroundVisualSprite,
+                "BackgroundArtwork",
+                0,
+                targetBottomLeft,
+                true,
+                stageData.stageId == "STAGE_03");
 
             Sprite mapSprite = stageData.mapVisualSprite;
             DrawMapArtworkLayer(gridContainer.transform, mapSprite, "MapArtwork", 1, targetBottomLeft, false);
@@ -249,7 +269,14 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
-        private void DrawMapArtworkLayer(Transform parent, Sprite sprite, string objectName, int sortingOrder, Vector3 targetBottomLeft, bool alignToSourceRect)
+        private void DrawMapArtworkLayer(
+            Transform parent,
+            Sprite sprite,
+            string objectName,
+            int sortingOrder,
+            Vector3 targetBottomLeft,
+            bool alignToSourceRect,
+            bool animateAsSpriteSheet = false)
         {
             if (sprite == null) return;
 
@@ -260,17 +287,70 @@ namespace TrashTD.Core.GameLoop
             spriteRenderer.sprite = sprite;
             spriteRenderer.sortingOrder = sortingOrder;
 
+            if (animateAsSpriteSheet)
+            {
+                CreateSpriteSheetAnimation(
+                    spriteRenderer,
+                    sprite,
+                    Stage3BackgroundAnimationFrameDuration);
+            }
+
+            Sprite placedSprite = spriteRenderer.sprite;
             float pixelPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
-            float spriteUnitsPerTile = pixelPerTile / sprite.pixelsPerUnit;
+            float spriteUnitsPerTile = pixelPerTile / placedSprite.pixelsPerUnit;
             float tileScale = gridManager.CellSize / spriteUnitsPerTile;
             Vector3 artworkScale = new Vector3(tileScale, tileScale, 1f);
             artworkObject.transform.localScale = artworkScale;
 
             Vector3 sourceOffset = alignToSourceRect
-                ? new Vector3(sprite.rect.x, sprite.rect.y, 0f) * (gridManager.CellSize / pixelPerTile)
+                ? new Vector3(placedSprite.rect.x, placedSprite.rect.y, 0f) * (gridManager.CellSize / pixelPerTile)
                 : Vector3.zero;
             artworkObject.transform.position = targetBottomLeft + sourceOffset
-                - Vector3.Scale(sprite.bounds.min, artworkScale);
+                - Vector3.Scale(placedSprite.bounds.min, artworkScale);
+        }
+
+        private void CreateSpriteSheetAnimation(SpriteRenderer spriteRenderer, Sprite sourceSprite, float frameDuration)
+        {
+            Texture2D texture = sourceSprite.texture;
+            if (!texture.isReadable ||
+                texture.width % Stage3BackgroundFrameWidth != 0 ||
+                texture.height != Stage3BackgroundFrameHeight ||
+                frameDuration <= 0f)
+            {
+                Debug.LogError(
+                    $"Stage 3 background animation requires a readable sheet of {Stage3BackgroundFrameWidth}x{Stage3BackgroundFrameHeight} frames and a positive frame duration.",
+                    this);
+                return;
+            }
+
+            int frameCount = texture.width / Stage3BackgroundFrameWidth;
+            Vector2 pivot = new Vector2(
+                sourceSprite.pivot.x / sourceSprite.rect.width,
+                sourceSprite.pivot.y / sourceSprite.rect.height);
+            Sprite[] frames = new Sprite[frameCount];
+            for (int i = 0; i < frameCount; i++)
+            {
+                frames[i] = Sprite.Create(
+                    texture,
+                    new Rect(
+                        i * Stage3BackgroundFrameWidth,
+                        0f,
+                        Stage3BackgroundFrameWidth,
+                        Stage3BackgroundFrameHeight),
+                    pivot,
+                    sourceSprite.pixelsPerUnit,
+                    0,
+                    SpriteMeshType.FullRect,
+                    sourceSprite.border);
+            }
+
+            backgroundAnimations.Add(new SpriteSheetAnimationState
+            {
+                Renderer = spriteRenderer,
+                Frames = frames,
+                FrameDuration = frameDuration
+            });
+            spriteRenderer.sprite = frames[0];
         }
 
         private Sprite GetSpriteForTile(TileType type)
@@ -348,6 +428,15 @@ namespace TrashTD.Core.GameLoop
             if (placementPreviewMaterial != null)
             {
                 Destroy(placementPreviewMaterial);
+            }
+
+            foreach (SpriteSheetAnimationState animation in backgroundAnimations)
+            {
+                foreach (Sprite frame in animation.Frames)
+                {
+                    if (frame != null)
+                        Destroy(frame);
+                }
             }
         }
 
@@ -465,6 +554,7 @@ namespace TrashTD.Core.GameLoop
 
         private void Update()
         {
+            UpdateBackgroundAnimations();
             UpdateAcidRainDrops();
             UpdateStage6AcidRainDamage();
 
@@ -536,6 +626,7 @@ namespace TrashTD.Core.GameLoop
                         BeginOperatorPlacement(pendingDeployCard, gridPosition);
                     }
                 }
+
                 return;
             }
 
@@ -547,6 +638,24 @@ namespace TrashTD.Core.GameLoop
                     : null;
 
                 HandleOperatorMapSelection(clickedOperator);
+            }
+        }
+
+        private void UpdateBackgroundAnimations()
+        {
+            foreach (SpriteSheetAnimationState animation in backgroundAnimations)
+            {
+                if (animation.Renderer == null)
+                    continue;
+
+                animation.FrameTimer += Time.deltaTime;
+                if (animation.FrameTimer < animation.FrameDuration)
+                    continue;
+
+                int elapsedFrames = Mathf.FloorToInt(animation.FrameTimer / animation.FrameDuration);
+                animation.FrameTimer %= animation.FrameDuration;
+                animation.CurrentFrame = (animation.CurrentFrame + elapsedFrames) % animation.Frames.Length;
+                animation.Renderer.sprite = animation.Frames[animation.CurrentFrame];
             }
         }
 
@@ -628,7 +737,9 @@ namespace TrashTD.Core.GameLoop
             dustVelocity.space = ParticleSystemSimulationSpace.World;
             dustVelocity.x = new ParticleSystem.MinMaxCurve(1.2f, 2f);
             dustVelocity.y = new ParticleSystem.MinMaxCurve(-0.08f, 0.08f);
-            dust.GetComponent<ParticleSystemRenderer>().sharedMaterial = GetDustCloudMaterial();
+            ParticleSystemRenderer dustRenderer = dust.GetComponent<ParticleSystemRenderer>();
+            dustRenderer.sharedMaterial = GetDustCloudMaterial();
+            dustRenderer.sortingOrder = 8;
             dust.Play();
         }
 
