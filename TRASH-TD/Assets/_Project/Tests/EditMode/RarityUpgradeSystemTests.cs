@@ -17,9 +17,9 @@ namespace TrashTD.Tests
         public void SetUp()
         {
             upgradeObject = new GameObject("TestUpgradeSystem");
-            upgradeSystem = upgradeObject.AddComponent<RarityUpgradeSystem>();
+            upgradeSystem = TestUtility.AddAwakened<RarityUpgradeSystem>(upgradeObject);
             deckObject = new GameObject("TestPlayerDeck");
-            playerDeck = deckObject.AddComponent<PlayerDeck>();
+            playerDeck = TestUtility.AddAwakened<PlayerDeck>(deckObject);
 
             testOperator = ScriptableObject.CreateInstance<OperatorData>();
             testOperator.operatorName = "TrashBot";
@@ -29,6 +29,7 @@ namespace TrashTD.Tests
         [TearDown]
         public void TearDown()
         {
+            TestUtility.ClearSingletons();
             if (upgradeObject != null)
             {
                 Object.DestroyImmediate(upgradeObject);

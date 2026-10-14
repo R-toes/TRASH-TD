@@ -46,6 +46,7 @@ namespace TrashTD.Tests
         [TearDown]
         public void TearDown()
         {
+            TestUtility.ClearSingletons();
             if (draftObject != null)
             {
                 Object.DestroyImmediate(draftObject);
@@ -141,7 +142,7 @@ namespace TrashTD.Tests
         public void DrawgooDeathSkill_DrawsTwoRandomCardsFromOperatorPool()
         {
             var deckObject = new GameObject("DrawgooTestDeck");
-            var deck = deckObject.AddComponent<PlayerDeck>();
+            var deck = TestUtility.AddAwakened<PlayerDeck>(deckObject);
             var operatorObject = new GameObject("DrawgooTestOperator");
             var drawgoo = operatorObject.AddComponent<DrawgooTestOperator>();
             var drawgooData = ScriptableObject.CreateInstance<OperatorData>();
@@ -167,10 +168,10 @@ namespace TrashTD.Tests
         public void OperatorDeath_RemovesOperatorFromSquadWithoutReturningItsCard()
         {
             var managerObject = new GameObject("TestOperatorManager");
-            var manager = managerObject.AddComponent<OperatorManager>();
+            var manager = TestUtility.AddAwakened<OperatorManager>(managerObject);
             manager.SquadLimit = 1;
             var deckObject = new GameObject("TestOperatorDeathDeck");
-            var deck = deckObject.AddComponent<PlayerDeck>();
+            var deck = TestUtility.AddAwakened<PlayerDeck>(deckObject);
             var operatorObject = new GameObject("DeadOperator");
             var op = operatorObject.AddComponent<DrawgooTestOperator>();
             var operatorData = ScriptableObject.CreateInstance<OperatorData>();
@@ -182,6 +183,7 @@ namespace TrashTD.Tests
             deployedOperators.Add(op);
             Assert.IsTrue(manager.IsAtSquadLimit);
 
+            TestUtility.ExpectEditModeDestroy();
             op.TriggerDeath();
 
             Assert.AreEqual(0, manager.DeployedCount);

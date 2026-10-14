@@ -169,6 +169,18 @@ namespace TrashTD.UI
         private Text waveInfoText;
         private bool overlayVisible;
 
+        // --- Minimize (view the map while drafting) ---
+        private bool minimized;
+        private GameObject restoreBar;
+
+        // --- Deck strip (see the deck and discard cards while drafting) ---
+        private Text deckStripLabel;
+        private readonly Button[] deckSlotButtons = new Button[PlayerDeck.MAX_DECK_SIZE];
+        private readonly Text[] deckSlotTexts = new Text[PlayerDeck.MAX_DECK_SIZE];
+        private readonly MenuButtonFeedback[] deckSlotFeedbacks = new MenuButtonFeedback[PlayerDeck.MAX_DECK_SIZE];
+        private int pendingDiscardSlot = -1;
+        private DraftCard pendingDiscardCard;
+
         // --- Animation ---
         private RectTransform[] introRects;
         private Vector2[] introTargets;
@@ -226,6 +238,11 @@ namespace TrashTD.UI
             BuildOverlay();
             overlayRoot.SetActive(false);
 
+            if (playerDeck != null)
+            {
+                playerDeck.OnDeckChanged += HandleDeckChanged;
+            }
+
             if (gameManager != null)
             {
                 gameManager.OnPhaseChanged += HandlePhaseChanged;
@@ -239,7 +256,16 @@ namespace TrashTD.UI
 
         private void Update()
         {
-            if (!overlayVisible || overlayRoot == null) return;
+            if (overlayRoot == null) return;
+
+            if (minimized)
+            {
+                var keyboard = UnityEngine.InputSystem.Keyboard.current;
+                if (keyboard != null && keyboard.mKey.wasPressedThisFrame) SetMinimized(false);
+                return;
+            }
+
+            if (!overlayVisible) return;
 
             // Confirm button breathes while a card can be confirmed
             if (confirmFeedback != null && confirmButton != null)
@@ -257,6 +283,11 @@ namespace TrashTD.UI
             if (gameManager != null)
             {
                 gameManager.OnPhaseChanged -= HandlePhaseChanged;
+            }
+
+            if (playerDeck != null)
+            {
+                playerDeck.OnDeckChanged -= HandleDeckChanged;
             }
 
             if (draftSystem != null)
@@ -293,6 +324,11 @@ namespace TrashTD.UI
             if (keyboard.rKey.wasPressedThisFrame && rerollButton.interactable)
             {
                 OnRerollClicked();
+            }
+
+            if (keyboard.mKey.wasPressedThisFrame)
+            {
+                SetMinimized(true);
             }
         }
 
@@ -356,11 +392,13 @@ namespace TrashTD.UI
             }
 
             waitingForEnvironmentBriefing = false;
+            ResetMinimized();
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (developerPickerRoot != null) developerPickerRoot.SetActive(false);
 #endif
             selectedCardIndex = -1;
+            ClearPendingDiscard();
 
             if (hideRoutine != null)
             {
@@ -382,6 +420,7 @@ namespace TrashTD.UI
             UpdateConfirmButton();
             UpdateDeckCount();
             UpdateWaveInfo();
+            RefreshDeckStrip();
         }
 
         private bool IsActiveGameplayCardPick()
@@ -395,7 +434,13 @@ namespace TrashTD.UI
 
         private void HideDraftOverlay()
         {
-            if (overlayRoot == null || !overlayRoot.activeSelf) return;
+            // A minimized overlay is already inactive; still close it so its keys stop working.
+            ResetMinimized();
+            if (overlayRoot == null || !overlayRoot.activeSelf)
+            {
+                overlayVisible = false;
+                return;
+            }
 
             overlayVisible = false;
 
@@ -411,6 +456,7 @@ namespace TrashTD.UI
 
         private void HideDraftOverlayImmediately()
         {
+            ResetMinimized();
             overlayVisible = false;
             if (hideRoutine != null)
             {
@@ -582,7 +628,7 @@ namespace TrashTD.UI
             detailHpText.text = op.GetScaledHP(card.rarity).ToString();
             detailAtkText.text = op.GetScaledATK(card.rarity).ToString();
             detailDefText.text = op.GetScaledDEF(card.rarity).ToString();
-            detailResText.text = op.GetScaledRES(card.rarity).ToString();
+            detailResText.text = op.GetScaledRES(card.rarity) + "%";
             detailBlockText.text = op.blockCount.ToString();
             detailIntervalText.text = op.attackInterval.ToString("0.##") + "s";
 
@@ -803,7 +849,7 @@ namespace TrashTD.UI
 
             if (playerDeck != null && playerDeck.IsFull)
             {
-                confirmButtonText.text = "DECK FULL";
+                confirmButtonText.text = "DECK FULL: DISCARD A CARD";
             }
             else if (selectedCardIndex < 0)
             {
@@ -850,6 +896,148 @@ namespace TrashTD.UI
                     int nextWave = gameManager.GetCurrentWaveIndex() + 1;
                     waveInfoText.text = $"NEXT: WAVE {nextWave} / {waveManager.TotalWaves}";
                 }
+            }
+        }
+
+        // ============================
+        // Minimize (view the map)
+        // ============================
+
+        /// <summary>
+        /// Hides the draft screen so the player can look at the stage, leaving a small bar to come back.
+        /// The offer and the current selection are kept.
+        /// </summary>
+        private void SetMinimized(bool value)
+        {
+            if (overlayRoot == null || minimized == value) return;
+            if (value && !overlayVisible) return;
+
+            ClearUiSelection();
+            minimized = value;
+            if (value)
+            {
+                FinishAnimations();
+                overlayRoot.SetActive(false);
+            }
+            else
+            {
+                overlayRoot.SetActive(true);
+                overlayGroup.alpha = 1f;
+                overlayGroup.interactable = true;
+                overlayGroup.blocksRaycasts = true;
+                RefreshDeckStrip();
+                UpdateConfirmButton();
+                UpdateDeckCount();
+            }
+
+            if (restoreBar != null) restoreBar.SetActive(value);
+            PlayClick();
+        }
+
+        private void ResetMinimized()
+        {
+            minimized = false;
+            if (restoreBar != null) restoreBar.SetActive(false);
+        }
+
+        /// <summary>Jumps intro/deal animations to their end state so a restored overlay is laid out correctly.</summary>
+        private void FinishAnimations()
+        {
+            if (introRoutine != null)
+            {
+                StopCoroutine(introRoutine);
+                introRoutine = null;
+                for (int i = 0; i < introRects.Length; i++) introRects[i].anchoredPosition = introTargets[i];
+            }
+
+            if (dealRoutine != null)
+            {
+                StopCoroutine(dealRoutine);
+                dealRoutine = null;
+                for (int i = 0; i < 3; i++) ApplyDeal(i, 1f);
+            }
+        }
+
+        // ============================
+        // Deck strip (discard)
+        // ============================
+
+        private void HandleDeckChanged(IReadOnlyList<DraftCard> _)
+        {
+            if (pendingDiscardCard != null && playerDeck.GetCard(pendingDiscardSlot) != pendingDiscardCard)
+                ClearPendingDiscard();
+
+            if (!overlayVisible) return;
+            RefreshDeckStrip();
+            UpdateConfirmButton();
+            UpdateDeckCount();
+        }
+
+        /// <summary>First click marks a deck card for discard; a second click on it discards it.</summary>
+        private void OnDeckSlotClicked(int slot)
+        {
+            ClearUiSelection();
+            if (playerDeck == null) return;
+
+            DraftCard card = playerDeck.GetCard(slot);
+            if (card == null) return;
+
+            if (pendingDiscardSlot == slot && pendingDiscardCard == card)
+            {
+                ClearPendingDiscard();
+                playerDeck.RemoveCard(slot);
+                PlaySfx(confirmClip, 0.85f);
+                Debug.Log($"[Draft] Discarded {card.operatorData?.operatorName} ({card.rarity}) from deck.");
+            }
+            else
+            {
+                pendingDiscardSlot = slot;
+                pendingDiscardCard = card;
+                PlayClick();
+            }
+
+            RefreshDeckStrip();
+        }
+
+        private void ClearPendingDiscard()
+        {
+            pendingDiscardSlot = -1;
+            pendingDiscardCard = null;
+        }
+
+        private void RefreshDeckStrip()
+        {
+            if (deckStripLabel == null || playerDeck == null) return;
+
+            bool full = playerDeck.IsFull;
+            deckStripLabel.text = full ? "DECK FULL\nCLICK TO DISCARD" : "YOUR DECK\nCLICK TO DISCARD";
+            deckStripLabel.color = full ? DECK_FULL_COLOR : STAT_LABEL_COLOR;
+
+            for (int i = 0; i < deckSlotButtons.Length; i++)
+            {
+                if (deckSlotButtons[i] == null) continue;
+
+                DraftCard card = playerDeck.GetCard(i);
+                bool hasCard = card != null && card.operatorData != null;
+                bool pending = hasCard && i == pendingDiscardSlot && card == pendingDiscardCard;
+
+                deckSlotButtons[i].interactable = hasCard;
+                deckSlotFeedbacks[i].SetBaseColor(pending ? DECK_FULL_COLOR : (hasCard ? TILE_BG : PORTRAIT_BG));
+                deckSlotFeedbacks[i].glowAlways = pending;
+
+                if (!hasCard)
+                {
+                    deckSlotTexts[i].text = "EMPTY";
+                    deckSlotTexts[i].color = new Color(1f, 1f, 1f, 0.25f);
+                    continue;
+                }
+
+                int stars = (int)card.rarity;
+                string starColor = ColorUtility.ToHtmlStringRGB(GetRarityColor(stars));
+                deckSlotTexts[i].color = Color.white;
+                deckSlotTexts[i].text = pending
+                    ? $"DISCARD?\n{card.operatorData.operatorName}"
+                    : $"{card.operatorData.operatorName}\n<color=#{starColor}>{BuildStarString(stars)}</color>";
             }
         }
 
@@ -1202,10 +1390,14 @@ namespace TrashTD.UI
             confirmButton.interactable = false;
             confirmFeedback = AttachFeedback(confirmButton, ACCENT_BRIGHT, 1.03f);
 
+            // Deck strip (between the cards and the reroll/skip buttons) and the view-map controls
+            BuildDeckStrip(overlayRoot.transform);
+            BuildMinimizeControls(canvasObj.transform);
+
             // Keyboard hint
-            var hintText = MakeText(overlayRoot.transform, "KeyHints", "1 2 3  SELECT     ENTER  CONFIRM     R  REROLL", 12,
+            var hintText = MakeText(overlayRoot.transform, "KeyHints", "1 2 3  SELECT     ENTER  CONFIRM     R  REROLL     M  VIEW MAP", 12,
                 TextAnchor.MiddleCenter, new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.55f));
-            PositionRT(hintText, new Vector2(0f, 28f), new Vector2(0.5f, 0f), new Vector2(700f, 24f));
+            PositionRT(hintText, new Vector2(0f, 28f), new Vector2(0.5f, 0f), new Vector2(900f, 24f));
 
             // Header/footer/panel entrance data (positions captured after layout above)
             introRects = new[]
@@ -1227,6 +1419,72 @@ namespace TrashTD.UI
                 new Vector2(90f, 0f), new Vector2(0f, -60f), new Vector2(0f, -60f), new Vector2(0f, -30f)
             };
             introDelays = new[] { 0f, 0.06f, 0.1f, 0.1f, 0.15f, 0.25f, 0.3f, 0.35f };
+        }
+
+        /// <summary>The player's 8 deck slots, shown while drafting; clicking a card (twice) discards it.</summary>
+        private void BuildDeckStrip(Transform parent)
+        {
+            const float slotWidth = 126f;
+            const float slotHeight = 56f;
+            const float labelWidth = 150f;
+            const float spacing = 6f;
+
+            var strip = new GameObject("DeckStrip", typeof(RectTransform));
+            strip.transform.SetParent(parent, false);
+            float width = labelWidth + PlayerDeck.MAX_DECK_SIZE * (slotWidth + spacing);
+            PositionRT(strip.GetComponent<RectTransform>(), new Vector2(ColumnCenterX, 191f), new Vector2(0.5f, 0f),
+                new Vector2(width, slotHeight));
+
+            var layout = strip.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = spacing;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            deckStripLabel = MakeText(strip.transform, "DeckStripLabel", "YOUR DECK", 12, TextAnchor.MiddleRight, STAT_LABEL_COLOR);
+            deckStripLabel.rectTransform.sizeDelta = new Vector2(labelWidth, slotHeight);
+
+            for (int i = 0; i < PlayerDeck.MAX_DECK_SIZE; i++)
+            {
+                int slot = i;
+                Button button = MakeButton(strip.transform, $"DeckSlot{i + 1}", "EMPTY", new Vector2(slotWidth, slotHeight), TILE_BG);
+                Text label = button.GetComponentInChildren<Text>();
+                label.fontSize = 12;
+                label.fontStyle = FontStyle.Normal;
+                label.supportRichText = true;
+                label.resizeTextForBestFit = true;
+                label.resizeTextMinSize = 8;
+                label.resizeTextMaxSize = 12;
+                label.rectTransform.offsetMin = new Vector2(4f, 2f);
+                label.rectTransform.offsetMax = new Vector2(-4f, -2f);
+
+                button.onClick.AddListener(() => OnDeckSlotClicked(slot));
+                deckSlotButtons[i] = button;
+                deckSlotTexts[i] = label;
+                deckSlotFeedbacks[i] = AttachFeedback(button, DECK_FULL_COLOR, 1.04f);
+            }
+        }
+
+        /// <summary>"VIEW MAP" button on the overlay, plus the bar that brings the draft back while minimized.</summary>
+        private void BuildMinimizeControls(Transform canvasRoot)
+        {
+            Button viewMap = MakeButton(overlayRoot.transform, "ViewMapButton", "VIEW MAP (M)", new Vector2(220f, 48f), SKIP_COLOR);
+            PositionRT(viewMap, new Vector2(28f, -32f), new Vector2(0f, 1f), new Vector2(220f, 48f));
+            viewMap.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
+            viewMap.onClick.AddListener(() => SetMinimized(true));
+            AttachFeedback(viewMap, Color.white, 1.05f);
+
+            Button back = MakeButton(canvasRoot, "BackToCardPickButton", "BACK TO CARD PICK (M)", new Vector2(460f, 56f), CONFIRM_COLOR);
+            PositionRT(back, new Vector2(0f, -24f), new Vector2(0.5f, 1f), new Vector2(460f, 56f));
+            back.GetComponent<RectTransform>().pivot = new Vector2(0.5f, 1f);
+            back.onClick.AddListener(() => SetMinimized(false));
+            MenuButtonFeedback backFeedback = AttachFeedback(back, ACCENT_BRIGHT, 1.04f);
+            backFeedback.glowAlways = true;
+
+            restoreBar = back.gameObject;
+            restoreBar.SetActive(false);
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

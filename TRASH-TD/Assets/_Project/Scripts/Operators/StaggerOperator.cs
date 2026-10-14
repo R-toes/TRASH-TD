@@ -65,7 +65,7 @@ namespace TrashTD.Operators
                         enemy.transform.position,
                         new Color(1f, 0.45f, 0.1f, 1f));
 
-                    int damage = DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(enemy));
+                    int damage = DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(enemy), data.damageType);
                     enemy.TryTakeAttackDamage(damage, data.damageType, this);
                 }
 
@@ -79,7 +79,7 @@ namespace TrashTD.Operators
                 target.transform.position,
                 new Color(1f, 0.78f, 0.3f, 1f));
 
-            int singleDamage = DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
+            int singleDamage = DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target), data.damageType);
             target.TryTakeAttackDamage(singleDamage, data.damageType, this);
         }
 

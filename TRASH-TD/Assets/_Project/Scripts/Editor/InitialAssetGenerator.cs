@@ -103,6 +103,27 @@ namespace TrashTD.Editor
             Debug.Log($"<color=green>TRASH TD: Test Gameplay Scene successfully created and saved at: {scenePath}</color>");
         }
 
+        /// <summary>
+        /// Waves are authored on the stage asset (see Wave Planner). Generated waves are only a first
+        /// draft, so existing waves are kept unless the user explicitly confirms overwriting them.
+        /// </summary>
+        private static bool ShouldGenerateWaves(StageData stage)
+        {
+            bool hasWaves = (stage.wavesEasy != null && stage.wavesEasy.Length > 0) ||
+                            (stage.wavesNormal != null && stage.wavesNormal.Length > 0) ||
+                            (stage.wavesHard != null && stage.wavesHard.Length > 0);
+            if (!hasWaves) return true;
+            if (Application.isBatchMode) return false;
+
+            return !EditorUtility.DisplayDialog(
+                "Keep existing waves?",
+                $"{stage.name} already has waves. Regenerating replaces ALL of its Easy/Normal/Hard waves " +
+                "with generated defaults and discards any hand-tuned changes.\n\n" +
+                "The map layout and paths are regenerated either way.",
+                "Keep existing waves",
+                "Overwrite waves");
+        }
+
         private static void EnsureFolder(string path)
         {
             if (!AssetDatabase.IsValidFolder(path))
@@ -1039,7 +1060,7 @@ namespace TrashTD.Editor
             var rusher = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Rusher_Toxic.asset");
             var tank = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Tank_Pollution.asset");
 
-            if (grunt != null)
+            if (grunt != null && ShouldGenerateWaves(stage))
             {
                 stage.wavesEasy = new[]
                 {
@@ -1109,31 +1130,24 @@ namespace TrashTD.Editor
             EditorUtility.SetDirty(stage);
         }
 
+        // On editor load, only create stage assets that are missing. Existing stages are never
+        // regenerated automatically (that used to overwrite hand-edited waves on every recompile);
+        // use the TRASH TD > Generate Stage menu items to regenerate one on purpose.
         [InitializeOnLoadMethod]
-        private static void AutoEnsureStage2()
+        private static void AutoEnsureStages()
         {
             EditorApplication.delayCall += () =>
             {
-                GenerateStage2();
+                CreateStageIfMissing("STAGE_02.asset", GenerateStage2);
+                CreateStageIfMissing("STAGE_03.asset", GenerateStage3);
+                CreateStageIfMissing("STAGE_06.asset", GenerateStage6);
             };
         }
 
-        [InitializeOnLoadMethod]
-        private static void AutoEnsureStage3()
+        private static void CreateStageIfMissing(string fileName, System.Action generate)
         {
-            EditorApplication.delayCall += () =>
-            {
-                GenerateStage3();
-            };
-        }
-
-        [InitializeOnLoadMethod]
-        private static void AutoEnsureStage6()
-        {
-            EditorApplication.delayCall += () =>
-            {
-                GenerateStage6();
-            };
+            if (AssetDatabase.LoadAssetAtPath<StageData>($"{StageDataFolder}/{fileName}") == null)
+                generate();
         }
 
         [MenuItem("TRASH TD/Generate Stage 2 (Scrapyard Junction)")]
@@ -1307,9 +1321,12 @@ namespace TrashTD.Editor
             var rusher = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Rusher_Toxic.asset");
             var tank = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Tank_Pollution.asset");
 
-            stage.wavesEasy = BuildStage2Waves(10, 0, grunt, rusher, tank);
-            stage.wavesNormal = BuildStage2Waves(20, 1, grunt, rusher, tank);
-            stage.wavesHard = BuildStage2Waves(30, 2, grunt, rusher, tank);
+            if (ShouldGenerateWaves(stage))
+            {
+                stage.wavesEasy = BuildStage2Waves(10, 0, grunt, rusher, tank);
+                stage.wavesNormal = BuildStage2Waves(20, 1, grunt, rusher, tank);
+                stage.wavesHard = BuildStage2Waves(30, 2, grunt, rusher, tank);
+            }
 
             EditorUtility.SetDirty(stage);
             AssetDatabase.SaveAssets();
@@ -1466,9 +1483,12 @@ namespace TrashTD.Editor
             var grunt = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Grunt_Sludge.asset");
             var rusher = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Rusher_Toxic.asset");
             var tank = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Tank_Pollution.asset");
-            stage.wavesEasy = BuildStage3Waves(0, grunt, rusher, tank);
-            stage.wavesNormal = BuildStage3Waves(1, grunt, rusher, tank);
-            stage.wavesHard = BuildStage3Waves(2, grunt, rusher, tank);
+            if (ShouldGenerateWaves(stage))
+            {
+                stage.wavesEasy = BuildStage3Waves(0, grunt, rusher, tank);
+                stage.wavesNormal = BuildStage3Waves(1, grunt, rusher, tank);
+                stage.wavesHard = BuildStage3Waves(2, grunt, rusher, tank);
+            }
 
             EditorUtility.SetDirty(stage);
             AssetDatabase.SaveAssets();
@@ -1636,13 +1656,14 @@ namespace TrashTD.Editor
             var tank = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Tank_Pollution.asset");
 
             var stage1 = AssetDatabase.LoadAssetAtPath<StageData>($"{StageDataFolder}/STAGE_01.asset");
-            if (stage1 != null && stage1.wavesEasy != null && stage1.wavesEasy.Length > 0)
+            bool generateWaves = ShouldGenerateWaves(stage);
+            if (generateWaves && stage1 != null && stage1.wavesEasy != null && stage1.wavesEasy.Length > 0)
             {
                 stage.wavesEasy = DistributeWavesToLanes(stage1.wavesEasy);
                 stage.wavesNormal = DistributeWavesToLanes(stage1.wavesNormal);
                 stage.wavesHard = DistributeWavesToLanes(stage1.wavesHard);
             }
-            else
+            else if (generateWaves)
             {
                 var baseEasy = new[]
                 {

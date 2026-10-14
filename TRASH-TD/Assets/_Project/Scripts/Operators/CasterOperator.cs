@@ -103,7 +103,7 @@ namespace TrashTD.Operators
         {
             if (target == null || target.IsDead) return;
 
-            int chillDamage = DamageCalculator.CalculateDamage(Mathf.RoundToInt(currentATK * GetDamageMultiplier()), target.CurrentRES);
+            int chillDamage = DamageCalculator.CalculateArtsDamage(Mathf.RoundToInt(currentATK * GetDamageMultiplier()), target.CurrentRES);
             if (!target.TryTakeAttackDamage(chillDamage, DamageType.Arts, this)) return;
             bool didFreeze = target.ApplyChill(data.chillPerHit, data.chillSlowMultiplier, data.chillSlowDuration,
                 data.chillFreezeThreshold, data.chillFreezeDuration);
@@ -121,7 +121,7 @@ namespace TrashTD.Operators
 
             int primaryATK = Mathf.RoundToInt(GetArmorAdjustedAttack(currentATK, target) * GetDamageMultiplier());
             target.TryTakeAttackDamage(
-                DamageCalculator.CalculateDamage(primaryATK, target.CurrentRES),
+                DamageCalculator.CalculateArtsDamage(primaryATK, target.CurrentRES),
                 DamageType.Arts,
                 this);
 
@@ -137,7 +137,7 @@ namespace TrashTD.Operators
                 if (splashTarget == null || splashTarget == target || splashTarget.IsDead) continue;
 
                 int armorAdjustedSplashATK = GetArmorAdjustedAttack(secondaryAtk, splashTarget);
-                int splashDmg = DamageCalculator.CalculateDamage(armorAdjustedSplashATK, splashTarget.CurrentRES);
+                int splashDmg = DamageCalculator.CalculateArtsDamage(armorAdjustedSplashATK, splashTarget.CurrentRES);
                 splashTarget.TryTakeAttackDamage(splashDmg, DamageType.Arts, this);
             }
         }

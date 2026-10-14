@@ -57,8 +57,11 @@ namespace TrashTD.Operators
         public virtual bool CanReceiveHealing => true;
         public virtual bool CanHitAir => data != null && (data.position == OperatorPosition.Ranged || data.operatorClass == OperatorClass.Caster);
         public IReadOnlyList<EnemyBase> BlockedEnemies => blockedEnemies;
+        // Sandbox stays in Preparation for its whole session (so cards can be deployed mid-wave),
+        // so the preparation damage/healing lock must not apply there.
         protected bool IsInPreparationPhase =>
-            GameManager.Instance != null && GameManager.Instance.CurrentPhase == StagePhase.Preparation;
+            GameManager.Instance != null && !GameManager.Instance.IsSandbox &&
+            GameManager.Instance.CurrentPhase == StagePhase.Preparation;
 
         /// <summary>
         /// Initialize this operator with data and rarity.
@@ -187,7 +190,7 @@ namespace TrashTD.Operators
         {
             if (target == null || target.IsDead) return;
 
-            int damage = Combat.DamageCalculator.CalculateDamage(CurrentATK, GetTargetMitigation(target));
+            int damage = Combat.DamageCalculator.CalculateDamage(CurrentATK, GetTargetMitigation(target), data.damageType);
             target.TryTakeAttackDamage(damage, data.damageType);
         }
 
@@ -275,14 +278,16 @@ namespace TrashTD.Operators
             // Update skill cooldowns
             equippedSkill?.UpdateSkill(Time.deltaTime);
 
-            // Attack timing
-            attackTimer += Time.deltaTime;
-            if (attackTimer >= GetAttackInterval())
+            // Attack timing: once charged, the attack stays ready until a target is available,
+            // so an enemy entering range is hit immediately instead of waiting a full interval.
+            float interval = GetAttackInterval();
+            attackTimer = Mathf.Min(attackTimer + Time.deltaTime, interval);
+            if (attackTimer >= interval)
             {
-                attackTimer = 0f;
                 currentTarget = FindTarget();
                 if (currentTarget != null && CanAttackTarget(currentTarget))
                 {
+                    attackTimer = 0f;
                     Attack(currentTarget);
                 }
             }
@@ -322,7 +327,7 @@ namespace TrashTD.Operators
             }
 
             int mitigation = damageType == DamageType.Physical ? CurrentDEF : currentRES;
-            int damage = Combat.DamageCalculator.CalculateDamage(rawATK, mitigation);
+            int damage = Combat.DamageCalculator.CalculateDamage(rawATK, mitigation, damageType);
             int previousHP = currentHP;
             currentHP = Mathf.Max(0, currentHP - damage);
             int actualDamage = previousHP - currentHP;

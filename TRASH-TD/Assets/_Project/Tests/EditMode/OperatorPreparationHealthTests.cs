@@ -19,7 +19,7 @@ namespace TrashTD.Tests
         public void SetUp()
         {
             gameManagerObject = new GameObject("TestGameManager");
-            gameManager = gameManagerObject.AddComponent<GameManager>();
+            gameManager = TestUtility.AddAwakened<GameManager>(gameManagerObject);
 
             operatorData = ScriptableObject.CreateInstance<OperatorData>();
             operatorData.operatorName = "TestOperator";
@@ -34,6 +34,7 @@ namespace TrashTD.Tests
         [TearDown]
         public void TearDown()
         {
+            TestUtility.ClearSingletons();
             if (operatorObject != null) Object.DestroyImmediate(operatorObject);
             if (gameManagerObject != null) Object.DestroyImmediate(gameManagerObject);
             if (operatorData != null) Object.DestroyImmediate(operatorData);

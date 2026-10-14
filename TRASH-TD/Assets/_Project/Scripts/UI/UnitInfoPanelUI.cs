@@ -57,7 +57,7 @@ namespace TrashTD.UI
             if (hpText != null) hpText.text = $"HP: {op.CurrentHP} / {op.MaxHP}";
             if (atkText != null) atkText.text = $"ATK: {op.CurrentATK}";
             if (defText != null) defText.text = $"DEF: {op.CurrentDEF}";
-            if (resText != null) resText.text = $"RES: {op.CurrentRES}";
+            if (resText != null) resText.text = $"RES: {op.CurrentRES}%";
             if (blockText != null) blockText.text = $"Block: {op.GetCurrentBlockCount()} / {op.GetBlockCount()}";
         }
 

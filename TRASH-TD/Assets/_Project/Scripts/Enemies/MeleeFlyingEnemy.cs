@@ -5,7 +5,7 @@ using TrashTD.Operators;
 namespace TrashTD.Enemies
 {
     /// <summary>
-    /// Melee air enemy: single-target physical strike on the tile below or any adjacent tile.
+    /// Melee air enemy: single-target physical strike on the tile below or an orthogonally adjacent tile.
     /// Hunts ranged operators (Snipers, Medics), then Defenders, then Guards; ignores Casters.
     /// Stats (high DEF, low RES, Grunt speed) live on Enemy_Flying_Melee.asset.
     /// </summary>

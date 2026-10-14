@@ -44,15 +44,16 @@ namespace TrashTD.Operators
 
             equippedSkill?.UpdateSkill(Time.deltaTime);
 
-            // Shield cast interval (uses attackInterval as cycle interval, defaulting to 2.0s)
-            attackTimer += Time.deltaTime;
+            // Shield cast interval (uses attackInterval as cycle interval, defaulting to 2.0s).
+            // Stays ready until a shield target exists, so the first shield is cast immediately.
             float interval = Combat.StageCombatModifiers.GetAttackInterval(data != null ? data.attackInterval : 2.0f);
+            attackTimer = Mathf.Min(attackTimer + Time.deltaTime, interval);
             if (attackTimer >= interval)
             {
-                attackTimer = 0f;
                 OperatorBase target = FindShieldTarget();
                 if (target != null)
                 {
+                    attackTimer = 0f;
                     Shield(target);
                 }
             }

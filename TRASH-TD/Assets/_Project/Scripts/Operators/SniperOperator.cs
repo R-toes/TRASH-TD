@@ -33,7 +33,7 @@ namespace TrashTD.Operators
         {
             if (target == null || target.IsDead) return;
 
-            int damage = Combat.DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
+            int damage = Combat.DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target), data.damageType);
             target.TryTakeAttackDamage(damage, data.damageType, this);
         }
 

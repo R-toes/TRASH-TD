@@ -8,8 +8,21 @@ namespace TrashTD.Enemies
     /// </summary>
     public class FlyerEnemy : EnemyBase
     {
+        /// <summary>
+        /// True for flyers that run their own attack logic (AirCombatEnemy); they only need the
+        /// base movement/status update, not this class's default projectile attack.
+        /// </summary>
+        protected virtual bool HandlesOwnAttacks => false;
+
         protected override void Update()
         {
+            if (HandlesOwnAttacks)
+            {
+                // Flyers are never blocked, so the base update only animates, applies status and moves.
+                base.Update();
+                return;
+            }
+
             UpdateRangedBehavior(prioritizeRangedOperators: true);
         }
 

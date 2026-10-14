@@ -41,6 +41,8 @@ namespace TrashTD.Enemies
         protected abstract bool IsTargetInRange(OperatorBase op);
         protected abstract void PerformAirAttack(OperatorBase target);
 
+        protected override bool HandlesOwnAttacks => true;
+
         public override void Initialize(EnemyData enemyData, int difficultyLevel)
         {
             base.Initialize(enemyData, difficultyLevel);
@@ -188,7 +190,7 @@ namespace TrashTD.Enemies
             return offset.sqrMagnitude <= radius * radius;
         }
 
-        /// <summary>Operator on the tile below the flyer or any of the 8 surrounding tiles.</summary>
+        /// <summary>Operator on the tile below the flyer or one of the 4 orthogonally adjacent tiles (no diagonals).</summary>
         protected bool IsOnOrAdjacent(OperatorBase op)
         {
             GridManager grid = GridManagerCache;
@@ -198,7 +200,7 @@ namespace TrashTD.Enemies
             Vector2Int operatorPosition = op.DeployedCell != null
                 ? op.DeployedCell.GridPosition
                 : grid.WorldToGridPosition(op.transform.position);
-            return Mathf.Abs(operatorPosition.x - ownPosition.x) <= 1 &&
+            return Mathf.Abs(operatorPosition.x - ownPosition.x) +
                    Mathf.Abs(operatorPosition.y - ownPosition.y) <= 1;
         }
 

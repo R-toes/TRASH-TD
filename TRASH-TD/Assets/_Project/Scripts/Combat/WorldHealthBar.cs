@@ -29,6 +29,14 @@ namespace TrashTD.Combat
 
         private void Awake()
         {
+            EnsureLines();
+        }
+
+        // Also called lazily from UpdateHealth, since Awake does not run for components added in edit mode (tests).
+        private void EnsureLines()
+        {
+            if (background != null && fill != null) return;
+
             SpriteRenderer spriteRenderer = GetComponentInChildren<SpriteRenderer>();
             if (spriteRenderer != null)
             {
@@ -78,6 +86,7 @@ namespace TrashTD.Combat
 
         private void UpdateHealth(int currentHP, int maxHP)
         {
+            EnsureLines();
             if (currentHP >= maxHP)
             {
                 background.gameObject.SetActive(false);

@@ -119,7 +119,7 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             int atk = isAir ? Mathf.RoundToInt(CurrentATK * AirDamageMultiplier) : CurrentATK;
-            int damage = DamageCalculator.CalculateDamage(atk, GetTargetMitigation(target));
+            int damage = DamageCalculator.CalculateDamage(atk, GetTargetMitigation(target), data.damageType);
             target.TryTakeAttackDamage(damage, data.damageType, this);
         }
     }

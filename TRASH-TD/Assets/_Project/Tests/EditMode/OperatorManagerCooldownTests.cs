@@ -32,10 +32,10 @@ namespace TrashTD.Tests
             gridManager.InitializeFromStageData(stageData);
 
             deckObject = new GameObject("TestPlayerDeck");
-            playerDeck = deckObject.AddComponent<PlayerDeck>();
+            playerDeck = TestUtility.AddAwakened<PlayerDeck>(deckObject);
 
             operatorManagerObject = new GameObject("TestOperatorManager");
-            operatorManager = operatorManagerObject.AddComponent<OperatorManager>();
+            operatorManager = TestUtility.AddAwakened<OperatorManager>(operatorManagerObject);
 
             operatorData = ScriptableObject.CreateInstance<OperatorData>();
             operatorData.operatorName = "TestSniper";
@@ -46,6 +46,7 @@ namespace TrashTD.Tests
         [TearDown]
         public void TearDown()
         {
+            TestUtility.ClearSingletons();
             if (retreatedOperator != null) Object.DestroyImmediate(retreatedOperator.gameObject);
             if (deployedOperator != null) Object.DestroyImmediate(deployedOperator.gameObject);
             if (operatorManagerObject != null) Object.DestroyImmediate(operatorManagerObject);
@@ -70,6 +71,7 @@ namespace TrashTD.Tests
                 out retreatedOperator));
             playerDeck.RemoveCard(retreatedCopy);
 
+            TestUtility.ExpectEditModeDestroy();
             operatorManager.RetreatOperator(retreatedOperator);
 
             DraftCard coolingCopy = null;

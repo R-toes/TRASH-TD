@@ -25,14 +25,16 @@ namespace TrashTD.Operators
 
             equippedSkill?.UpdateSkill(Time.deltaTime);
 
-            // Heal timing (uses attackInterval as heal tick interval)
-            attackTimer += Time.deltaTime;
-            if (attackTimer >= GetAttackInterval())
+            // Heal timing (uses attackInterval as heal tick interval). Stays ready until someone
+            // needs healing, so the first heal lands immediately.
+            float interval = GetAttackInterval();
+            attackTimer = Mathf.Min(attackTimer + Time.deltaTime, interval);
+            if (attackTimer >= interval)
             {
-                attackTimer = 0f;
                 OperatorBase healTarget = FindHealTarget();
                 if (healTarget != null)
                 {
+                    attackTimer = 0f;
                     Heal(healTarget);
                 }
             }

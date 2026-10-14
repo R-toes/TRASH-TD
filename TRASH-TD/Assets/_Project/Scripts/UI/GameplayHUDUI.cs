@@ -927,7 +927,7 @@ namespace TrashTD.UI
             selectedOperatorDetailsStatValues[0].text = data.GetScaledHP(op.CurrentRarity).ToString();
             selectedOperatorDetailsStatValues[1].text = data.GetScaledATK(op.CurrentRarity).ToString();
             selectedOperatorDetailsStatValues[2].text = data.GetScaledDEF(op.CurrentRarity).ToString();
-            selectedOperatorDetailsStatValues[3].text = data.GetScaledRES(op.CurrentRarity).ToString();
+            selectedOperatorDetailsStatValues[3].text = data.GetScaledRES(op.CurrentRarity) + "%";
             selectedOperatorDetailsStatValues[4].text = data.blockCount.ToString();
             selectedOperatorDetailsStatValues[5].text = $"{data.attackInterval:0.##}s";
             selectedOperatorDetailsRoles.text = data.roleTags != null && data.roleTags.Length > 0
