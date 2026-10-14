@@ -17,7 +17,7 @@ namespace TrashTD.Editor
         private const string ArtFolder = "Assets/_Project/Art";
         private const string OperatorDataFolder = "Assets/_Project/Data/Operators";
         private const string EnemyDataFolder = "Assets/_Project/Data/Enemies";
-        private const string StageDataFolder = "Assets/_Project/Data/Stages";
+        private const string StageDataFolder = "Assets/Resources/Stages";
         private const string OperatorPrefabFolder = "Assets/_Project/Prefabs/Operators";
         private const string EnemyPrefabFolder = "Assets/_Project/Prefabs/Enemies";
 
@@ -58,7 +58,7 @@ namespace TrashTD.Editor
             var bootstrapper = bootstrapperObj.AddComponent<StageBootstrapper>();
 
             // Assign Stage Data
-            bootstrapper.stageData = AssetDatabase.LoadAssetAtPath<StageData>($"{StageDataFolder}/Stage_01_LandfillOutskirts.asset");
+            bootstrapper.stageData = AssetDatabase.LoadAssetAtPath<StageData>($"{StageDataFolder}/STAGE_01.asset");
             bootstrapper.difficulty = StageDifficulty.Normal;
 
             // Assign Operators Pool
@@ -921,7 +921,7 @@ namespace TrashTD.Editor
 
         private static void GenerateStage()
         {
-            string path = $"{StageDataFolder}/Stage_01_LandfillOutskirts.asset";
+            string path = $"{StageDataFolder}/STAGE_01.asset";
             var stage = AssetDatabase.LoadAssetAtPath<StageData>(path);
             if (stage == null)
             {
@@ -1116,7 +1116,7 @@ namespace TrashTD.Editor
         [MenuItem("TRASH TD/Generate Stage 2 (Scrapyard Junction)")]
         public static void GenerateStage2()
         {
-            string path = $"{StageDataFolder}/Stage_02_ScrapyardJunction.asset";
+            string path = $"{StageDataFolder}/STAGE_02.asset";
             var stage = AssetDatabase.LoadAssetAtPath<StageData>(path);
             if (stage == null)
             {
@@ -1291,21 +1291,13 @@ namespace TrashTD.Editor
             EditorUtility.SetDirty(stage);
             AssetDatabase.SaveAssets();
 
-            // Also synchronize into Resources/Stages/STAGE_02.asset for runtime loading
-            string resourcesPath = "Assets/Resources/Stages/STAGE_02.asset";
-            if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
-            if (!AssetDatabase.IsValidFolder("Assets/Resources/Stages")) AssetDatabase.CreateFolder("Assets/Resources", "Stages");
-            AssetDatabase.DeleteAsset(resourcesPath);
-            AssetDatabase.CopyAsset(path, resourcesPath);
-            AssetDatabase.SaveAssets();
-
             Debug.Log("<color=green>TRASH TD: Stage 2 (Scrapyard Junction) successfully generated with dual-lane enemy waves!</color>");
         }
 
         [MenuItem("TRASH TD/Generate Stage 3 (Railyard Crossing)")]
         public static void GenerateStage3()
         {
-            string path = $"{StageDataFolder}/Stage_03_RailyardCrossing.asset";
+            string path = $"{StageDataFolder}/STAGE_03.asset";
             var stage = AssetDatabase.LoadAssetAtPath<StageData>(path);
             if (stage == null)
             {
@@ -1457,19 +1449,12 @@ namespace TrashTD.Editor
 
             EditorUtility.SetDirty(stage);
             AssetDatabase.SaveAssets();
-
-            string resourcesPath = "Assets/Resources/Stages/STAGE_03.asset";
-            if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
-            if (!AssetDatabase.IsValidFolder("Assets/Resources/Stages")) AssetDatabase.CreateFolder("Assets/Resources", "Stages");
-            AssetDatabase.DeleteAsset(resourcesPath);
-            AssetDatabase.CopyAsset(path, resourcesPath);
-            AssetDatabase.SaveAssets();
         }
 
         [MenuItem("TRASH TD/Generate Stage 6 (Clockwork Quarry)")]
         public static void GenerateStage6()
         {
-            string path = $"{StageDataFolder}/Stage_06_ClockworkQuarry.asset";
+            string path = $"{StageDataFolder}/STAGE_06.asset";
             var stage = AssetDatabase.LoadAssetAtPath<StageData>(path);
             if (stage == null)
             {
@@ -1627,7 +1612,7 @@ namespace TrashTD.Editor
             var rusher = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Rusher_Toxic.asset");
             var tank = AssetDatabase.LoadAssetAtPath<EnemyData>($"{EnemyDataFolder}/Enemy_Tank_Pollution.asset");
 
-            var stage1 = AssetDatabase.LoadAssetAtPath<StageData>($"{StageDataFolder}/Stage_01_LandfillOutskirts.asset");
+            var stage1 = AssetDatabase.LoadAssetAtPath<StageData>($"{StageDataFolder}/STAGE_01.asset");
             if (stage1 != null && stage1.wavesEasy != null && stage1.wavesEasy.Length > 0)
             {
                 stage.wavesEasy = DistributeWavesToLanes(stage1.wavesEasy);
@@ -1694,13 +1679,6 @@ namespace TrashTD.Editor
             }
 
             EditorUtility.SetDirty(stage);
-            AssetDatabase.SaveAssets();
-
-            string resourcesPath = "Assets/Resources/Stages/STAGE_06.asset";
-            if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
-            if (!AssetDatabase.IsValidFolder("Assets/Resources/Stages")) AssetDatabase.CreateFolder("Assets/Resources", "Stages");
-            AssetDatabase.DeleteAsset(resourcesPath);
-            AssetDatabase.CopyAsset(path, resourcesPath);
             AssetDatabase.SaveAssets();
 
             Debug.Log("<color=green>TRASH TD: Stage 6 (Clockwork Quarry) successfully generated!</color>");

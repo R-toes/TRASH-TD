@@ -197,7 +197,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08561ee39686a7340b3614cfe4f089ab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Core.GameLoop.StageBootstrapper
-  stageData: {fileID: 11400000, guid: 18a74a00b9015334cbf3fa03a367a155, type: 2}
+  stageData: {fileID: 11400000, guid: b97c14cbe92d9954aba65fb42a12c827, type: 2}
   difficulty: 1
   operatorPool:
   - {fileID: 11400000, guid: bd3f1ac48d1f44545850e9e1e5b291ff, type: 2}
