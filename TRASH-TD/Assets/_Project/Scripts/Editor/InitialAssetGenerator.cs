@@ -15,6 +15,14 @@ namespace TrashTD.Editor
     public static class InitialAssetGenerator
     {
         private const string ArtFolder = "Assets/_Project/Art";
+        private static readonly string[] ArtSearchFolders =
+        {
+            ArtFolder + "/Operators",
+            ArtFolder + "/Enemies",
+            ArtFolder + "/Tiles",
+            ArtFolder + "/Placeholders",
+            ArtFolder,
+        };
         private const string OperatorDataFolder = "Assets/_Project/Data/Operators";
         private const string EnemyDataFolder = "Assets/_Project/Data/Enemies";
         private const string StageDataFolder = "Assets/Resources/Stages";
@@ -113,15 +121,30 @@ namespace TrashTD.Editor
             }
         }
 
+        // Resolves a bare art filename to its path in the Art folder or one of its category subfolders.
+        private static string ResolveArtPath(string filename)
+        {
+            foreach (string folder in ArtSearchFolders)
+            {
+                string path = $"{folder}/{filename}";
+                if (!string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(path, AssetPathToGUIDOptions.OnlyExistingAssets)))
+                {
+                    return path;
+                }
+            }
+
+            return $"{ArtFolder}/{filename}";
+        }
+
         private static Sprite LoadSprite(string filename)
         {
-            string path = $"{ArtFolder}/{filename}";
+            string path = ResolveArtPath(filename);
             return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
         private static Sprite LoadSprite(string filename, string spriteName)
         {
-            string path = $"{ArtFolder}/{filename}";
+            string path = ResolveArtPath(filename);
             Object[] assets = AssetDatabase.LoadAllAssetsAtPath(path);
             for (int i = 0; i < assets.Length; i++)
             {
