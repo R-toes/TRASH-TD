@@ -19,47 +19,13 @@ namespace TrashTD.Operators
         {
             if (IsInPreparationPhase) return;
 
-            int hpBefore = currentHP;
             base.TakeDamage(rawATK, damageType, attacker);
-            int hpAfter = currentHP;
 
-            // Retaliate against the attacker when attacked
+            // Retaliate against the attacker when attacked by an enemy.
+            // Environmental damage (acid tiles, acid rain, etc.) has no attacker and will not trigger retaliation.
             if (attacker != null && !attacker.IsDead)
             {
                 Retaliate(attacker);
-            }
-            else if (attacker == null && hpBefore > hpAfter)
-            {
-                if (blockedEnemies.Count > 0)
-                {
-                    EnemyBase primaryBlocked = blockedEnemies[0];
-                    if (primaryBlocked != null && !primaryBlocked.IsDead)
-                    {
-                        Retaliate(primaryBlocked);
-                    }
-                }
-                else if (Systems.EnemyManager.Instance != null && Systems.EnemyManager.Instance.ActiveEnemies.Count > 0)
-                {
-                    // Fallback for unreferenced attackers (e.g. ranged or flying attackers where reference was omitted)
-                    EnemyBase nearest = null;
-                    float nearestDistSq = float.MaxValue;
-                    var enemies = Systems.EnemyManager.Instance.ActiveEnemies;
-                    for (int i = 0; i < enemies.Count; i++)
-                    {
-                        var e = enemies[i];
-                        if (e == null || e.IsDead) continue;
-                        float distSq = (e.transform.position - transform.position).sqrMagnitude;
-                        if (distSq < nearestDistSq && distSq <= 36f)
-                        {
-                            nearestDistSq = distSq;
-                            nearest = e;
-                        }
-                    }
-                    if (nearest != null)
-                    {
-                        Retaliate(nearest);
-                    }
-                }
             }
         }
 
