@@ -190,11 +190,10 @@ namespace TrashTD.Editor
         {
             int spawnPoints = stage.spawnPoints != null ? stage.spawnPoints.Length : 0;
             int paths = stage.enemyPaths != null ? stage.enemyPaths.Length : 0;
-            float hpMultiplier = 1f + (WaveAnalysis.GetDifficultyLevel(difficulty) - 1) * 0.25f;
 
             EditorGUILayout.LabelField(
                 $"Spawn points: {spawnPoints}    Explicit paths: {paths}    Lives: {stage.GetLifePoints(difficulty)}    " +
-                $"Squad limit: {stage.squadSizeLimit}    Enemy HP x{hpMultiplier:0.##} on {DifficultyNames[(int)difficulty]}",
+                $"Squad limit: {stage.squadSizeLimit}",
                 EditorStyles.miniLabel);
 
             string effect = GetStageEffectNote(stage.stageId);

@@ -37,17 +37,17 @@ namespace TrashTD.Tests
         }
 
         [Test]
-        public void Summarize_TotalsUseDifficultyScaledHP()
+        public void Summarize_TotalsUseBaseHP_OnEveryDifficulty()
         {
             var wave = Wave(
                 new WaveEntry { enemyData = grunt, count = 3, spawnInterval = 1f },
                 new WaveEntry { enemyData = flyer, count = 2, spawnInterval = 1f, spawnPointIndex = 1 });
 
-            WaveAnalysis.WaveSummary summary = WaveAnalysis.Summarize(wave, stage, StageDifficulty.Normal);
+            WaveAnalysis.WaveSummary summary = WaveAnalysis.Summarize(wave, stage, StageDifficulty.Hard);
 
             Assert.AreEqual(5, summary.EnemyCount);
             Assert.AreEqual(2, summary.AirCount);
-            Assert.AreEqual(grunt.GetScaledHP(2) * 3 + flyer.GetScaledHP(2) * 2, summary.TotalHP);
+            Assert.AreEqual(grunt.baseHP * 3 + flyer.baseHP * 2, summary.TotalHP, "Enemy stats don't scale with difficulty.");
             Assert.AreEqual(3 * 1 + 2 * 2, summary.MaxLeakCost);
             Assert.AreEqual(0b11, summary.SpawnPointMask);
             Assert.IsFalse(summary.HasWarnings);

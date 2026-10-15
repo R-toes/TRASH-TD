@@ -91,7 +91,7 @@ namespace TrashTD.Editor
                 int waveCount = current != null ? current.Length : 0;
                 if (waveCount == 0) continue;
 
-                WaveData[] rebuilt = WaveCurveBuilder.BuildWaves(stage, difficulty, waveCount, roster, settings);
+                WaveData[] rebuilt = WaveCurveBuilder.BuildWaves(stage, waveCount, roster, settings);
                 switch (difficulty)
                 {
                     case StageDifficulty.Easy: stage.wavesEasy = rebuilt; break;

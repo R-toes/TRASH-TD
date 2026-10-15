@@ -23,12 +23,12 @@ namespace TrashTD.Tests
             stage = Make<StageData>();
             stage.spawnPoints = new[] { Vector2Int.zero, Vector2Int.one };
 
-            grunt = Enemy("Grunt", EnemyArchetype.Grunt, 200);
-            rusher = Enemy("Rusher", EnemyArchetype.Rusher, 150);
-            tank = Enemy("Tank", EnemyArchetype.Tank, 1000);
-            flyer = Enemy("Flyer", EnemyArchetype.Flyer, 190);
+            grunt = Enemy("Grunt", EnemyArchetype.Grunt, 200, def: 10, speed: 0.75f);
+            rusher = Enemy("Rusher", EnemyArchetype.Rusher, 150, def: 5, speed: 1.8f);
+            tank = Enemy("Tank", EnemyArchetype.Tank, 1000, def: 35, speed: 0.6f);
+            flyer = Enemy("Flyer", EnemyArchetype.Flyer, 190, def: 15, speed: 1.6f);
             flyer.movementType = EnemyMovementType.Air;
-            excluded = Enemy("Broken", EnemyArchetype.Caster, 110);
+            excluded = Enemy("Broken", EnemyArchetype.Caster, 110, def: 10, speed: 0.85f);
             settings.excludedEnemies.Add(excluded);
         }
 
@@ -42,36 +42,31 @@ namespace TrashTD.Tests
         [TestCase(10)]
         [TestCase(20)]
         [TestCase(30)]
-        public void BudgetCurve_RisesEveryRegularWave_SpikesEveryFifth_FinalIsHardest(int waveCount)
+        public void BudgetCurve_EveryWaveIsHarder_FinalIsHardest(int waveCount)
         {
             float[] budgets = WaveCurveBuilder.BuildBudgetCurve(waveCount, 1000f, settings);
 
             for (int n = 2; n <= waveCount; n++)
-            {
-                bool spike = WaveCurveBuilder.IsSpikeWave(n, waveCount, settings.spikeInterval);
-                bool afterSpike = WaveCurveBuilder.IsSpikeWave(n - 1, waveCount, settings.spikeInterval);
+                Assert.Greater(budgets[n - 1], budgets[n - 2], $"Wave {n} must be harder than wave {n - 1}.");
 
-                if (spike)
-                    Assert.Greater(budgets[n - 1], budgets[n - 2], $"Spike wave {n} must be harder than wave {n - 1}.");
-                else if (afterSpike)
-                    Assert.GreaterOrEqual(budgets[n - 1], budgets[n - 2] * settings.postSpikeFloor - 0.01f,
-                        $"Wave {n} drops too far after the spike.");
-                else
-                    Assert.Greater(budgets[n - 1], budgets[n - 2], $"Regular wave {n} must be harder than wave {n - 1}.");
-            }
-
-            float max = Mathf.Max(budgets);
-            Assert.AreEqual(max, budgets[waveCount - 1], 0.001f, "The last wave must be the hardest.");
+            Assert.AreEqual(Mathf.Max(budgets), budgets[waveCount - 1], 0.001f, "The last wave must be the hardest.");
         }
 
         [Test]
-        public void BudgetCurve_WaveAfterSpikeIsHarderThanTheWaveBeforeTheSpike()
+        public void Threat_GrowsWithArmorSpeedAndFlight()
         {
-            float[] budgets = WaveCurveBuilder.BuildBudgetCurve(20, 1000f, settings);
+            float gruntThreat = WaveCurveBuilder.GetThreat(grunt, settings);
 
-            // Wave 6 (after the wave-5 spike) must beat wave 4, wave 11 must beat wave 9, ...
-            for (int spike = 5; spike < 20; spike += 5)
-                Assert.Greater(budgets[spike], budgets[spike - 2]);
+            Assert.Greater(gruntThreat, grunt.baseHP, "DEF makes an enemy tougher than its HP alone.");
+            Assert.Greater(WaveCurveBuilder.GetThreat(rusher, settings) / rusher.baseHP, gruntThreat / grunt.baseHP,
+                "A fast enemy spends less time in range, so each HP counts for more.");
+            Assert.Greater(WaveCurveBuilder.GetThreat(flyer, settings) / flyer.baseHP, gruntThreat / grunt.baseHP * settings.airThreatMultiplier,
+                "Air enemies can only be hit by part of the squad.");
+
+            EnemyData plated = Enemy("Plated", EnemyArchetype.Grunt, 200, def: 500, speed: 0.75f);
+            plated.baseRES = 500;
+            Assert.AreEqual(200f * settings.maxArmorThreat, WaveCurveBuilder.GetThreat(plated, settings), 0.01f,
+                "The armor factor is capped.");
         }
 
         [Test]
@@ -83,54 +78,103 @@ namespace TrashTD.Tests
         }
 
         [Test]
-        public void Introductions_OneNewTypePerWave_HeavyDebutsOnFirstSpike()
+        public void Introductions_SpacedOut_AvoidSpikes_HeavyDebutsOnFirstSpikeAfterSquadIsFull()
         {
             var roster = WaveCurveBuilder.OrderRoster(new[] { grunt, rusher, flyer, tank }, settings);
 
-            int[] intro = WaveCurveBuilder.BuildIntroductionWaves(roster, 10, settings.spikeInterval);
+            int[] intro = WaveCurveBuilder.BuildIntroductionWaves(roster, settings);
 
             Assert.AreEqual(1, intro[roster.IndexOf(grunt)]);
-            Assert.AreEqual(5, intro[roster.IndexOf(tank)]);
+            Assert.AreEqual(1 + settings.introductionSpacing, intro[roster.IndexOf(rusher)]);
+            Assert.AreEqual(settings.firstHeavyWave, intro[roster.IndexOf(tank)]);
             CollectionAssert.AllItemsAreUnique(intro);
-            foreach (int wave in intro) Assert.That(wave, Is.InRange(1, 10));
+            foreach (EnemyData enemy in new[] { grunt, rusher, flyer })
+                Assert.AreNotEqual(0, intro[roster.IndexOf(enemy)] % settings.spikeInterval, $"{enemy.enemyName} debuts on a spike wave.");
         }
 
         [Test]
-        public void BuildWaves_RealizedStrengthFollowsCurve_AndRespectsRoster()
+        public void StageBonus_AddsItsEnemiesOnWaveOne_SplitAcrossSpawnPoints_AndFadesLater()
+        {
+            var roster = WaveCurveBuilder.OrderRoster(new[] { grunt, rusher, flyer, tank }, settings);
+            WaveData[] firstStage = WaveCurveBuilder.BuildWaves(stage, 30, roster, settings);
+
+            StageData laterStage = Make<StageData>();
+            laterStage.spawnPoints = stage.spawnPoints;
+            laterStage.extraStartEnemies = 1;
+            WaveData[] secondStage = WaveCurveBuilder.BuildWaves(laterStage, 30, roster, settings);
+
+            // Wave 1: 3 basic enemies on the first stage, 4 on the next, split evenly over both spawn points.
+            Assert.AreEqual(2, secondStage[0].entries.Length);
+            foreach (WaveEntry entry in secondStage[0].entries) Assert.AreEqual(2, entry.count);
+
+            for (int i = 0; i < 30; i++)
+            {
+                Assert.Greater(WaveCurveBuilder.GetWaveThreat(secondStage[i], settings),
+                    WaveCurveBuilder.GetWaveThreat(firstStage[i], settings), $"Wave {i + 1} of the later stage must be harder.");
+            }
+
+            Assert.Less(WaveCurveBuilder.StageFactor(laterStage, 30, settings), WaveCurveBuilder.StageFactor(laterStage, 1, settings),
+                "The stage bonus fades so final waves stay beatable.");
+        }
+
+        [Test]
+        public void BuildWaves_EveryWaveIsHarder_FirstWaveFitsOneOperator()
         {
             var roster = WaveCurveBuilder.OrderRoster(new[] { grunt, rusher, flyer, tank, excluded }, settings);
-            stage.wavesNormal = WaveCurveBuilder.BuildWaves(stage, StageDifficulty.Normal, 20, roster, settings);
+            WaveData[] waves = WaveCurveBuilder.BuildWaves(stage, 30, roster, settings);
+            stage.wavesHard = waves;
 
-            WaveAnalysis.WaveSummary[] summaries = WaveAnalysis.SummarizeAll(stage, StageDifficulty.Normal);
-            Assert.AreEqual(20, summaries.Length);
+            WaveAnalysis.WaveSummary[] summaries = WaveAnalysis.SummarizeAll(stage, StageDifficulty.Hard);
+            Assert.AreEqual(30, summaries.Length);
 
-            int hardest = 0;
-            for (int i = 0; i < summaries.Length; i++)
+            float hardest = 0f;
+            for (int i = 0; i < waves.Length; i++)
             {
                 Assert.IsFalse(summaries[i].HasWarnings, $"Wave {i + 1}: {string.Join("; ", summaries[i].Warnings)}");
-                if (summaries[i].TotalHP > summaries[hardest].TotalHP) hardest = i;
-                if (i == 0) continue;
 
-                int n = i + 1;
-                bool afterSpike = WaveCurveBuilder.IsSpikeWave(n - 1, 20, settings.spikeInterval) &&
-                                  !WaveCurveBuilder.IsSpikeWave(n, 20, settings.spikeInterval);
-                if (afterSpike)
-                    Assert.GreaterOrEqual(summaries[i].TotalHP, summaries[i - 1].TotalHP * settings.postSpikeFloor,
-                        $"Wave {n} collapses after the spike.");
-                else
-                    Assert.Greater(summaries[i].TotalHP, summaries[i - 1].TotalHP, $"Wave {n} is not harder than wave {n - 1}.");
+                float threat = WaveCurveBuilder.GetWaveThreat(waves[i], settings);
+                if (i > 0)
+                    Assert.Greater(threat, WaveCurveBuilder.GetWaveThreat(waves[i - 1], settings), $"Wave {i + 1} is not harder than wave {i}.");
+                hardest = Mathf.Max(hardest, threat);
+
+                foreach (WaveEntry entry in waves[i].entries)
+                {
+                    Assert.AreNotSame(excluded, entry.enemyData);
+                    Assert.That(entry.spawnPointIndex, Is.InRange(0, 1));
+                }
             }
-            Assert.AreEqual(19, hardest, "The final wave should have the most total HP.");
+            Assert.AreEqual(hardest, WaveCurveBuilder.GetWaveThreat(waves[29], settings), 0.01f, "The final wave should be the hardest.");
 
-            foreach (WaveData wave in stage.wavesNormal)
-            foreach (WaveEntry entry in wave.entries)
+            // Wave 1: a few basic enemies, spaced for a single operator.
+            int firstWaveCount = 0;
+            foreach (WaveEntry entry in waves[0].entries)
             {
-                Assert.AreNotSame(excluded, entry.enemyData);
-                Assert.That(entry.spawnPointIndex, Is.InRange(0, 1));
+                Assert.AreSame(grunt, entry.enemyData);
+                Assert.AreEqual(settings.coreIntervalStart, entry.spawnInterval, 0.001f);
+                firstWaveCount += entry.count;
+            }
+            Assert.AreEqual(Mathf.RoundToInt(settings.startEnemies), firstWaveCount);
+        }
+
+        [Test]
+        public void Difficulties_ShareTheirWaves_AndDifferOnlyInLength()
+        {
+            var roster = WaveCurveBuilder.OrderRoster(new[] { grunt, rusher, flyer, tank }, settings);
+            WaveData[] easy = WaveCurveBuilder.BuildWaves(stage, 10, roster, settings);
+            WaveData[] hard = WaveCurveBuilder.BuildWaves(stage, 30, roster, settings);
+
+            for (int i = 0; i < 9; i++)
+            {
+                Assert.AreEqual(hard[i].entries.Length, easy[i].entries.Length, $"Wave {i + 1} differs.");
+                for (int e = 0; e < easy[i].entries.Length; e++)
+                {
+                    Assert.AreSame(hard[i].entries[e].enemyData, easy[i].entries[e].enemyData, $"Wave {i + 1} differs.");
+                    Assert.AreEqual(hard[i].entries[e].count, easy[i].entries[e].count, $"Wave {i + 1} differs.");
+                }
             }
 
-            // Only the basic enemy on wave 1.
-            foreach (WaveEntry entry in stage.wavesNormal[0].entries) Assert.AreSame(grunt, entry.enemyData);
+            Assert.Greater(WaveCurveBuilder.GetWaveThreat(easy[9], settings), WaveCurveBuilder.GetWaveThreat(hard[9], settings),
+                "Easy's final wave gets the finale boost that Hard's wave 10 doesn't.");
         }
 
         private T Make<T>() where T : ScriptableObject
@@ -140,12 +184,14 @@ namespace TrashTD.Tests
             return obj;
         }
 
-        private EnemyData Enemy(string name, EnemyArchetype archetype, int hp)
+        private EnemyData Enemy(string name, EnemyArchetype archetype, int hp, int def, float speed)
         {
             EnemyData enemy = Make<EnemyData>();
             enemy.enemyName = name;
             enemy.archetype = archetype;
             enemy.baseHP = hp;
+            enemy.baseDEF = def;
+            enemy.moveSpeed = speed;
             return enemy;
         }
     }

@@ -4,11 +4,12 @@ using UnityEngine;
 namespace TrashTD.Data
 {
     /// <summary>
-    /// Builds a stage's waves from one shared difficulty curve (see WaveCurveSettings):
-    /// each wave gets a strength budget (total enemy HP, difficulty-scaled like WaveManager),
-    /// and the budget is filled with the stage's roster. New enemy types are introduced one at a
-    /// time with a small first count; heavy enemies debut on spike waves. The result is a draft
-    /// to hand-tune in the Wave Planner.
+    /// Builds a stage's waves from one shared difficulty curve (see WaveCurveSettings). Each wave gets a
+    /// strength budget in threat (enemy HP weighted by speed, armor and flight, see GetThreat), and the
+    /// budget is filled with the stage's roster. Everything depends on the wave number only, except that
+    /// the last wave gets the finale boost, so Easy/Normal/Hard share their opening waves and differ in
+    /// length. New enemy types are introduced one at a time with a small first count; heavy enemies debut
+    /// on spike waves. The result is a draft to hand-tune in the Wave Planner.
     /// </summary>
     public static class WaveCurveBuilder
     {
@@ -30,17 +31,50 @@ namespace TrashTD.Data
         }
 
         /// <summary>
-        /// Nominal strength budget per wave (index 0 = wave 1), in difficulty-scaled HP, before enemy
-        /// counts are rounded. BuildWaves follows the same rules using each wave's actual strength.
+        /// How hard an enemy is to kill, in HP-equivalents: its HP, scaled up for DEF/RES (against a typical
+        /// squad's damage), for speed (less time inside operator range) and for flight (only ranged operators
+        /// and Casters can hit it).
+        /// </summary>
+        public static float GetThreat(EnemyData enemy, WaveCurveSettings settings)
+        {
+            if (enemy == null) return 0f;
+
+            float physical = settings.referencePhysicalATK;
+            float arts = settings.referenceArtsATK;
+            float share = settings.physicalDamageShare;
+
+            float unarmored = share * physical + (1f - share) * arts;
+            float dealt = share * Mathf.Max(physical - enemy.baseDEF, physical * 0.05f) +
+                          (1f - share) * Mathf.Max(arts - enemy.baseRES, arts * 0.05f);
+            float armor = Mathf.Clamp(unarmored / Mathf.Max(0.01f, dealt), 1f, settings.maxArmorThreat);
+
+            float speed = Mathf.Max(0.5f, 1f + settings.speedThreatWeight * (enemy.moveSpeed / settings.referenceSpeed - 1f));
+            float air = GetRole(enemy) == Role.Air ? settings.airThreatMultiplier : 1f;
+
+            return Mathf.Max(1, enemy.baseHP) * armor * speed * air;
+        }
+
+        public static float GetWaveThreat(WaveData wave, WaveCurveSettings settings)
+        {
+            float threat = 0f;
+            if (wave?.entries == null) return threat;
+
+            foreach (WaveEntry entry in wave.entries)
+                if (entry?.enemyData != null && entry.count > 0) threat += entry.count * GetThreat(entry.enemyData, settings);
+            return threat;
+        }
+
+        /// <summary>
+        /// Nominal strength budget per wave (index 0 = wave 1), in threat, before enemy counts are rounded.
+        /// BuildWaves follows the same rules using each wave's actual strength.
         /// </summary>
         public static float[] BuildBudgetCurve(int waveCount, float baseBudget, WaveCurveSettings settings)
         {
             var budgets = new float[Mathf.Max(0, waveCount)];
-            float curveLevel = baseBudget;
             for (int n = 1; n <= waveCount; n++)
             {
-                if (n > 1) curveLevel = NextCurveLevel(curveLevel, n, waveCount, budgets[n - 2], settings);
-                budgets[n - 1] = curveLevel * SpikeFactor(n, waveCount, settings);
+                float level = n == 1 ? baseBudget : budgets[n - 2] * GrowthFor(n, settings);
+                budgets[n - 1] = level * SpikeFactor(n, waveCount, settings);
             }
 
             return budgets;
@@ -86,128 +120,93 @@ namespace TrashTD.Data
                 if (byRole != 0) return byRole;
                 int byArchetype = a.archetype.CompareTo(b.archetype);
                 if (byArchetype != 0) return byArchetype;
-                return GetThreat(a).CompareTo(GetThreat(b));
+                return GetThreat(a, settings).CompareTo(GetThreat(b, settings));
             });
             return ordered;
         }
 
         private static int RoleOrder(Role role) => role == Role.Core ? 0 : role == Role.Air ? 1 : 2;
 
-        private static float GetThreat(EnemyData enemy) => enemy.baseHP * (1f + (enemy.baseDEF + enemy.baseRES) / 100f);
-
         /// <summary>
-        /// Wave (1-based) on which each roster enemy first appears. At most one new type per wave
-        /// where the wave count allows; non-heavy types avoid spike waves, heavy types debut on them.
+        /// Wave (1-based) on which each roster enemy first appears. Non-heavy types start on wave 1 and follow
+        /// every introductionSpacing waves, skipping spike waves; heavy types debut on spike waves from
+        /// firstHeavyWave. The schedule ignores stage length: types scheduled past the last wave simply don't
+        /// appear on that difficulty.
         /// </summary>
-        public static int[] BuildIntroductionWaves(IReadOnlyList<EnemyData> orderedRoster, int waveCount, int spikeInterval)
+        public static int[] BuildIntroductionWaves(IReadOnlyList<EnemyData> orderedRoster, WaveCurveSettings settings)
         {
             var intro = new int[orderedRoster.Count];
-            var used = new HashSet<int>();
+            int interval = Mathf.Max(2, settings.spikeInterval);
 
-            var spikes = new List<int>();
-            for (int n = 1; n <= waveCount; n++)
-                if (IsSpikeWave(n, waveCount, spikeInterval)) spikes.Add(n);
-
-            var nonHeavy = new List<int>();
-            int heavyIndex = 0;
+            int heavyWave = Mathf.CeilToInt(Mathf.Max(1, settings.firstHeavyWave) / (float)interval) * interval;
+            int nextWave = 1;
             for (int i = 0; i < orderedRoster.Count; i++)
             {
                 if (GetRole(orderedRoster[i]) == Role.Heavy)
                 {
-                    intro[i] = spikes.Count > 0 ? spikes[Mathf.Min(heavyIndex, spikes.Count - 1)] : waveCount;
-                    used.Add(intro[i]);
-                    heavyIndex++;
-                }
-                else
-                {
-                    nonHeavy.Add(i);
-                }
-            }
-
-            if (nonHeavy.Count == 0) return intro;
-
-            int spacing = nonHeavy.Count > 1
-                ? Mathf.Clamp(Mathf.RoundToInt(waveCount * 0.5f / (nonHeavy.Count - 1)), 1, 3)
-                : 1;
-
-            int previous = 1;
-            intro[nonHeavy[0]] = 1;
-            used.Add(1);
-            for (int k = 1; k < nonHeavy.Count; k++)
-            {
-                int candidate = previous + spacing;
-                while (candidate <= waveCount && (used.Contains(candidate) || IsSpikeWave(candidate, waveCount, spikeInterval)))
-                    candidate++;
-
-                if (candidate > waveCount)
-                {
-                    candidate = -1;
-                    for (int n = waveCount; n > previous; n--)
-                    {
-                        if (!used.Contains(n) && !IsSpikeWave(n, waveCount, spikeInterval)) { candidate = n; break; }
-                    }
-                    if (candidate < 0) candidate = Mathf.Min(waveCount, previous + 1);
+                    intro[i] = heavyWave;
+                    heavyWave += interval;
+                    continue;
                 }
 
-                intro[nonHeavy[k]] = candidate;
-                used.Add(candidate);
-                previous = candidate;
+                while (nextWave > 1 && nextWave % interval == 0) nextWave++;
+                intro[i] = nextWave;
+                nextWave += Mathf.Max(1, settings.introductionSpacing);
             }
 
             return intro;
         }
 
-        public static WaveData[] BuildWaves(StageData stage, StageDifficulty difficulty, int waveCount,
-            IReadOnlyList<EnemyData> orderedRoster, WaveCurveSettings settings)
+        public static WaveData[] BuildWaves(StageData stage, int waveCount, IReadOnlyList<EnemyData> orderedRoster,
+            WaveCurveSettings settings)
         {
             if (stage == null || settings == null || orderedRoster == null || orderedRoster.Count == 0 || waveCount <= 0)
                 return new WaveData[0];
 
-            int level = WaveAnalysis.GetDifficultyLevel(difficulty);
             int lanes = Mathf.Max(1, stage.spawnPoints != null ? stage.spawnPoints.Length : 1);
 
             EnemyData unit = FirstWithRole(orderedRoster, Role.Core) ?? orderedRoster[0];
-            float baseBudget = settings.GetStartEnemies(difficulty) * unit.GetScaledHP(level) *
-                               (1f + settings.extraBudgetPerLane * (lanes - 1));
+            float baseBudget = settings.startEnemies * GetThreat(unit, settings);
 
-            int[] intro = BuildIntroductionWaves(orderedRoster, waveCount, settings.spikeInterval);
+            int[] intro = BuildIntroductionWaves(orderedRoster, settings);
+
+            // The curve itself is stage-neutral (same as BuildBudgetCurve); each stage's bonus goes on top.
+            float[] curve = BuildBudgetCurve(waveCount, baseBudget, settings);
 
             var waves = new WaveData[waveCount];
-            float curveLevel = baseBudget;
-            float previousHP = 0f;
+            float previousThreat = 0f;
             for (int n = 1; n <= waveCount; n++)
             {
-                // The curve advances from what the previous wave actually contains, so rounding up a
-                // wave never leaves the following waves lagging behind it.
-                if (n > 1) curveLevel = NextCurveLevel(curveLevel, n, waveCount, previousHP, settings);
-                float budget = curveLevel * SpikeFactor(n, waveCount, settings);
-
-                // Rounding enemy counts (and a single big newcomer eating a spike's budget) can undo
-                // the curve, so each wave gets a minimum strength relative to the previous wave.
                 bool isSpike = IsSpikeWave(n, waveCount, settings.spikeInterval);
-                float minimumHP = n == 1 ? 0f
-                    : isSpike ? previousHP * settings.spikeMultiplier
-                    : IsSpikeWave(n - 1, waveCount, settings.spikeInterval) ? previousHP * settings.postSpikeFloor
-                    : previousHP + 1f;
+                float budget = curve[n - 1] * StageFactor(stage, n, settings);
 
-                waves[n - 1] = BuildWave(n, waveCount, budget, minimumHP, level, lanes, orderedRoster, intro,
-                    settings, out previousHP);
+                // Rounding enemy counts can undo the curve, so each wave gets a minimum strength.
+                float minimumThreat = n == 1 ? 0f : previousThreat * (isSpike ? settings.spikeMultiplier : 1.01f);
+
+                waves[n - 1] = BuildWave(n, waveCount, budget, minimumThreat, lanes, orderedRoster, intro,
+                    settings, out previousThreat);
             }
             return waves;
         }
 
         /// <summary>
-        /// Regular-wave strength level for wave n, given the previous wave's level and actual strength:
-        /// it grows by the per-wave rate, and right after a spike it resumes near the spike.
+        /// How much stronger this stage's wave n is than the first stage's. On wave 1 it adds exactly
+        /// stage.extraStartEnemies basic enemies; the bonus then fades to stageBonusLateShare of that by
+        /// stageBonusFadeWaves, so later stages open harder without making their final waves unbeatable.
         /// </summary>
-        private static float NextCurveLevel(float previousLevel, int n, int waveCount, float previousStrength,
-            WaveCurveSettings settings)
+        public static float StageFactor(StageData stage, int waveNumber, WaveCurveSettings settings)
         {
-            float growth = n <= settings.earlyGrowthWaves ? settings.earlyGrowthPerWave : settings.growthPerWave;
-            float floor = IsSpikeWave(n - 1, waveCount, settings.spikeInterval)
-                ? previousStrength * settings.postSpikeFloor
-                : previousStrength * growth;
-            return Mathf.Max(previousLevel * growth, floor);
+            int extra = stage != null ? Mathf.Max(0, stage.extraStartEnemies) : 0;
+            if (extra == 0) return 1f;
+
+            float fade = Mathf.Clamp01((waveNumber - 1f) / Mathf.Max(1, settings.stageBonusFadeWaves - 1));
+            float share = Mathf.Lerp(1f, settings.stageBonusLateShare, fade);
+            return 1f + extra / Mathf.Max(1f, settings.startEnemies) * share;
+        }
+
+        private static float GrowthFor(int n, WaveCurveSettings settings)
+        {
+            return n <= settings.earlyGrowthWaves ? settings.earlyGrowthPerWave : settings.growthPerWave;
         }
 
         private static float SpikeFactor(int n, int waveCount, WaveCurveSettings settings)
@@ -216,8 +215,8 @@ namespace TrashTD.Data
             return settings.spikeMultiplier * (n == waveCount ? settings.finalWaveMultiplier : 1f);
         }
 
-        private static WaveData BuildWave(int n, int waveCount, float budget, float minimumHP, int level, int lanes,
-            IReadOnlyList<EnemyData> roster, int[] intro, WaveCurveSettings settings, out float realizedHP)
+        private static WaveData BuildWave(int n, int waveCount, float budget, float minimumThreat, int lanes,
+            IReadOnlyList<EnemyData> roster, int[] intro, WaveCurveSettings settings, out float realizedThreat)
         {
             bool isSpike = IsSpikeWave(n, waveCount, settings.spikeInterval);
             var counts = new int[roster.Count];
@@ -239,7 +238,7 @@ namespace TrashTD.Data
                 if (isNew && !onlyCore)
                 {
                     counts[i] = role == Role.Core ? NewcomerCoreCount : 1;
-                    spent += counts[i] * HP(roster[i], level);
+                    spent += counts[i] * GetThreat(roster[i], settings);
                     newcomers.Add(roster[i].enemyName);
                     continue;
                 }
@@ -250,18 +249,18 @@ namespace TrashTD.Data
                 else establishedHeavy.Add(i);
             }
 
-            // Heavy: a big share on spike waves, a small share in the late stage.
+            // Heavy: a big share on spike waves, a small share in late regular waves.
             float heavyShare = isSpike ? settings.spikeHeavyShare
-                : (n > waveCount * settings.lateStageStart ? settings.lateHeavyShare : 0f);
+                : (n >= settings.lateHeavyFromWave ? settings.lateHeavyShare : 0f);
             if (heavyShare > 0f && establishedHeavy.Count > 0)
             {
                 float perType = budget * heavyShare / establishedHeavy.Count;
                 foreach (int i in establishedHeavy)
                 {
-                    int count = Mathf.RoundToInt(perType / HP(roster[i], level));
+                    int count = Mathf.RoundToInt(perType / GetThreat(roster[i], settings));
                     if (isSpike) count = Mathf.Max(1, count);
                     counts[i] += count;
-                    spent += count * HP(roster[i], level);
+                    spent += count * GetThreat(roster[i], settings);
                 }
             }
 
@@ -271,9 +270,9 @@ namespace TrashTD.Data
                 float perType = budget * settings.airShare / establishedAir.Count;
                 foreach (int i in establishedAir)
                 {
-                    int count = Mathf.Max(1, Mathf.RoundToInt(perType / HP(roster[i], level)));
+                    int count = Mathf.Max(1, Mathf.RoundToInt(perType / GetThreat(roster[i], settings)));
                     counts[i] += count;
-                    spent += count * HP(roster[i], level);
+                    spent += count * GetThreat(roster[i], settings);
                 }
             }
 
@@ -287,23 +286,23 @@ namespace TrashTD.Data
                     : (k == (n - 1) % establishedCore.Count
                         ? EmphasizedCoreWeight
                         : (1f - EmphasizedCoreWeight) / (establishedCore.Count - 1));
-                int count = Mathf.RoundToInt(remaining * weight / HP(roster[i], level));
+                int count = Mathf.RoundToInt(remaining * weight / GetThreat(roster[i], settings));
                 counts[i] += count;
                 coreSpawned += count;
             }
             if (coreSpawned == 0 && establishedCore.Count > 0 && remaining > 0f)
                 counts[establishedCore[0]] += 1;
 
-            realizedHP = 0f;
-            for (int i = 0; i < roster.Count; i++) realizedHP += counts[i] * HP(roster[i], level);
+            realizedThreat = 0f;
+            for (int i = 0; i < roster.Count; i++) realizedThreat += counts[i] * GetThreat(roster[i], settings);
 
             // Top up with the cheapest basic enemy until the wave meets its minimum strength.
-            int filler = CheapestOf(establishedCore, roster, level);
-            if (filler < 0) filler = CheapestOf(establishedAir, roster, level);
-            while (filler >= 0 && realizedHP < minimumHP)
+            int filler = CheapestOf(establishedCore, roster, settings);
+            if (filler < 0) filler = CheapestOf(establishedAir, roster, settings);
+            while (filler >= 0 && realizedThreat < minimumThreat)
             {
                 counts[filler]++;
-                realizedHP += HP(roster[filler], level);
+                realizedThreat += GetThreat(roster[filler], settings);
             }
 
             return new WaveData
@@ -313,14 +312,14 @@ namespace TrashTD.Data
                     : newcomers.Count > 0 && n > 1 ? $"Wave {n}: New {string.Join(", ", newcomers)}"
                     : $"Wave {n}",
                 preWaveDelay = settings.preWaveDelay,
-                entries = BuildEntries(n, waveCount, lanes, roster, counts, settings)
+                entries = BuildEntries(n, lanes, roster, counts, settings)
             };
         }
 
-        private static WaveEntry[] BuildEntries(int n, int waveCount, int lanes, IReadOnlyList<EnemyData> roster,
-            int[] counts, WaveCurveSettings settings)
+        private static WaveEntry[] BuildEntries(int n, int lanes, IReadOnlyList<EnemyData> roster, int[] counts,
+            WaveCurveSettings settings)
         {
-            float progress = waveCount > 1 ? (n - 1f) / (waveCount - 1f) : 1f;
+            float progress = Mathf.Clamp01((n - 1f) / Mathf.Max(1, settings.intervalRampWaves - 1));
             float coreInterval = Mathf.Lerp(settings.coreIntervalStart, settings.coreIntervalEnd, progress);
 
             var entries = new List<WaveEntry>();
@@ -353,13 +352,11 @@ namespace TrashTD.Data
             return entries.ToArray();
         }
 
-        private static float HP(EnemyData enemy, int level) => Mathf.Max(1, enemy.GetScaledHP(level));
-
-        private static int CheapestOf(List<int> indices, IReadOnlyList<EnemyData> roster, int level)
+        private static int CheapestOf(List<int> indices, IReadOnlyList<EnemyData> roster, WaveCurveSettings settings)
         {
             int cheapest = -1;
             foreach (int i in indices)
-                if (cheapest < 0 || HP(roster[i], level) < HP(roster[cheapest], level)) cheapest = i;
+                if (cheapest < 0 || GetThreat(roster[i], settings) < GetThreat(roster[cheapest], settings)) cheapest = i;
             return cheapest;
         }
 

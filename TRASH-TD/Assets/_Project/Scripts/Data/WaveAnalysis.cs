@@ -33,9 +33,6 @@ namespace TrashTD.Data
             public bool HasWarnings => Warnings.Count > 0;
         }
 
-        /// <summary>Same mapping WaveManager uses (Easy = 1, Normal = 2, Hard = 3).</summary>
-        public static int GetDifficultyLevel(StageDifficulty difficulty) => (int)difficulty + 1;
-
         public static WaveSummary[] SummarizeAll(StageData stage, StageDifficulty difficulty)
         {
             WaveData[] waves = stage != null ? stage.GetWaves(difficulty) : null;
@@ -77,7 +74,6 @@ namespace TrashTD.Data
                 return summary;
             }
 
-            int level = GetDifficultyLevel(difficulty);
             int spawnPointCount = stage != null && stage.spawnPoints != null ? stage.spawnPoints.Length : 0;
 
             for (int i = 0; i < wave.entries.Length; i++)
@@ -108,7 +104,7 @@ namespace TrashTD.Data
 
                 summary.EnemyCount += entry.count;
                 if (entry.enemyData.movementType == EnemyMovementType.Air) summary.AirCount += entry.count;
-                summary.TotalHP += entry.enemyData.GetScaledHP(level) * entry.count;
+                summary.TotalHP += entry.enemyData.baseHP * entry.count;
                 summary.MaxLeakCost += entry.enemyData.lifePointCost * entry.count;
                 summary.SpawnDuration = Mathf.Max(summary.SpawnDuration, GetEntryDuration(entry));
                 if (entry.spawnPointIndex < 31) summary.SpawnPointMask |= 1 << entry.spawnPointIndex;

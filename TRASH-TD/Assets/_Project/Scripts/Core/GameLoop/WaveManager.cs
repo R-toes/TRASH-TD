@@ -23,7 +23,6 @@ namespace TrashTD.Core.GameLoop
         private AStarPathfinder pathfinder;
         private WaveData[] waves;
         private int currentWaveIndex = -1;
-        private int difficultyLevel = 1;
         private int sandboxWaveNumber;
         private int sandboxSpawnPointCount;
         private int sandboxSpawnCursor;
@@ -31,6 +30,9 @@ namespace TrashTD.Core.GameLoop
         private Coroutine sandboxSpawnCoroutine;
 
         private const float SandboxQueueSpawnIntervalSeconds = 1f;
+
+        // Enemy stats are the same on every difficulty; difficulties differ only in their wave lists.
+        private const int EnemyLevel = 1;
 
         // Cached paths: one ground route per spawn, shared by every enemy movement type.
         private readonly Dictionary<string, List<Vector3>> pathCache = new Dictionary<string, List<Vector3>>();
@@ -67,7 +69,6 @@ namespace TrashTD.Core.GameLoop
             }
 
             waves = stageData.GetWaves(difficulty);
-            difficultyLevel = (int)difficulty + 1;
             isSandboxStage = stageData.stageId == "SANDBOX";
             sandboxWaveNumber = 0;
             sandboxSpawnPointCount = stageData.spawnPoints != null ? stageData.spawnPoints.Length : 0;
@@ -242,7 +243,7 @@ namespace TrashTD.Core.GameLoop
                     continue;
 
                 sandboxSpawnCursor = (spawnIndex + 1) % sandboxSpawnPointCount;
-                return enemyManager.SpawnEnemy(enemyData, path, difficultyLevel) != null;
+                return enemyManager.SpawnEnemy(enemyData, path, EnemyLevel) != null;
             }
 
             Debug.LogError("WaveManager: Cannot spawn sandbox enemy because no valid spawn path is available.");
@@ -374,7 +375,7 @@ namespace TrashTD.Core.GameLoop
             {
                 if (enemyManager != null)
                 {
-                    enemyManager.SpawnEnemy(entry.enemyData, path, difficultyLevel);
+                    enemyManager.SpawnEnemy(entry.enemyData, path, EnemyLevel);
                 }
 
                 if (i < entry.count - 1 && entry.spawnInterval > 0f)

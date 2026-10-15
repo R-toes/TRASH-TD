@@ -33,13 +33,14 @@ MonoBehaviour:
   lifePointsNormal: 3
   lifePointsHard: 1
   squadSizeLimit: 8
+  extraStartEnemies: 0
   wavesEasy:
   - waveName: Wave 1
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
       count: 3
-      spawnInterval: 2
+      spawnInterval: 3
       startDelay: 0
       spawnPointIndex: 0
   - waveName: Wave 2
@@ -47,20 +48,20 @@ MonoBehaviour:
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
       count: 4
-      spawnInterval: 1.8888888
+      spawnInterval: 2.937931
       startDelay: 0
       spawnPointIndex: 0
   - waveName: 'Wave 3: New Toxic Rusher'
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 3
-      spawnInterval: 1.7777778
+      count: 2
+      spawnInterval: 2.875862
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
       count: 2
-      spawnInterval: 1.7777778
+      spawnInterval: 2.875862
       startDelay: 0
       spawnPointIndex: 0
   - waveName: Wave 4
@@ -68,43 +69,38 @@ MonoBehaviour:
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
       count: 2
-      spawnInterval: 1.6666666
+      spawnInterval: 2.813793
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 4
-      spawnInterval: 1.6666666
+      count: 3
+      spawnInterval: 2.813793
       startDelay: 0
       spawnPointIndex: 0
   - waveName: 'Wave 5: Spike'
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 1
-      spawnInterval: 1.5555556
+      count: 4
+      spawnInterval: 2.751724
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 1
-      spawnInterval: 1.5555556
+      count: 2
+      spawnInterval: 2.751724
       startDelay: 0
-      spawnPointIndex: 0
-    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
-      count: 1
-      spawnInterval: 3.5
-      startDelay: 4
       spawnPointIndex: 0
   - waveName: 'Wave 6: New Skyshard'
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
       count: 2
-      spawnInterval: 1.4444444
+      spawnInterval: 2.689655
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 5
-      spawnInterval: 1.4444444
+      count: 3
+      spawnInterval: 2.689655
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
@@ -116,17 +112,17 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 3
-      spawnInterval: 1.3333333
+      count: 4
+      spawnInterval: 2.627586
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 3
-      spawnInterval: 1.3333333
+      count: 2
+      spawnInterval: 2.627586
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -135,16 +131,16 @@ MonoBehaviour:
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
       count: 2
-      spawnInterval: 1.2222222
+      spawnInterval: 2.565517
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 4
-      spawnInterval: 1.2222222
+      count: 3
+      spawnInterval: 2.565517
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -158,12 +154,12 @@ MonoBehaviour:
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
       count: 4
-      spawnInterval: 1.1111112
+      spawnInterval: 2.503448
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 4
-      spawnInterval: 1.1111112
+      count: 2
+      spawnInterval: 2.503448
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
@@ -180,17 +176,17 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 3
-      spawnInterval: 1
+      count: 1
+      spawnInterval: 2.441379
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 6
-      spawnInterval: 1
+      count: 2
+      spawnInterval: 2.441379
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -209,81 +205,68 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 4
-      spawnInterval: 2
+      count: 3
+      spawnInterval: 3
       startDelay: 0
       spawnPointIndex: 0
   - waveName: Wave 2
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 5
-      spawnInterval: 1.9473684
+      count: 4
+      spawnInterval: 2.937931
       startDelay: 0
       spawnPointIndex: 0
-  - waveName: Wave 3
+  - waveName: 'Wave 3: New Toxic Rusher'
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 6
-      spawnInterval: 1.8947369
-      startDelay: 0
-      spawnPointIndex: 0
-  - waveName: 'Wave 4: New Toxic Rusher'
-    preWaveDelay: 3
-    entries:
-    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 5
-      spawnInterval: 1.8421053
+      count: 2
+      spawnInterval: 2.875862
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
       count: 2
-      spawnInterval: 1.8421053
+      spawnInterval: 2.875862
+      startDelay: 0
+      spawnPointIndex: 0
+  - waveName: Wave 4
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 2.813793
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 2.813793
       startDelay: 0
       spawnPointIndex: 0
   - waveName: 'Wave 5: Spike'
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 3
-      spawnInterval: 1.7894737
-      startDelay: 0
-      spawnPointIndex: 0
-    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 3
-      spawnInterval: 1.7894737
-      startDelay: 0
-      spawnPointIndex: 0
-    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
-      count: 1
-      spawnInterval: 3.5
-      startDelay: 4
-      spawnPointIndex: 0
-  - waveName: Wave 6
-    preWaveDelay: 3
-    entries:
-    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
       count: 4
-      spawnInterval: 1.7368422
+      spawnInterval: 2.751724
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 8
-      spawnInterval: 1.7368422
+      count: 2
+      spawnInterval: 2.751724
       startDelay: 0
       spawnPointIndex: 0
-  - waveName: 'Wave 7: New Skyshard'
+  - waveName: 'Wave 6: New Skyshard'
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 6
-      spawnInterval: 1.6842105
+      count: 2
+      spawnInterval: 2.689655
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 5
-      spawnInterval: 1.6842105
+      count: 3
+      spawnInterval: 2.689655
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
@@ -291,21 +274,44 @@ MonoBehaviour:
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
-  - waveName: Wave 8
+  - waveName: Wave 7
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
       count: 4
-      spawnInterval: 1.6315789
+      spawnInterval: 2.627586
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 8
-      spawnInterval: 1.6315789
+      count: 2
+      spawnInterval: 2.627586
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 2.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+  - waveName: 'Wave 8: New Talon Rat'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 2.565517
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
       count: 3
+      spawnInterval: 2.565517
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 2.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -313,17 +319,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 6
-      spawnInterval: 1.5789473
+      count: 4
+      spawnInterval: 2.503448
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 6
-      spawnInterval: 1.5789473
+      count: 2
+      spawnInterval: 2.503448
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 3
+      count: 1
+      spawnInterval: 2.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -331,17 +342,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 4
-      spawnInterval: 1.5263158
+      count: 1
+      spawnInterval: 2.441379
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 7
-      spawnInterval: 1.5263158
+      count: 1
+      spawnInterval: 2.441379
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 4
+      count: 1
+      spawnInterval: 2.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -350,21 +366,21 @@ MonoBehaviour:
       spawnInterval: 3.5
       startDelay: 4
       spawnPointIndex: 0
-  - waveName: 'Wave 11: New Talon Rat'
+  - waveName: Wave 11
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 8
-      spawnInterval: 1.4736842
+      count: 6
+      spawnInterval: 2.37931
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 7
-      spawnInterval: 1.4736842
+      count: 3
+      spawnInterval: 2.37931
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -378,21 +394,21 @@ MonoBehaviour:
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
       count: 5
-      spawnInterval: 1.4210527
+      spawnInterval: 2.317241
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 11
-      spawnInterval: 1.4210527
+      count: 4
+      spawnInterval: 2.317241
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -400,83 +416,73 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 5
-      spawnInterval: 1.3684211
+      count: 7
+      spawnInterval: 2.255172
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 5
-      spawnInterval: 1.3684211
+      count: 3
+      spawnInterval: 2.255172
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
-      spawnPointIndex: 0
-    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
-      count: 1
-      spawnInterval: 3.5
-      startDelay: 4
       spawnPointIndex: 0
   - waveName: Wave 14
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 4
-      spawnInterval: 1.3157895
+      count: 5
+      spawnInterval: 2.193104
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 8
-      spawnInterval: 1.3157895
+      count: 5
+      spawnInterval: 2.193104
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
-      spawnPointIndex: 0
-    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
-      count: 1
-      spawnInterval: 3.5
-      startDelay: 4
       spawnPointIndex: 0
   - waveName: 'Wave 15: Spike'
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 6
-      spawnInterval: 1.2631578
+      count: 5
+      spawnInterval: 2.131034
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 6
-      spawnInterval: 1.2631578
+      count: 2
+      spawnInterval: 2.131034
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 3.5
       startDelay: 4
       spawnPointIndex: 0
@@ -484,22 +490,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 6
-      spawnInterval: 1.2105262
+      count: 5
+      spawnInterval: 2.068965
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 12
-      spawnInterval: 1.2105262
+      count: 3
+      spawnInterval: 2.068965
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -512,22 +518,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 9
-      spawnInterval: 1.1578947
+      count: 7
+      spawnInterval: 2.006896
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 8
-      spawnInterval: 1.1578947
+      count: 2
+      spawnInterval: 2.006896
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -540,22 +546,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 6
-      spawnInterval: 1.1052632
+      count: 5
+      spawnInterval: 1.944828
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 13
-      spawnInterval: 1.1052632
+      count: 4
+      spawnInterval: 1.944828
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -568,22 +574,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 10
-      spawnInterval: 1.0526316
+      count: 7
+      spawnInterval: 1.882759
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 9
-      spawnInterval: 1.0526316
+      count: 3
+      spawnInterval: 1.882759
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -596,27 +602,27 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 6
-      spawnInterval: 1
+      count: 3
+      spawnInterval: 1.82069
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 13
-      spawnInterval: 1
+      count: 4
+      spawnInterval: 1.82069
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 5
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 4
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
-      count: 4
+      count: 2
       spawnInterval: 3.5
       startDelay: 4
       spawnPointIndex: 0
@@ -625,37 +631,42 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 5
-      spawnInterval: 2
+      count: 3
+      spawnInterval: 3
       startDelay: 0
       spawnPointIndex: 0
   - waveName: Wave 2
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 6
-      spawnInterval: 1.9655173
+      count: 4
+      spawnInterval: 2.937931
       startDelay: 0
       spawnPointIndex: 0
-  - waveName: Wave 3
+  - waveName: 'Wave 3: New Toxic Rusher'
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 7
-      spawnInterval: 1.9310344
-      startDelay: 0
-      spawnPointIndex: 0
-  - waveName: 'Wave 4: New Toxic Rusher'
-    preWaveDelay: 3
-    entries:
-    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 6
-      spawnInterval: 1.8965517
+      count: 2
+      spawnInterval: 2.875862
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
       count: 2
-      spawnInterval: 1.8965517
+      spawnInterval: 2.875862
+      startDelay: 0
+      spawnPointIndex: 0
+  - waveName: Wave 4
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 2.813793
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 2.813793
       startDelay: 0
       spawnPointIndex: 0
   - waveName: 'Wave 5: Spike'
@@ -663,43 +674,25 @@ MonoBehaviour:
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
       count: 4
-      spawnInterval: 1.862069
+      spawnInterval: 2.751724
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 2
+      spawnInterval: 2.751724
+      startDelay: 0
+      spawnPointIndex: 0
+  - waveName: 'Wave 6: New Skyshard'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 2.689655
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
       count: 3
-      spawnInterval: 1.862069
-      startDelay: 0
-      spawnPointIndex: 0
-    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
-      count: 1
-      spawnInterval: 3.5
-      startDelay: 4
-      spawnPointIndex: 0
-  - waveName: Wave 6
-    preWaveDelay: 3
-    entries:
-    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 4
-      spawnInterval: 1.8275862
-      startDelay: 0
-      spawnPointIndex: 0
-    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 9
-      spawnInterval: 1.8275862
-      startDelay: 0
-      spawnPointIndex: 0
-  - waveName: 'Wave 7: New Skyshard'
-    preWaveDelay: 3
-    entries:
-    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 7
-      spawnInterval: 1.7931035
-      startDelay: 0
-      spawnPointIndex: 0
-    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 6
-      spawnInterval: 1.7931035
+      spawnInterval: 2.689655
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
@@ -707,21 +700,44 @@ MonoBehaviour:
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
-  - waveName: Wave 8
+  - waveName: Wave 7
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
       count: 4
-      spawnInterval: 1.7586207
+      spawnInterval: 2.627586
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 9
-      spawnInterval: 1.7586207
+      count: 2
+      spawnInterval: 2.627586
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 2.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+  - waveName: 'Wave 8: New Talon Rat'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 2
+      spawnInterval: 2.565517
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
       count: 3
+      spawnInterval: 2.565517
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 2.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -729,17 +745,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 7
-      spawnInterval: 1.7241379
+      count: 4
+      spawnInterval: 2.503448
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 6
-      spawnInterval: 1.7241379
+      count: 2
+      spawnInterval: 2.503448
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 3
+      count: 1
+      spawnInterval: 2.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -747,40 +768,45 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 2
-      spawnInterval: 1.6896552
+      count: 1
+      spawnInterval: 2.441379
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 4
-      spawnInterval: 1.6896552
+      count: 1
+      spawnInterval: 2.441379
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 4
+      count: 1
+      spawnInterval: 2.5
+      startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 3.5
       startDelay: 4
       spawnPointIndex: 0
-  - waveName: 'Wave 11: New Talon Rat'
+  - waveName: Wave 11
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 7
-      spawnInterval: 1.6551723
+      count: 6
+      spawnInterval: 2.37931
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 8
-      spawnInterval: 1.6551723
+      count: 3
+      spawnInterval: 2.37931
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 4
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -793,22 +819,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 6
-      spawnInterval: 1.6206896
+      count: 5
+      spawnInterval: 2.317241
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 11
-      spawnInterval: 1.6206896
+      count: 4
+      spawnInterval: 2.317241
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -816,22 +842,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 9
-      spawnInterval: 1.5862069
+      count: 7
+      spawnInterval: 2.255172
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 8
-      spawnInterval: 1.5862069
+      count: 3
+      spawnInterval: 2.255172
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -839,22 +865,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 6
-      spawnInterval: 1.5517242
+      count: 5
+      spawnInterval: 2.193104
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 13
-      spawnInterval: 1.5517242
+      count: 5
+      spawnInterval: 2.193104
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -862,27 +888,27 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 7
-      spawnInterval: 1.5172414
+      count: 5
+      spawnInterval: 2.131034
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 6
-      spawnInterval: 1.5172414
+      count: 2
+      spawnInterval: 2.131034
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 3.5
       startDelay: 4
       spawnPointIndex: 0
@@ -890,91 +916,106 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 8
-      spawnInterval: 1.4827586
+      count: 5
+      spawnInterval: 2.068965
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 16
-      spawnInterval: 1.4827586
+      count: 3
+      spawnInterval: 2.068965
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 3.5
+      startDelay: 4
       spawnPointIndex: 0
   - waveName: Wave 17
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 12
-      spawnInterval: 1.4482758
+      count: 7
+      spawnInterval: 2.006896
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 11
-      spawnInterval: 1.4482758
+      count: 2
+      spawnInterval: 2.006896
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 3.5
+      startDelay: 4
       spawnPointIndex: 0
   - waveName: Wave 18
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 9
-      spawnInterval: 1.4137931
+      count: 5
+      spawnInterval: 1.944828
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 17
-      spawnInterval: 1.4137931
+      count: 4
+      spawnInterval: 1.944828
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 3.5
+      startDelay: 4
       spawnPointIndex: 0
   - waveName: Wave 19
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 11
-      spawnInterval: 1.3793104
+      count: 7
+      spawnInterval: 1.882759
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 9
-      spawnInterval: 1.3793104
+      count: 3
+      spawnInterval: 1.882759
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -987,27 +1028,27 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 6
-      spawnInterval: 1.3448277
+      count: 7
+      spawnInterval: 1.82069
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 12
-      spawnInterval: 1.3448277
+      count: 6
+      spawnInterval: 1.82069
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 4
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 3.5
       startDelay: 4
       spawnPointIndex: 0
@@ -1015,22 +1056,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 13
-      spawnInterval: 1.3103448
+      count: 10
+      spawnInterval: 1.758621
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 13
-      spawnInterval: 1.3103448
+      count: 4
+      spawnInterval: 1.758621
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 4
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -1043,22 +1084,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 10
-      spawnInterval: 1.2758621
+      count: 7
+      spawnInterval: 1.696552
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 19
-      spawnInterval: 1.2758621
+      count: 7
+      spawnInterval: 1.696552
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 4
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -1071,22 +1112,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 15
-      spawnInterval: 1.2413793
+      count: 10
+      spawnInterval: 1.634483
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 14
-      spawnInterval: 1.2413793
+      count: 5
+      spawnInterval: 1.634483
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 4
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -1099,22 +1140,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 11
-      spawnInterval: 1.2068965
+      count: 7
+      spawnInterval: 1.572414
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 21
-      spawnInterval: 1.2068965
+      count: 8
+      spawnInterval: 1.572414
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 4
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 3
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -1127,27 +1168,27 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 13
-      spawnInterval: 1.1724138
+      count: 8
+      spawnInterval: 1.510345
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 12
-      spawnInterval: 1.1724138
+      count: 5
+      spawnInterval: 1.510345
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 5
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 5
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
-      count: 4
+      count: 2
       spawnInterval: 3.5
       startDelay: 4
       spawnPointIndex: 0
@@ -1155,22 +1196,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 14
-      spawnInterval: 1.1379311
+      count: 9
+      spawnInterval: 1.448276
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 27
-      spawnInterval: 1.1379311
+      count: 11
+      spawnInterval: 1.448276
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 5
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 4
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -1183,22 +1224,22 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 21
-      spawnInterval: 1.1034483
+      count: 15
+      spawnInterval: 1.386207
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 19
-      spawnInterval: 1.1034483
+      count: 7
+      spawnInterval: 1.386207
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 5
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 4
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
@@ -1211,27 +1252,27 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 12
-      spawnInterval: 1.0689654
+      count: 10
+      spawnInterval: 1.324138
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 25
-      spawnInterval: 1.0689654
+      count: 12
+      spawnInterval: 1.324138
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 5
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 5
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 3.5
       startDelay: 4
       spawnPointIndex: 0
@@ -1239,27 +1280,27 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 19
-      spawnInterval: 1.0344827
+      count: 16
+      spawnInterval: 1.262069
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 17
-      spawnInterval: 1.0344827
+      count: 8
+      spawnInterval: 1.262069
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 6
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 5
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
-      count: 2
+      count: 1
       spawnInterval: 3.5
       startDelay: 4
       spawnPointIndex: 0
@@ -1267,27 +1308,27 @@ MonoBehaviour:
     preWaveDelay: 3
     entries:
     - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
-      count: 15
-      spawnInterval: 1
+      count: 9
+      spawnInterval: 1.2
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
-      count: 29
-      spawnInterval: 1
+      count: 11
+      spawnInterval: 1.2
       startDelay: 0
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
-      count: 9
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
-      count: 8
+      count: 1
       spawnInterval: 2.5
       startDelay: 2.5
       spawnPointIndex: 0
     - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
-      count: 7
+      count: 3
       spawnInterval: 3.5
       startDelay: 4
       spawnPointIndex: 0

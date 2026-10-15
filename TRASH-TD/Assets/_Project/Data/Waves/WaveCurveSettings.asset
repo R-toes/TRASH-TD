@@ -11,25 +11,32 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4290549035fcf8c45b2a673ab0804df2, type: 3}
   m_Name: WaveCurveSettings
-  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.WaveCurveSettings
-  earlyGrowthPerWave: 1.12
+  startEnemies: 3
+  earlyGrowthPerWave: 1.22
   earlyGrowthWaves: 8
   growthPerWave: 1.03
   spikeInterval: 5
-  spikeMultiplier: 1.3
-  postSpikeFloor: 0.92
-  finalWaveMultiplier: 1.25
-  startEnemiesEasy: 3
-  startEnemiesNormal: 4
-  startEnemiesHard: 5
-  extraBudgetPerLane: 0.25
+  spikeMultiplier: 1.12
+  finalWaveMultiplier: 1.1
+  stageBonusLateShare: 0.5
+  stageBonusFadeWaves: 30
+  referencePhysicalATK: 70
+  referenceArtsATK: 60
+  physicalDamageShare: 0.65
+  maxArmorThreat: 3
+  referenceSpeed: 0.75
+  speedThreatWeight: 0.5
+  airThreatMultiplier: 1.5
+  introductionSpacing: 2
+  firstHeavyWave: 10
   airShare: 0.2
-  spikeHeavyShare: 0.4
+  spikeHeavyShare: 0.35
   lateHeavyShare: 0.15
-  lateStageStart: 0.6
+  lateHeavyFromWave: 16
   preWaveDelay: 3
-  coreIntervalStart: 2
-  coreIntervalEnd: 1
+  coreIntervalStart: 3
+  coreIntervalEnd: 1.2
+  intervalRampWaves: 30
   airInterval: 2.5
   heavyInterval: 3.5
   airStartDelay: 2.5

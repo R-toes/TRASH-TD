@@ -107,6 +107,10 @@ namespace TrashTD.Data
         public int squadSizeLimit = 8;
 
         [Header("Waves")]
+        [Tooltip("Extra basic enemies on wave 1 compared with the first stage (Stage 1 = 0, Stage 2 = 1, ...). " +
+                 "Scales every wave of this stage when rebalancing, so each stage is a bit harder than the last.")]
+        [Min(0)] public int extraStartEnemies = 0;
+
         [Tooltip("Wave list for Easy difficulty")]
         public WaveData[] wavesEasy;
 
