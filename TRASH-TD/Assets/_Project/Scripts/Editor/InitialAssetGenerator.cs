@@ -1011,10 +1011,10 @@ namespace TrashTD.Editor
 
             stage.squadSizeLimit = 8;
 
-            // Lives: 3 lives per stage
+            // Lives: 3 on Easy/Normal, 1 on Hard
             stage.lifePointsEasy = 3;
             stage.lifePointsNormal = 3;
-            stage.lifePointsHard = 3;
+            stage.lifePointsHard = 1;
 
             string[] layoutRows =
             {
@@ -1204,7 +1204,7 @@ namespace TrashTD.Editor
 
             stage.lifePointsEasy = 3;
             stage.lifePointsNormal = 3;
-            stage.lifePointsHard = 3;
+            stage.lifePointsHard = 1;
 
             string[] layoutRows =
             {
@@ -1399,7 +1399,7 @@ namespace TrashTD.Editor
             stage.squadSizeLimit = 8;
             stage.lifePointsEasy = 3;
             stage.lifePointsNormal = 3;
-            stage.lifePointsHard = 3;
+            stage.lifePointsHard = 1;
 
             string[] layoutRows =
             {
@@ -1549,7 +1549,7 @@ namespace TrashTD.Editor
             stage.squadSizeLimit = 8;
             stage.lifePointsEasy = 3;
             stage.lifePointsNormal = 3;
-            stage.lifePointsHard = 3;
+            stage.lifePointsHard = 1;
 
             string[] layoutRows =
             {

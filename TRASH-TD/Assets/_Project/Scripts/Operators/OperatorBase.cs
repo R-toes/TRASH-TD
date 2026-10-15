@@ -100,6 +100,23 @@ namespace TrashTD.Operators
             }
         }
 
+        /// <summary>
+        /// Raises a deployed operator to a higher rarity in place (a rarity merge that used this copy).
+        /// Stats rescale to the new rarity and the operator keeps the same fraction of its HP.
+        /// </summary>
+        public void UpgradeRarity(OperatorRarity newRarity)
+        {
+            if (data == null || newRarity <= currentRarity) return;
+
+            float hpFraction = maxHP > 0 ? (float)currentHP / maxHP : 1f;
+            currentRarity = newRarity;
+            maxHP = data.GetScaledHP(newRarity);
+            currentHP = Mathf.Clamp(Mathf.RoundToInt(maxHP * hpFraction), 1, maxHP);
+            currentATK = data.GetScaledATK(newRarity);
+            currentDEF = data.GetScaledDEF(newRarity);
+            currentRES = data.GetScaledRES(newRarity);
+        }
+
         public void SetFacing(OperatorFacing newFacing)
         {
             facing = newFacing;
@@ -190,7 +207,7 @@ namespace TrashTD.Operators
         {
             if (target == null || target.IsDead) return;
 
-            int damage = Combat.DamageCalculator.CalculateDamage(CurrentATK, GetTargetMitigation(target), data.damageType);
+            int damage = Combat.DamageCalculator.CalculateDamage(CurrentATK, GetTargetMitigation(target));
             target.TryTakeAttackDamage(damage, data.damageType);
         }
 
@@ -327,7 +344,7 @@ namespace TrashTD.Operators
             }
 
             int mitigation = damageType == DamageType.Physical ? CurrentDEF : currentRES;
-            int damage = Combat.DamageCalculator.CalculateDamage(rawATK, mitigation, damageType);
+            int damage = Combat.DamageCalculator.CalculateDamage(rawATK, mitigation);
             int previousHP = currentHP;
             currentHP = Mathf.Max(0, currentHP - damage);
             int actualDamage = previousHP - currentHP;

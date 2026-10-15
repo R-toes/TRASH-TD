@@ -23,8 +23,6 @@ namespace TrashTD.Core.GameLoop
         private AStarPathfinder pathfinder;
         private WaveData[] waves;
         private int currentWaveIndex = -1;
-        private bool isSpawningWave = false;
-        private bool allWavesSpawned = false;
         private int difficultyLevel = 1;
         private int sandboxWaveNumber;
         private int sandboxSpawnPointCount;
@@ -76,8 +74,6 @@ namespace TrashTD.Core.GameLoop
             sandboxSpawnCursor = 0;
             sandboxSpawnCoroutine = null;
             currentWaveIndex = -1;
-            allWavesSpawned = false;
-            isSpawningWave = false;
             pathCache.Clear();
 
             // Initialize custom A* Pathfinder
@@ -193,7 +189,6 @@ namespace TrashTD.Core.GameLoop
 
             sandboxWaveNumber++;
             IsWaveInProgress = true;
-            isSpawningWave = true;
             sandboxSpawnCoroutine = StartCoroutine(SpawnSandboxQueueRoutine(
                 queuedEnemies != null ? new List<EnemyData>(queuedEnemies) : new List<EnemyData>()));
             return true;
@@ -210,7 +205,6 @@ namespace TrashTD.Core.GameLoop
                 sandboxSpawnCoroutine = null;
             }
 
-            isSpawningWave = false;
             IsWaveInProgress = false;
             if (enemyManager != null)
                 enemyManager.ClearAllForSandbox();
@@ -227,7 +221,6 @@ namespace TrashTD.Core.GameLoop
                     yield return new WaitForSeconds(SandboxQueueSpawnIntervalSeconds);
             }
 
-            isSpawningWave = false;
             sandboxSpawnCoroutine = null;
         }
 
@@ -270,16 +263,12 @@ namespace TrashTD.Core.GameLoop
                 }
 
                 OnWaveStarted?.Invoke(CurrentWaveNumber, TotalWaves);
-                isSpawningWave = true;
 
                 // Spawn all entries in wave
                 yield return StartCoroutine(SpawnWaveEntriesRoutine(currentWave));
-                isSpawningWave = false;
 
                 OnWaveCompleted?.Invoke(currentWaveIndex);
             }
-
-            allWavesSpawned = true;
 
             // Wait until all remaining active enemies are defeated
             while (enemyManager != null && enemyManager.ActiveEnemyCount > 0)
@@ -333,7 +322,6 @@ namespace TrashTD.Core.GameLoop
             // Check if this was the last wave
             if (waveIndex >= waves.Length - 1)
             {
-                allWavesSpawned = true;
                 OnAllWavesCleared?.Invoke();
                 if (GameManager.Instance != null && GameManager.Instance.CurrentState == GamePlayState.Playing)
                 {
@@ -342,7 +330,9 @@ namespace TrashTD.Core.GameLoop
             }
             else
             {
-                // Signal that this single wave is done (phase loop listens to this)
+                // Advance the phase loop here rather than relying on a UI listener,
+                // so the stage keeps progressing even without a HUD.
+                GameManager.Instance?.OnWaveFinished();
                 OnSingleWaveFinished?.Invoke();
             }
         }

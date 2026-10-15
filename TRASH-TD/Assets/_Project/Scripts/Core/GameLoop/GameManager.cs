@@ -27,7 +27,7 @@ namespace TrashTD.Core.GameLoop
     }
 
     /// <summary>
-    /// Central game manager orchestrating stage lifecycle, DP generation,
+    /// Central game manager orchestrating stage lifecycle,
     /// life points, 3-star conditions, and win/loss state (GDD 1.2, 1.4.6, 1.4.7).
     /// </summary>
     public class GameManager : MonoBehaviour
@@ -38,17 +38,9 @@ namespace TrashTD.Core.GameLoop
         [SerializeField] private StageData currentStage;
         [SerializeField] private StageDifficulty currentDifficulty = StageDifficulty.Normal;
 
-        [Header("Economy & DP")]
-        [SerializeField] private int startingDP = 10;
-        [SerializeField] private int maxDP = 99;
-        [SerializeField] private float dpGenerationInterval = 1.0f; // 1 DP per second
-        [SerializeField] private int dpPerTick = 1;
-
         // --- Runtime State ---
         private int currentLifePoints;
         private int maxLifePoints;
-        private int currentDP;
-        private float dpTimer;
         private float elapsedTime;
         private GamePlayState currentState = GamePlayState.NotStarted;
         private bool leakedAnyEnemy = false;
@@ -58,7 +50,6 @@ namespace TrashTD.Core.GameLoop
         public StageDifficulty CurrentDifficulty => currentDifficulty;
         public int CurrentLifePoints => currentLifePoints;
         public int MaxLifePoints => maxLifePoints;
-        public int CurrentDP => currentDP;
         public float ElapsedTime => elapsedTime;
         public GamePlayState CurrentState => currentState;
         public float GameSpeed { get; private set; } = 1f;
@@ -73,7 +64,6 @@ namespace TrashTD.Core.GameLoop
 
         // --- Events ---
         public event Action<int, int> OnLifePointsChanged; // (current, max)
-        public event Action<int> OnDPChanged;              // (current)
         public event Action<GamePlayState> OnGameStateChanged;
         public event Action<StagePhase> OnPhaseChanged;
         public event Action<int> OnStageVictory;           // (starsEarned 1-3)
@@ -113,10 +103,9 @@ namespace TrashTD.Core.GameLoop
             currentStage = stageData;
             currentDifficulty = difficulty;
 
-            maxLifePoints = 3; // 3 lives
+            // Lives come from the stage data for the chosen difficulty; fall back to 3 if no stage is set.
+            maxLifePoints = stageData != null ? Mathf.Max(1, stageData.GetLifePoints(difficulty)) : 3;
             currentLifePoints = maxLifePoints;
-            currentDP = 0;
-            dpTimer = 0f;
             elapsedTime = 0f;
             leakedAnyEnemy = false;
             currentWaveIndex = 0;
@@ -188,17 +177,6 @@ namespace TrashTD.Core.GameLoop
             {
                 TriggerDefeat();
             }
-        }
-
-        public void AddDP(int amount)
-        {
-            // DP system removed
-        }
-
-        public bool TrySpendDP(int cost)
-        {
-            // DP system removed — deployment is always free
-            return true;
         }
 
         public void PauseGame()

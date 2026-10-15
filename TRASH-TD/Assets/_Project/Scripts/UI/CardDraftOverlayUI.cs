@@ -628,7 +628,7 @@ namespace TrashTD.UI
             detailHpText.text = op.GetScaledHP(card.rarity).ToString();
             detailAtkText.text = op.GetScaledATK(card.rarity).ToString();
             detailDefText.text = op.GetScaledDEF(card.rarity).ToString();
-            detailResText.text = op.GetScaledRES(card.rarity) + "%";
+            detailResText.text = op.GetScaledRES(card.rarity).ToString();
             detailBlockText.text = op.blockCount.ToString();
             detailIntervalText.text = op.attackInterval.ToString("0.##") + "s";
 
@@ -778,7 +778,7 @@ namespace TrashTD.UI
             if (selectedCardIndex < 0 || draftSystem == null || playerDeck == null)
                 return;
 
-            if (playerDeck.IsFull)
+            if (!playerDeck.CanAcceptCard(GetSelectedOfferedCard()))
             {
                 Debug.LogWarning("PlayerDeck: Deck is full! Cannot add more cards.");
                 return;
@@ -840,14 +840,20 @@ namespace TrashTD.UI
 
         private void UpdateConfirmButton()
         {
-            bool canConfirm = selectedCardIndex >= 0 && playerDeck != null && !playerDeck.IsFull;
+            DraftCard selectedCard = GetSelectedOfferedCard();
+            bool canConfirm = selectedCard != null && playerDeck != null && playerDeck.CanAcceptCard(selectedCard);
             confirmButton.interactable = canConfirm;
 
             // Button tint transition is disabled (feedback component drives color), so show state here.
             confirmFeedback.SetBaseColor(canConfirm ? CONFIRM_COLOR : CONFIRM_DISABLED);
             confirmFeedback.glowAlways = canConfirm;
 
-            if (playerDeck != null && playerDeck.IsFull)
+            if (playerDeck != null && playerDeck.IsFull && canConfirm)
+            {
+                // A full deck still takes a card that merges on arrival.
+                confirmButtonText.text = "CONFIRM: MERGES";
+            }
+            else if (playerDeck != null && playerDeck.IsFull)
             {
                 confirmButtonText.text = "DECK FULL: DISCARD A CARD";
             }
@@ -861,6 +867,13 @@ namespace TrashTD.UI
             }
 
             confirmButtonText.color = canConfirm ? Color.white : new Color(1f, 1f, 1f, 0.55f);
+        }
+
+        private DraftCard GetSelectedOfferedCard()
+        {
+            if (draftSystem == null || selectedCardIndex < 0 || selectedCardIndex >= draftSystem.CurrentOfferedCards.Count)
+                return null;
+            return draftSystem.CurrentOfferedCards[selectedCardIndex];
         }
 
         private void UpdateRerollButton()

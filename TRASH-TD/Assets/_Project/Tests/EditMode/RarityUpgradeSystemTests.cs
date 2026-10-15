@@ -107,6 +107,57 @@ namespace TrashTD.Tests
         }
 
         [Test]
+        public void CopyOnCooldown_WaitsUntilReady_AndDoesNotLockReadyCopies()
+        {
+            var readyA = new DraftCard(testOperator, OperatorRarity.Star1);
+            var readyB = new DraftCard(testOperator, OperatorRarity.Star1);
+            playerDeck.AddCard(readyA);
+            playerDeck.AddCard(readyB);
+            playerDeck.AddCard(new DraftCard(testOperator, OperatorRarity.Star1, 1)); // returned by a retreat
+
+            Assert.AreEqual(3, playerDeck.CardCount, "A copy on cooldown must not merge yet.");
+            Assert.AreEqual(0, readyA.cooldownRoundsRemaining);
+            Assert.AreEqual(0, readyB.cooldownRoundsRemaining);
+
+            playerDeck.AdvanceRedeployCooldownsOneRound();
+
+            Assert.AreEqual(1, playerDeck.CardCount);
+            Assert.AreEqual(1, upgradeSystem.GetCopyCount(testOperator.operatorName, OperatorRarity.Star2));
+            foreach (DraftCard card in playerDeck.DeckSlots)
+            {
+                if (card != null) Assert.AreEqual(0, card.cooldownRoundsRemaining);
+            }
+        }
+
+        [Test]
+        public void FullDeck_AcceptsOnlyACardThatMergesOnArrival()
+        {
+            var fillers = new System.Collections.Generic.List<OperatorData>();
+            for (int i = 0; i < PlayerDeck.MAX_DECK_SIZE - 2; i++)
+            {
+                OperatorData filler = ScriptableObject.CreateInstance<OperatorData>();
+                filler.operatorName = $"Filler{i}";
+                fillers.Add(filler);
+                playerDeck.AddCard(new DraftCard(filler, OperatorRarity.Star1));
+            }
+            playerDeck.AddCard(new DraftCard(testOperator, OperatorRarity.Star1));
+            playerDeck.AddCard(new DraftCard(testOperator, OperatorRarity.Star1));
+            Assert.IsTrue(playerDeck.IsFull);
+
+            var nonMerging = new DraftCard(fillers[0], OperatorRarity.Star1);
+            Assert.IsFalse(playerDeck.CanAcceptCard(nonMerging));
+            Assert.IsFalse(playerDeck.AddCard(nonMerging));
+
+            var merging = new DraftCard(testOperator, OperatorRarity.Star1);
+            Assert.IsTrue(playerDeck.CanAcceptCard(merging));
+            Assert.IsTrue(playerDeck.AddCard(merging));
+            Assert.AreEqual(PlayerDeck.MAX_DECK_SIZE - 1, playerDeck.CardCount);
+            Assert.AreEqual(1, upgradeSystem.GetCopyCount(testOperator.operatorName, OperatorRarity.Star2));
+
+            foreach (OperatorData filler in fillers) Object.DestroyImmediate(filler);
+        }
+
+        [Test]
         public void DifferentOperatorsAndRarities_DoNotMerge()
         {
             OperatorData otherOperator = ScriptableObject.CreateInstance<OperatorData>();

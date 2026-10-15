@@ -220,7 +220,7 @@ namespace TrashTD.Operators
             {
                 if (enemy == null || enemy.IsDead) continue;
 
-                int calculated = DamageCalculator.CalculateArtsDamage(damageValue, enemy.CurrentRES);
+                int calculated = DamageCalculator.CalculateDamage(damageValue, enemy.CurrentRES);
                 enemy.TryTakeAttackDamage(calculated, DamageType.Arts, recipient);
             }
         }

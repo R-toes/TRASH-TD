@@ -95,6 +95,70 @@ namespace TrashTD.Tests
         }
 
         [Test]
+        public void DeployedCopy_CountsTowardMerge_AndIsUpgradedInPlace()
+        {
+            var upgradeObject = new GameObject("TestUpgradeSystem");
+            TestUtility.AddAwakened<RarityUpgradeSystem>(upgradeObject);
+            try
+            {
+                var fieldCopy = new DraftCard(operatorData, OperatorRarity.Star1);
+                playerDeck.AddCard(fieldCopy);
+                Assert.IsTrue(operatorManager.TryDeployOperator(
+                    fieldCopy, new Vector2Int(0, 0), OperatorFacing.Right, out deployedOperator));
+                playerDeck.RemoveCard(fieldCopy);
+                int star1MaxHP = deployedOperator.MaxHP;
+
+                playerDeck.AddCard(new DraftCard(operatorData, OperatorRarity.Star1));
+                playerDeck.AddCard(new DraftCard(operatorData, OperatorRarity.Star1));
+
+                Assert.AreEqual(OperatorRarity.Star2, deployedOperator.CurrentRarity);
+                Assert.Greater(deployedOperator.MaxHP, star1MaxHP);
+                Assert.AreEqual(0, playerDeck.CardCount);
+                Assert.AreEqual(1, operatorManager.DeployedCount);
+            }
+            finally
+            {
+                Object.DestroyImmediate(upgradeObject);
+            }
+        }
+
+        [Test]
+        public void TwoDeployedCopies_MergeUsesOnlyOne_AndNothingLeavesTheField()
+        {
+            var upgradeObject = new GameObject("TestUpgradeSystem");
+            TestUtility.AddAwakened<RarityUpgradeSystem>(upgradeObject);
+            try
+            {
+                var firstCard = new DraftCard(operatorData, OperatorRarity.Star1);
+                playerDeck.AddCard(firstCard);
+                Assert.IsTrue(operatorManager.TryDeployOperator(
+                    firstCard, new Vector2Int(0, 0), OperatorFacing.Right, out deployedOperator));
+                playerDeck.RemoveCard(firstCard);
+
+                var secondCard = new DraftCard(operatorData, OperatorRarity.Star1);
+                playerDeck.AddCard(secondCard);
+                Assert.IsTrue(operatorManager.TryDeployOperator(
+                    secondCard, new Vector2Int(1, 0), OperatorFacing.Right, out retreatedOperator));
+                playerDeck.RemoveCard(secondCard);
+
+                // One card plus one field copy is only two copies: no merge yet.
+                playerDeck.AddCard(new DraftCard(operatorData, OperatorRarity.Star1));
+                Assert.AreEqual(1, playerDeck.CardCount);
+
+                playerDeck.AddCard(new DraftCard(operatorData, OperatorRarity.Star1));
+
+                Assert.AreEqual(2, operatorManager.DeployedCount);
+                Assert.AreEqual(0, playerDeck.CardCount);
+                Assert.AreEqual(OperatorRarity.Star2, deployedOperator.CurrentRarity);
+                Assert.AreEqual(OperatorRarity.Star1, retreatedOperator.CurrentRarity);
+            }
+            finally
+            {
+                Object.DestroyImmediate(upgradeObject);
+            }
+        }
+
+        [Test]
         public void TryDeployOperator_RejectsTheCopyThatIsOnCooldown()
         {
             var coolingCopy = new DraftCard(operatorData, OperatorRarity.Star1, 1);

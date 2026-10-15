@@ -9,6 +9,27 @@ namespace TrashTD.UI
         private static readonly Color BadgeColor = new Color(1f, 0.78f, 0.2f, 1f);
         private static readonly Color BadgeBackground = new Color(0.08f, 0.07f, 0.035f, 0.94f);
 
+        private const string BadgeObjectName = "OperatorUpgradeBadge";
+
+        /// <summary>
+        /// Replaces the operator's badge after its rarity changed on the field.
+        /// </summary>
+        public static void Refresh(OperatorBase op)
+        {
+            if (op == null) return;
+
+            Transform existing = op.transform.Find(BadgeObjectName);
+            if (existing != null)
+            {
+                // Detach first: Destroy is deferred, and a chained upgrade can refresh again this frame.
+                existing.SetParent(null, false);
+                if (Application.isPlaying) Object.Destroy(existing.gameObject);
+                else Object.DestroyImmediate(existing.gameObject);
+            }
+
+            Show(op);
+        }
+
         public static void Show(OperatorBase op)
         {
             if (op == null || op.Data == null) return;
@@ -16,7 +37,7 @@ namespace TrashTD.UI
             int upgradeLevels = Mathf.Clamp((int)op.CurrentRarity - (int)op.Data.baseRarity, 0, 2);
             if (upgradeLevels <= 0) return;
 
-            GameObject badgeObject = new GameObject("OperatorUpgradeBadge", typeof(RectTransform), typeof(Canvas));
+            GameObject badgeObject = new GameObject(BadgeObjectName, typeof(RectTransform), typeof(Canvas));
             badgeObject.transform.SetParent(op.transform, false);
             badgeObject.transform.localScale = Vector3.one * 0.008f;
 

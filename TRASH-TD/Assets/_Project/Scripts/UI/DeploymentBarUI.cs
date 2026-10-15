@@ -6,13 +6,12 @@ using TrashTD.Systems;
 namespace TrashTD.UI
 {
     /// <summary>
-    /// Displays stage HUD info: DP count, Life Points, Deployed count / Squad limit,
+    /// Displays stage HUD info: Life Points, Deployed count / Squad limit,
     /// and controls for drafting new units (GDD 1.9).
     /// </summary>
     public class DeploymentBarUI : MonoBehaviour
     {
         [Header("Status Displays")]
-        [SerializeField] private Text dpText;
         [SerializeField] private Text lifePointsText;
         [SerializeField] private Text squadCountText;
         [SerializeField] private Text waveText;
@@ -24,9 +23,7 @@ namespace TrashTD.UI
         {
             if (GameManager.Instance != null)
             {
-                GameManager.Instance.OnDPChanged += UpdateDPDisplay;
                 GameManager.Instance.OnLifePointsChanged += UpdateLifePointsDisplay;
-                UpdateDPDisplay(GameManager.Instance.CurrentDP);
                 UpdateLifePointsDisplay(GameManager.Instance.CurrentLifePoints, GameManager.Instance.MaxLifePoints);
             }
 
@@ -40,7 +37,6 @@ namespace TrashTD.UI
         {
             if (GameManager.Instance != null)
             {
-                GameManager.Instance.OnDPChanged -= UpdateDPDisplay;
                 GameManager.Instance.OnLifePointsChanged -= UpdateLifePointsDisplay;
             }
         }
@@ -50,14 +46,6 @@ namespace TrashTD.UI
             if (OperatorManager.Instance != null && squadCountText != null)
             {
                 squadCountText.text = $"Squad: {OperatorManager.Instance.DeployedCount} / {OperatorManager.Instance.SquadLimit}";
-            }
-        }
-
-        private void UpdateDPDisplay(int currentDP)
-        {
-            if (dpText != null)
-            {
-                dpText.text = $"DP: {currentDP}";
             }
         }
 

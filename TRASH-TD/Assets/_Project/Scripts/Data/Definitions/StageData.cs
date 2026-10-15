@@ -97,10 +97,10 @@ namespace TrashTD.Data
         [Tooltip("Waypoint paths for enemies. Each path is an array of grid positions from spawn to exit.")]
         public PathData[] enemyPaths;
 
-        [Header("Difficulty — Lives (3 lives per stage)")]
+        [Header("Difficulty — Lives (3 Easy/Normal, 1 Hard)")]
         public int lifePointsEasy = 3;
         public int lifePointsNormal = 3;
-        public int lifePointsHard = 3;
+        public int lifePointsHard = 1;
 
         [Header("Squad")]
         [Tooltip("Maximum number of operators that can be deployed simultaneously")]

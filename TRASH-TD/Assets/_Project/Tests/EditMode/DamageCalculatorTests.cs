@@ -33,27 +33,15 @@ namespace TrashTD.Tests
         }
 
         [Test]
-        public void ArtsDamage_MitigatedByResAsPercentage()
+        public void ArtsDamage_MitigatedByResIdentically()
         {
-            // ATK: 80, RES: 20% -> 64
-            Assert.AreEqual(64, DamageCalculator.CalculateDamage(80, 0, 20, DamageType.Arts));
+            // ATK: 80, RES: 20 -> 60
+            int damage = DamageCalculator.CalculateDamage(80, 0, 20, DamageType.Arts);
+            Assert.AreEqual(60, damage);
 
-            // ATK: 80, RES: 80% -> 16 (flat RES would have dropped this to the 4-damage floor)
-            Assert.AreEqual(16, DamageCalculator.CalculateArtsDamage(80, 80));
-
-            // ATK: 80, RES: 100% -> min floor = 80 * 0.05 = 4
-            Assert.AreEqual(4, DamageCalculator.CalculateDamage(80, 0, 100, DamageType.Arts));
-
-            // RES outside 0-100 is clamped.
-            Assert.AreEqual(4, DamageCalculator.CalculateArtsDamage(80, 250));
-            Assert.AreEqual(80, DamageCalculator.CalculateArtsDamage(80, -10));
-        }
-
-        [Test]
-        public void TypedOverload_UsesDefFlatForPhysical_AndResPercentForArts()
-        {
-            Assert.AreEqual(30, DamageCalculator.CalculateDamage(80, 50, DamageType.Physical));
-            Assert.AreEqual(40, DamageCalculator.CalculateDamage(80, 50, DamageType.Arts));
+            // ATK: 80, RES: 100 -> min floor = 80 * 0.05 = 4
+            int floorDamage = DamageCalculator.CalculateDamage(80, 0, 100, DamageType.Arts);
+            Assert.AreEqual(4, floorDamage);
         }
     }
 }

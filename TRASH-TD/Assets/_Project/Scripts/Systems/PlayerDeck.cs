@@ -70,11 +70,17 @@ namespace TrashTD.Systems
         }
 
         /// <summary>
-        /// Add a draft card to the deck. Returns false if deck is full.
+        /// Add a draft card to the deck. A full deck only accepts a card that merges on arrival,
+        /// since the merge frees the slot it would need. Returns false if the card can't be taken.
         /// </summary>
         public bool AddCard(DraftCard card)
         {
-            if (card == null || IsFull) return false;
+            if (card == null) return false;
+            if (IsFull)
+            {
+                return RarityUpgradeSystem.Instance != null &&
+                       RarityUpgradeSystem.Instance.TryMergeIncomingCard(this, card);
+            }
 
             int emptySlot = -1;
             for (int i = 0; i < deckSlots.Count; i++)
@@ -133,41 +139,64 @@ namespace TrashTD.Systems
             return count;
         }
 
-        public bool TryMergeCopies(
-            OperatorData operatorData,
-            OperatorRarity currentRarity,
-            OperatorRarity upgradedRarity,
-            out DraftCard upgradedCard)
+        /// <summary>
+        /// True if the card can be taken: the deck has a free slot, or the card merges on arrival.
+        /// </summary>
+        public bool CanAcceptCard(DraftCard card)
         {
-            upgradedCard = null;
-            if (operatorData == null) return false;
+            if (card == null) return false;
+            return !IsFull ||
+                   (RarityUpgradeSystem.Instance != null && RarityUpgradeSystem.Instance.WouldMergeIncomingCard(this, card));
+        }
 
-            var matchingSlots = new List<int>(RarityUpgradeSystem.COPIES_REQUIRED_FOR_UPGRADE);
-            int cooldownRoundsRemaining = 0;
+        /// <summary>
+        /// Slots holding copies of the operator at this rarity that are off redeploy cooldown.
+        /// Only these can take part in a rarity merge.
+        /// </summary>
+        public List<int> GetReadyCopySlots(OperatorData operatorData, OperatorRarity rarity)
+        {
+            var slots = new List<int>();
+            if (operatorData == null) return slots;
+
             for (int i = 0; i < deckSlots.Count; i++)
             {
                 DraftCard card = deckSlots[i];
-                if (card == null || card.operatorData != operatorData || card.rarity != currentRarity) continue;
-
-                matchingSlots.Add(i);
-                cooldownRoundsRemaining = Mathf.Max(cooldownRoundsRemaining, card.cooldownRoundsRemaining);
-                if (matchingSlots.Count == RarityUpgradeSystem.COPIES_REQUIRED_FOR_UPGRADE) break;
+                if (card != null && card.operatorData == operatorData && card.rarity == rarity &&
+                    card.cooldownRoundsRemaining <= 0)
+                {
+                    slots.Add(i);
+                }
             }
 
-            if (matchingSlots.Count < RarityUpgradeSystem.COPIES_REQUIRED_FOR_UPGRADE) return false;
+            return slots;
+        }
 
-            upgradedCard = new DraftCard(operatorData, upgradedRarity, cooldownRoundsRemaining);
-            int upgradedSlot = matchingSlots[0];
-            foreach (int slot in matchingSlots)
+        /// <summary>
+        /// Removes the merged copies in the given slots. The upgraded card, if any, takes the first freed slot;
+        /// it is null when the upgrade went to a deployed operator instead.
+        /// </summary>
+        public void ReplaceMergedCopies(IReadOnlyList<int> slots, DraftCard upgradedCard)
+        {
+            if (slots == null || slots.Count == 0) return;
+
+            foreach (int slot in slots)
             {
                 deckSlots[slot] = null;
                 OnCardRemoved?.Invoke(slot);
             }
 
-            deckSlots[upgradedSlot] = upgradedCard;
-            OnCardAdded?.Invoke(upgradedCard);
+            if (upgradedCard != null)
+            {
+                deckSlots[slots[0]] = upgradedCard;
+                OnCardAdded?.Invoke(upgradedCard);
+            }
+
+            foreach (int slot in slots)
+            {
+                FillVacatedSlotWithReturnedCard(slot);
+            }
+
             OnDeckChanged?.Invoke(deckSlots);
-            return true;
         }
 
         public bool AddReturnedCard(DraftCard card)
@@ -282,10 +311,12 @@ namespace TrashTD.Systems
         public void AdvanceRedeployCooldownsOneRound()
         {
             bool changed = false;
+            var readiedCards = new List<DraftCard>();
             foreach (DraftCard card in deckSlots)
             {
                 if (card == null || card.cooldownRoundsRemaining <= 0) continue;
                 card.cooldownRoundsRemaining--;
+                if (card.cooldownRoundsRemaining <= 0) readiedCards.Add(card);
                 changed = true;
             }
 
@@ -302,6 +333,12 @@ namespace TrashTD.Systems
             }
 
             if (changed) OnDeckChanged?.Invoke(deckSlots);
+
+            // Cards skip merging while on cooldown, so check them again now that they're ready.
+            foreach (DraftCard card in readiedCards)
+            {
+                if (deckSlots.Contains(card)) RarityUpgradeSystem.Instance?.ProcessReadiedCard(this, card);
+            }
         }
 
         private void FillVacatedSlotWithReturnedCard(int preferredSlot)

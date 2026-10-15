@@ -229,7 +229,6 @@ namespace TrashTD.UI
             if (waveManager != null)
             {
                 waveManager.OnWaveStarted += HandleWaveStarted;
-                waveManager.OnSingleWaveFinished += HandleSingleWaveFinished;
             }
 
             if (enemyManager != null)
@@ -241,7 +240,6 @@ namespace TrashTD.UI
 
             if (gameManager != null)
             {
-                gameManager.OnDPChanged += HandleDPChanged;
                 gameManager.OnLifePointsChanged += HandleLPChanged;
                 gameManager.OnPhaseChanged += HandlePhaseChanged;
             }
@@ -271,7 +269,6 @@ namespace TrashTD.UI
             if (waveManager != null)
             {
                 waveManager.OnWaveStarted -= HandleWaveStarted;
-                waveManager.OnSingleWaveFinished -= HandleSingleWaveFinished;
             }
 
             if (enemyManager != null)
@@ -283,7 +280,6 @@ namespace TrashTD.UI
 
             if (gameManager != null)
             {
-                gameManager.OnDPChanged -= HandleDPChanged;
                 gameManager.OnLifePointsChanged -= HandleLPChanged;
                 gameManager.OnPhaseChanged -= HandlePhaseChanged;
             }
@@ -927,7 +923,7 @@ namespace TrashTD.UI
             selectedOperatorDetailsStatValues[0].text = data.GetScaledHP(op.CurrentRarity).ToString();
             selectedOperatorDetailsStatValues[1].text = data.GetScaledATK(op.CurrentRarity).ToString();
             selectedOperatorDetailsStatValues[2].text = data.GetScaledDEF(op.CurrentRarity).ToString();
-            selectedOperatorDetailsStatValues[3].text = data.GetScaledRES(op.CurrentRarity) + "%";
+            selectedOperatorDetailsStatValues[3].text = data.GetScaledRES(op.CurrentRarity).ToString();
             selectedOperatorDetailsStatValues[4].text = data.blockCount.ToString();
             selectedOperatorDetailsStatValues[5].text = $"{data.attackInterval:0.##}s";
             selectedOperatorDetailsRoles.text = data.roleTags != null && data.roleTags.Length > 0
@@ -2325,23 +2321,9 @@ namespace TrashTD.UI
             }
         }
 
-        private void HandleSingleWaveFinished()
-        {
-            // Wave done — GameManager.OnWaveFinished will transition back to CardPick
-            if (gameManager != null)
-            {
-                gameManager.OnWaveFinished();
-            }
-        }
-
         private void HandleEnemyCountChanged(EnemyBase enemy)
         {
             RefreshCounters();
-        }
-
-        private void HandleDPChanged(int dp)
-        {
-            // DP system removed
         }
 
         private void HandleLPChanged(int current, int max)

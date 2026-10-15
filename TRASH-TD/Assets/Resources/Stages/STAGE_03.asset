@@ -74,7 +74,7 @@ MonoBehaviour:
     exitPointIndex: 0
   lifePointsEasy: 3
   lifePointsNormal: 3
-  lifePointsHard: 3
+  lifePointsHard: 1
   squadSizeLimit: 8
   wavesEasy:
   - waveName: Wave 1

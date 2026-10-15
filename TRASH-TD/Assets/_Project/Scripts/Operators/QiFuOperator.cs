@@ -36,7 +36,7 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead || !isDeployed)
                 return false;
 
-            int damage = DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target), data.damageType);
+            int damage = DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
             if (!target.TryTakeAttackDamage(damage, Data.damageType, this))
                 return false;
 
