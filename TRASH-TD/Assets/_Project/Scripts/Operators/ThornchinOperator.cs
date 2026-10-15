@@ -76,7 +76,7 @@ namespace TrashTD.Operators
         {
             if (target == null || target.IsDead) return;
 
-            AudioManager.Instance?.PlaySfx(SfxId.GameplayMeleeAttack);
+            PlayAbilitySound(SfxId.GameplayMeleeAttack);
 
             int damage = DamageCalculator.CalculateDamage(currentATK, target.CurrentDEF);
             target.TryTakeAttackDamage(damage, data != null ? data.damageType : DamageType.Physical, this, canHitAir: true);

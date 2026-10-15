@@ -49,6 +49,8 @@ namespace TrashTD.Operators
         {
             if (target == null) return;
             target.Heal(GetHealAmount());
+            // A Medic's heal is its "attack"; it only has a sound if the operator has its own Attack clip.
+            Audio.UnitSfx.Play(data, Audio.UnitSfxEvent.Attack);
         }
 
         public virtual int GetHealAmount()

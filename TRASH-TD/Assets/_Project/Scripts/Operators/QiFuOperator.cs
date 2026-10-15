@@ -45,7 +45,9 @@ namespace TrashTD.Operators
                 return false;
 
             hitsSinceKnockback = 0;
-            return !target.IsDead && target.PushBack(1, QiFuChiAttackVisual.PushbackDuration);
+            bool knockedBack = !target.IsDead && target.PushBack(1, QiFuChiAttackVisual.PushbackDuration);
+            if (knockedBack) PlayAbilitySound();
+            return knockedBack;
         }
     }
 }

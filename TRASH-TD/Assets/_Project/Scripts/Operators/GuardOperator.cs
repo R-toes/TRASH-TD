@@ -81,7 +81,7 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             int damage = DamageCalculator.CalculateDamage(attackPower, GetTargetMitigation(target));
-            target.TryTakeAttackDamage(damage, data.damageType);
+            if (target.TryTakeAttackDamage(damage, data.damageType)) PlayImpactSound();
         }
 
         private bool HasAdjacentOperator()

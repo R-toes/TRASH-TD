@@ -191,12 +191,14 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             int damage = Combat.DamageCalculator.CalculateDamage(CurrentATK, GetTargetMitigation(target));
-            target.TryTakeAttackDamage(damage, data.damageType);
+            if (target.TryTakeAttackDamage(damage, data.damageType)) PlayImpactSound();
         }
 
+        /// <summary>Attack sound: the operator's own Attack clip, else the shared one for its damage type.</summary>
         protected void PlayAttackSound()
         {
             if (data == null || AudioManager.Instance == null) return;
+            if (UnitSfx.Play(data, UnitSfxEvent.Attack)) return;
 
             if (data.damageType == DamageType.Arts)
             {
@@ -210,6 +212,19 @@ namespace TrashTD.Operators
             {
                 AudioManager.Instance.PlaySfx(SfxId.GameplayMeleeAttack);
             }
+        }
+
+        /// <summary>
+        /// The operator's own Impact clip (projectile landing, explosion), if it has one. Called whenever one of its
+        /// hits lands; repeats within a moment are throttled, so an AoE hit plays it once.
+        /// </summary>
+        public void PlayImpactSound() => UnitSfx.Play(data, UnitSfxEvent.Impact);
+
+        /// <summary>The operator's own Ability clip, else the given shared sound (if any).</summary>
+        protected void PlayAbilitySound(SfxId? fallback = null)
+        {
+            if (data == null || UnitSfx.Play(data, UnitSfxEvent.Ability)) return;
+            if (fallback.HasValue) AudioManager.Instance?.PlaySfx(fallback.Value);
         }
 
         public Vector2Int[] GetRangePattern() => data.rangePattern;
@@ -386,6 +401,7 @@ namespace TrashTD.Operators
         /// </summary>
         protected virtual void Die()
         {
+            UnitSfx.Play(data, UnitSfxEvent.Death);
             Retreat();
             TrashTD.Systems.OperatorManager.Instance?.HandleOperatorDeath(this);
             OnDeath();

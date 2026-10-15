@@ -27,7 +27,7 @@ namespace TrashTD.Operators
             int primaryHeal = GetHealAmount();
             target.Heal(primaryHeal);
 
-            PlayHealSound();
+            PlayAttackSound();
 
             // Projectile visual from Progeny to primary heal recipient
             CombatProjectileVisual.Fire(
@@ -45,6 +45,7 @@ namespace TrashTD.Operators
             {
                 int bounceHeal = Mathf.Max(1, Mathf.RoundToInt(primaryHeal * 0.5f));
                 bounceTarget.Heal(bounceHeal);
+                PlayAbilitySound();
 
                 // Projectile visual from first target to bounce target
                 CombatProjectileVisual.Fire(
@@ -112,14 +113,6 @@ namespace TrashTD.Operators
             }
 
             return bestTarget;
-        }
-
-        private void PlayHealSound()
-        {
-            if (AudioManager.Instance != null)
-            {
-                AudioManager.Instance.PlaySfx(SfxId.GameplayMagicAttack);
-            }
         }
     }
 }

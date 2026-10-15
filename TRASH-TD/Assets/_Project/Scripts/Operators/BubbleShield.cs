@@ -138,11 +138,9 @@ namespace TrashTD.Operators
             // Floating indicator on recipient
             FloatingCombatNumber.ShowText(pos, "BLOCKED", new Color(0.4f, 0.9f, 1f));
 
-            // Sound
-            if (AudioManager.Instance != null)
-            {
-                AudioManager.Instance.PlaySfx(SfxId.GameplayMagicAttack);
-            }
+            // Sound: the caster's Ability clip, else the shared magic sound.
+            if (source != null) source.PlayShieldPopSound();
+            else AudioManager.Instance?.PlaySfx(SfxId.GameplayMagicAttack);
         }
 
         private void ApplyPopHeal()

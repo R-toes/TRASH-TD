@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using TrashTD.Audio;
 using TrashTD.Combat;
 using TrashTD.Core.Grid;
 using TrashTD.Core.Pathfinding;
@@ -283,6 +284,7 @@ namespace TrashTD.Enemies
                 if (targets.Count > 0)
                 {
                     attackTimer = 0f;
+                    PlayAttackSound();
                     PlayFrontalSlamVisual(direction, tileRange, includeBlockingTile);
                     for (int i = 0; i < targets.Count; i++)
                     {
@@ -455,12 +457,23 @@ namespace TrashTD.Enemies
             return preferredTarget != null ? preferredTarget : fallbackTarget;
         }
 
+        // Enemy sounds sit a little under operator sounds: there are many more enemies on screen.
+        private const float EnemySfxVolume = 0.7f;
+
+        /// <summary>The enemy's own Attack clip (swing, shot, cast), if it has one.</summary>
+        protected void PlayAttackSound() => UnitSfx.Play(data, UnitSfxEvent.Attack, EnemySfxVolume);
+
+        /// <summary>The enemy's own Impact clip (its projectile landing), if it has one.</summary>
+        protected void PlayImpactSound() => UnitSfx.Play(data, UnitSfxEvent.Impact, EnemySfxVolume);
+
         private void AttackOperator(OperatorBase target)
         {
+            PlayAttackSound();
             System.Action onImpact = () =>
             {
-                if (target != null && target.IsDeployed && data != null)
-                    target.TryTakeAttackDamage(currentATK, data.damageType, this);
+                if (target == null || !target.IsDeployed || data == null) return;
+                PlayImpactSound();
+                target.TryTakeAttackDamage(currentATK, data.damageType, this);
             };
 
             Color projectileColor = data != null
@@ -697,6 +710,7 @@ namespace TrashTD.Enemies
             }
 
             TakeDamage(damage, damageType);
+            attacker?.PlayImpactSound();
             return true;
         }
 
@@ -760,6 +774,7 @@ namespace TrashTD.Enemies
             if (attackTimer >= Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval))
             {
                 attackTimer = 0f;
+                PlayAttackSound();
                 MeleeSwipeVisual.Play(transform.position, blockingOperator.transform.position, new Color(1f, 0.35f, 0.25f, 1f));
                 blockingOperator.TryTakeAttackDamage(currentATK, data.damageType, this);
             }

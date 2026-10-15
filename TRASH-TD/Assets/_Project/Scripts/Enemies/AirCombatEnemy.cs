@@ -75,6 +75,7 @@ namespace TrashTD.Enemies
 
             attackTimer = 0f;
             attackPauseTimer = interval * AttackPauseFraction;
+            PlayAttackSound();
             PerformAirAttack(lockedTarget);
         }
 
@@ -233,6 +234,7 @@ namespace TrashTD.Enemies
 
             Vector3 impactPoint = target.transform.position;
             float radius = CellSize * blastRadiusInTiles;
+            PlayImpactSound();
             target.TryTakeAttackDamage(CurrentATK, Data.damageType, this);
             AoeBlastVisual.PlayCircle(impactPoint, radius, new Color(0.7f, 0.4f, 1f, 0.35f));
 

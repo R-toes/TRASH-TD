@@ -132,6 +132,7 @@ namespace TrashTD.Operators
             // Play green restorative pulse visual
             Vector3 visualOrigin = originCell.WorldPosition;
             AoeBlastVisual.PlayCircle(visualOrigin, 1.25f, new Color(0.25f, 0.95f, 0.45f, 0.6f));
+            PlayAbilitySound();
 
             for (int i = 0; i < targetsToHeal.Count; i++)
             {

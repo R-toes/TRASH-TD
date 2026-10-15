@@ -57,6 +57,7 @@ namespace TrashTD.Operators
             for (int i = 0; i < blastCells.Count; i++)
                 blastCellPositions.Add(blastCells[i].WorldPosition);
             AoeBlastVisual.PlayCells(blastCellPositions, gridManager.CellSize, BlastColor);
+            PlayImpactSound(); // the explosion, even if the target moved out of the blast
 
             List<EnemyBase> blastTargets = EnemyManager.Instance.GetEnemiesInCells(blastCells, data.position);
             HashSet<EnemyBase> uniqueTargets = new HashSet<EnemyBase>();

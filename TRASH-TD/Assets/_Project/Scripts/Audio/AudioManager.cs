@@ -230,8 +230,17 @@ namespace TrashTD.Audio
             operatorManager = null;
         }
 
-        private void HandleEnemyDied(EnemyBase enemy) => PlaySfx(SfxId.GameplayEnemyDeath, 0.75f);
-        private void HandleOperatorDeployed(OperatorBase op) => PlaySfx(SfxId.GameplayDeploy);
+        private void HandleEnemyDied(EnemyBase enemy)
+        {
+            if (enemy == null || !UnitSfx.Play(enemy.Data, UnitSfxEvent.Death, 0.8f))
+                PlaySfx(SfxId.GameplayEnemyDeath, 0.75f);
+        }
+
+        private void HandleOperatorDeployed(OperatorBase op)
+        {
+            if (op == null || !UnitSfx.Play(op.Data, UnitSfxEvent.Deploy))
+                PlaySfx(SfxId.GameplayDeploy);
+        }
         private void HandleOperatorRetreated(OperatorBase op) => PlaySfx(SfxId.GameplayRetreat);
     }
 }

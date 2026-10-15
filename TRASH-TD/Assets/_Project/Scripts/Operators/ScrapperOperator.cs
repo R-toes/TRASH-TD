@@ -21,6 +21,7 @@ namespace TrashTD.Operators
             if (Random.value < StunChance && target != null && !target.IsDead)
             {
                 target.ApplyStun(StunDuration);
+                PlayAbilitySound();
             }
         }
     }

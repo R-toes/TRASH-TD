@@ -59,6 +59,9 @@ namespace TrashTD.Operators
             }
         }
 
+        /// <summary>Played by a bubble this Bubblets cast when it pops.</summary>
+        public void PlayShieldPopSound() => PlayAbilitySound(Audio.SfxId.GameplayMagicAttack);
+
         public void Shield(OperatorBase target)
         {
             if (target == null || !isDeployed) return;
