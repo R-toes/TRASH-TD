@@ -33,27 +33,35 @@ namespace TrashTD.Data
             public bool HasWarnings => Warnings.Count > 0;
         }
 
-        public static WaveSummary[] SummarizeAll(StageData stage, StageDifficulty difficulty)
+        /// <summary>
+        /// Summarizes every wave and flags spikes/drops between neighbours. With curve settings, strength is
+        /// compared as threat (HP weighted by armor, speed and flight), so a themed wave of few tough elites
+        /// isn't mistaken for a drop; without them, raw total HP is compared.
+        /// </summary>
+        public static WaveSummary[] SummarizeAll(StageData stage, StageDifficulty difficulty, WaveCurveSettings settings = null)
         {
             WaveData[] waves = stage != null ? stage.GetWaves(difficulty) : null;
             if (waves == null) return new WaveSummary[0];
 
+            string measure = settings != null ? "threat" : "total HP";
             var summaries = new WaveSummary[waves.Length];
+            float previous = 0f;
             for (int i = 0; i < waves.Length; i++)
             {
                 summaries[i] = Summarize(waves[i], stage, difficulty);
 
-                int previousHP = i > 0 ? summaries[i - 1].TotalHP : 0;
-                if (previousHP > 0 && summaries[i].TotalHP > previousHP * SpikeRatio)
+                float strength = settings != null ? WaveCurveBuilder.GetWaveThreat(waves[i], settings) : summaries[i].TotalHP;
+                if (previous > 0f && strength > previous * SpikeRatio)
                 {
                     summaries[i].Warnings.Add(
-                        $"Difficulty spike: {(float)summaries[i].TotalHP / previousHP:0.0}x the previous wave's total HP.");
+                        $"Difficulty spike: {strength / previous:0.0}x the previous wave's {measure}.");
                 }
-                else if (previousHP > 0 && summaries[i].TotalHP < previousHP * DropRatio)
+                else if (previous > 0f && strength < previous * DropRatio)
                 {
                     summaries[i].Warnings.Add(
-                        $"Difficulty drop: only {(float)summaries[i].TotalHP / previousHP:0%} of the previous wave's total HP.");
+                        $"Difficulty drop: only {strength / previous:0%} of the previous wave's {measure}.");
                 }
+                previous = strength;
             }
 
             return summaries;

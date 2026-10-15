@@ -107,26 +107,46 @@ namespace TrashTD.Tests
         }
 
         [Test]
-        public void CopyOnCooldown_WaitsUntilReady_AndDoesNotLockReadyCopies()
+        public void RecalledCopy_MergesImmediately_AndUpgradedCardKeepsTheRecallCooldown()
         {
-            var readyA = new DraftCard(testOperator, OperatorRarity.Star1);
-            var readyB = new DraftCard(testOperator, OperatorRarity.Star1);
-            playerDeck.AddCard(readyA);
-            playerDeck.AddCard(readyB);
-            playerDeck.AddCard(new DraftCard(testOperator, OperatorRarity.Star1, 1)); // returned by a retreat
+            playerDeck.AddCard(new DraftCard(testOperator, OperatorRarity.Star1));
+            playerDeck.AddCard(new DraftCard(testOperator, OperatorRarity.Star1));
+            playerDeck.AddReturnedCard(new DraftCard(testOperator, OperatorRarity.Star1, 2)); // returned by a recall
 
-            Assert.AreEqual(3, playerDeck.CardCount, "A copy on cooldown must not merge yet.");
-            Assert.AreEqual(0, readyA.cooldownRoundsRemaining);
-            Assert.AreEqual(0, readyB.cooldownRoundsRemaining);
+            Assert.AreEqual(1, playerDeck.CardCount, "A recalled copy merges with the two in the deck.");
+            DraftCard upgraded = FindCard(OperatorRarity.Star2);
+            Assert.IsNotNull(upgraded);
+            Assert.AreEqual(2, upgraded.cooldownRoundsRemaining, "The upgrade still serves the recall's normal cooldown.");
+        }
 
-            playerDeck.AdvanceRedeployCooldownsOneRound();
-
-            Assert.AreEqual(1, playerDeck.CardCount);
-            Assert.AreEqual(1, upgradeSystem.GetCopyCount(testOperator.operatorName, OperatorRarity.Star2));
-            foreach (DraftCard card in playerDeck.DeckSlots)
+        [Test]
+        public void RecalledCopy_MergesIntoAFullDeck_AndKeepsTheRecallCooldown()
+        {
+            var fillers = new System.Collections.Generic.List<OperatorData>();
+            for (int i = 0; i < PlayerDeck.MAX_DECK_SIZE - 2; i++)
             {
-                if (card != null) Assert.AreEqual(0, card.cooldownRoundsRemaining);
+                OperatorData filler = ScriptableObject.CreateInstance<OperatorData>();
+                filler.operatorName = $"Filler{i}";
+                fillers.Add(filler);
+                playerDeck.AddCard(new DraftCard(filler, OperatorRarity.Star1));
             }
+            playerDeck.AddCard(new DraftCard(testOperator, OperatorRarity.Star1));
+            playerDeck.AddCard(new DraftCard(testOperator, OperatorRarity.Star1));
+            Assert.IsTrue(playerDeck.IsFull);
+
+            playerDeck.AddReturnedCard(new DraftCard(testOperator, OperatorRarity.Star1, 1));
+
+            Assert.AreEqual(PlayerDeck.MAX_DECK_SIZE - 1, playerDeck.CardCount);
+            Assert.AreEqual(1, FindCard(OperatorRarity.Star2).cooldownRoundsRemaining);
+
+            foreach (OperatorData filler in fillers) Object.DestroyImmediate(filler);
+        }
+
+        private DraftCard FindCard(OperatorRarity rarity)
+        {
+            foreach (DraftCard card in playerDeck.DeckSlots)
+                if (card != null && card.operatorData == testOperator && card.rarity == rarity) return card;
+            return null;
         }
 
         [Test]

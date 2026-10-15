@@ -1,15 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using TrashTD.Data;
-using TrashTD.Operators;
-using TrashTD.UI;
 
 namespace TrashTD.Systems
 {
     /// <summary>
-    /// Merges three matching copies of an operator into one of the next rarity tier.
-    /// Ready deck cards count, plus at most one deployed copy, which is upgraded in place.
+    /// Merges three matching deck cards into one card of the next rarity tier.
+    /// Deployed operators never take part; recall one to let its card merge.
     /// </summary>
     public class RarityUpgradeSystem : MonoBehaviour
     {
@@ -51,19 +50,6 @@ namespace TrashTD.Systems
 
             UpdateHighestRarity(card.operatorData, card.rarity);
             OnCopyAdded?.Invoke(card.operatorData, card.rarity, deck.GetCopyCount(card.operatorData, card.rarity));
-
-            // A card on redeploy cooldown (a retreated operator) waits until it's ready before merging,
-            // so it never pulls ready copies into its cooldown.
-            if (card.cooldownRoundsRemaining > 0) return;
-            MergeCopies(deck, card.operatorData, card.rarity, null);
-        }
-
-        /// <summary>
-        /// Merges a deck card whose redeploy cooldown just ended.
-        /// </summary>
-        public void ProcessReadiedCard(PlayerDeck deck, DraftCard card)
-        {
-            if (deck == null || card == null || card.operatorData == null || card.cooldownRoundsRemaining > 0) return;
             MergeCopies(deck, card.operatorData, card.rarity, null);
         }
 
@@ -72,16 +58,14 @@ namespace TrashTD.Systems
         /// </summary>
         public bool WouldMergeIncomingCard(PlayerDeck deck, DraftCard card)
         {
-            if (deck == null || card == null || card.operatorData == null || card.cooldownRoundsRemaining > 0) return false;
+            if (deck == null || card == null || card.operatorData == null) return false;
             if (card.rarity >= GetMaximumRarity(card.operatorData)) return false;
 
-            int availableCopies = deck.GetReadyCopySlots(card.operatorData, card.rarity).Count +
-                                  (FindDeployedCopy(card.operatorData, card.rarity) != null ? 1 : 0);
-            return availableCopies >= COPIES_REQUIRED_FOR_UPGRADE - 1;
+            return deck.GetCopySlots(card.operatorData, card.rarity).Count >= COPIES_REQUIRED_FOR_UPGRADE - 1;
         }
 
         /// <summary>
-        /// Merges a card straight from the draft without it taking a deck slot (used when the deck is full).
+        /// Merges a card without it taking a deck slot (used when the deck is full).
         /// </summary>
         public bool TryMergeIncomingCard(PlayerDeck deck, DraftCard card)
         {
@@ -109,9 +93,9 @@ namespace TrashTD.Systems
         }
 
         /// <summary>
-        /// Merges three copies into one of the next tier. Copies come from ready deck cards, the incoming card
-        /// (if any) and at most one deployed operator. A deployed operator that takes part is upgraded where it
-        /// stands, so merging never removes anything from the field.
+        /// Merges three deck copies (counting the incoming card, if any) into one of the next tier.
+        /// Copies closest to ready are used first, and the upgraded card keeps the longest redeploy
+        /// cooldown among them, so a recalled operator still serves its full cooldown.
         /// </summary>
         private static bool TryMergeOnce(
             PlayerDeck deck,
@@ -120,37 +104,20 @@ namespace TrashTD.Systems
             OperatorRarity nextRarity,
             DraftCard incomingCard)
         {
-            OperatorBase fieldCopy = FindDeployedCopy(opData, rarity);
-            int copiesFromDeck = COPIES_REQUIRED_FOR_UPGRADE - (incomingCard != null ? 1 : 0) - (fieldCopy != null ? 1 : 0);
+            int copiesFromDeck = COPIES_REQUIRED_FOR_UPGRADE - (incomingCard != null ? 1 : 0);
 
-            List<int> slots = deck.GetReadyCopySlots(opData, rarity);
+            List<int> slots = deck.GetCopySlots(opData, rarity);
             if (slots.Count < copiesFromDeck) return false;
-            slots.RemoveRange(copiesFromDeck, slots.Count - copiesFromDeck);
+            slots = slots.OrderBy(slot => deck.GetCard(slot).cooldownRoundsRemaining).Take(copiesFromDeck).ToList();
 
-            if (fieldCopy != null)
+            int cooldownRounds = incomingCard != null ? incomingCard.cooldownRoundsRemaining : 0;
+            foreach (int slot in slots)
             {
-                deck.ReplaceMergedCopies(slots, null);
-                fieldCopy.UpgradeRarity(nextRarity);
-                OperatorUpgradeBadge.Refresh(fieldCopy);
-            }
-            else
-            {
-                deck.ReplaceMergedCopies(slots, new DraftCard(opData, nextRarity));
+                cooldownRounds = Mathf.Max(cooldownRounds, deck.GetCard(slot).cooldownRoundsRemaining);
             }
 
+            deck.ReplaceMergedCopies(slots, new DraftCard(opData, nextRarity, cooldownRounds));
             return true;
-        }
-
-        private static OperatorBase FindDeployedCopy(OperatorData opData, OperatorRarity rarity)
-        {
-            if (OperatorManager.Instance == null) return null;
-
-            foreach (OperatorBase op in OperatorManager.Instance.DeployedOperators)
-            {
-                if (op != null && op.IsDeployed && op.Data == opData && op.CurrentRarity == rarity) return op;
-            }
-
-            return null;
         }
 
         private static OperatorRarity GetMaximumRarity(OperatorData opData)

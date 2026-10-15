@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4290549035fcf8c45b2a673ab0804df2, type: 3}
   m_Name: WaveCurveSettings
   startEnemies: 3
-  earlyGrowthPerWave: 1.22
+  earlyGrowthPerWave: 1.24
   earlyGrowthWaves: 8
-  growthPerWave: 1.03
+  growthPerWave: 1.08
   spikeInterval: 5
-  spikeMultiplier: 1.12
-  finalWaveMultiplier: 1.1
+  spikeMultiplier: 1.15
+  finalWaveMultiplier: 1.12
   stageBonusLateShare: 0.5
   stageBonusFadeWaves: 30
   referencePhysicalATK: 70
@@ -27,20 +27,37 @@ MonoBehaviour:
   referenceSpeed: 0.75
   speedThreatWeight: 0.5
   airThreatMultiplier: 1.5
+  crowdThreatMultiplier: 0.7
+  referenceEnemyATK: 25
+  attackThreatWeight: 0.25
   introductionSpacing: 2
   firstHeavyWave: 10
   airShare: 0.2
   spikeHeavyShare: 0.35
   lateHeavyShare: 0.15
   lateHeavyFromWave: 16
+  firstRushWave: 4
+  firstThemedWave: 11
+  pairedThemeEliteShare: 0.5
+  finalHeavyShare: 0.4
+  finalAirShare: 0.4
+  maxCoreEnemies: 40
+  maxCoreEnemiesPerExtraSpawn: 20
   preWaveDelay: 3
   coreIntervalStart: 3
-  coreIntervalEnd: 1.2
+  coreIntervalEnd: 0.8
   intervalRampWaves: 30
-  airInterval: 2.5
-  heavyInterval: 3.5
-  airStartDelay: 2.5
-  heavyStartDelay: 4
+  airInterval: 1.6
+  heavyInterval: 2.5
+  airStartDelay: 1.5
+  heavyStartDelay: 2
+  spawnWindow: 18
+  themedSpawnWindow: 10
+  minSpawnInterval: 0.3
+  swarmPackSize: 6
+  swarmPackInterval: 0.25
+  swarmPackGap: 3
+  swarmWindow: 12
   excludedEnemies:
   - {fileID: 11400000, guid: dbcd494ba6a44644b91770a58e5af798, type: 2}
   - {fileID: 11400000, guid: 2ca03e3556c7f9848ad8481102a7a591, type: 2}

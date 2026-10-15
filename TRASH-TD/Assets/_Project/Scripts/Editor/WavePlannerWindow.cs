@@ -134,7 +134,8 @@ namespace TrashTD.Editor
 
             SerializedProperty waves = serializedStage.FindProperty(WavesFieldName);
             selectedWave = Mathf.Clamp(selectedWave, 0, Mathf.Max(0, waves.arraySize - 1));
-            WaveAnalysis.WaveSummary[] summaries = WaveAnalysis.SummarizeAll(stage, difficulty);
+            WaveAnalysis.WaveSummary[] summaries = WaveAnalysis.SummarizeAll(stage, difficulty,
+                AssetDatabase.LoadAssetAtPath<WaveCurveSettings>(WaveRebalancer.SettingsPath));
 
             DrawStageHeader(summaries);
             DrawStrengthGraph(summaries);

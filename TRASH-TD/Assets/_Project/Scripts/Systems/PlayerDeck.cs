@@ -150,10 +150,9 @@ namespace TrashTD.Systems
         }
 
         /// <summary>
-        /// Slots holding copies of the operator at this rarity that are off redeploy cooldown.
-        /// Only these can take part in a rarity merge.
+        /// Slots holding copies of the operator at this rarity, whether or not they're on redeploy cooldown.
         /// </summary>
-        public List<int> GetReadyCopySlots(OperatorData operatorData, OperatorRarity rarity)
+        public List<int> GetCopySlots(OperatorData operatorData, OperatorRarity rarity)
         {
             var slots = new List<int>();
             if (operatorData == null) return slots;
@@ -161,8 +160,7 @@ namespace TrashTD.Systems
             for (int i = 0; i < deckSlots.Count; i++)
             {
                 DraftCard card = deckSlots[i];
-                if (card != null && card.operatorData == operatorData && card.rarity == rarity &&
-                    card.cooldownRoundsRemaining <= 0)
+                if (card != null && card.operatorData == operatorData && card.rarity == rarity)
                 {
                     slots.Add(i);
                 }
@@ -172,8 +170,7 @@ namespace TrashTD.Systems
         }
 
         /// <summary>
-        /// Removes the merged copies in the given slots. The upgraded card, if any, takes the first freed slot;
-        /// it is null when the upgrade went to a deployed operator instead.
+        /// Removes the merged copies in the given slots. The upgraded card takes the first freed slot.
         /// </summary>
         public void ReplaceMergedCopies(IReadOnlyList<int> slots, DraftCard upgradedCard)
         {
@@ -205,7 +202,10 @@ namespace TrashTD.Systems
 
             if (IsFull)
             {
-                pendingReturnedCards.Enqueue(card);
+                if (RarityUpgradeSystem.Instance == null || !RarityUpgradeSystem.Instance.TryMergeIncomingCard(this, card))
+                {
+                    pendingReturnedCards.Enqueue(card);
+                }
                 return true;
             }
 
@@ -311,12 +311,10 @@ namespace TrashTD.Systems
         public void AdvanceRedeployCooldownsOneRound()
         {
             bool changed = false;
-            var readiedCards = new List<DraftCard>();
             foreach (DraftCard card in deckSlots)
             {
                 if (card == null || card.cooldownRoundsRemaining <= 0) continue;
                 card.cooldownRoundsRemaining--;
-                if (card.cooldownRoundsRemaining <= 0) readiedCards.Add(card);
                 changed = true;
             }
 
@@ -333,12 +331,6 @@ namespace TrashTD.Systems
             }
 
             if (changed) OnDeckChanged?.Invoke(deckSlots);
-
-            // Cards skip merging while on cooldown, so check them again now that they're ready.
-            foreach (DraftCard card in readiedCards)
-            {
-                if (deckSlots.Contains(card)) RarityUpgradeSystem.Instance?.ProcessReadiedCard(this, card);
-            }
         }
 
         private void FillVacatedSlotWithReturnedCard(int preferredSlot)

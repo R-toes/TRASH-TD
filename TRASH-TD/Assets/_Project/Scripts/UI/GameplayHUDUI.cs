@@ -1696,13 +1696,17 @@ namespace TrashTD.UI
             cooldownToastRoutine = null;
         }
 
+        // During card pick (the draft's map & deck view) the deck can be rearranged and discarded from, but not deployed.
+        private bool IsDeckEditOnly => gameManager != null && gameManager.CurrentPhase == StagePhase.CardPick;
+
         private bool CanDragDeckCard(int slotIndex)
         {
-            if (gameManager == null || gameManager.CurrentPhase != StagePhase.Preparation || playerDeck == null) return false;
+            if (gameManager == null || playerDeck == null) return false;
+            if (gameManager.CurrentPhase != StagePhase.Preparation && !IsDeckEditOnly) return false;
 
             DraftCard card = playerDeck.GetCard(slotIndex);
             if (card == null) return false;
-            if (card.cooldownRoundsRemaining <= 0) return true;
+            if (card.cooldownRoundsRemaining <= 0 || IsDeckEditOnly) return true;
 
             ShowCooldownWarning(card.operatorData != null ? card.operatorData.operatorName : null, card.cooldownRoundsRemaining);
             return false;
@@ -2102,7 +2106,8 @@ namespace TrashTD.UI
 
         private void FinishDeckCardDrag(int slotIndex, Vector2 screenPosition)
         {
-            if (gameManager == null || gameManager.CurrentPhase != StagePhase.Preparation || playerDeck == null) return;
+            if (gameManager == null || playerDeck == null) return;
+            if (gameManager.CurrentPhase != StagePhase.Preparation && !IsDeckEditOnly) return;
 
             DraftCard card = playerDeck.GetCard(slotIndex);
             if (card == null) return;
@@ -2126,7 +2131,7 @@ namespace TrashTD.UI
                 return;
             }
 
-            if (gridManager == null || stageBootstrapper == null) return;
+            if (IsDeckEditOnly || gridManager == null || stageBootstrapper == null) return;
             Camera gameCamera = Camera.main;
             if (gameCamera == null) return;
 
@@ -2139,7 +2144,7 @@ namespace TrashTD.UI
 
         private void HandleDeckCardDrag(int slotIndex, Vector2 screenPosition)
         {
-            if (playerDeck == null || gridManager == null || stageBootstrapper == null) return;
+            if (IsDeckEditOnly || playerDeck == null || gridManager == null || stageBootstrapper == null) return;
 
             DraftCard card = playerDeck.GetCard(slotIndex);
             if (card == null) return;
@@ -2177,7 +2182,7 @@ namespace TrashTD.UI
 
         private void SelectDeckSlot(int index)
         {
-            if (playerDeck == null) return;
+            if (playerDeck == null || IsDeckEditOnly) return;
 
             var card = playerDeck.GetCard(index);
             if (card == null) return;

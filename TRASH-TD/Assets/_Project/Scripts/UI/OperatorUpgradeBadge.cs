@@ -11,25 +11,6 @@ namespace TrashTD.UI
 
         private const string BadgeObjectName = "OperatorUpgradeBadge";
 
-        /// <summary>
-        /// Replaces the operator's badge after its rarity changed on the field.
-        /// </summary>
-        public static void Refresh(OperatorBase op)
-        {
-            if (op == null) return;
-
-            Transform existing = op.transform.Find(BadgeObjectName);
-            if (existing != null)
-            {
-                // Detach first: Destroy is deferred, and a chained upgrade can refresh again this frame.
-                existing.SetParent(null, false);
-                if (Application.isPlaying) Object.Destroy(existing.gameObject);
-                else Object.DestroyImmediate(existing.gameObject);
-            }
-
-            Show(op);
-        }
-
         public static void Show(OperatorBase op)
         {
             if (op == null || op.Data == null) return;
