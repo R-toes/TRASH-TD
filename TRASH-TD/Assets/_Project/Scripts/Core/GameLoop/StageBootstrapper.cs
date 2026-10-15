@@ -29,6 +29,17 @@ namespace TrashTD.Core.GameLoop
         private static Texture2D dustCloudTexture;
         private static Material dustCloudMaterial;
 
+        private const string DefaultSandboxMapStageId = "STAGE_01";
+
+        /// <summary>
+        /// Stage whose map (layout, artwork, spawns, exits, paths) the sandbox runs on. Static so it survives
+        /// the scene reload used by Retry and by switching maps from the sandbox panel.
+        /// </summary>
+        public static string SandboxMapStageId { get; private set; } = DefaultSandboxMapStageId;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetSandboxMap() => SandboxMapStageId = DefaultSandboxMapStageId;
+
         private sealed class SpriteSheetAnimationState
         {
             public SpriteRenderer Renderer;
@@ -106,23 +117,29 @@ namespace TrashTD.Core.GameLoop
             stageData = MainMenuController.ConsumePendingStage(stageData);
             if (stageData != null && stageData.stageId == "SANDBOX")
             {
-                StageData stageOne = Resources.Load<StageData>("Stages/STAGE_01");
-                if (stageOne != null)
+                StageData mapSource = Resources.Load<StageData>("Stages/" + SandboxMapStageId);
+                if (mapSource == null)
+                {
+                    SandboxMapStageId = DefaultSandboxMapStageId;
+                    mapSource = Resources.Load<StageData>("Stages/" + DefaultSandboxMapStageId);
+                }
+
+                if (mapSource != null)
                 {
                     // Work on a runtime copy so play mode doesn't overwrite the sandbox asset.
                     stageData = Instantiate(stageData);
-                    stageData.gridWidth = stageOne.gridWidth;
-                    stageData.gridHeight = stageOne.gridHeight;
-                    stageData.tileLayout = stageOne.tileLayout;
-                    stageData.mapVisualSprite = stageOne.mapVisualSprite;
-                    stageData.backgroundVisualSprite = stageOne.backgroundVisualSprite;
-                    stageData.upperBackgroundVisualSprites = stageOne.upperBackgroundVisualSprites;
-                    stageData.foregroundVisualSprite = stageOne.foregroundVisualSprite;
-                    stageData.visualTilePixelSize = stageOne.visualTilePixelSize;
-                    stageData.visualTileOffset = stageOne.visualTileOffset;
-                    stageData.spawnPoints = stageOne.spawnPoints;
-                    stageData.exitPoints = stageOne.exitPoints;
-                    stageData.enemyPaths = stageOne.enemyPaths;
+                    stageData.gridWidth = mapSource.gridWidth;
+                    stageData.gridHeight = mapSource.gridHeight;
+                    stageData.tileLayout = mapSource.tileLayout;
+                    stageData.mapVisualSprite = mapSource.mapVisualSprite;
+                    stageData.backgroundVisualSprite = mapSource.backgroundVisualSprite;
+                    stageData.upperBackgroundVisualSprites = mapSource.upperBackgroundVisualSprites;
+                    stageData.foregroundVisualSprite = mapSource.foregroundVisualSprite;
+                    stageData.visualTilePixelSize = mapSource.visualTilePixelSize;
+                    stageData.visualTileOffset = mapSource.visualTileOffset;
+                    stageData.spawnPoints = mapSource.spawnPoints;
+                    stageData.exitPoints = mapSource.exitPoints;
+                    stageData.enemyPaths = mapSource.enemyPaths;
                 }
             }
             TrashTD.Combat.StageCombatModifiers.ConfigureForStage(stageData);
@@ -201,6 +218,21 @@ namespace TrashTD.Core.GameLoop
                 FindFirstObjectByType<CardDraftOverlayUI>()?.HideForSandbox();
                 gameObject.AddComponent<SandboxController>().Initialize(this);
             }
+        }
+
+        /// <summary>
+        /// Restarts the sandbox on another stage's map. Reloading the scene rebuilds the grid, paths and artwork
+        /// from scratch, the same way Retry does; the deck, queue and deployed operators start over.
+        /// </summary>
+        public void SwitchSandboxMap(string mapStageId)
+        {
+            if (!IsSandbox || string.IsNullOrEmpty(mapStageId)) return;
+
+            SandboxMapStageId = mapStageId;
+            MainMenuController.SetPendingStage(stageData);
+            MainMenuController.SetPendingStageDifficulty(difficulty);
+            Time.timeScale = 1f;
+            UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
         }
 
         private void SpawnVisualGridTiles()

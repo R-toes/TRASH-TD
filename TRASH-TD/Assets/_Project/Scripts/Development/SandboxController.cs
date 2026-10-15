@@ -16,7 +16,7 @@ namespace TrashTD.Development
     /// Before a wave: clicking an enemy adds it to the spawn queue; START WAVE deploys the queue
     /// at the normal stage spawn interval. During a wave: clicking an enemy spawns it instantly;
     /// END WAVE cancels pending spawns and kills every enemy. Clicking an operator adds its card
-    /// to the deck immediately.
+    /// to the deck immediately. The MAP list restarts the sandbox on another stage's map.
     /// </summary>
     public sealed class SandboxController : MonoBehaviour
     {
@@ -37,6 +37,7 @@ namespace TrashTD.Development
         private readonly List<EnemyData> enemyQueue = new List<EnemyData>();
         private readonly List<EnemyData> availableEnemies = new List<EnemyData>();
         private readonly List<OperatorData> operatorData = new List<OperatorData>();
+        private readonly List<StageData> mapStages = new List<StageData>();
 
         private StageBootstrapper bootstrapper;
         private WaveManager waveManager;
@@ -61,6 +62,7 @@ namespace TrashTD.Development
             gameplayHud?.RegisterSandboxController(this);
             LoadEnemyData();
             LoadOperatorData();
+            LoadMapStages();
             if (gameManager != null && gameManager.CurrentPhase == StagePhase.CardPick)
                 gameManager.EnterPreparationPhase();
             BuildPanel();
@@ -130,6 +132,23 @@ namespace TrashTD.Development
             });
         }
 
+        private void LoadMapStages()
+        {
+            mapStages.Clear();
+            foreach (StageData stage in Resources.LoadAll<StageData>("Stages"))
+            {
+                if (stage != null && stage.stageId != "SANDBOX" && stage.gridWidth > 0 && stage.gridHeight > 0)
+                    mapStages.Add(stage);
+            }
+            mapStages.Sort((a, b) => string.Compare(a.stageId, b.stageId, System.StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static string GetMapLabel(StageData stage)
+        {
+            string number = stage.stageId.StartsWith("STAGE_") ? stage.stageId.Substring(6).TrimStart('0') : stage.stageId;
+            return string.IsNullOrEmpty(stage.mapName) ? $"Stage {number}" : $"{number}. {stage.mapName}";
+        }
+
         private void AddEnemiesFromWaves(WaveData[] waves)
         {
             if (waves == null) return;
@@ -192,6 +211,18 @@ namespace TrashTD.Development
         {
             playerDeck?.ClearDeck();
             SetStatus("Deck cleared.");
+        }
+
+        private void SwitchMap(StageData stage)
+        {
+            if (stage == null || bootstrapper == null) return;
+            if (stage.stageId == StageBootstrapper.SandboxMapStageId)
+            {
+                SetStatus($"Already on {GetMapLabel(stage)}.");
+                return;
+            }
+
+            bootstrapper.SwitchSandboxMap(stage.stageId);
         }
 
         /// <summary>Called by the HUD's Start/End Wave button.</summary>
@@ -307,11 +338,25 @@ namespace TrashTD.Development
 
             Text title = MakeText(panel.transform, "QA SANDBOX", 16, AccentColor, TextAnchor.MiddleLeft);
             SetHeight(title, 24f);
+            StageData currentMap = mapStages.Find(stage => stage.stageId == StageBootstrapper.SandboxMapStageId);
+            Text mapText = MakeText(panel.transform, "Map: " + (currentMap != null ? GetMapLabel(currentMap) : StageBootstrapper.SandboxMapStageId),
+                10, DimColor, TextAnchor.MiddleLeft);
+            SetHeight(mapText, 16f);
             modeText = MakeText(panel.transform, "", 10, AccentColor, TextAnchor.UpperLeft);
             statusText = MakeText(panel.transform, "Ready.", 10, Color.yellow, TextAnchor.UpperLeft);
 
             // Everything else scrolls inside a masked viewport, so lists can never spill over other controls.
             Transform content = MakeScrollView(panel.transform);
+
+            // Switching maps restarts the sandbox on that stage's layout, spawns and paths.
+            Transform mapList = MakeSection(content, "MAP", false);
+            for (int i = 0; i < mapStages.Count; i++)
+            {
+                StageData stage = mapStages[i];
+                bool isCurrent = stage.stageId == StageBootstrapper.SandboxMapStageId;
+                MakeRow(mapList, GetMapLabel(stage), isCurrent ? "ON" : null, AccentColor, isCurrent ? HeaderColor : RowColor)
+                    .onClick.AddListener(() => SwitchMap(stage));
+            }
 
             Transform enemyList = MakeSection(content, "ENEMIES", true);
             for (int i = 0; i < availableEnemies.Count; i++)
