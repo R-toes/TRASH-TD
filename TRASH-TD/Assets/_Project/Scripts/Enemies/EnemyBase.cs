@@ -169,7 +169,12 @@ namespace TrashTD.Enemies
             isPushingBack = false;
             pushbackElapsed = 0f;
             isDead = false;
-            attackTimer = 0f;
+            // Ground melee enemies are ready to strike on first contact with a blocker
+            // (casters keep their wind-up before the first ranged shot).
+            attackTimer = data != null && data.movementType == EnemyMovementType.Ground &&
+                          data.archetype != EnemyArchetype.Caster
+                ? Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval)
+                : 0f;
             rangedAttackStopTimer = 0f;
             currentPathIndex = 0;
             trapDamageTimer = 0f;
@@ -214,15 +219,30 @@ namespace TrashTD.Enemies
                 // Attack the blocking operator while blocked
                 AttackBlocker();
             }
-            else if (isPushingBack)
-            {
-                UpdatePushback();
-            }
             else
             {
-                // Move along path
-                MoveAlongPath();
+                // The melee attack keeps charging while walking (capped at one interval), so the first
+                // hit lands as soon as an operator blocks this enemy instead of a full interval later.
+                ChargeMeleeAttack(Time.deltaTime);
+
+                if (isPushingBack)
+                {
+                    UpdatePushback();
+                }
+                else
+                {
+                    // Move along path
+                    MoveAlongPath();
+                }
             }
+        }
+
+        private void ChargeMeleeAttack(float deltaTime)
+        {
+            if (data == null) return;
+
+            float attackInterval = Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval);
+            attackTimer = Mathf.Min(attackTimer + deltaTime, attackInterval);
         }
 
         protected void UpdateRangedBehavior(bool prioritizeRangedOperators)

@@ -167,6 +167,7 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - `EnemyBase.VisualPosition` — centre of the visible sprite. Aim visuals (projectiles, swipes, damage numbers, health bars) at it, not `transform.position`; game logic (range, grid cells) still uses `transform.position`.
 - `CombatProjectileVisual.Fire(start, EnemyBase target, ...)` follows a moving target — prefer it over the fixed-position overload.
 - `OperatorBase.IgnoresMissMechanic`, `IsCamouflaged`, `IsTargetable` — enemies skip operators that aren't targetable.
+- Enemy attack timers are "time since last attack", capped at one interval. Ground melee enemies spawn ready and keep charging while walking, so they **hit their blocker immediately on contact**; air combat enemies and Sand Hulk's frontal slam work the same way. Enemy casters keep their wind-up before the first shot.
 
 ### 7.4 Audio
 

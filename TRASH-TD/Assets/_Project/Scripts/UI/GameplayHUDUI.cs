@@ -1135,16 +1135,22 @@ namespace TrashTD.UI
             deckUpgradeBadgeLabels = new UpgradeArrowGraphic[DeckSlotCount];
             deckFeedbacks = new MenuButtonFeedback[DeckSlotCount];
 
-            // In the 378x58 sprite, slots are centered at x = 23, 65, 107, 149, 191, 233, 275, 317 (pitch = 42px).
-            // Card bay height sits between caution tape (y=5 from top) and bottom ledge (y=47 from top), center Y ~94f.
-            const float slotWidth = 104f;
-            const float slotHeight = 114f;
-            const float slotCenterY = 94f;
+            // In the 378x58 sprite, each bay's dark interior spans 35px between pillars (x = 8..42 for bay 1,
+            // pitch 42px, so bays are centered at x = 25.5 + 42i) and 40px from the caution tape to the
+            // bottom ledge (y = 7..46 from the top). The slot covers exactly that interior.
+            const float bayLeftPx = 8f;
+            const float bayWidthPx = 35f;
+            const float bayPitchPx = 42f;
+            const float bayTopPx = 7f;
+            const float bayHeightPx = 40f;
+            float slotWidth = bayWidthPx * bgScale;
+            float slotHeight = bayHeightPx * bgScale;
+            float slotCenterY = (58f - bayTopPx - bayHeightPx * 0.5f) * bgScale;
 
             for (int i = 0; i < DeckSlotCount; i++)
             {
                 int slotIndex = i;
-                float slotCenterX = (23f + i * 42f) * bgScale;
+                float slotCenterX = (bayLeftPx + bayWidthPx * 0.5f + i * bayPitchPx) * bgScale;
                 var slotBtn = CreateDeckSlot(slotsContainer.transform, $"DeckSlot_{i + 1}");
                 var btnRect = slotBtn.GetComponent<RectTransform>();
                 btnRect.anchorMin = new Vector2(0f, 0f);
@@ -1390,12 +1396,13 @@ namespace TrashTD.UI
 
         private Button CreateDeckSlot(Transform parent, string objectName)
         {
-            // Sized 104x114 to fit inside the 123px slot bay, leaving margin to dividers and
-            // keeping the bottom ledge (with slot numbers 1-8) completely visible.
-            var button = CreateButton(parent, objectName, "", new Vector2(104f, 114f));
+            // Size and position are set by the caller to match a bay of the Deck BG sprite. The slot image stays
+            // transparent (it only catches clicks and carries the hover/selection glow outline), so the bay
+            // art shows through behind the operator.
+            var button = CreateButton(parent, objectName, "", new Vector2(102f, 117f));
             var image = button.GetComponent<Image>();
-            image.sprite = CreateTrapezoidSprite();
-            image.color = new Color(0.06f, 0.07f, 0.10f, 0f);
+            image.sprite = null;
+            image.color = Color.clear;
             image.type = Image.Type.Simple;
 
             var label = button.GetComponentInChildren<Text>();
@@ -1409,35 +1416,26 @@ namespace TrashTD.UI
                 label.resizeTextMaxSize = 11;
                 label.color = Color.white;
 
+                // Name + stars sit on the dark strip under the green bracket frame (bay y = 36..46 of 7..46).
                 RectTransform labelRect = label.GetComponent<RectTransform>();
-                labelRect.anchorMin = new Vector2(0.06f, 0.03f);
-                labelRect.anchorMax = new Vector2(0.94f, 0.28f);
+                labelRect.anchorMin = new Vector2(0.03f, 0.01f);
+                labelRect.anchorMax = new Vector2(0.97f, 0.27f);
                 labelRect.offsetMin = Vector2.zero;
                 labelRect.offsetMax = Vector2.zero;
             }
 
+            // Portrait sits inside the bay's green bracket frame (bay y = 8..34 of 7..46), with a small inset.
             var portraitObject = new GameObject("OperatorPortrait", typeof(RectTransform), typeof(Image));
             portraitObject.transform.SetParent(button.transform, false);
             RectTransform portraitRect = portraitObject.GetComponent<RectTransform>();
-            portraitRect.anchorMin = new Vector2(0.08f, 0.30f);
-            portraitRect.anchorMax = new Vector2(0.92f, 0.94f);
+            portraitRect.anchorMin = new Vector2(0.1f, 0.33f);
+            portraitRect.anchorMax = new Vector2(0.9f, 0.94f);
             portraitRect.offsetMin = Vector2.zero;
             portraitRect.offsetMax = Vector2.zero;
 
             Image portraitImage = portraitObject.GetComponent<Image>();
             portraitImage.preserveAspect = true;
             portraitImage.raycastTarget = false;
-
-            var labelBackground = new GameObject("OperatorLabelBackground", typeof(RectTransform), typeof(Image));
-            labelBackground.transform.SetParent(button.transform, false);
-            RectTransform labelBackgroundRect = labelBackground.GetComponent<RectTransform>();
-            labelBackgroundRect.anchorMin = new Vector2(0.06f, 0.03f);
-            labelBackgroundRect.anchorMax = new Vector2(0.94f, 0.28f);
-            labelBackgroundRect.offsetMin = Vector2.zero;
-            labelBackgroundRect.offsetMax = Vector2.zero;
-            Image labelBackgroundImage = labelBackground.GetComponent<Image>();
-            labelBackgroundImage.color = new Color(0.02f, 0.025f, 0.035f, 0.9f);
-            labelBackgroundImage.raycastTarget = false;
 
             if (label != null)
             {
@@ -2104,11 +2102,12 @@ namespace TrashTD.UI
                     deckCooldownLabels[i].text = card.cooldownRoundsRemaining.ToString();
                     deckCooldownBadges[i].SetActive(!isReady);
 
-                    // Tint based on class for visual differentiation (dimmed while on cooldown).
+                    // No slot fill (the bay art shows through); the class color only drives the
+                    // hover/selection glow and the drag ghost (dimmed while on cooldown).
                     Color slotColor = isReady
                         ? GetClassColor(card.operatorData.operatorClass)
                         : new Color(0.22f, 0.22f, 0.24f, 0.7f);
-                    deckFeedbacks[i].SetBaseColor(slotColor);
+                    deckFeedbacks[i].SetBaseColor(Color.clear);
                     Color glow = Color.Lerp(slotColor, Color.white, 0.55f);
                     deckFeedbacks[i].glowColor = new Color(glow.r, glow.g, glow.b, 0.9f);
 
@@ -2881,27 +2880,6 @@ namespace TrashTD.UI
             texture.Apply();
             enemySkullSprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), size);
             return enemySkullSprite;
-        }
-
-        private static Sprite CreateTrapezoidSprite()
-        {
-            const int width = 128;
-            const int height = 112;
-            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
-            var pixels = new Color[width * height];
-            for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.clear;
-
-            for (int y = 0; y < height; y++)
-            {
-                float inset = Mathf.Lerp(18f, 0f, y / (float)(height - 1));
-                int left = Mathf.RoundToInt(inset);
-                int right = width - left;
-                for (int x = left; x < right; x++) pixels[y * width + x] = Color.white;
-            }
-
-            texture.SetPixels(pixels);
-            texture.Apply();
-            return Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 100f);
         }
 
         private static Sprite CreateTrashIconSprite()
