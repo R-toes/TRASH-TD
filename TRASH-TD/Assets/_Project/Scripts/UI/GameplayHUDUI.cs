@@ -49,6 +49,8 @@ namespace TrashTD.UI
         [SerializeField] private AudioClip lifeLostClip;
         [SerializeField, Range(0f, 1f)] private float sfxVolume = 0.7f;
 
+        private Sprite[] deckBgSprites;
+
         private Canvas canvas;
         private GameObject pausePanel;
         private GameObject stageInfoPanel;
@@ -147,6 +149,9 @@ namespace TrashTD.UI
         private RectTransform waveProgressFillRect;
         private Image waveProgressFill;
         private Image dangerFlashImage;
+        private Image deckBgAnimImage;
+        private float deckBgAnimTime;
+        private int deckBgAnimFrame;
         private CanvasGroup phaseBannerGroup;
         private RectTransform phaseBannerContent;
         private Text phaseBannerTitle;
@@ -209,6 +214,9 @@ namespace TrashTD.UI
             if (lifeLostClip == null) lifeLostClip = AudioManager.Instance?.GetClip(SfxId.GameplayLifeLost);
 
             EnsureEventSystem();
+            // Load the Deck BG sprite sheet frames from Resources at runtime.
+            // The asset lives at Assets/Resources/UI/Deck BG.png (sprite mode: Multiple).
+            deckBgSprites = Resources.LoadAll<Sprite>("UI/Deck BG");
             BuildHud();
             if (canvas != null && pausePanel != null)
             {
@@ -311,7 +319,7 @@ namespace TrashTD.UI
             CreateTopBar(root);
             CreateDeckBar(root);
             CreateSpeedBar(root);
-            CreateTrashDropZone(root);
+            // Trash drop zone is created and parented inside CreateDeckBar to align with the deck background
             CreateDiscardConfirmationPanel(root);
             CreatePhaseBanner(root);
             CreateEnvironmentBriefing(root);
@@ -1050,6 +1058,10 @@ namespace TrashTD.UI
 
         private void CreateDeckBar(Transform root)
         {
+            const float bgHeight = 170f;
+            const float bgAspect = 378f / 58f;
+            const float bgScale = bgHeight / 58f;
+
             // Bottom bar background
             var bar = new GameObject("DeckBar", typeof(RectTransform), typeof(Image));
             bar.transform.SetParent(root, false);
@@ -1057,10 +1069,35 @@ namespace TrashTD.UI
             barRect.anchorMin = new Vector2(0f, 0f);
             barRect.anchorMax = new Vector2(1f, 0f);
             barRect.pivot = new Vector2(0.5f, 0f);
-            barRect.sizeDelta = new Vector2(0f, 170f);
+            barRect.sizeDelta = new Vector2(0f, bgHeight);
             barRect.anchoredPosition = Vector2.zero;
             bar.GetComponent<Image>().color = BarColor;
             deckBarRect = barRect;
+
+            // Deck background sprite-sheet animation — aspect-correct, anchored to
+            // the bottom-left corner of the deck bar. Width is derived from the first
+            // frame's aspect ratio so the sprite is never distorted.
+            if (deckBgSprites != null && deckBgSprites.Length > 0)
+            {
+                var deckBgObj = new GameObject("DeckBgAnim", typeof(RectTransform), typeof(Image));
+                deckBgObj.transform.SetParent(bar.transform, false);
+                var deckBgRect = deckBgObj.GetComponent<RectTransform>();
+                deckBgRect.anchorMin = new Vector2(0f, 0f);
+                deckBgRect.anchorMax = new Vector2(0f, 0f);
+                deckBgRect.pivot   = new Vector2(0f, 0f);
+                Sprite firstFrame = deckBgSprites[0];
+                float aspect = firstFrame != null && firstFrame.rect.height > 0f
+                    ? firstFrame.rect.width / firstFrame.rect.height
+                    : bgAspect;
+                deckBgRect.sizeDelta = new Vector2(bgHeight * aspect, bgHeight);
+                deckBgRect.anchoredPosition = Vector2.zero;
+                deckBgAnimImage = deckBgObj.GetComponent<Image>();
+                deckBgAnimImage.sprite = firstFrame;
+                deckBgAnimImage.color = Color.white;
+                deckBgAnimImage.preserveAspect = false;
+                deckBgAnimImage.raycastTarget = false;
+                deckBgAnimImage.type = Image.Type.Simple;
+            }
 
             // Thin accent line along the top edge
             var edge = new GameObject("DeckBarEdge", typeof(RectTransform), typeof(Image));
@@ -1075,22 +1112,15 @@ namespace TrashTD.UI
             edgeImage.color = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.45f);
             edgeImage.raycastTarget = false;
 
-            // Deck slots container
+            // Deck slots container matching the DeckBgAnim sprite dimensions
             var slotsContainer = new GameObject("DeckSlots", typeof(RectTransform));
             slotsContainer.transform.SetParent(bar.transform, false);
             var slotsRect = slotsContainer.GetComponent<RectTransform>();
             slotsRect.anchorMin = new Vector2(0f, 0f);
-            slotsRect.anchorMax = new Vector2(1f, 1f);
-            slotsRect.offsetMin = new Vector2(30f, 15f);
-            slotsRect.offsetMax = new Vector2(-420f, -15f);
-
-            var layout = slotsContainer.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 10f;
-            layout.childAlignment = TextAnchor.MiddleLeft;
-            layout.childControlWidth = false;
-            layout.childControlHeight = false;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = false;
+            slotsRect.anchorMax = new Vector2(0f, 0f);
+            slotsRect.pivot = new Vector2(0f, 0f);
+            slotsRect.sizeDelta = new Vector2(bgHeight * bgAspect, bgHeight);
+            slotsRect.anchoredPosition = Vector2.zero;
 
             deckButtons = new Button[DeckSlotCount];
             deckButtonLabels = new Text[DeckSlotCount];
@@ -1105,10 +1135,24 @@ namespace TrashTD.UI
             deckUpgradeBadgeLabels = new UpgradeArrowGraphic[DeckSlotCount];
             deckFeedbacks = new MenuButtonFeedback[DeckSlotCount];
 
+            // In the 378x58 sprite, slots are centered at x = 23, 65, 107, 149, 191, 233, 275, 317 (pitch = 42px).
+            // Card bay height sits between caution tape (y=5 from top) and bottom ledge (y=47 from top), center Y ~94f.
+            const float slotWidth = 104f;
+            const float slotHeight = 114f;
+            const float slotCenterY = 94f;
+
             for (int i = 0; i < DeckSlotCount; i++)
             {
                 int slotIndex = i;
+                float slotCenterX = (23f + i * 42f) * bgScale;
                 var slotBtn = CreateDeckSlot(slotsContainer.transform, $"DeckSlot_{i + 1}");
+                var btnRect = slotBtn.GetComponent<RectTransform>();
+                btnRect.anchorMin = new Vector2(0f, 0f);
+                btnRect.anchorMax = new Vector2(0f, 0f);
+                btnRect.pivot = new Vector2(0.5f, 0.5f);
+                btnRect.sizeDelta = new Vector2(slotWidth, slotHeight);
+                btnRect.anchoredPosition = new Vector2(slotCenterX, slotCenterY);
+
                 deckButtons[i] = slotBtn;
                 deckButtonLabels[i] = slotBtn.GetComponentInChildren<Text>();
                 deckButtonImages[i] = slotBtn.GetComponent<Image>();
@@ -1118,7 +1162,7 @@ namespace TrashTD.UI
                     slotBtn.transform,
                     out _,
                     out deckCooldownLabels[i]);
-                deckUpgradeBadges[i] = CreateUpgradeBadge(slotBtn.transform, $"DeckUpgradeBadge_{i + 1}", new Vector2(34f, 18f), new Vector2(-5f, -5f));
+                deckUpgradeBadges[i] = CreateUpgradeBadge(slotBtn.transform, $"DeckUpgradeBadge_{i + 1}", new Vector2(32f, 18f), new Vector2(-4f, -4f));
                 deckUpgradeBadgeLabels[i] = deckUpgradeBadges[i].GetComponentInChildren<UpgradeArrowGraphic>();
                 slotBtn.onClick.AddListener(() => SelectDeckSlot(slotIndex));
                 var dragHandler = slotBtn.gameObject.AddComponent<DeckSlotDragHandler>();
@@ -1134,6 +1178,8 @@ namespace TrashTD.UI
 
                 slotBtn.interactable = false;
             }
+
+            CreateTrashDropZone(bar.transform);
 
             // Start Wave button
             startWaveButton = CreateButton(bar.transform, "StartWaveButton", "START\nWAVE", new Vector2(160f, 100f));
@@ -1206,36 +1252,36 @@ namespace TrashTD.UI
             UpdateSpeedSelection(gameManager != null ? gameManager.GameSpeed : 1f);
         }
 
-        private void CreateTrashDropZone(Transform root)
+        private void CreateTrashDropZone(Transform parent)
         {
             var zone = new GameObject("TrashDropZone", typeof(RectTransform), typeof(Image), typeof(Button));
-            zone.transform.SetParent(root, false);
+            zone.transform.SetParent(parent, false);
             trashDropZone = zone.GetComponent<RectTransform>();
-            SetPosition(trashDropZone, new Vector2(1034f, 85f), Vector2.zero,
-                new Vector2(78f, 92f), new Vector2(0f, 0.5f));
+            // Aligned precisely to the discard monitor screen on the Deck BG sprite sheet
+            // Sprite discard screen: x=345..373 (center ~359), y=10..45 from top (center ~30.5 from bottom)
+            // At scale (170/58): Center X = 1052.2f, Center Y = 89.4f, inner screen ~84x102f
+            SetPosition(trashDropZone, new Vector2(1052f, 89f), new Vector2(0f, 0f),
+                new Vector2(80f, 98f), new Vector2(0.5f, 0.5f));
 
             var image = zone.GetComponent<Image>();
-            image.color = new Color(0.10f, 0.07f, 0.09f, 0.96f);
+            image.color = new Color(0.10f, 0.05f, 0.07f, 0.25f);
             image.raycastTarget = true;
-            var outline = zone.AddComponent<Outline>();
-            outline.effectColor = new Color(1f, 0.25f, 0.3f, 0.55f);
-            outline.effectDistance = new Vector2(2f, -2f);
 
             var icon = new GameObject("TrashIcon", typeof(RectTransform), typeof(Image));
             icon.transform.SetParent(zone.transform, false);
             var iconRect = icon.GetComponent<RectTransform>();
-            SetPosition(iconRect, new Vector2(0f, 14f), new Vector2(0.5f, 0.5f),
-                new Vector2(38f, 42f), new Vector2(0.5f, 0.5f));
+            SetPosition(iconRect, new Vector2(0f, 12f), new Vector2(0.5f, 0.5f),
+                new Vector2(34f, 38f), new Vector2(0.5f, 0.5f));
             var iconImage = icon.GetComponent<Image>();
             iconImage.sprite = CreateTrashIconSprite();
             iconImage.color = new Color(1f, 0.35f, 0.38f, 1f);
             iconImage.raycastTarget = false;
 
-            var discardLabel = CreateText(zone.transform, "DiscardLabel", "DISCARD", 10, TextAnchor.MiddleCenter);
+            var discardLabel = CreateText(zone.transform, "DiscardLabel", "DISCARD", 11, TextAnchor.MiddleCenter);
             discardLabel.color = new Color(1f, 0.78f, 0.78f, 1f);
             discardLabel.raycastTarget = false;
-            SetPosition(discardLabel.GetComponent<RectTransform>(), new Vector2(0f, -31f), new Vector2(0.5f, 0.5f),
-                new Vector2(74f, 20f), new Vector2(0.5f, 0.5f));
+            SetPosition(discardLabel.GetComponent<RectTransform>(), new Vector2(0f, -24f), new Vector2(0.5f, 0.5f),
+                new Vector2(74f, 18f), new Vector2(0.5f, 0.5f));
 
             var button = zone.GetComponent<Button>();
             button.interactable = false;
@@ -1344,26 +1390,28 @@ namespace TrashTD.UI
 
         private Button CreateDeckSlot(Transform parent, string objectName)
         {
-            var button = CreateButton(parent, objectName, "", new Vector2(115f, 130f));
+            // Sized 104x114 to fit inside the 123px slot bay, leaving margin to dividers and
+            // keeping the bottom ledge (with slot numbers 1-8) completely visible.
+            var button = CreateButton(parent, objectName, "", new Vector2(104f, 114f));
             var image = button.GetComponent<Image>();
             image.sprite = CreateTrapezoidSprite();
-            image.color = new Color(0.06f, 0.07f, 0.10f, 1f);
+            image.color = new Color(0.06f, 0.07f, 0.10f, 0f);
             image.type = Image.Type.Simple;
 
             var label = button.GetComponentInChildren<Text>();
             if (label != null)
             {
-                label.fontSize = 12;
+                label.fontSize = 11;
                 label.horizontalOverflow = HorizontalWrapMode.Wrap;
                 label.verticalOverflow = VerticalWrapMode.Truncate;
                 label.resizeTextForBestFit = true;
-                label.resizeTextMinSize = 9;
-                label.resizeTextMaxSize = 12;
+                label.resizeTextMinSize = 8;
+                label.resizeTextMaxSize = 11;
                 label.color = Color.white;
 
                 RectTransform labelRect = label.GetComponent<RectTransform>();
-                labelRect.anchorMin = new Vector2(0.04f, 0.02f);
-                labelRect.anchorMax = new Vector2(0.96f, 0.30f);
+                labelRect.anchorMin = new Vector2(0.06f, 0.03f);
+                labelRect.anchorMax = new Vector2(0.94f, 0.28f);
                 labelRect.offsetMin = Vector2.zero;
                 labelRect.offsetMax = Vector2.zero;
             }
@@ -1371,7 +1419,7 @@ namespace TrashTD.UI
             var portraitObject = new GameObject("OperatorPortrait", typeof(RectTransform), typeof(Image));
             portraitObject.transform.SetParent(button.transform, false);
             RectTransform portraitRect = portraitObject.GetComponent<RectTransform>();
-            portraitRect.anchorMin = new Vector2(0.08f, 0.32f);
+            portraitRect.anchorMin = new Vector2(0.08f, 0.30f);
             portraitRect.anchorMax = new Vector2(0.92f, 0.94f);
             portraitRect.offsetMin = Vector2.zero;
             portraitRect.offsetMax = Vector2.zero;
@@ -1383,8 +1431,8 @@ namespace TrashTD.UI
             var labelBackground = new GameObject("OperatorLabelBackground", typeof(RectTransform), typeof(Image));
             labelBackground.transform.SetParent(button.transform, false);
             RectTransform labelBackgroundRect = labelBackground.GetComponent<RectTransform>();
-            labelBackgroundRect.anchorMin = new Vector2(0.04f, 0.02f);
-            labelBackgroundRect.anchorMax = new Vector2(0.96f, 0.30f);
+            labelBackgroundRect.anchorMin = new Vector2(0.06f, 0.03f);
+            labelBackgroundRect.anchorMax = new Vector2(0.94f, 0.28f);
             labelBackgroundRect.offsetMin = Vector2.zero;
             labelBackgroundRect.offsetMax = Vector2.zero;
             Image labelBackgroundImage = labelBackground.GetComponent<Image>();
@@ -1407,8 +1455,8 @@ namespace TrashTD.UI
             badgeRect.anchorMin = new Vector2(1f, 0.36f);
             badgeRect.anchorMax = new Vector2(1f, 0.36f);
             badgeRect.pivot = new Vector2(0.5f, 0.5f);
-            badgeRect.sizeDelta = new Vector2(30f, 30f);
-            badgeRect.anchoredPosition = new Vector2(-4f, 0f);
+            badgeRect.sizeDelta = new Vector2(24f, 24f);
+            badgeRect.anchoredPosition = new Vector2(-6f, 0f);
 
             backgroundImage = badge.GetComponent<Image>();
             backgroundImage.raycastTarget = false;
@@ -2071,7 +2119,7 @@ namespace TrashTD.UI
                 }
                 else
                 {
-                    Color emptyColor = new Color(0.06f, 0.07f, 0.10f, 0.5f);
+                    Color emptyColor = new Color(0.06f, 0.07f, 0.10f, 0f);
                     deckButtonLabels[i].text = "";
                     deckPortraitImages[i].sprite = null;
                     deckPortraitImages[i].enabled = false;
@@ -2419,6 +2467,20 @@ namespace TrashTD.UI
         private void UpdateAnimations(float dt, float time)
         {
             float k = 1f - Mathf.Exp(-8f * dt);
+
+            // Deck background sprite-sheet animation (~12 fps)
+            if (deckBgAnimImage != null && deckBgSprites != null && deckBgSprites.Length > 1)
+            {
+                const float deckBgFps = 12f;
+                deckBgAnimTime += dt;
+                int newFrame = Mathf.FloorToInt(deckBgAnimTime * deckBgFps) % deckBgSprites.Length;
+                if (newFrame != deckBgAnimFrame)
+                {
+                    deckBgAnimFrame = newFrame;
+                    if (deckBgSprites[deckBgAnimFrame] != null)
+                        deckBgAnimImage.sprite = deckBgSprites[deckBgAnimFrame];
+                }
+            }
 
             // Phase color follows the current phase (text + wave progress strip)
             if (phaseText != null) phaseText.color = Color.Lerp(phaseText.color, phaseColorTarget, k);
