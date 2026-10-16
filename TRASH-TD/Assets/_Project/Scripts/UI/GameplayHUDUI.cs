@@ -1897,8 +1897,18 @@ namespace TrashTD.UI
 
             if (!isActiveAndEnabled || gameManager.CurrentStage == null) yield break;
             StageData stage = gameManager.CurrentStage;
+
+            // The sandbox shows the briefing for the environment of the map it runs on.
+            string environmentStageId = stageBootstrapper != null ? stageBootstrapper.EnvironmentStageId : stage.stageId;
+            string environmentName = stage.mapName;
+            if (environmentStageId != stage.stageId)
+            {
+                StageData environmentStage = Resources.Load<StageData>("Stages/" + environmentStageId);
+                if (environmentStage != null) environmentName = environmentStage.mapName;
+            }
+
             string effectDescription;
-            switch (stage.stageId)
+            switch (environmentStageId)
             {
                 case "STAGE_03":
                     effectDescription =
@@ -1908,13 +1918,13 @@ namespace TrashTD.UI
                 case "STAGE_06":
                     effectDescription =
                         "Acid rain periodically deals 3 physical damage to deployed operators " +
-                        "and active enemies every 2 seconds. Operators are protected during Preparation.";
+                        "and active enemies every 2 seconds while a wave is running. Operators are protected between waves.";
                     break;
                 default:
                     yield break;
             }
 
-            environmentBriefingDescription.text = $"{stage.mapName}\n\n{effectDescription}";
+            environmentBriefingDescription.text = $"{environmentName}\n\n{effectDescription}";
             environmentBriefingPanel.SetActive(true);
         }
 

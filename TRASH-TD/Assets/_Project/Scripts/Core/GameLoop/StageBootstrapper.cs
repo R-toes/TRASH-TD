@@ -95,6 +95,12 @@ namespace TrashTD.Core.GameLoop
 
         public bool IsSandbox => stageData != null && stageData.stageId == "SANDBOX";
 
+        /// <summary>
+        /// Stage whose environment (combat modifiers, weather visuals and damage, animated background) is active.
+        /// The sandbox uses the environment of the map it is running on.
+        /// </summary>
+        public string EnvironmentStageId => IsSandbox ? SandboxMapStageId : stageData != null ? stageData.stageId : null;
+
         private void Awake()
         {
             if (gridManager == null) gridManager = FindFirstObjectByType<GridManager>() ?? gameObject.AddComponent<GridManager>();
@@ -142,7 +148,7 @@ namespace TrashTD.Core.GameLoop
                     stageData.enemyPaths = mapSource.enemyPaths;
                 }
             }
-            TrashTD.Combat.StageCombatModifiers.ConfigureForStage(stageData);
+            TrashTD.Combat.StageCombatModifiers.ConfigureForEnvironment(EnvironmentStageId);
 
             if (stageData == null)
             {
@@ -160,11 +166,11 @@ namespace TrashTD.Core.GameLoop
             CenterCameraOnGrid();
 
             // Acid rain remains a Stage 6 effect; Stage 3 uses its sandstorm combat modifiers.
-            if (stageData.stageId == "STAGE_03")
+            if (EnvironmentStageId == "STAGE_03")
             {
                 CreateStage3SandstormVisuals();
             }
-            else if (stageData.stageId == "STAGE_06")
+            else if (EnvironmentStageId == "STAGE_06")
             {
                 CreateStage6AcidRain();
             }
@@ -251,7 +257,7 @@ namespace TrashTD.Core.GameLoop
                 0,
                 targetBottomLeft,
                 true,
-                stageData.stageId == "STAGE_03");
+                EnvironmentStageId == "STAGE_03");
 
             Sprite mapSprite = stageData.mapVisualSprite;
             DrawMapArtworkLayer(gridContainer.transform, mapSprite, "MapArtwork", 1, targetBottomLeft, false);
@@ -973,9 +979,17 @@ namespace TrashTD.Core.GameLoop
 
         private void UpdateStage6AcidRainDamage()
         {
-            if (stageData == null || stageData.stageId != "STAGE_06" ||
+            if (EnvironmentStageId != "STAGE_06" ||
                 gameManager == null || gameManager.CurrentState != GamePlayState.Playing)
             {
+                return;
+            }
+
+            // Acid rain only hurts while a wave is running (the sandbox has no waves, so it always rains there).
+            // Between waves the timer restarts so nothing ticks during Card Pick / Preparation.
+            if (!IsSandbox && gameManager.CurrentPhase != StagePhase.WaveActive)
+            {
+                weatherDamageTimer = 0f;
                 return;
             }
 

@@ -54,6 +54,42 @@ namespace TrashTD.Tests
         }
 
         [Test]
+        public void CardPickPhase_BlocksDamageAndHealing()
+        {
+            SetPhase(StagePhase.CardPick);
+
+            sniper.TakeDamage(20, DamageType.Physical);
+            sniper.Heal(20);
+
+            Assert.IsTrue(sniper.IsCombatPaused);
+            Assert.AreEqual(sniper.MaxHP, sniper.CurrentHP);
+            Assert.IsFalse(sniper.TryTakeAttackDamage(20, DamageType.Physical));
+        }
+
+        [Test]
+        public void BetweenWaves_BubbleShieldIsNotPopped()
+        {
+            SetPhase(StagePhase.Preparation);
+            var bubbletsObject = new GameObject("TestBubblets");
+            try
+            {
+                BubbletsOperator bubblets = bubbletsObject.AddComponent<BubbletsOperator>();
+                BubbleShield.Apply(sniper, 20, bubblets);
+
+                sniper.TakeDamage(20, DamageType.Physical);
+                SetPhase(StagePhase.CardPick);
+                sniper.TakeDamage(20, DamageType.Physical);
+
+                Assert.IsTrue(BubbleShield.HasActiveShield(sniper));
+                Assert.AreEqual(sniper.MaxHP, sniper.CurrentHP);
+            }
+            finally
+            {
+                Object.DestroyImmediate(bubbletsObject);
+            }
+        }
+
+        [Test]
         public void WaveActivePhase_AllowsDamageAndHealing()
         {
             SetPhase(StagePhase.WaveActive);

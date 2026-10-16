@@ -23,12 +23,16 @@ namespace TrashTD.Operators
         {
             if (!isDeployed) return;
 
-            equippedSkill?.UpdateSkill(Time.deltaTime);
-
             // Heal timing (uses attackInterval as heal tick interval). Stays ready until someone
             // needs healing, so the first heal lands immediately.
             float interval = GetAttackInterval();
             attackTimer = Mathf.Min(attackTimer + Time.deltaTime, interval);
+
+            // No heals between waves.
+            if (IsCombatPaused) return;
+
+            equippedSkill?.UpdateSkill(Time.deltaTime);
+
             if (attackTimer >= interval)
             {
                 OperatorBase healTarget = FindHealTarget();

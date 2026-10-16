@@ -153,6 +153,8 @@ Each asset's `skillDescription` is the authoritative description of that operato
 
 **Stages:** STAGE_01, STAGE_02, STAGE_03, STAGE_06, plus STAGE_SANDBOX (development sandbox with multiple maps; cards can be deployed mid-wave and the squad limit is lifted).
 
+**Stage environments:** Stage 3 = sandstorm (attack intervals ×0.95, 10% miss chance, wind/dust particles, animated background). Stage 6 = acid rain (3 physical damage to operators and enemies every 2 s while a wave runs, rain particles). The sandbox runs the environment of whichever map is selected — key environment checks on `StageBootstrapper.EnvironmentStageId`, not `stageData.stageId` (which is `SANDBOX` there).
+
 ### 7.2 Wave Design Rules
 
 - Each wave is harder than the last, with a **spike every 5 waves**; the **final wave is the hardest**.
@@ -167,6 +169,7 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - `EnemyBase.VisualPosition` — centre of the visible sprite. Aim visuals (projectiles, swipes, damage numbers, health bars) at it, not `transform.position`; game logic (range, grid cells) still uses `transform.position`.
 - `CombatProjectileVisual.Fire(start, EnemyBase target, ...)` follows a moving target — prefer it over the fixed-position overload.
 - `OperatorBase.IgnoresMissMechanic`, `IsCamouflaged`, `IsTargetable` — enemies skip operators that aren't targetable.
+- **Nothing happens between waves.** `OperatorBase.IsCombatPaused` is true in every phase except `WaveActive` (Card Pick and Preparation; never in Sandbox). While paused, operators take no damage of any kind (enemy, trap, weather), receive no healing, gain/lose no shields, and run no attacks, heals or abilities. Any operator with its own `Update`/`TakeDamage` override must respect it.
 - Enemy attack timers are "time since last attack", capped at one interval. Ground melee enemies spawn ready and keep charging while walking, so they **hit their blocker immediately on contact**; air combat enemies and Sand Hulk's frontal slam work the same way. Enemy casters keep their wind-up before the first shot.
 
 ### 7.4 Audio

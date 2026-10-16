@@ -60,11 +60,12 @@ namespace TrashTD.Operators
         public virtual bool IsCamouflaged => false;
         public virtual bool IsTargetable => !IsCamouflaged;
         public IReadOnlyList<EnemyBase> BlockedEnemies => blockedEnemies;
-        // Sandbox stays in Preparation for its whole session (so cards can be deployed mid-wave),
-        // so the preparation damage/healing lock must not apply there.
-        protected bool IsInPreparationPhase =>
+        // Operators are frozen whenever no wave is running (Card Pick and Preparation): no damage (from enemies,
+        // traps or weather), no healing, no shields and no abilities. Sandbox stays in Preparation for its whole
+        // session (so cards can be deployed mid-wave), so the lock must not apply there.
+        public bool IsCombatPaused =>
             GameManager.Instance != null && !GameManager.Instance.IsSandbox &&
-            GameManager.Instance.CurrentPhase == StagePhase.Preparation;
+            GameManager.Instance.CurrentPhase != StagePhase.WaveActive;
 
         /// <summary>
         /// Initialize this operator with data and rarity.
@@ -277,6 +278,15 @@ namespace TrashTD.Operators
         {
             if (!isDeployed) return;
 
+            if (IsCombatPaused)
+            {
+                // Between waves nothing ticks: no trap damage, skills or attacks. The attack stays charged
+                // so the first attack of the next wave isn't delayed.
+                trapDamageTimer = 0f;
+                attackTimer = Mathf.Min(attackTimer + Time.deltaTime, GetAttackInterval());
+                return;
+            }
+
             if (deployedCell != null && deployedCell.TileType == TileType.Trap)
             {
                 trapDamageTimer += Time.deltaTime;
@@ -336,7 +346,7 @@ namespace TrashTD.Operators
         /// </summary>
         public virtual void TakeDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
         {
-            if (IsInPreparationPhase || currentHP <= 0 || rawATK <= 0) return;
+            if (IsCombatPaused || currentHP <= 0 || rawATK <= 0) return;
 
             var shield = GetComponent<BubbleShield>();
             if (shield != null && shield.TryConsume(rawATK, damageType))
@@ -363,7 +373,7 @@ namespace TrashTD.Operators
 
         public bool TryTakeAttackDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
         {
-            if (IsInPreparationPhase) return false;
+            if (IsCombatPaused) return false;
             if (!Combat.StageCombatModifiers.TryAttackHit(transform.position))
                 return false;
 
@@ -376,7 +386,7 @@ namespace TrashTD.Operators
         /// </summary>
         public void Heal(int amount)
         {
-            if (IsInPreparationPhase || !CanReceiveHealing) return;
+            if (IsCombatPaused || !CanReceiveHealing) return;
             ApplyHealing(amount);
         }
 
@@ -387,7 +397,7 @@ namespace TrashTD.Operators
 
         private void ApplyHealing(int amount)
         {
-            if (IsInPreparationPhase || amount <= 0 || currentHP <= 0) return;
+            if (IsCombatPaused || amount <= 0 || currentHP <= 0) return;
 
             int previousHP = currentHP;
             currentHP = Mathf.Min(currentHP + amount, maxHP);

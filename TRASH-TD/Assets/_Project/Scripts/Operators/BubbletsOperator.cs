@@ -42,12 +42,16 @@ namespace TrashTD.Operators
         {
             if (!isDeployed) return;
 
-            equippedSkill?.UpdateSkill(Time.deltaTime);
-
             // Shield cast interval (uses attackInterval as cycle interval, defaulting to 2.0s).
             // Stays ready until a shield target exists, so the first shield is cast immediately.
             float interval = Combat.StageCombatModifiers.GetAttackInterval(data != null ? data.attackInterval : 2.0f);
             attackTimer = Mathf.Min(attackTimer + Time.deltaTime, interval);
+
+            // No bubbles between waves.
+            if (IsCombatPaused) return;
+
+            equippedSkill?.UpdateSkill(Time.deltaTime);
+
             if (attackTimer >= interval)
             {
                 OperatorBase target = FindShieldTarget();
@@ -64,7 +68,7 @@ namespace TrashTD.Operators
 
         public void Shield(OperatorBase target)
         {
-            if (target == null || !isDeployed) return;
+            if (target == null || !isDeployed || IsCombatPaused) return;
 
             PlayAttackSound();
 
@@ -78,7 +82,8 @@ namespace TrashTD.Operators
                 true,
                 () =>
                 {
-                    if (target != null && target.IsDeployed)
+                    // A bubble still in flight when the wave ends is dropped.
+                    if (target != null && target.IsDeployed && !IsCombatPaused)
                     {
                         BubbleShield.Apply(target, currentATK, this);
                     }

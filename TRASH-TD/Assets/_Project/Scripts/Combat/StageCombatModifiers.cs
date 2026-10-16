@@ -12,7 +12,13 @@ namespace TrashTD.Combat
 
         public static void ConfigureForStage(StageData stageData)
         {
-            IsSandstormActive = stageData != null && stageData.stageId == "STAGE_03";
+            ConfigureForEnvironment(stageData != null ? stageData.stageId : null);
+        }
+
+        /// <summary>Activates the combat modifiers of the given stage's environment (the sandbox passes its map's stage).</summary>
+        public static void ConfigureForEnvironment(string environmentStageId)
+        {
+            IsSandstormActive = environmentStageId == "STAGE_03";
         }
 
         public static float GetAttackInterval(float baseInterval)

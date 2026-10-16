@@ -17,7 +17,7 @@ namespace TrashTD.Operators
 
         public override void TakeDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
         {
-            if (IsInPreparationPhase) return;
+            if (IsCombatPaused) return;
 
             base.TakeDamage(rawATK, damageType, attacker);
 

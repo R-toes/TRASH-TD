@@ -54,6 +54,8 @@ namespace TrashTD.Operators
 
         public override void TakeDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
         {
+            if (IsCombatPaused) return;
+
             base.TakeDamage(rawATK, damageType, attacker);
 
             // When attacked by an enemy, gain camouflage for 5 seconds
