@@ -88,7 +88,8 @@ namespace TrashTD.Editor
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Bubblets.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Progeny.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Stagger.asset"),
-                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Defender_Thornchin.asset")
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Defender_Thornchin.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Ignisaur.asset")
             };
 
             // Assign Tile Sprites
@@ -368,6 +369,45 @@ namespace TrashTD.Editor
                 stagger.skillDescription =
                     "Passive - Six-Limb Slugger: When attacking, strikes all blocked enemies on his tile and adjacent tiles simultaneously (including enemies blocked by allies on his sides or back). If no enemies are blocked, attacks a single target in range.";
                 EditorUtility.SetDirty(stagger);
+            }
+
+            // 1e. Guard (Ignisaur)
+            var ignisaurFrame0 = LoadSprite("Ignisaur-Sheet.png", "Ignisaur-Sheet_0") ?? LoadSprite("Ignisaur-Sheet.png", "Ignisaur_0");
+            var ignisaurFrame1 = LoadSprite("Ignisaur-Sheet.png", "Ignisaur-Sheet_1") ?? LoadSprite("Ignisaur-Sheet.png", "Ignisaur_1");
+            var ignisaurFrame2 = LoadSprite("Ignisaur-Sheet.png", "Ignisaur-Sheet_2") ?? LoadSprite("Ignisaur-Sheet.png", "Ignisaur_2");
+            var ignisaurFrame3 = LoadSprite("Ignisaur-Sheet.png", "Ignisaur-Sheet_3") ?? LoadSprite("Ignisaur-Sheet.png", "Ignisaur_3");
+            if (ignisaurFrame0 != null && ignisaurFrame1 != null && ignisaurFrame2 != null && ignisaurFrame3 != null)
+            {
+                var ignisaurFrames = new[] { ignisaurFrame0, ignisaurFrame1, ignisaurFrame2, ignisaurFrame3 };
+                var ignisaurPrefab = CreateIgnisaurPrefab(ignisaurFrames);
+                var ignisaur = CreateOperator(
+                    "OP_Guard_Ignisaur",
+                    "Ignisaur",
+                    OperatorClass.Guard,
+                    OperatorPosition.Melee,
+                    OperatorRarity.Star2,
+                    hp: 115,
+                    atk: 60,
+                    def: 18,
+                    res: 10,
+                    blockCount: 1,
+                    range: 2,
+                    interval: 1.2f,
+                    dp: 11,
+                    new[]
+                    {
+                        new Vector2Int(1, 0),
+                        new Vector2Int(1, 1),
+                        new Vector2Int(1, -1),
+                        new Vector2Int(2, 0)
+                    },
+                    ignisaurFrame0,
+                    ignisaurPrefab);
+                ignisaur.damageType = DamageType.Arts;
+                ignisaur.roleTags = new[] { "Arts", "Melee", "Anti-Air" };
+                ignisaur.skillDescription =
+                    "Passive - Protean: Deals Physical damage with a melee slash to enemies on his tile, and Arts damage with ranged attacks to all forward and surrounding tiles in range. Can attack aerial/drone enemies. Reduces attack interval when not blocking, and increases ATK by 25% when blocking.";
+                EditorUtility.SetDirty(ignisaur);
             }
 
             // 2. Defender (Bulkhead)
@@ -757,6 +797,45 @@ namespace TrashTD.Editor
             spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
             spriteRenderer.sortingOrder = 5;
             go.AddComponent<ThornchinOperator>();
+            var animation = go.AddComponent<OperatorSpriteAnimation>();
+            animation.Configure(frames);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        private static GameObject CreateIgnisaurPrefab(Sprite[] frames)
+        {
+            const string prefabName = "Prefab_OP_Guard_Ignisaur";
+            string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null)
+            {
+                var existingAnim = existing.GetComponent<OperatorSpriteAnimation>();
+                if (existingAnim == null)
+                {
+                    existingAnim = existing.AddComponent<OperatorSpriteAnimation>();
+                }
+                existingAnim.Configure(frames);
+                var existingSr = existing.GetComponent<SpriteRenderer>();
+                if (existingSr != null && frames != null && frames.Length > 0 && frames[0] != null)
+                {
+                    existingSr.sprite = frames[0];
+                }
+                if (existing.GetComponent<IgnisaurOperator>() == null)
+                {
+                    existing.AddComponent<IgnisaurOperator>();
+                }
+                EditorUtility.SetDirty(existing);
+                return existing;
+            }
+
+            var go = new GameObject(prefabName);
+            var spriteRenderer = go.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
+            spriteRenderer.sortingOrder = 5;
+            go.AddComponent<IgnisaurOperator>();
             var animation = go.AddComponent<OperatorSpriteAnimation>();
             animation.Configure(frames);
 

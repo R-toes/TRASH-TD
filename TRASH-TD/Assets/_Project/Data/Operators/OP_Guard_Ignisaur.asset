@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
+  m_Name: OP_Guard_Ignisaur
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
+  operatorName: Ignisaur
+  operatorClass: 0
+  baseRarity: 2
+  position: 0
+  roleTags:
+  - Arts
+  - Melee
+  - Anti-Air
+  baseHP: 115
+  baseATK: 75
+  baseDEF: 18
+  baseRES: 10
+  blockCount: 1
+  attackRange: 2
+  attackInterval: 1.2
+  rangePattern:
+  - {x: 1, y: 0}
+  - {x: 1, y: 1}
+  - {x: 1, y: -1}
+  - {x: 2, y: 0}
+  damageType: 1
+  drawTwoCardsOnDeath: 0
+  bonusWhenIsolated: 0
+  isolatedAttackMultiplier: 1.5
+  skillDescription: 'Passive - Protean: Reduces attack interval when not blocking, and increases ATK by 25% when blocking. Deals Physical damage with a melee slash to enemies on his tile, and Arts damage with ranged attacks to all forward tiles in range.'
+  chillPerHit: 0
+  chillSlowMultiplier: 0.65
+  chillSlowDuration: 2.5
+  chillFreezeThreshold: 100
+  chillFreezeDuration: 1.5
+  dpCost: 11
+  redeployCooldown: 60
+  portrait: {fileID: -1820305707, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
+  operatorPrefab: {fileID: 8120733290429841632, guid: f9a8b7c6d5e432109876543210abcdef, type: 3}

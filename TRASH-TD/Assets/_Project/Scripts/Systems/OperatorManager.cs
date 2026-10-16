@@ -136,7 +136,8 @@ namespace TrashTD.Systems
                    (opData.operatorName == "Deadeye" && !(opComp is DeadeyeOperator)) ||
                    (opData.operatorName == "Chillpath" && !(opComp is ChillpathOperator)) ||
                    (opData.operatorName == "Coalesce" && !(opComp is CoalesceOperator)) ||
-                   ((opData.operatorName == "Proxishot" || opData.operatorName == "Proxyshot") && !(opComp is ProxishotOperator));
+                   ((opData.operatorName == "Proxishot" || opData.operatorName == "Proxyshot") && !(opComp is ProxishotOperator)) ||
+                   (opData.operatorName == "Ignisaur" && !(opComp is IgnisaurOperator));
         }
 
         private OperatorBase AddClassComponent(GameObject obj, OperatorData opData)
@@ -192,6 +193,10 @@ namespace TrashTD.Systems
             if (opData != null && (opData.operatorName == "Proxishot" || opData.operatorName == "Proxyshot"))
             {
                 return obj.AddComponent<ProxishotOperator>();
+            }
+            if (opData != null && opData.operatorName == "Ignisaur")
+            {
+                return obj.AddComponent<IgnisaurOperator>();
             }
 
             OperatorClass opClass = opData != null ? opData.operatorClass : OperatorClass.Guard;
