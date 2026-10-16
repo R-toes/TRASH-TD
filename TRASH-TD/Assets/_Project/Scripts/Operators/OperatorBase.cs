@@ -177,7 +177,7 @@ namespace TrashTD.Operators
             PlayAttackSound();
             CombatProjectileVisual.Fire(
                 transform.position,
-                target.transform.position,
+                target,
                 new Color(1f, 0.9f, 0.35f),
                 12f,
                 0.1f,

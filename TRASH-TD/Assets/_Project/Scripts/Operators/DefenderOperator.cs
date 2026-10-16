@@ -15,7 +15,7 @@ namespace TrashTD.Operators
         {
             if (target == null || !isDeployed) return;
 
-            MeleeSwipeVisual.Play(transform.position, target.transform.position, new Color(0.55f, 0.9f, 1f, 1f));
+            MeleeSwipeVisual.Play(transform.position, target.VisualPosition, new Color(0.55f, 0.9f, 1f, 1f));
             base.Attack(target);
         }
 

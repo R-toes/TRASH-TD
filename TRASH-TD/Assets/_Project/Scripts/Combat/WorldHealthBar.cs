@@ -1,4 +1,5 @@
 using UnityEngine;
+using TrashTD.Enemies;
 
 namespace TrashTD.Combat
 {
@@ -17,6 +18,7 @@ namespace TrashTD.Combat
         private float healthRatio = 1f;
         private int sortingLayerId;
         private int sortingOrder = 30;
+        private EnemyBase enemy;
 
         public static void UpdateFor(GameObject target, int currentHP, int maxHP)
         {
@@ -37,7 +39,18 @@ namespace TrashTD.Combat
         {
             if (background != null && fill != null) return;
 
-            SpriteRenderer spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+            enemy = GetComponent<EnemyBase>();
+            SpriteRenderer spriteRenderer = null;
+            SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null && renderers[i].enabled && renderers[i].sprite != null)
+                {
+                    spriteRenderer = renderers[i];
+                    break;
+                }
+            }
+
             if (spriteRenderer != null)
             {
                 verticalOffset = spriteRenderer.bounds.extents.y + BarOffset;
@@ -54,7 +67,8 @@ namespace TrashTD.Combat
         {
             if (background == null || !background.gameObject.activeSelf) return;
 
-            Vector3 center = transform.position + Vector3.up * verticalOffset;
+            Vector3 center = (enemy != null ? enemy.VisualPosition : transform.position) +
+                Vector3.up * verticalOffset;
             center.z = transform.position.z - 0.05f;
             background.SetPosition(0, center + Vector3.left * (BarWidth * 0.5f));
             background.SetPosition(1, center + Vector3.right * (BarWidth * 0.5f));

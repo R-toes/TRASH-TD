@@ -33,7 +33,7 @@ namespace TrashTD.Operators
         {
             if (target == null || !isDeployed) return;
 
-            MeleeSwipeVisual.Play(transform.position, target.transform.position, SpineColor);
+            MeleeSwipeVisual.Play(transform.position, target.VisualPosition, SpineColor);
             base.Attack(target);
         }
 
@@ -42,7 +42,7 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             Vector3 startPos = transform.position;
-            Vector3 targetPos = target.transform.position;
+            Vector3 targetPos = target.VisualPosition;
             float distance = Vector3.Distance(startPos, targetPos);
 
             if (distance <= 1.5f)
@@ -56,7 +56,7 @@ namespace TrashTD.Operators
                 // Ranged attacker retaliation: shoot an urchin quill projectile
                 CombatProjectileVisual.Fire(
                     startPos,
-                    targetPos,
+                    target,
                     SpineColor,
                     14f,
                     0.09f,

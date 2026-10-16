@@ -45,7 +45,7 @@ namespace TrashTD.Operators
                 bool isIsolated = !HasAdjacentOperator();
                 MeleeSwipeVisual.PlayStab(
                     transform.position,
-                    target.transform.position,
+                    target.VisualPosition,
                     isIsolated
                         ? new Color(0.12f, 0.008f, 0.015f, 1f)
                         : new Color(0.22f, 0.015f, 0.025f, 1f));
@@ -56,7 +56,7 @@ namespace TrashTD.Operators
                     int attackPower = Mathf.RoundToInt(currentATK * Mathf.Max(1f, data.isolatedAttackMultiplier));
                     CombatProjectileVisual.Fire(
                         transform.position,
-                        target.transform.position,
+                        target,
                         new Color(1f, 0.2f, 0.15f),
                         12f,
                         0.08f,
@@ -72,7 +72,7 @@ namespace TrashTD.Operators
                 return;
             }
 
-            MeleeSwipeVisual.Play(transform.position, target.transform.position, new Color(1f, 0.78f, 0.3f, 1f));
+            MeleeSwipeVisual.Play(transform.position, target.VisualPosition, new Color(1f, 0.78f, 0.3f, 1f));
             base.Attack(target);
         }
 

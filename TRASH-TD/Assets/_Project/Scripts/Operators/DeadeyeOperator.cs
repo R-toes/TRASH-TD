@@ -105,7 +105,7 @@ namespace TrashTD.Operators
 
             CombatProjectileVisual.Fire(
                 transform.position,
-                target.transform.position,
+                target,
                 projectileColor,
                 14f,
                 0.16f,

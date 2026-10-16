@@ -907,11 +907,24 @@ namespace TrashTD.Editor
                 EditorUtility.SetDirty(sandHulk);
             }
 
-            var casterSprite = LoadSprite("tex_enemy_caster.png");
+            var smogCasterFrames = LoadSpriteFrames("smog caster sheet.png", "smog caster sheet", 8);
+            bool hasAllSmogCasterFrames = true;
+            for (int i = 0; i < smogCasterFrames.Length; i++)
+                hasAllSmogCasterFrames &= smogCasterFrames[i] != null;
+
+            var casterSprite = hasAllSmogCasterFrames
+                ? smogCasterFrames[0]
+                : LoadSprite("tex_enemy_caster.png");
             var casterPrefab = CreateOrGetEnemyPrefab("Prefab_Enemy_Caster", casterSprite, EnemyArchetype.Caster);
-            CreateEnemy("Enemy_Caster_Smog", "Smog Caster", EnemyArchetype.Caster, EnemyMovementType.Ground,
+            var smogCaster = CreateEnemy("Enemy_Caster_Smog", "Smog Caster", EnemyArchetype.Caster, EnemyMovementType.Ground,
                 hp: 110, atk: 35, def: 10, res: 15, speed: 0.85f, isUnblockable: true,
                 casterSprite, casterPrefab);
+            if (hasAllSmogCasterFrames)
+            {
+                smogCaster.animationFrames = smogCasterFrames;
+                smogCaster.animationFrameRate = 8f;
+            }
+            EditorUtility.SetDirty(smogCaster);
 
             var sandPonchoSprite = LoadSprite("Sand Poncho Enemy Sheet.png", "Sand Poncho Enemy Sheet_0");
             var sandPoncho = CreateEnemy("Enemy_Caster_SandPoncho", "Sand Poncho", EnemyArchetype.Caster,
@@ -927,11 +940,25 @@ namespace TrashTD.Editor
                 8);
             EditorUtility.SetDirty(sandPoncho);
 
-            var flyerSprite = LoadSprite("tex_enemy_flyer.png");
+            var acidFlyerFrames = LoadSpriteFrames("acid flyer sheet.png", "acid flyer sheet", 8);
+            bool hasAllAcidFlyerFrames = true;
+            for (int i = 0; i < acidFlyerFrames.Length; i++)
+                hasAllAcidFlyerFrames &= acidFlyerFrames[i] != null;
+
+            var flyerSprite = hasAllAcidFlyerFrames
+                ? acidFlyerFrames[0]
+                : LoadSprite("tex_enemy_flyer.png");
             var flyerPrefab = CreateOrGetEnemyPrefab("Prefab_Enemy_Flyer", flyerSprite, EnemyArchetype.Flyer);
-            CreateEnemy("Enemy_Flyer_Acid", "Acid Flyer", EnemyArchetype.Flyer, EnemyMovementType.Air,
+            var acidFlyer = CreateEnemy("Enemy_Flyer_Acid", "Acid Flyer", EnemyArchetype.Flyer, EnemyMovementType.Air,
                 hp: 80, atk: 25, def: 5, res: 10, speed: 1.25f, isUnblockable: true,
                 flyerSprite, flyerPrefab);
+            acidFlyer.visualOffset = new Vector3(0f, 0.75f, 0f);
+            if (hasAllAcidFlyerFrames)
+            {
+                acidFlyer.animationFrames = acidFlyerFrames;
+                acidFlyer.animationFrameRate = 8f;
+            }
+            EditorUtility.SetDirty(acidFlyer);
         }
 
         private static EnemyData CreateEnemy(string assetName, string displayName, EnemyArchetype archetype,

@@ -76,7 +76,7 @@ namespace TrashTD.Operators
             {
                 CombatProjectileVisual.Fire(
                     transform.position,
-                    target.transform.position,
+                    target,
                     new Color(0.35f, 0.8f, 1f),
                     8.5f,
                     0.2f,
@@ -88,7 +88,7 @@ namespace TrashTD.Operators
 
             CombatProjectileVisual.Fire(
                 transform.position,
-                target.transform.position,
+                target,
                 new Color(0.74f, 0.38f, 1f),
                 5.5f,
                 0.26f,
@@ -127,7 +127,7 @@ namespace TrashTD.Operators
 
             if (EnemyManager.Instance == null || splashRadius <= 0f) return;
 
-            AoeBlastVisual.PlayCircle(target.transform.position, splashRadius, new Color(0.74f, 0.38f, 1f, 0.5f));
+            AoeBlastVisual.PlayCircle(target.VisualPosition, splashRadius, new Color(0.74f, 0.38f, 1f, 0.5f));
 
             var splashTargets = EnemyManager.Instance.GetEnemiesInRadius(target.transform.position, splashRadius, data.position);
             int secondaryAtk = Mathf.RoundToInt(currentATK * splashDamageRatio * GetDamageMultiplier());

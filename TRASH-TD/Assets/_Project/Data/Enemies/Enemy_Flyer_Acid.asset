@@ -26,5 +26,16 @@ MonoBehaviour:
   isUnblockable: 1
   blockWeight: 1
   lifePointCost: 1
-  sprite: {fileID: 21300000, guid: b2222222222222222222222222222205, type: 3}
+  sprite: {fileID: -8987417843591626518, guid: b3924cabde49e2d4a9638e1f9dcae783, type: 3}
+  animationFrames:
+  - {fileID: -8987417843591626518, guid: b3924cabde49e2d4a9638e1f9dcae783, type: 3}
+  - {fileID: -5161502854174544358, guid: b3924cabde49e2d4a9638e1f9dcae783, type: 3}
+  - {fileID: -5287884072185185028, guid: b3924cabde49e2d4a9638e1f9dcae783, type: 3}
+  - {fileID: 7117058271807663987, guid: b3924cabde49e2d4a9638e1f9dcae783, type: 3}
+  - {fileID: 4260847680896173505, guid: b3924cabde49e2d4a9638e1f9dcae783, type: 3}
+  - {fileID: -293191490540632015, guid: b3924cabde49e2d4a9638e1f9dcae783, type: 3}
+  - {fileID: -1443709074429842544, guid: b3924cabde49e2d4a9638e1f9dcae783, type: 3}
+  - {fileID: 2247870921653927585, guid: b3924cabde49e2d4a9638e1f9dcae783, type: 3}
+  animationFrameRate: 8
+  visualOffset: {x: 0, y: 0.75, z: 0}
   enemyPrefab: {fileID: 9005451285246291141, guid: e4d1d87d2bc16634c81d7c93e58b8db0, type: 3}

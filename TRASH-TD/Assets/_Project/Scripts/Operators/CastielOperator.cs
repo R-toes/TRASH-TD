@@ -49,7 +49,7 @@ namespace TrashTD.Operators
                 PlayAttackSound();
                 laser = LightLaserVisual.Fire(
                     transform,
-                    target.transform,
+                    target,
                     new Color(1f, 0.98f, 0.65f, 1f),
                     DamageTickInterval,
                     ApplyBeamTick);

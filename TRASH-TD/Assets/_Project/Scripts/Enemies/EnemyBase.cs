@@ -91,6 +91,26 @@ namespace TrashTD.Enemies
         public bool IsDead => isDead;
         public bool IsFrozen => isFrozen;
         public bool IsStunned => isStunned;
+        public Vector3 VisualPosition
+        {
+            get
+            {
+                if (animationRenderers == null)
+                    animationRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+
+                for (int i = 0; i < animationRenderers.Length; i++)
+                {
+                    SpriteRenderer renderer = animationRenderers[i];
+                    if (renderer != null && renderer.enabled && renderer.gameObject.activeInHierarchy &&
+                        renderer.sprite != null)
+                    {
+                        return renderer.bounds.center;
+                    }
+                }
+
+                return transform.position;
+            }
+        }
         public float ChillAmount => chillAmount;
         public EnemyMovementType MovementType => data.movementType;
         public float DistanceToGoal
@@ -680,7 +700,7 @@ namespace TrashTD.Enemies
             int actualDamage = previousHP - currentHP;
             if (actualDamage > 0)
             {
-                FloatingCombatNumber.Show(transform.position, actualDamage, damageType);
+                FloatingCombatNumber.Show(VisualPosition, actualDamage, damageType);
                 WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
             }
 
@@ -705,7 +725,7 @@ namespace TrashTD.Enemies
             if (data != null && data.operatorAttackMissChance > 0f &&
                 !Combat.StageCombatModifiers.TryAttackHit(data.operatorAttackMissChance))
             {
-                FloatingCombatNumber.ShowMiss(transform.position);
+                FloatingCombatNumber.ShowMiss(VisualPosition);
                 return false;
             }
 
@@ -775,7 +795,7 @@ namespace TrashTD.Enemies
             {
                 attackTimer = 0f;
                 PlayAttackSound();
-                MeleeSwipeVisual.Play(transform.position, blockingOperator.transform.position, new Color(1f, 0.35f, 0.25f, 1f));
+                MeleeSwipeVisual.Play(VisualPosition, blockingOperator.transform.position, new Color(1f, 0.35f, 0.25f, 1f));
                 blockingOperator.TryTakeAttackDamage(currentATK, data.damageType, this);
             }
         }
@@ -851,7 +871,7 @@ namespace TrashTD.Enemies
             if (!isStunned)
             {
                 isStunned = true;
-                Combat.FloatingCombatNumber.ShowText(transform.position, "STUNNED!", new Color(1f, 0.9f, 0.2f));
+                Combat.FloatingCombatNumber.ShowText(VisualPosition, "STUNNED!", new Color(1f, 0.9f, 0.2f));
             }
 
             UpdateChillVisual();

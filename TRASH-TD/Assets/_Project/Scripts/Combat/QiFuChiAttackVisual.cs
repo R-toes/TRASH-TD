@@ -14,7 +14,7 @@ namespace TrashTD.Combat
         private SpriteRenderer glowRenderer;
         private Vector3 startPosition;
         private Vector3 targetPosition;
-        private Transform target;
+        private EnemyBase target;
         private float travelDuration;
         private float elapsed;
         private bool isImpacting;
@@ -36,7 +36,7 @@ namespace TrashTD.Combat
         private void Initialize(Vector3 start, EnemyBase enemyTarget, Func<bool> callback)
         {
             startPosition = start;
-            target = enemyTarget.transform;
+            target = enemyTarget;
             targetPosition = GetFollowPosition();
             travelDuration = Mathf.Clamp(Vector3.Distance(start, targetPosition) / 12f, 0.06f, 0.14f);
             onImpact = callback;
@@ -69,6 +69,9 @@ namespace TrashTD.Combat
 
             if (!isImpacting)
             {
+                if (target != null)
+                    targetPosition = GetFollowPosition();
+
                 float progress = Mathf.Clamp01(elapsed / travelDuration);
                 transform.position = Vector3.Lerp(startPosition, targetPosition, progress);
                 if (progress < 1f)
@@ -102,7 +105,7 @@ namespace TrashTD.Combat
 
         private Vector3 GetFollowPosition()
         {
-            Vector3 position = target != null ? target.position : targetPosition;
+            Vector3 position = target != null ? target.VisualPosition : targetPosition;
             position.z -= 0.15f;
             return position;
         }

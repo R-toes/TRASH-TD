@@ -19,14 +19,14 @@ namespace TrashTD.Operators
 
             MeleeSwipeVisual.Play(
                 transform.position,
-                target.transform.position,
+                target.VisualPosition,
                 new Color(0.55f, 0.08f, 0.16f, 1f),
                 1.8f);
             PlayAttackSound();
 
             CombatProjectileVisual.Fire(
                 transform.position,
-                target.transform.position,
+                target,
                 new Color(0.9f, 0.12f, 0.24f),
                 12f,
                 0.1f,

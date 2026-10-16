@@ -62,7 +62,7 @@ namespace TrashTD.Operators
 
                     MeleeSwipeVisual.Play(
                         transform.position,
-                        enemy.transform.position,
+                        enemy.VisualPosition,
                         new Color(1f, 0.45f, 0.1f, 1f));
 
                     int damage = DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(enemy));
@@ -76,7 +76,7 @@ namespace TrashTD.Operators
             PlayAttackSound();
             MeleeSwipeVisual.Play(
                 transform.position,
-                target.transform.position,
+                target.VisualPosition,
                 new Color(1f, 0.78f, 0.3f, 1f));
 
             int singleDamage = DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));

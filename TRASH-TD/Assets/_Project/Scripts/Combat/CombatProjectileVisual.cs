@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using TrashTD.Enemies;
 
 namespace TrashTD.Combat
 {
@@ -10,6 +11,8 @@ namespace TrashTD.Combat
         private static Material sharedTrailMaterial;
 
         private Vector3 targetPosition;
+        private EnemyBase targetEnemy;
+        private Vector3 targetOffset;
         private float speed;
         private SpriteRenderer spriteRenderer;
         private bool burstOnImpact;
@@ -28,6 +31,22 @@ namespace TrashTD.Combat
             Action onImpact = null)
         {
             Spawn(start, target, GetProjectileSprite(), color, color, speed, size, trailWidth, burstOnImpact, onImpact);
+        }
+
+        public static void Fire(
+            Vector3 start,
+            EnemyBase target,
+            Color color,
+            float speed,
+            float size,
+            float trailWidth,
+            bool burstOnImpact = false,
+            Action onImpact = null)
+        {
+            if (target == null) return;
+
+            Spawn(start, target.VisualPosition, GetProjectileSprite(), color, color, speed, size,
+                trailWidth, burstOnImpact, onImpact, target);
         }
 
         public static void FireSand(
@@ -60,7 +79,9 @@ namespace TrashTD.Combat
             float size,
             float trailWidth,
             bool burstOnImpact,
-            Action onImpact)
+            Action onImpact,
+            EnemyBase targetEnemy = null,
+            Vector3 targetOffset = default)
         {
             GameObject projectile = new GameObject("CombatProjectileVisual");
             projectile.transform.position = start;
@@ -83,6 +104,8 @@ namespace TrashTD.Combat
 
             CombatProjectileVisual visual = projectile.AddComponent<CombatProjectileVisual>();
             visual.targetPosition = target;
+            visual.targetEnemy = targetEnemy;
+            visual.targetOffset = targetOffset;
             visual.speed = speed;
             visual.spriteRenderer = spriteRenderer;
             visual.burstOnImpact = burstOnImpact;
@@ -100,7 +123,8 @@ namespace TrashTD.Combat
             float size,
             float trailWidth,
             int pelletCount,
-            Action onImpact = null)
+            Action onImpact = null,
+            EnemyBase aimTarget = null)
         {
             if (pelletCount <= 0 || range <= 0f || direction.sqrMagnitude <= Mathf.Epsilon) return;
 
@@ -112,9 +136,17 @@ namespace TrashTD.Combat
                     ? 0.5f
                     : i / (float)(pelletCount - 1);
                 float lateralOffset = Mathf.Lerp(minSpreadOffset, maxSpreadOffset, normalizedPosition);
-                Vector3 pelletTarget = start + direction * range + perpendicular * lateralOffset;
-                Fire(start, pelletTarget, color, speed, size, trailWidth, false,
-                    i == pelletCount - 1 ? onImpact : null);
+                Action pelletImpact = i == pelletCount - 1 ? onImpact : null;
+                if (aimTarget != null)
+                {
+                    Spawn(start, aimTarget.VisualPosition, GetProjectileSprite(), color, color, speed, size,
+                        trailWidth, false, pelletImpact, aimTarget, perpendicular * lateralOffset);
+                }
+                else
+                {
+                    Vector3 pelletTarget = start + direction * range + perpendicular * lateralOffset;
+                    Fire(start, pelletTarget, color, speed, size, trailWidth, false, pelletImpact);
+                }
             }
         }
 
@@ -134,6 +166,9 @@ namespace TrashTD.Combat
                 }
                 return;
             }
+
+            if (targetEnemy != null)
+                targetPosition = targetEnemy.VisualPosition + targetOffset;
 
             Vector3 toTarget = targetPosition - transform.position;
             float step = speed * Time.deltaTime;

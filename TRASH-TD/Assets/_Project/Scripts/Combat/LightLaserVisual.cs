@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using TrashTD.Enemies;
 
 namespace TrashTD.Combat
 {
@@ -8,6 +9,7 @@ namespace TrashTD.Combat
         private static Material sharedMaterial;
         private Transform source;
         private Transform target;
+        private EnemyBase targetEnemy;
         private float tickInterval;
         private float tickTimer;
         private Action onTick;
@@ -33,6 +35,17 @@ namespace TrashTD.Combat
             visual.line = line;
             visual.UpdateLine();
             return visual;
+        }
+
+        public static LightLaserVisual Fire(Transform source, EnemyBase target, Color color, float tickInterval, Action tick)
+        {
+            if (target == null)
+                return null;
+
+            var laser = Fire(source, target.transform, color, tickInterval, tick);
+            laser.targetEnemy = target;
+            laser.UpdateLine();
+            return laser;
         }
 
         private LineRenderer line;
@@ -63,7 +76,7 @@ namespace TrashTD.Combat
         private void UpdateLine()
         {
             line.SetPosition(0, source.position);
-            line.SetPosition(1, target.position);
+            line.SetPosition(1, targetEnemy != null ? targetEnemy.VisualPosition : target.position);
         }
 
         private static Material GetMaterial()
