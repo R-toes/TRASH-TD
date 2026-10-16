@@ -102,6 +102,7 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 2. **Prefer minimal, targeted changes** over broad rewrites when modifying existing code.
 3. **If an implementation choice isn't determined by the GDD** (e.g., exact stat numbers, exact Unity packages, specific skill effects), flag it as a decision point rather than picking silently.
 4. **Keep this file updated** if Raim makes design decisions in later sessions that supersede a "not yet defined" placeholder.
+   **Every major commit must update this file in the same commit** — new operators/enemies/stages, rule changes, new systems, reworks or balance passes. Update the affected sections (especially §7) and mention it in the commit description. If you pull someone else's major commit that skipped this, update the file before your next commit.
 5. **Pathfinding must use A\*** — this is an explicit technical requirement, not a suggestion.
 6. **All maps are grid-based** and selected non-linearly (Bloons TD style), with 3 difficulty variants each:
 
