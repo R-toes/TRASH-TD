@@ -221,6 +221,14 @@ namespace TrashTD.Systems
             OnEnemyReachedExit?.Invoke(enemy);
         }
 
+        public void RegisterActiveEnemyForTesting(EnemyBase enemy)
+        {
+            if (enemy != null && !activeEnemies.Contains(enemy))
+            {
+                activeEnemies.Add(enemy);
+            }
+        }
+
         /// <summary>
         /// Get all enemies currently inside any of the specified grid cells.
         /// </summary>

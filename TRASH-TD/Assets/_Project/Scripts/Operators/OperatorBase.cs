@@ -56,6 +56,9 @@ namespace TrashTD.Operators
         public OperatorClass OperatorClass => data.operatorClass;
         public virtual bool CanReceiveHealing => true;
         public virtual bool CanHitAir => data != null && (data.position == OperatorPosition.Ranged || data.operatorClass == OperatorClass.Caster);
+        public virtual bool IgnoresMissMechanic => false;
+        public virtual bool IsCamouflaged => false;
+        public virtual bool IsTargetable => !IsCamouflaged;
         public IReadOnlyList<EnemyBase> BlockedEnemies => blockedEnemies;
         // Sandbox stays in Preparation for its whole session (so cards can be deployed mid-wave),
         // so the preparation damage/healing lock must not apply there.

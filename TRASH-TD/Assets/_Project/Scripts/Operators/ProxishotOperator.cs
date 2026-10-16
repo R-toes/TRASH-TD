@@ -9,37 +9,101 @@ using TrashTD.Systems;
 namespace TrashTD.Operators
 {
     /// <summary>
-    /// Short-range physical sniper that fires a fan of pellets and damages a small area.
-    /// Trait: For every enemy type killed, Increase attack by 3% (cap at 5 stacks) (resets when retreated).
+    /// Proxyshot — Short-range physical sniper that fires a fan of pellets in a spread.
+    /// Talent: Ignores the miss mechanic (attacks never miss).
+    /// When attacked by an enemy, gains Camouflage for 5 seconds (cannot be targeted by enemies, lower sprite opacity).
     /// </summary>
     public class ProxishotOperator : SniperOperator
     {
+        public const float CamouflageDuration = 5.0f;
+        public const float CamouflageAlpha = 0.45f;
         private const int PelletCount = 9;
-        private const int MaxKillBonusStacks = 5;
-        private const float AtkBonusPerType = 0.03f;
 
-        private readonly HashSet<string> killedEnemyTypes = new HashSet<string>();
+        private float camouflageTimer;
+        private SpriteRenderer spriteRenderer;
 
-        public int KilledTypeCount => killedEnemyTypes.Count;
+        public override bool IgnoresMissMechanic => true;
 
-        public override int CurrentATK
+        public override bool IsCamouflaged => camouflageTimer > 0f;
+
+        public float CamouflageTimeRemaining => Mathf.Max(0f, camouflageTimer);
+
+        private void Awake()
         {
-            get
+            spriteRenderer = GetComponent<SpriteRenderer>();
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            if (camouflageTimer > 0f)
             {
-                int stacks = Mathf.Min(MaxKillBonusStacks, killedEnemyTypes.Count);
-                return Mathf.RoundToInt(base.CurrentATK * (1f + (stacks * AtkBonusPerType)));
+                camouflageTimer -= Time.deltaTime;
+                if (camouflageTimer <= 0f)
+                {
+                    camouflageTimer = 0f;
+                    SetSpriteAlpha(1.0f);
+                }
+                else
+                {
+                    SetSpriteAlpha(CamouflageAlpha);
+                }
+            }
+        }
+
+        public override void TakeDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
+        {
+            base.TakeDamage(rawATK, damageType, attacker);
+
+            // When attacked by an enemy, gain camouflage for 5 seconds
+            if (attacker != null && currentHP > 0)
+            {
+                ActivateCamouflage();
+            }
+        }
+
+        public void ActivateCamouflage()
+        {
+            bool wasCamouflaged = IsCamouflaged;
+            camouflageTimer = CamouflageDuration;
+            SetSpriteAlpha(CamouflageAlpha);
+
+            if (!wasCamouflaged)
+            {
+                FloatingCombatNumber.ShowText(transform.position + Vector3.up * 0.6f, "CAMOUFLAGE!", new Color(0.6f, 0.9f, 1f));
+            }
+        }
+
+        private void SetSpriteAlpha(float alpha)
+        {
+            if (spriteRenderer == null)
+            {
+                spriteRenderer = GetComponent<SpriteRenderer>();
+            }
+
+            if (spriteRenderer != null)
+            {
+                Color color = spriteRenderer.color;
+                if (!Mathf.Approximately(color.a, alpha))
+                {
+                    color.a = alpha;
+                    spriteRenderer.color = color;
+                }
             }
         }
 
         protected override void OnDeployed()
         {
-            killedEnemyTypes.Clear();
             base.OnDeployed();
+            camouflageTimer = 0f;
+            SetSpriteAlpha(1.0f);
         }
 
         protected override void OnRetreated()
         {
-            killedEnemyTypes.Clear();
+            camouflageTimer = 0f;
+            SetSpriteAlpha(1.0f);
             base.OnRetreated();
         }
 
@@ -102,28 +166,8 @@ namespace TrashTD.Operators
                 var inRangeTarget = targets[i];
                 if (inRangeTarget == null || inRangeTarget.IsDead) continue;
 
-                EnemyData enemyData = inRangeTarget.Data;
-                int hpBefore = inRangeTarget.CurrentHP;
-
                 int damage = DamageCalculator.CalculateDamage(CurrentATK, inRangeTarget.CurrentDEF);
-                bool hit = inRangeTarget.TryTakeAttackDamage(damage, DamageType.Physical, this);
-
-                if (hit && hpBefore > 0 && (inRangeTarget == null || inRangeTarget.IsDead || inRangeTarget.CurrentHP <= 0))
-                {
-                    RecordKilledEnemy(enemyData);
-                }
-            }
-        }
-
-        private void RecordKilledEnemy(EnemyData enemyData)
-        {
-            if (enemyData == null) return;
-
-            string typeKey = !string.IsNullOrEmpty(enemyData.enemyName) ? enemyData.enemyName : enemyData.archetype.ToString();
-            if (killedEnemyTypes.Add(typeKey))
-            {
-                int currentStacks = Mathf.Min(MaxKillBonusStacks, killedEnemyTypes.Count);
-                FloatingCombatNumber.ShowText(transform.position + Vector3.up * 0.6f, $"+3% ATK ({currentStacks}/5)", new Color(1f, 0.85f, 0.3f));
+                inRangeTarget.TryTakeAttackDamage(damage, DamageType.Physical, this);
             }
         }
 

@@ -28,6 +28,16 @@ namespace TrashTD.Operators
 
         protected override EnemyBase FindTarget()
         {
+            return FindTargetInternal(null);
+        }
+
+        public virtual EnemyBase FindAdditionalTarget(EnemyBase excludeTarget)
+        {
+            return FindTargetInternal(excludeTarget);
+        }
+
+        private EnemyBase FindTargetInternal(EnemyBase excludeTarget)
+        {
             if (EnemyManager.Instance == null || deployedCell == null || data == null || data.rangePattern == null)
                 return null;
 
@@ -45,7 +55,7 @@ namespace TrashTD.Operators
             for (int i = 0; i < candidates.Count; i++)
             {
                 var candidate = candidates[i];
-                if (candidate == null || candidate.IsDead) continue;
+                if (candidate == null || candidate.IsDead || candidate == excludeTarget) continue;
 
                 var splashGroup = EnemyManager.Instance.GetEnemiesInRadius(candidate.transform.position, splashRadius, data.position);
                 int count = splashGroup != null ? splashGroup.Count : 1;
@@ -71,11 +81,19 @@ namespace TrashTD.Operators
             if (target == null || !isDeployed) return;
 
             PlayAttackSound();
+            FireAttackProjectile(target);
+        }
 
-            if (data.chillPerHit > 0f)
+        protected virtual void FireAttackProjectile(EnemyBase target, Vector3 startOffset = default)
+        {
+            if (target == null) return;
+
+            Vector3 startPos = transform.position + startOffset;
+
+            if (data != null && data.chillPerHit > 0f)
             {
                 CombatProjectileVisual.Fire(
-                    transform.position,
+                    startPos,
                     target,
                     new Color(0.35f, 0.8f, 1f),
                     8.5f,
@@ -87,7 +105,7 @@ namespace TrashTD.Operators
             }
 
             CombatProjectileVisual.Fire(
-                transform.position,
+                startPos,
                 target,
                 new Color(0.74f, 0.38f, 1f),
                 5.5f,
@@ -95,6 +113,18 @@ namespace TrashTD.Operators
                 0.2f,
                 false,
                 () => ApplyArtsImpact(target));
+        }
+
+        public void ApplyAttackImpact(EnemyBase target)
+        {
+            if (data != null && data.chillPerHit > 0f)
+            {
+                ApplyChillImpact(target);
+            }
+            else
+            {
+                ApplyArtsImpact(target);
+            }
         }
 
         protected virtual float GetDamageMultiplier() => 1f;

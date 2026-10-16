@@ -37,7 +37,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Applies chill to slow and freeze enemies. Decreases attack interval after applying freeze.'
+  skillDescription: 'Applies chill to slow and freeze enemies. Decreases attack interval after applying freeze. Every 4th attack hits an additional target in range (or the current target if no other target is in range).'
   chillPerHit: 30
   chillSlowMultiplier: 0.5
   chillSlowDuration: 2.5

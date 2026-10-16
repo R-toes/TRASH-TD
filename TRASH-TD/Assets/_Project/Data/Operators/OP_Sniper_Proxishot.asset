@@ -31,7 +31,15 @@ MonoBehaviour:
   - {x: 1, y: 0}
   - {x: 1, y: 1}
   damageType: 0
-  skillDescription: 'For every enemy type killed, increases ATK by 3% (cap at 5 stacks, resets when retreated).'
+  drawTwoCardsOnDeath: 0
+  bonusWhenIsolated: 0
+  isolatedAttackMultiplier: 1.5
+  skillDescription: 'Octo-Scatter: Ignores miss mechanic of both enemies and stage. When attacked gains Camouflage for 5 seconds.'
+  chillPerHit: 0
+  chillSlowMultiplier: 0.65
+  chillSlowDuration: 2.5
+  chillFreezeThreshold: 100
+  chillFreezeDuration: 1.5
   dpCost: 13
   redeployCooldown: 60
   portrait: {fileID: 4798833663072170488, guid: 323ca61e4bd2cd24199506d2ec39cad4, type: 3}

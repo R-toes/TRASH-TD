@@ -452,7 +452,7 @@ namespace TrashTD.Enemies
             for (int i = 0; i < deployed.Count; i++)
             {
                 OperatorBase op = deployed[i];
-                if (op == null || !op.IsDeployed) continue;
+                if (op == null || !op.IsDeployed || !op.IsTargetable) continue;
 
                 float sqrDistance = (op.transform.position - transform.position).sqrMagnitude;
                 if (sqrDistance > sqrRange) continue;
@@ -719,14 +719,18 @@ namespace TrashTD.Enemies
                 data != null && data.movementType == EnemyMovementType.Air)
                 return false;
 
-            if (!Combat.StageCombatModifiers.TryAttackHit(transform.position))
-                return false;
-
-            if (data != null && data.operatorAttackMissChance > 0f &&
-                !Combat.StageCombatModifiers.TryAttackHit(data.operatorAttackMissChance))
+            bool ignoresMiss = attacker != null && attacker.IgnoresMissMechanic;
+            if (!ignoresMiss)
             {
-                FloatingCombatNumber.ShowMiss(VisualPosition);
-                return false;
+                if (!Combat.StageCombatModifiers.TryAttackHit(transform.position))
+                    return false;
+
+                if (data != null && data.operatorAttackMissChance > 0f &&
+                    !Combat.StageCombatModifiers.TryAttackHit(data.operatorAttackMissChance))
+                {
+                    FloatingCombatNumber.ShowMiss(VisualPosition);
+                    return false;
+                }
             }
 
             TakeDamage(damage, damageType);

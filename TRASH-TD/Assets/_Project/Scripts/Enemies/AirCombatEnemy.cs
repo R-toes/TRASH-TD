@@ -139,7 +139,7 @@ namespace TrashTD.Enemies
 
         private bool IsValidTarget(OperatorBase op)
         {
-            return op != null && op.IsDeployed && IsTargetable(op) && IsTargetInRange(op);
+            return op != null && op.IsDeployed && op.IsTargetable && IsTargetable(op) && IsTargetInRange(op);
         }
 
         /// <summary>A point slightly ahead along the remaining path (the flyer's own position if none).</summary>
