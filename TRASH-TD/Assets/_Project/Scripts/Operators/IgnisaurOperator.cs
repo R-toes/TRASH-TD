@@ -49,14 +49,14 @@ namespace TrashTD.Operators
             if (isOwnTile)
             {
                 // Physical melee slash on own tile
-                AudioManager.Instance?.PlaySfx(SfxId.GameplayMeleeAttack);
+                PlayAttackSound(SfxId.GameplayMeleeAttack);
                 MeleeSwipeVisual.Play(transform.position, target.VisualPosition, SlashColor);
                 ApplyDamage(target, DamageType.Physical);
             }
             else
             {
                 // Arts ranged projectile on all range tiles (yellow front tile and green tiles)
-                AudioManager.Instance?.PlaySfx(SfxId.GameplayMagicAttack);
+                PlayAttackSound(SfxId.GameplayMagicAttack);
                 CombatProjectileVisual.Fire(
                     transform.position,
                     target,
@@ -67,6 +67,18 @@ namespace TrashTD.Operators
                     burstOnImpact: true,
                     () => ApplyDamage(target, DamageType.Arts));
             }
+        }
+
+        /// <summary>
+        /// Ignisaur's own Attack clip, else the shared sound for this hit's damage type
+        /// (its slash is Physical even though its data damage type is Arts).
+        /// </summary>
+        private void PlayAttackSound(SfxId fallback)
+        {
+            if (data == null || AudioManager.Instance == null) return;
+            if (UnitSfx.Play(data, UnitSfxEvent.Attack)) return;
+
+            AudioManager.Instance.PlaySfx(fallback);
         }
 
         public DamageType GetDamageTypeForTarget(EnemyBase target)
