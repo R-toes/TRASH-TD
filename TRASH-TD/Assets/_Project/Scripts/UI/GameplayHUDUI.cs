@@ -28,6 +28,9 @@ namespace TrashTD.UI
         private static Sprite cooldownClockSprite;
         private static Sprite waveMarkSprite;
         private static Sprite enemySkullSprite;
+        private static Sprite trashIconSprite;
+        private static Sprite pauseIconSprite;
+        private static Sprite exitIconSprite;
         private static readonly Dictionary<OperatorClass, Sprite> ClassIconSprites = new Dictionary<OperatorClass, Sprite>();
 
         // ── Palette ──────────────────────────────────────────
@@ -429,12 +432,23 @@ namespace TrashTD.UI
             selectedOperatorHealthFillRect.offsetMin = Vector2.zero;
             selectedOperatorHealthFillRect.offsetMax = Vector2.zero;
 
-            retreatOperatorButton = CreateButton(root, "RetreatOperatorButton", "↶", new Vector2(44f, 44f));
+            retreatOperatorButton = CreateButton(root, "RetreatOperatorButton", string.Empty, new Vector2(44f, 44f));
             SetPosition(retreatOperatorButton.GetComponent<RectTransform>(), new Vector2(185f, 0f), new Vector2(0.5f, 0.5f));
             retreatOperatorButton.GetComponent<Image>().color = new Color(0.7f, 0.2f, 0.18f, 1f);
             SetPlacementButtonStyle(retreatOperatorButton, new Color(0.7f, 0.2f, 0.18f, 1f), 28);
             retreatOperatorButton.onClick.AddListener(RetreatSelectedOperator);
             retreatFeedback = AttachFeedback(retreatOperatorButton, new Color(1f, 0.45f, 0.4f, 1f), 1.1f);
+
+            var exitIcon = GetExitIconSprite();
+            if (exitIcon != null)
+            {
+                CreateIconImage(retreatOperatorButton.transform, "Icon", exitIcon, Color.white, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(24f, 24f), new Vector2(0.5f, 0.5f));
+            }
+            else
+            {
+                var label = retreatOperatorButton.GetComponentInChildren<Text>();
+                if (label != null) label.text = "↶";
+            }
 
             selectedOperatorLabelRoot.SetActive(false);
             retreatOperatorButton.gameObject.SetActive(false);
@@ -1020,10 +1034,21 @@ namespace TrashTD.UI
             waveProgressFill.raycastTarget = false;
 
             // Pause button (top-left)
-            var pauseButton = CreateButton(stageInfoPanel.transform, "PauseButton", "||", new Vector2(50f, 50f));
+            var pauseButton = CreateButton(stageInfoPanel.transform, "PauseButton", string.Empty, new Vector2(50f, 50f));
             SetPosition(pauseButton.GetComponent<RectTransform>(), new Vector2(20f, -45f), new Vector2(0f, 1f), new Vector2(50f, 50f), new Vector2(0f, 0.5f));
             pauseButton.onClick.AddListener(PauseGame);
             StyleButton(pauseButton, DarkButton, Color.white, 1.08f);
+
+            var pauseIcon = GetPauseIconSprite();
+            if (pauseIcon != null)
+            {
+                CreateIconImage(pauseButton.transform, "Icon", pauseIcon, Color.white, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(26f, 26f), new Vector2(0.5f, 0.5f));
+            }
+            else
+            {
+                var label = pauseButton.GetComponentInChildren<Text>();
+                if (label != null) label.text = "||";
+            }
 
             phaseHeaderText = CreateText(stageInfoPanel.transform, "PhaseHeaderText", "PHASE", 28, TextAnchor.MiddleLeft);
             SetPosition(phaseHeaderText.GetComponent<RectTransform>(), new Vector2(95f, -28f), new Vector2(0f, 1f), new Vector2(220f, 32f), new Vector2(0f, 0.5f));
@@ -1615,6 +1640,9 @@ namespace TrashTD.UI
 
         private static Sprite CreateCooldownClockSprite()
         {
+            if (cooldownClockSprite != null) return cooldownClockSprite;
+
+            cooldownClockSprite = LoadIconSprite("icon_clock");
             if (cooldownClockSprite != null) return cooldownClockSprite;
 
             const int size = 16;
@@ -2817,8 +2845,40 @@ namespace TrashTD.UI
             return image;
         }
 
+        private static Sprite LoadIconSprite(string iconName)
+        {
+            var sprite = Resources.Load<Sprite>("UI/icons/" + iconName);
+            if (sprite != null) return sprite;
+
+            var tex = Resources.Load<Texture2D>("UI/icons/" + iconName);
+            if (tex != null)
+            {
+                tex.filterMode = FilterMode.Point;
+                return Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), Mathf.Max(tex.width, tex.height));
+            }
+
+            return null;
+        }
+
+        private static Sprite GetPauseIconSprite()
+        {
+            if (pauseIconSprite != null) return pauseIconSprite;
+            pauseIconSprite = LoadIconSprite("icon_pause");
+            return pauseIconSprite;
+        }
+
+        private static Sprite GetExitIconSprite()
+        {
+            if (exitIconSprite != null) return exitIconSprite;
+            exitIconSprite = LoadIconSprite("icon_exit");
+            return exitIconSprite;
+        }
+
         private static Sprite GetWaveMarkSprite()
         {
+            if (waveMarkSprite != null) return waveMarkSprite;
+
+            waveMarkSprite = LoadIconSprite("icon_wave");
             if (waveMarkSprite != null) return waveMarkSprite;
 
             const int size = 48;
@@ -2846,6 +2906,9 @@ namespace TrashTD.UI
 
         private static Sprite GetEnemySkullSprite()
         {
+            if (enemySkullSprite != null) return enemySkullSprite;
+
+            enemySkullSprite = LoadIconSprite("icon_skull");
             if (enemySkullSprite != null) return enemySkullSprite;
 
             const int size = 64;
@@ -2894,6 +2957,11 @@ namespace TrashTD.UI
 
         private static Sprite CreateTrashIconSprite()
         {
+            if (trashIconSprite != null) return trashIconSprite;
+
+            trashIconSprite = LoadIconSprite("icon_discard");
+            if (trashIconSprite != null) return trashIconSprite;
+
             const int width = 24;
             const int height = 24;
             var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
