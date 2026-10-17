@@ -53,11 +53,48 @@ namespace TrashTD.Systems
             {
                 gridManager = FindFirstObjectByType<GridManager>();
             }
+
+            SubscribeToGameManager();
+        }
+
+        private void Start()
+        {
+            SubscribeToGameManager();
         }
 
         public void Initialize(GridManager grid)
         {
             gridManager = grid;
+            SubscribeToGameManager();
+        }
+
+        public void SubscribeToGameManager()
+        {
+            if (TrashTD.Core.GameLoop.GameManager.Instance != null)
+            {
+                TrashTD.Core.GameLoop.GameManager.Instance.OnPhaseChanged -= HandlePhaseChanged;
+                TrashTD.Core.GameLoop.GameManager.Instance.OnPhaseChanged += HandlePhaseChanged;
+            }
+        }
+
+        public void HandlePhaseChanged(TrashTD.Core.GameLoop.StagePhase phase)
+        {
+            if (phase == TrashTD.Core.GameLoop.StagePhase.WaveActive)
+            {
+                MarkAllDeployedOperatorsAsFought();
+            }
+        }
+
+        public void MarkAllDeployedOperatorsAsFought()
+        {
+            for (int i = 0; i < deployedOperators.Count; i++)
+            {
+                if (deployedOperators[i] != null)
+                {
+                    deployedOperators[i].HasFoughtInWave = true;
+                    deployedOperators[i].DeployedDuringCurrentPreparation = false;
+                }
+            }
         }
 
         public void RegisterOperator(OperatorBase op)
@@ -70,6 +107,11 @@ namespace TrashTD.Systems
 
         private void OnDestroy()
         {
+            if (TrashTD.Core.GameLoop.GameManager.Instance != null)
+            {
+                TrashTD.Core.GameLoop.GameManager.Instance.OnPhaseChanged -= HandlePhaseChanged;
+            }
+
             if (Instance == this)
             {
                 Instance = null;
@@ -125,6 +167,11 @@ namespace TrashTD.Systems
                 Destroy(opObj);
                 return false;
             }
+
+            bool isWaveActive = TrashTD.Core.GameLoop.GameManager.Instance != null &&
+                TrashTD.Core.GameLoop.GameManager.Instance.CurrentPhase == TrashTD.Core.GameLoop.StagePhase.WaveActive;
+            opComp.HasFoughtInWave = isWaveActive;
+            opComp.DeployedDuringCurrentPreparation = !isWaveActive;
 
             opComp.HeatStacks = card != null ? card.heatStacks : 0;
             opComp.IsBurning = opComp.HeatStacks >= 5;
@@ -232,6 +279,8 @@ namespace TrashTD.Systems
 
         /// <summary>
         /// Retreats an active operator and starts their redeploy cooldown.
+        /// If the operator was deployed and undeployed in the same Preparation phase without fighting,
+        /// redeploy cooldown is 0. Otherwise, normal retreat cooldown applies.
         /// </summary>
         public void RetreatOperator(OperatorBase op)
         {
@@ -239,7 +288,13 @@ namespace TrashTD.Systems
 
             if (SelectedOperator == op) SelectOperator(null);
 
-            int cooldownRounds = op.Data != null ? GetRetreatCooldownRounds(op.OperatorClass) : 0;
+            bool isSandbox = TrashTD.Core.GameLoop.GameManager.Instance != null && TrashTD.Core.GameLoop.GameManager.Instance.IsSandbox;
+            bool isPreparing = isSandbox || TrashTD.Core.GameLoop.GameManager.Instance == null || TrashTD.Core.GameLoop.GameManager.Instance.CurrentPhase == TrashTD.Core.GameLoop.StagePhase.Preparation;
+            bool isPreparationRefund = isSandbox || (isPreparing && op.DeployedDuringCurrentPreparation && !op.HasFoughtInWave);
+
+            int cooldownRounds = (!isPreparationRefund && op.Data != null)
+                ? GetRetreatCooldownRounds(op.OperatorClass)
+                : 0;
 
             DraftCard returnedCard = op.Data != null
                 ? new DraftCard(op.Data, op.CurrentRarity, cooldownRounds, op.HeatStacks)

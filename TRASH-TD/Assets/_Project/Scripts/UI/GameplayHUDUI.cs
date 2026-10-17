@@ -2316,9 +2316,21 @@ namespace TrashTD.UI
 
             Vector3 worldPosition = gameCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, -gameCamera.transform.position.z));
             Vector2Int gridPosition = gridManager.WorldToGridPosition(worldPosition);
-            if (!gridManager.IsInBounds(gridPosition)) return;
+            if (!gridManager.IsInBounds(gridPosition))
+            {
+                stageBootstrapper.CancelOperatorPlacementPreview(card);
+                return;
+            }
 
-            stageBootstrapper.BeginOperatorPlacement(card, gridPosition);
+            GridCell targetCell = gridManager.GetCell(gridPosition);
+            if (targetCell != null && targetCell.CanDeploy(card.operatorData.position))
+            {
+                stageBootstrapper.BeginOperatorPlacement(card, gridPosition);
+            }
+            else
+            {
+                stageBootstrapper.CancelOperatorPlacementPreview(card);
+            }
         }
 
         private void HandleDeckCardDrag(int slotIndex, Vector2 screenPosition)

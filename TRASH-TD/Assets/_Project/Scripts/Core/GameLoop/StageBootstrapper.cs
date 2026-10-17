@@ -92,6 +92,35 @@ namespace TrashTD.Core.GameLoop
         private OperatorFacing placementFacing = OperatorFacing.Right;
         private bool isPlacementPreviewActive;
         private bool isOperatorRangePreviewActive;
+        private bool isDraggingToDeploy;
+        private Vector3 sweepAnchorWorldPosition;
+
+        public bool IsDraggingToDeploy => isDraggingToDeploy;
+        public OperatorFacing PlacementFacing => placementFacing;
+        public Vector2Int PlacementGridPosition => placementGridPosition;
+        public bool IsPlacementPreviewActive => isPlacementPreviewActive;
+        public DraftCard PendingDeployCard => pendingDeployCard;
+
+        /// <summary>
+        /// Calculates the cardinal operator facing direction from a drag displacement vector.
+        /// Matches Arknights PC Client mouse-tracking logic.
+        /// </summary>
+        public static OperatorFacing CalculateFacingFromDisplacement(Vector2 displacement, OperatorFacing fallback = OperatorFacing.Right)
+        {
+            if (Mathf.Approximately(displacement.x, 0f) && Mathf.Approximately(displacement.y, 0f))
+            {
+                return fallback;
+            }
+
+            if (Mathf.Abs(displacement.x) >= Mathf.Abs(displacement.y))
+            {
+                return displacement.x >= 0f ? OperatorFacing.Right : OperatorFacing.Left;
+            }
+            else
+            {
+                return displacement.y >= 0f ? OperatorFacing.Up : OperatorFacing.Down;
+            }
+        }
 
         public bool IsSandbox => stageData != null && stageData.stageId == "SANDBOX";
 
@@ -518,6 +547,9 @@ namespace TrashTD.Core.GameLoop
                 gameManager == null || (!IsSandbox && gameManager.CurrentPhase != StagePhase.Preparation) ||
                 !gridManager.IsInBounds(gridPosition)) return;
 
+            GridCell targetCell = gridManager.GetCell(gridPosition);
+            if (targetCell == null) return;
+
             bool continuingPlacement = isPlacementPreviewActive && ReferenceEquals(pendingDeployCard, card);
             if (continuingPlacement && placementGridPosition == gridPosition) return;
 
@@ -530,9 +562,50 @@ namespace TrashTD.Core.GameLoop
 
             pendingDeployCard = card;
             placementGridPosition = gridPosition;
+            sweepAnchorWorldPosition = targetCell.WorldPosition;
             if (!continuingPlacement) placementFacing = OperatorFacing.Right;
             isPlacementPreviewActive = true;
+            isDraggingToDeploy = false;
             RefreshPlacementPreview();
+        }
+
+        /// <summary>
+        /// Updates placement during card dragging. Moving across the map updates the hovered tile,
+        /// and dragging away from the tile center sweeps the operator's facing direction.
+        /// </summary>
+        public void UpdateOperatorPlacementDrag(DraftCard card, Vector2Int gridPosition, Vector3 worldPosition)
+        {
+            if (card == null || card.operatorData == null || gridManager == null ||
+                gameManager == null || (!IsSandbox && gameManager.CurrentPhase != StagePhase.Preparation) ||
+                !gridManager.IsInBounds(gridPosition)) return;
+
+            GridCell targetCell = gridManager.GetCell(gridPosition);
+            if (targetCell == null) return;
+
+            bool isNewTile = !isPlacementPreviewActive || !ReferenceEquals(pendingDeployCard, card) || placementGridPosition != gridPosition;
+
+            if (isNewTile)
+            {
+                operatorManager?.SelectOperator(null);
+                isOperatorRangePreviewActive = false;
+                pendingDeployCard = card;
+                placementGridPosition = gridPosition;
+                sweepAnchorWorldPosition = targetCell.WorldPosition;
+                isPlacementPreviewActive = true;
+                RefreshPlacementPreview();
+            }
+
+            Vector2 displacement = (Vector2)(worldPosition - targetCell.WorldPosition);
+            float minSweepDistance = gridManager.CellSize * 0.20f;
+            if (displacement.sqrMagnitude >= minSweepDistance * minSweepDistance)
+            {
+                OperatorFacing newFacing = CalculateFacingFromDisplacement(displacement, placementFacing);
+                if (newFacing != placementFacing)
+                {
+                    placementFacing = newFacing;
+                    RefreshPlacementPreview();
+                }
+            }
         }
 
         public void SetPlacementFacing(OperatorFacing facing)
@@ -546,6 +619,8 @@ namespace TrashTD.Core.GameLoop
         public void ConfirmOperatorPlacement()
         {
             if (!isPlacementPreviewActive || pendingDeployCard == null) return;
+
+            isDraggingToDeploy = false;
 
             if (pendingDeployCard.cooldownRoundsRemaining > 0)
             {
@@ -589,6 +664,7 @@ namespace TrashTD.Core.GameLoop
         public void CancelOperatorPlacement()
         {
             pendingDeployCard = null;
+            isDraggingToDeploy = false;
             HidePlacementPreview();
         }
 
@@ -596,6 +672,7 @@ namespace TrashTD.Core.GameLoop
         {
             if (isPlacementPreviewActive && ReferenceEquals(pendingDeployCard, card))
             {
+                isDraggingToDeploy = false;
                 HidePlacementPreview();
             }
         }
@@ -613,71 +690,121 @@ namespace TrashTD.Core.GameLoop
             }
 
             bool isPreparing = IsSandbox || gameManager.CurrentPhase == StagePhase.Preparation;
-            if (!isPreparing && isPlacementPreviewActive)
+            if (!isPreparing && (isPlacementPreviewActive || isDraggingToDeploy))
             {
                 pendingDeployCard = null;
+                isDraggingToDeploy = false;
                 HidePlacementPreview();
             }
 
             Keyboard keyboard = Keyboard.current;
-            if (isPreparing && isPlacementPreviewActive)
+            Mouse mouse = Mouse.current;
+
+            // Universal cancel: Right-click or Escape cancels active placement or drag
+            if ((keyboard != null && keyboard.escapeKey.wasPressedThisFrame) ||
+                (mouse != null && mouse.rightButton.wasPressedThisFrame))
             {
-                if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
+                if (isPlacementPreviewActive || pendingDeployCard != null || isDraggingToDeploy)
                 {
                     CancelOperatorPlacement();
                     return;
                 }
+            }
 
-                OperatorFacing nextFacing = GetFacingInput(keyboard);
-                if (nextFacing != placementFacing)
+            // 1. Drag-and-Release sweep in progress
+            if (isPreparing && isDraggingToDeploy)
+            {
+                Camera gameCamera = Camera.main;
+                Vector2 mouseScreen = mouse != null ? mouse.position.ReadValue() : Vector2.zero;
+                Vector3 mouseWorld = (gameCamera != null && mouse != null)
+                    ? gameCamera.ScreenToWorldPoint(new Vector3(mouseScreen.x, mouseScreen.y, -gameCamera.transform.position.z))
+                    : sweepAnchorWorldPosition;
+
+                Vector2 displacement = (Vector2)(mouseWorld - sweepAnchorWorldPosition);
+                float minSweepDist = gridManager != null ? gridManager.CellSize * 0.20f : 0.2f;
+
+                if (displacement.sqrMagnitude >= minSweepDist * minSweepDist)
                 {
-                    placementFacing = nextFacing;
-                    RefreshPlacementPreview();
+                    OperatorFacing sweptFacing = CalculateFacingFromDisplacement(displacement, placementFacing);
+                    if (sweptFacing != placementFacing)
+                    {
+                        placementFacing = sweptFacing;
+                        RefreshPlacementPreview();
+                    }
                 }
 
-                bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
-                Vector2Int hoveredPosition = placementGridPosition;
-                bool pointerOnGrid = !pointerOverUI && Mouse.current != null &&
-                    TryGetGridPosition(Mouse.current.position.ReadValue(), out hoveredPosition) &&
-                    gridManager.IsInBounds(hoveredPosition);
-                if (pointerOnGrid && Mouse.current.leftButton.wasPressedThisFrame &&
-                    placementGridPosition != hoveredPosition)
+                // PointerUp: Releasing the mouse button executes the choice, placing the operator
+                if (mouse != null && mouse.leftButton.wasReleasedThisFrame)
                 {
-                    placementGridPosition = hoveredPosition;
-                    RefreshPlacementPreview();
-                }
-
-                bool confirmWithKeyboard = keyboard != null &&
-                    (keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame);
-                if (confirmWithKeyboard)
-                {
+                    isDraggingToDeploy = false;
                     ConfirmOperatorPlacement();
+                    return;
                 }
 
                 return;
             }
 
+            // 2. Pending deployment card selected from deck: Left-clicking and holding on a tile maps to PointerDown
             if (isPreparing && pendingDeployCard != null)
             {
-                if (TryGetGridClick(out Vector2Int gridPosition))
+                bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+                if (!pointerOverUI && mouse != null && mouse.leftButton.wasPressedThisFrame &&
+                    TryGetGridPosition(mouse.position.ReadValue(), out Vector2Int clickedTile) &&
+                    gridManager != null && gridManager.IsInBounds(clickedTile))
                 {
-                    GridCell clickedCell = gridManager.GetCell(gridPosition);
-                    OperatorBase clickedOperator = clickedCell != null && clickedCell.OccupantOperator != null
-                        ? clickedCell.OccupantOperator.GetComponent<OperatorBase>()
+                    GridCell cell = gridManager.GetCell(clickedTile);
+                    OperatorBase clickedOperator = cell != null && cell.OccupantOperator != null
+                        ? cell.OccupantOperator.GetComponent<OperatorBase>()
                         : null;
+
                     if (clickedOperator != null)
                     {
                         HandleOperatorMapSelection(clickedOperator);
+                        return;
                     }
-                    else
+
+                    if (cell != null && cell.CanDeploy(pendingDeployCard.operatorData.position))
                     {
-                        BeginOperatorPlacement(pendingDeployCard, gridPosition);
+                        if (isPlacementPreviewActive && clickedTile == placementGridPosition)
+                        {
+                            // Step 2: Click and hold where the operator is to drag the direction it needs to face
+                            sweepAnchorWorldPosition = cell.WorldPosition;
+                            isDraggingToDeploy = true;
+                            return;
+                        }
+                        else
+                        {
+                            // Step 1: Place or reposition operator preview on desired tile
+                            BeginOperatorPlacement(pendingDeployCard, clickedTile);
+                            return;
+                        }
+                    }
+                }
+
+                // Keyboard confirm fallback
+                bool confirmWithKeyboard = keyboard != null &&
+                    (keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame);
+                if (confirmWithKeyboard && isPlacementPreviewActive)
+                {
+                    ConfirmOperatorPlacement();
+                    return;
+                }
+
+                // Keyboard facing fallback
+                if (isPlacementPreviewActive)
+                {
+                    OperatorFacing nextFacing = GetFacingInput(keyboard);
+                    if (nextFacing != placementFacing)
+                    {
+                        placementFacing = nextFacing;
+                        RefreshPlacementPreview();
                     }
                 }
 
                 return;
             }
 
+            // 3. Normal grid click when no card is pending deployment (select placed operator)
             if (TryGetGridClick(out Vector2Int selectedGridPosition))
             {
                 GridCell clickedCell = gridManager.GetCell(selectedGridPosition);
@@ -1190,8 +1317,7 @@ namespace TrashTD.Core.GameLoop
             DrawCellOutline(targetCell.WorldPosition, placementColor);
             DrawOperatorPreview(targetCell.WorldPosition, pendingDeployCard.operatorData, placementFacing, canDeploy);
             DrawFacingMarker(targetCell.WorldPosition, placementFacing);
-            gameplayHudUI?.SetPlacementControls(true, canDeploy);
-            gameplayHudUI?.SetPlacementControlsPosition(targetCell.WorldPosition);
+            gameplayHudUI?.SetPlacementControls(false);
         }
 
         private void DrawOperatorPreview(Vector3 position, OperatorData opData, OperatorFacing facing, bool canDeploy)
@@ -1265,27 +1391,50 @@ namespace TrashTD.Core.GameLoop
             CreatePreviewLine("PlacementOutline", gridManager.CellSize * 0.045f, color, corners, true);
         }
 
-        private void DrawFacingMarker(Vector3 center, OperatorFacing facing)
+        private void DrawFacingMarker(Vector3 center, OperatorFacing activeFacing)
         {
-            Vector2 forward = facing switch
-            {
-                OperatorFacing.Up => Vector2.up,
-                OperatorFacing.Left => Vector2.left,
-                OperatorFacing.Down => Vector2.down,
-                _ => Vector2.right
-            };
-            Vector2 side = new Vector2(-forward.y, forward.x);
+            if (gridManager == null) return;
             float cellSize = gridManager.CellSize;
-            Vector3 tip = center + (Vector3)(forward * cellSize * 0.36f);
-            Vector3 baseCenter = center + (Vector3)(forward * cellSize * 0.08f);
-            Vector3[] arrow =
+            OperatorFacing[] allFacings = { OperatorFacing.Right, OperatorFacing.Up, OperatorFacing.Left, OperatorFacing.Down };
+
+            foreach (OperatorFacing f in allFacings)
             {
-                tip,
-                baseCenter + (Vector3)(side * cellSize * 0.14f),
-                baseCenter - (Vector3)(side * cellSize * 0.14f)
-            };
-            for (int i = 0; i < arrow.Length; i++) arrow[i].z = 0.06f;
-            CreatePreviewLine("PlacementFacingMarker", cellSize * 0.05f, Color.white, arrow, true);
+                bool isSelected = f == activeFacing;
+                Vector2 forward = f switch
+                {
+                    OperatorFacing.Up => Vector2.up,
+                    OperatorFacing.Left => Vector2.left,
+                    OperatorFacing.Down => Vector2.down,
+                    _ => Vector2.right
+                };
+                Vector2 side = new Vector2(-forward.y, forward.x);
+
+                float distMultiplier = isSelected ? 0.44f : 0.38f;
+                float arrowSize = isSelected ? 0.16f : 0.10f;
+                float lineWidth = isSelected ? cellSize * 0.065f : cellSize * 0.035f;
+                Color arrowColor = isSelected ? new Color(0.15f, 0.95f, 1f, 1f) : new Color(1f, 1f, 1f, 0.35f);
+
+                Vector3 tip = center + (Vector3)(forward * cellSize * distMultiplier);
+                Vector3 baseCenter = center + (Vector3)(forward * cellSize * (distMultiplier - arrowSize));
+                Vector3[] arrow =
+                {
+                    tip,
+                    baseCenter + (Vector3)(side * cellSize * (arrowSize * 0.75f)),
+                    baseCenter - (Vector3)(side * cellSize * (arrowSize * 0.75f))
+                };
+                for (int i = 0; i < arrow.Length; i++) arrow[i].z = 0.06f;
+
+                CreatePreviewLine(isSelected ? "ActiveFacingMarker" : "InactiveFacingMarker", lineWidth, arrowColor, arrow, true);
+
+                if (isSelected)
+                {
+                    Vector3 stemStart = center + (Vector3)(forward * cellSize * 0.12f);
+                    stemStart.z = 0.06f;
+                    Vector3 stemEnd = baseCenter;
+                    stemEnd.z = 0.06f;
+                    CreatePreviewLine("ActiveFacingStem", lineWidth * 0.8f, arrowColor, new[] { stemStart, stemEnd }, false);
+                }
+            }
         }
 
         private void CreatePreviewLine(string objectName, float width, Color color, Vector3[] points, bool closed)

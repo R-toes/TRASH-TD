@@ -64,6 +64,10 @@ namespace TrashTD.Operators
         public virtual bool IsTargetable => !IsCamouflaged;
         public virtual bool HasTaunt => false;
 
+        // --- Deployment & Combat Phase Tracking ---
+        public bool HasFoughtInWave { get; set; } = false;
+        public bool DeployedDuringCurrentPreparation { get; set; } = true;
+
         /// <summary>
         /// Checks whether this operator taunts the specified attacker position.
         /// Ranged enemies prioritize this operator if the attacker is in a surrounding tile.
