@@ -126,9 +126,15 @@ namespace TrashTD.Systems
                 return false;
             }
 
+            opComp.HeatStacks = card != null ? card.heatStacks : 0;
+            opComp.IsBurning = opComp.HeatStacks >= 5;
             deployedOperators.Add(opComp);
             opComp.ApplyFacingVisuals();
             OperatorUpgradeBadge.Show(opComp);
+            if (TrashTD.Combat.StageCombatModifiers.IsHeatHazardActive)
+            {
+                TrashTD.UI.OperatorHeatBar.ShowFor(opComp);
+            }
             deployedInstance = opComp;
             OnOperatorDeployed?.Invoke(opComp);
             return true;
@@ -236,7 +242,7 @@ namespace TrashTD.Systems
             int cooldownRounds = op.Data != null ? GetRetreatCooldownRounds(op.OperatorClass) : 0;
 
             DraftCard returnedCard = op.Data != null
-                ? new DraftCard(op.Data, op.CurrentRarity, cooldownRounds)
+                ? new DraftCard(op.Data, op.CurrentRarity, cooldownRounds, op.HeatStacks)
                 : null;
             deployedOperators.Remove(op);
             OnOperatorRetreated?.Invoke(op);

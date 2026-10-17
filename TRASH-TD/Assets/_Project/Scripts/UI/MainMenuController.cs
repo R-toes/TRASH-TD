@@ -20,6 +20,7 @@ namespace TrashTD.UI
         private const string FirstPlayableStageId = "STAGE_01";
         private const string SecondPlayableStageId = "STAGE_02";
         private const string ThirdPlayableStageId = "STAGE_03";
+        private const string FourthPlayableStageId = "STAGE_04";
         private const string FifthPlayableStageId = "STAGE_05";
         private const string SixthPlayableStageId = "STAGE_06";
         private const string SandboxStageId = "SANDBOX";
@@ -31,6 +32,7 @@ namespace TrashTD.UI
             return stageId == FirstPlayableStageId
                 || stageId == SecondPlayableStageId
                 || stageId == ThirdPlayableStageId
+                || stageId == FourthPlayableStageId
                 || stageId == FifthPlayableStageId
                 || stageId == SixthPlayableStageId
                 || stageId == SandboxStageId;
@@ -660,7 +662,7 @@ namespace TrashTD.UI
                 "Clear the first wave of spreading hazard.",
                 "Hold the line through the trash docks.",
                 "Secure the scrapline junction.",
-                "Reclaim the ruined market district.",
+                "Navigate the factory floor while fending off waves of pollutants.",
                 "Push through the cinder dump.",
                 "Hold the line through the meltdown.",
                 "Development-only map for enemy and operator testing."

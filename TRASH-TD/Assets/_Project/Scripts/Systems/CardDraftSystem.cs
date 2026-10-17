@@ -14,12 +14,14 @@ namespace TrashTD.Systems
         public OperatorData operatorData;
         public OperatorRarity rarity;
         public int cooldownRoundsRemaining;
+        public int heatStacks;
 
-        public DraftCard(OperatorData data, OperatorRarity rarity, int cooldownRoundsRemaining = 0)
+        public DraftCard(OperatorData data, OperatorRarity rarity, int cooldownRoundsRemaining = 0, int heatStacks = 0)
         {
             this.operatorData = data;
             this.rarity = rarity;
             this.cooldownRoundsRemaining = cooldownRoundsRemaining;
+            this.heatStacks = heatStacks;
         }
     }
 

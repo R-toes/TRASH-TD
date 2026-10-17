@@ -171,6 +171,10 @@ namespace TrashTD.Core.GameLoop
             {
                 CreateStage3SandstormVisuals();
             }
+            else if (EnvironmentStageId == "STAGE_04")
+            {
+                CreateStage4HeatHazard();
+            }
             else if (EnvironmentStageId == "STAGE_05")
             {
                 CreateStage5TrafficEncounter();
@@ -1063,6 +1067,14 @@ namespace TrashTD.Core.GameLoop
             encounterObj.transform.SetParent(transform);
             var encounter = encounterObj.AddComponent<Stage5CarEncounter>();
             encounter.Initialize(gridManager, waveManager, enemyManager, operatorManager, stageData);
+        }
+
+        private void CreateStage4HeatHazard()
+        {
+            GameObject hazardObj = new GameObject("Stage4HeatHazard");
+            hazardObj.transform.SetParent(transform);
+            var hazard = hazardObj.AddComponent<Stage4HeatHazard>();
+            hazard.Initialize(gridManager, waveManager, operatorManager, playerDeck, stageData);
         }
 
         private bool TryGetGridClick(out Vector2Int gridPosition)

@@ -1,0 +1,609 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0d1f336f3983b94c9ec7ed405acc69f, type: 3}
+  m_Name: STAGE_04
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.StageData
+  stageId: STAGE_04
+  mapName: Industrial Factory
+  shortDescription: Navigate the factory floor while fending off waves of pollutants.
+  gridWidth: 14
+  gridHeight: 7
+  tileLayout: 0200000002000000020000000200000002000000020000000200000002000000020000000200000002000000020000000200000002000000040000000000000000000000000000000100000002000000010000000100000001000000010000000100000001000000020000000200000001000000010000000100000000000000020000000200000001000000000000000000000000000000000000000100000002000000020000000200000002000000010000000000000002000000020000000100000000000000010000000100000000000000010000000100000002000000020000000200000001000000000000000100000001000000010000000000000001000000010000000000000000000000000000000500000002000000010000000000000000000000000000000000000000000000000000000100000001000000010000000100000001000000020000000200000002000000020000000200000002000000020000000200000002000000020000000200000002000000020000000200000002000000i
+  mapVisualSprite: {fileID: 21300000, guid: d762ec1b32f47094d9b050f80bd56ee7, type: 3}
+  backgroundVisualSprite: {fileID: 0}
+  upperBackgroundVisualSprites: []
+  visualTilePixelSize: 32
+  visualTileOffset: {x: 0, y: 0}
+  foregroundVisualSprite: {fileID: 0}
+  trafficVehicleSprites: []
+  spawnPoints:
+  - {x: 0, y: 1}
+  exitPoints:
+  - {x: 13, y: 4}
+  enemyPaths:
+  - waypoints:
+    - {x: 0, y: 1}
+    - {x: 1, y: 1}
+    - {x: 2, y: 1}
+    - {x: 3, y: 1}
+    - {x: 3, y: 2}
+    - {x: 3, y: 3}
+    - {x: 3, y: 4}
+    - {x: 3, y: 5}
+    - {x: 4, y: 5}
+    - {x: 5, y: 5}
+    - {x: 6, y: 5}
+    - {x: 7, y: 5}
+    - {x: 7, y: 4}
+    - {x: 7, y: 3}
+    - {x: 7, y: 2}
+    - {x: 8, y: 2}
+    - {x: 9, y: 2}
+    - {x: 10, y: 2}
+    - {x: 10, y: 3}
+    - {x: 10, y: 4}
+    - {x: 11, y: 4}
+    - {x: 12, y: 4}
+    - {x: 13, y: 4}
+    spawnPointIndex: 0
+    exitPointIndex: 0
+  lifePointsEasy: 3
+  lifePointsNormal: 3
+  lifePointsHard: 1
+  squadSizeLimit: 8
+  extraStartEnemies: 3
+  wavesEasy:
+  - waveName: Wave 1
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 3
+      startDelay: 0
+      spawnPointIndex: 0
+  - waveName: Wave 2
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 2.8
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 1
+      spawnInterval: 2.8
+      startDelay: 2
+      spawnPointIndex: 0
+  - waveName: 'Wave 3: Rusher Push'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 5
+      spawnInterval: 0.3
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 2.6
+      startDelay: 0
+      spawnPointIndex: 0
+  - waveName: 'Wave 4: Spike'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 2.5
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 0.3
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 5: New Skyshard'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 2.4
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 3
+      spawnInterval: 2.4
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+  - waveName: Wave 6
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 2.3
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 2.3
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+  - waveName: 'Wave 7: Rush'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 7
+      spawnInterval: 0.25
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 7
+      spawnInterval: 0.25
+      startDelay: 4
+      spawnPointIndex: 0
+  - waveName: 'Wave 8: New Talon Rat'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 2.2
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 2.2
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 2
+      spawnPointIndex: 0
+  - waveName: Final Wave
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 2
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 0.25
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 2
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 2.5
+      startDelay: 3
+      spawnPointIndex: 0
+  wavesNormal:
+  - waveName: Wave 1
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 3
+      startDelay: 0
+      spawnPointIndex: 0
+  - waveName: Wave 2
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 2.8
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 2
+      spawnInterval: 2.8
+      startDelay: 2
+      spawnPointIndex: 0
+  - waveName: 'Wave 3: Rusher Push'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 0.25
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 3
+      spawnInterval: 2.6
+      startDelay: 0
+      spawnPointIndex: 0
+  - waveName: 'Wave 4: Spike'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 2.5
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 5
+      spawnInterval: 0.25
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 5: New Skyshard'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 2.4
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 4
+      spawnInterval: 2.4
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+  - waveName: Wave 6
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 2.3
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 5
+      spawnInterval: 2.3
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+  - waveName: 'Wave 7: Rush'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 8
+      spawnInterval: 0.25
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 8
+      spawnInterval: 0.25
+      startDelay: 4
+      spawnPointIndex: 0
+  - waveName: 'Wave 8: New Talon Rat'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 2.2
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 5
+      spawnInterval: 2.2
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 2
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 2
+      spawnPointIndex: 0
+  - waveName: 'Wave 9: Rush'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 8
+      spawnInterval: 0.25
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 8
+      spawnInterval: 0.25
+      startDelay: 4
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 10: New Pollution Tank'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 2.1
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 5
+      spawnInterval: 2.1
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 2
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 2.5
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 11: Air and Armor'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 2
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 2
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 2.5
+      startDelay: 2
+      spawnPointIndex: 0
+  - waveName: 'Wave 12: Rush'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 8
+      spawnInterval: 0.25
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 8
+      spawnInterval: 0.25
+      startDelay: 4
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 0.25
+      startDelay: 8
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 2.5
+      startDelay: 2
+      spawnPointIndex: 0
+  - waveName: Final Wave
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 8
+      spawnInterval: 2
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 8
+      spawnInterval: 0.25
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 2
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 2
+      spawnInterval: 1.6
+      startDelay: 2
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 2
+      spawnInterval: 2.5
+      startDelay: 3
+      spawnPointIndex: 0
+  wavesHard:
+  - waveName: Wave 1
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 5
+      spawnInterval: 2.8
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 2
+      spawnInterval: 0.3
+      startDelay: 0
+      spawnPointIndex: 0
+  - waveName: 'Wave 2: Rusher Push'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 8
+      spawnInterval: 0.25
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 4
+      spawnInterval: 2.5
+      startDelay: 0
+      spawnPointIndex: 0
+  - waveName: 'Wave 3: New Skyshard'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 2.4
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 5
+      spawnInterval: 0.25
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+  - waveName: 'Wave 4: Rush'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 10
+      spawnInterval: 0.25
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 10
+      spawnInterval: 0.25
+      startDelay: 4
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 5: New Talon Rat'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 2.2
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 2.2
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 2
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 1
+      spawnInterval: 1.6
+      startDelay: 2
+      spawnPointIndex: 0
+  - waveName: 'Wave 6: New Pollution Tank'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 6
+      spawnInterval: 2.1
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 6
+      spawnInterval: 2.1
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 2
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 2
+      spawnInterval: 1.6
+      startDelay: 2
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 1
+      spawnInterval: 2.5
+      startDelay: 3
+      spawnPointIndex: 0
+  - waveName: 'Wave 7: Siege'
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 10
+      spawnInterval: 0.25
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 10
+      spawnInterval: 0.25
+      startDelay: 4
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 2
+      spawnInterval: 2.5
+      startDelay: 2
+      spawnPointIndex: 0
+  - waveName: Final Wave
+    preWaveDelay: 3
+    entries:
+    - enemyData: {fileID: 11400000, guid: e6bc27cc176926342a9585b6c15f97bf, type: 2}
+      count: 10
+      spawnInterval: 2
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 81de7f1050c775a4596673009df613f1, type: 2}
+      count: 10
+      spawnInterval: 0.25
+      startDelay: 0
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: 9a3e7c1d5b4f48a6c2d0e8f6b4a1c9d9, type: 2}
+      count: 3
+      spawnInterval: 1.6
+      startDelay: 1.5
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: ab4f8d2c6e1a49b7d3f0e8c5a2b6d9e0, type: 2}
+      count: 3
+      spawnInterval: 1.6
+      startDelay: 2
+      spawnPointIndex: 0
+    - enemyData: {fileID: 11400000, guid: c7fa936f0635e46428569947a7eebcc9, type: 2}
+      count: 3
+      spawnInterval: 2.5
+      startDelay: 3
+      spawnPointIndex: 0
+  timeLimit: 0
+  threeStarCondition: Clear with no life points lost
+  mapPrefab: {fileID: 0}

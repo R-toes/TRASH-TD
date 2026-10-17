@@ -111,12 +111,14 @@ namespace TrashTD.Systems
             slots = slots.OrderBy(slot => deck.GetCard(slot).cooldownRoundsRemaining).Take(copiesFromDeck).ToList();
 
             int cooldownRounds = incomingCard != null ? incomingCard.cooldownRoundsRemaining : 0;
+            int heatStacks = incomingCard != null ? incomingCard.heatStacks : 0;
             foreach (int slot in slots)
             {
                 cooldownRounds = Mathf.Max(cooldownRounds, deck.GetCard(slot).cooldownRoundsRemaining);
+                heatStacks = Mathf.Max(heatStacks, deck.GetCard(slot).heatStacks);
             }
 
-            deck.ReplaceMergedCopies(slots, new DraftCard(opData, nextRarity, cooldownRounds));
+            deck.ReplaceMergedCopies(slots, new DraftCard(opData, nextRarity, cooldownRounds, heatStacks));
             return true;
         }
 

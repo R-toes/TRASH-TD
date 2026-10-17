@@ -313,9 +313,17 @@ namespace TrashTD.Systems
             bool changed = false;
             foreach (DraftCard card in deckSlots)
             {
-                if (card == null || card.cooldownRoundsRemaining <= 0) continue;
-                card.cooldownRoundsRemaining--;
-                changed = true;
+                if (card == null) continue;
+                if (card.cooldownRoundsRemaining > 0)
+                {
+                    card.cooldownRoundsRemaining--;
+                    changed = true;
+                }
+                if (card.heatStacks > 0)
+                {
+                    card.heatStacks = Mathf.Max(0, card.heatStacks - 2);
+                    changed = true;
+                }
             }
 
             int pendingCount = pendingReturnedCards.Count;
@@ -325,6 +333,11 @@ namespace TrashTD.Systems
                 if (card.cooldownRoundsRemaining > 0)
                 {
                     card.cooldownRoundsRemaining--;
+                    changed = true;
+                }
+                if (card.heatStacks > 0)
+                {
+                    card.heatStacks = Mathf.Max(0, card.heatStacks - 2);
                     changed = true;
                 }
                 pendingReturnedCards.Enqueue(card);

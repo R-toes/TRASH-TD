@@ -9,6 +9,7 @@ namespace TrashTD.Combat
         private const float SandstormMissChance = 0.1f;
 
         public static bool IsSandstormActive { get; private set; }
+        public static bool IsHeatHazardActive { get; private set; }
 
         public static void ConfigureForStage(StageData stageData)
         {
@@ -19,6 +20,7 @@ namespace TrashTD.Combat
         public static void ConfigureForEnvironment(string environmentStageId)
         {
             IsSandstormActive = environmentStageId == "STAGE_03";
+            IsHeatHazardActive = environmentStageId == "STAGE_04";
         }
 
         public static float GetAttackInterval(float baseInterval)

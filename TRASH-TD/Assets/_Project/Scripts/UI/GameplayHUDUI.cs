@@ -142,6 +142,8 @@ namespace TrashTD.UI
         private GameObject[] deckClassBadges;
         private GameObject[] deckCooldownBadges;
         private Text[] deckCooldownLabels;
+        private GameObject[] deckHeatBadges;
+        private Text[] deckHeatLabels;
         private GameObject[] deckUpgradeBadges;
         private UpgradeArrowGraphic[] deckUpgradeBadgeLabels;
         private CardDraftSystem draftSystem;
@@ -162,7 +164,7 @@ namespace TrashTD.UI
             {
                 if (environmentBriefingDismissed || gameManager == null || gameManager.CurrentStage == null) return false;
                 string stageId = gameManager.CurrentStage.stageId;
-                return stageId == "STAGE_03" || stageId == "STAGE_06";
+                return stageId == "STAGE_03" || stageId == "STAGE_04" || stageId == "STAGE_06";
             }
         }
 
@@ -1190,6 +1192,8 @@ namespace TrashTD.UI
             deckClassBadges = new GameObject[DeckSlotCount];
             deckCooldownBadges = new GameObject[DeckSlotCount];
             deckCooldownLabels = new Text[DeckSlotCount];
+            deckHeatBadges = new GameObject[DeckSlotCount];
+            deckHeatLabels = new Text[DeckSlotCount];
             deckUpgradeBadges = new GameObject[DeckSlotCount];
             deckUpgradeBadgeLabels = new UpgradeArrowGraphic[DeckSlotCount];
             deckFeedbacks = new MenuButtonFeedback[DeckSlotCount];
@@ -1227,6 +1231,9 @@ namespace TrashTD.UI
                     slotBtn.transform,
                     out _,
                     out deckCooldownLabels[i]);
+                deckHeatBadges[i] = CreateDeckHeatBadge(
+                    slotBtn.transform,
+                    out deckHeatLabels[i]);
                 deckUpgradeBadges[i] = CreateUpgradeBadge(slotBtn.transform, $"DeckUpgradeBadge_{i + 1}", new Vector2(32f, 18f), new Vector2(-4f, -4f));
                 deckUpgradeBadgeLabels[i] = deckUpgradeBadges[i].GetComponentInChildren<UpgradeArrowGraphic>();
                 slotBtn.onClick.AddListener(() => SelectDeckSlot(slotIndex));
@@ -1670,6 +1677,40 @@ namespace TrashTD.UI
             return badge;
         }
 
+        private GameObject CreateDeckHeatBadge(Transform parent, out Text heatText)
+        {
+            var badge = new GameObject("DeckHeatBadge", typeof(RectTransform), typeof(Image));
+            badge.transform.SetParent(parent, false);
+            RectTransform badgeRect = badge.GetComponent<RectTransform>();
+            badgeRect.anchorMin = new Vector2(1f, 0f);
+            badgeRect.anchorMax = new Vector2(1f, 0f);
+            badgeRect.pivot = new Vector2(1f, 0f);
+            badgeRect.sizeDelta = new Vector2(38f, 22f);
+            badgeRect.anchoredPosition = new Vector2(-4f, 4f);
+
+            Image background = badge.GetComponent<Image>();
+            background.color = new Color(0.24f, 0.05f, 0.02f, 0.96f);
+            background.raycastTarget = false;
+
+            Outline outline = badge.AddComponent<Outline>();
+            outline.effectColor = new Color(1f, 0.35f, 0.08f, 0.9f);
+            outline.effectDistance = new Vector2(1f, -1f);
+            outline.useGraphicAlpha = false;
+
+            heatText = CreateText(badge.transform, "HeatStacks", "🔥0", 12, TextAnchor.MiddleCenter);
+            RectTransform textRect = heatText.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            heatText.color = new Color(1f, 0.82f, 0.35f, 1f);
+            heatText.fontStyle = FontStyle.Bold;
+            heatText.raycastTarget = false;
+
+            badge.SetActive(false);
+            return badge;
+        }
+
         private static Sprite CreateCooldownClockSprite()
         {
             if (cooldownClockSprite != null) return cooldownClockSprite;
@@ -1975,6 +2016,14 @@ namespace TrashTD.UI
                         "A sandstorm sweeps the battlefield. Attack intervals are 5% shorter, " +
                         "and each attack has a 10% chance to miss.";
                     break;
+                case "STAGE_04":
+                    effectDescription =
+                        "Extreme Industrial Heat Hazard:\n\n" +
+                        "• Deployed operators accumulate 1 Heat Stack per round (Max 5 stacks).\n" +
+                        "• At 5 stacks, the heat bar fills and the operator IGNITES, suffering continuous burning damage over time!\n" +
+                        "• Fire can ONLY be extinguished by retreating the operator.\n" +
+                        "• Retreated operators cool down while benched (heat stacks fade away by 2 each round benched).";
+                    break;
                 case "STAGE_05":
                     effectDescription =
                         "Starting from Wave 6, vehicles periodically speed down the boulevard lanes. " +
@@ -2174,6 +2223,16 @@ namespace TrashTD.UI
                     deckCooldownLabels[i].text = card.cooldownRoundsRemaining.ToString();
                     deckCooldownBadges[i].SetActive(!isReady);
 
+                    if (deckHeatBadges != null && i < deckHeatBadges.Length && deckHeatBadges[i] != null)
+                    {
+                        bool hasHeat = card.heatStacks > 0;
+                        deckHeatBadges[i].SetActive(hasHeat);
+                        if (hasHeat && deckHeatLabels[i] != null)
+                        {
+                            deckHeatLabels[i].text = $"🔥{card.heatStacks}";
+                        }
+                    }
+
                     // No slot fill (the bay art shows through); the class color only drives the
                     // hover/selection glow and the drag ghost (dimmed while on cooldown).
                     Color slotColor = isReady
@@ -2197,6 +2256,10 @@ namespace TrashTD.UI
                     deckClassBadges[i].SetActive(false);
                     deckCooldownLabels[i].text = "";
                     deckCooldownBadges[i].SetActive(false);
+                    if (deckHeatBadges != null && i < deckHeatBadges.Length && deckHeatBadges[i] != null)
+                    {
+                        deckHeatBadges[i].SetActive(false);
+                    }
                     deckButtons[i].interactable = false;
                     deckFeedbacks[i].SetBaseColor(emptyColor);
                     deckUpgradeBadges[i].SetActive(false);

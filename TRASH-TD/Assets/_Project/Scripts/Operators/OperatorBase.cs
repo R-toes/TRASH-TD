@@ -99,6 +99,8 @@ namespace TrashTD.Operators
         public bool IsStunned => isStunned;
         public float StunTimer => stunTimer;
         public IReadOnlyList<EnemyBase> BlockedEnemies => blockedEnemies;
+        public int HeatStacks { get; set; }
+        public bool IsBurning { get; set; }
         // Operators are frozen whenever no wave is running (Card Pick and Preparation): no damage (from enemies,
         // traps or weather), no healing, no shields and no abilities. Sandbox stays in Preparation for its whole
         // session (so cards can be deployed mid-wave), so the lock must not apply there.
@@ -201,6 +203,7 @@ namespace TrashTD.Operators
             deployedCell?.Vacate();
             deployedCell = null;
             isDeployed = false;
+            IsBurning = false;
             trapDamageTimer = 0f;
             currentTarget = null;
 
