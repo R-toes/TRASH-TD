@@ -2018,11 +2018,8 @@ namespace TrashTD.UI
                     break;
                 case "STAGE_04":
                     effectDescription =
-                        "Extreme Industrial Heat Hazard:\n\n" +
-                        "• Deployed operators accumulate 1 Heat Stack per round (Max 5 stacks).\n" +
-                        "• At 5 stacks, the heat bar fills and the operator IGNITES, suffering continuous burning damage over time!\n" +
-                        "• Fire can ONLY be extinguished by retreating the operator.\n" +
-                        "• Retreated operators cool down while benched (heat stacks fade away by 2 each round benched).";
+                        "Extreme heat builds up on deployed operators each round. " +
+                        "Overheated operators ignite and suffer continuous burn damage until retreated to the bench to cool down.";
                     break;
                 case "STAGE_05":
                     effectDescription =
