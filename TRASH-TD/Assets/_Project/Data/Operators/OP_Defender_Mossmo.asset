@@ -19,7 +19,7 @@ MonoBehaviour:
   roleTags:
   - Defense
   - Support
-  baseHP: 130
+  baseHP: 160
   baseATK: 10
   baseDEF: 30
   baseRES: 5

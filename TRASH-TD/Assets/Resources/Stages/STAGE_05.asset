@@ -24,6 +24,10 @@ MonoBehaviour:
   visualTilePixelSize: 32
   visualTileOffset: {x: 0, y: -1}
   foregroundVisualSprite: {fileID: -1183825519679443706, guid: 9ddb5b2f75adf3d4382cdebbddc57c9c, type: 3}
+  trafficVehicleSprites:
+  - {fileID: -6459620379200589844, guid: c8328c1e2052bc345aee62df6277c782, type: 3}
+  - {fileID: 6024127299358086841, guid: c8328c1e2052bc345aee62df6277c782, type: 3}
+  - {fileID: 8808617164939731031, guid: c8328c1e2052bc345aee62df6277c782, type: 3}
   spawnPoints:
   - {x: 3, y: 7}
   - {x: 4, y: 7}

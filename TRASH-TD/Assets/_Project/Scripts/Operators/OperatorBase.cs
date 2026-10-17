@@ -38,6 +38,9 @@ namespace TrashTD.Operators
         private float trapDamageTimer;
         protected List<EnemyBase> blockedEnemies = new List<EnemyBase>();
         protected EnemyBase currentTarget;
+        protected float stunTimer;
+        protected bool isStunned;
+        protected SpriteRenderer spriteRenderer;
 
         // --- Skill (composition) ---
         protected ISkill equippedSkill;
@@ -59,6 +62,8 @@ namespace TrashTD.Operators
         public virtual bool IgnoresMissMechanic => false;
         public virtual bool IsCamouflaged => false;
         public virtual bool IsTargetable => !IsCamouflaged;
+        public bool IsStunned => isStunned;
+        public float StunTimer => stunTimer;
         public IReadOnlyList<EnemyBase> BlockedEnemies => blockedEnemies;
         // Operators are frozen whenever no wave is running (Card Pick and Preparation): no damage (from enemies,
         // traps or weather), no healing, no shields and no abilities. Sandbox stays in Preparation for its whole
@@ -176,7 +181,7 @@ namespace TrashTD.Operators
 
         public virtual void Attack(EnemyBase target)
         {
-            if (target == null || !isDeployed) return;
+            if (target == null || !isDeployed || isStunned) return;
 
             PlayAttackSound();
             CombatProjectileVisual.Fire(
@@ -250,8 +255,8 @@ namespace TrashTD.Operators
 
         public virtual bool TryBlock(EnemyBase enemy)
         {
-            if (enemy == null || !isDeployed) return false;
-            if (blockedEnemies.Count >= data.blockCount) return false;
+            if (enemy == null || !isDeployed || isStunned) return false;
+            if (blockedEnemies.Count >= GetBlockCount()) return false;
             if (enemy.Data.isUnblockable) return false;
 
             blockedEnemies.Add(enemy);
@@ -267,8 +272,70 @@ namespace TrashTD.Operators
             }
         }
 
-        public int GetBlockCount() => data.blockCount;
+        public int GetBlockCount() => (isStunned || data == null) ? 0 : data.blockCount;
         public int GetCurrentBlockCount() => blockedEnemies.Count;
+
+        // ========================
+        // Stun System
+        // ========================
+
+        /// <summary>
+        /// Applies a stun to this operator. While stunned, an operator cannot attack and block.
+        /// </summary>
+        public virtual void ApplyStun(float duration)
+        {
+            if (!isDeployed || currentHP <= 0 || duration <= 0f) return;
+
+            stunTimer = Mathf.Max(stunTimer, duration);
+            if (!isStunned)
+            {
+                isStunned = true;
+                TrashTD.Combat.FloatingCombatNumber.ShowText(transform.position, "STUNNED!", new Color(1f, 0.9f, 0.2f));
+            }
+
+            // Immediately release any currently blocked enemies
+            for (int i = blockedEnemies.Count - 1; i >= 0; i--)
+            {
+                ReleaseBlock(blockedEnemies[i]);
+            }
+
+            UpdateStunVisual();
+        }
+
+        public void UpdateStunStatus(float dt)
+        {
+            if (stunTimer > 0f)
+            {
+                stunTimer = Mathf.Max(0f, stunTimer - dt);
+                if (stunTimer <= 0f)
+                {
+                    isStunned = false;
+                    UpdateStunVisual();
+                }
+            }
+        }
+
+        protected virtual void UpdateStunVisual()
+        {
+            if (spriteRenderer == null)
+            {
+                spriteRenderer = GetComponent<SpriteRenderer>();
+                if (spriteRenderer == null)
+                    spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+            }
+            if (spriteRenderer != null)
+            {
+                Color current = spriteRenderer.color;
+                if (isStunned)
+                {
+                    spriteRenderer.color = new Color(1f, 0.95f, 0.4f, current.a);
+                }
+                else
+                {
+                    spriteRenderer.color = new Color(1f, 1f, 1f, current.a);
+                }
+            }
+        }
 
         // ========================
         // MonoBehaviour Lifecycle
@@ -303,6 +370,12 @@ namespace TrashTD.Operators
                 trapDamageTimer = 0f;
             }
 
+            if (isStunned)
+            {
+                UpdateStunStatus(Time.deltaTime);
+                return;
+            }
+
             // Update skill cooldowns
             equippedSkill?.UpdateSkill(Time.deltaTime);
 
@@ -323,7 +396,7 @@ namespace TrashTD.Operators
 
         protected virtual bool CanAttackTarget(EnemyBase target)
         {
-            if (target == null || target.IsDead || target.IsInsideHole) return false;
+            if (isStunned || target == null || target.IsDead || target.IsInsideHole) return false;
             return target.MovementType != EnemyMovementType.Air || CanHitAir;
         }
 
@@ -362,6 +435,43 @@ namespace TrashTD.Operators
             if (actualDamage > 0)
             {
                 TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualDamage, damageType);
+                TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
+            }
+
+            if (currentHP <= 0)
+            {
+                Die();
+            }
+        }
+
+        /// <summary>
+        /// Take true damage directly (ignoring DEF and RES).
+        /// If ignoreShieldNegation is true (e.g. Stage 5 traffic collision),
+        /// damage bypasses shield negation but still pops the bubble.
+        /// </summary>
+        public virtual void TakeTrueDamage(int damage, bool ignoreShieldNegation = false)
+        {
+            if (IsCombatPaused || currentHP <= 0 || damage <= 0) return;
+
+            var shield = GetComponent<BubbleShield>();
+            if (shield != null && shield.IsActive)
+            {
+                if (ignoreShieldNegation)
+                {
+                    shield.Pop(false);
+                }
+                else if (shield.TryConsume(damage, DamageType.Physical))
+                {
+                    return;
+                }
+            }
+
+            int previousHP = currentHP;
+            currentHP = Mathf.Max(0, currentHP - damage);
+            int actualDamage = previousHP - currentHP;
+            if (actualDamage > 0)
+            {
+                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualDamage, DamageType.Physical);
                 TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
             }
 
@@ -453,7 +563,12 @@ namespace TrashTD.Operators
         protected virtual void OnDeployed() { }
 
         /// <summary>Called after retreat.</summary>
-        protected virtual void OnRetreated() { }
+        protected virtual void OnRetreated()
+        {
+            isStunned = false;
+            stunTimer = 0f;
+            UpdateStunVisual();
+        }
 
         /// <summary>Called when the operator dies.</summary>
         protected virtual void OnDeath()

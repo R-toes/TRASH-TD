@@ -87,6 +87,9 @@ namespace TrashTD.Data
         [Tooltip("Optional foreground artwork displayed in front of units (e.g. fence/trees overlay)")]
         public Sprite foregroundVisualSprite;
 
+        [Tooltip("Optional vehicle sprites for traffic encounters (e.g. Stage 5 boulevard traffic)")]
+        public Sprite[] trafficVehicleSprites;
+
         [Tooltip("Spawn point positions on the grid (enemy entry points)")]
         public Vector2Int[] spawnPoints;
 

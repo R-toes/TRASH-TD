@@ -50,6 +50,12 @@ namespace TrashTD.Operators
             // No bubbles between waves.
             if (IsCombatPaused) return;
 
+            if (isStunned)
+            {
+                UpdateStunStatus(Time.deltaTime);
+                return;
+            }
+
             equippedSkill?.UpdateSkill(Time.deltaTime);
 
             if (attackTimer >= interval)
@@ -68,7 +74,7 @@ namespace TrashTD.Operators
 
         public void Shield(OperatorBase target)
         {
-            if (target == null || !isDeployed || IsCombatPaused) return;
+            if (target == null || !isDeployed || IsCombatPaused || isStunned) return;
 
             PlayAttackSound();
 

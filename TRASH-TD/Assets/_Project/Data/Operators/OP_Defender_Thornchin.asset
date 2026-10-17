@@ -19,7 +19,7 @@ MonoBehaviour:
   roleTags:
   - Defense
   - Retaliation
-  baseHP: 130
+  baseHP: 150
   baseATK: 40
   baseDEF: 36
   baseRES: 5

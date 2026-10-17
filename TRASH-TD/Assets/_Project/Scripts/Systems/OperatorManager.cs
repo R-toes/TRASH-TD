@@ -55,6 +55,19 @@ namespace TrashTD.Systems
             }
         }
 
+        public void Initialize(GridManager grid)
+        {
+            gridManager = grid;
+        }
+
+        public void RegisterOperator(OperatorBase op)
+        {
+            if (op != null && !deployedOperators.Contains(op))
+            {
+                deployedOperators.Add(op);
+            }
+        }
+
         private void OnDestroy()
         {
             if (Instance == this)

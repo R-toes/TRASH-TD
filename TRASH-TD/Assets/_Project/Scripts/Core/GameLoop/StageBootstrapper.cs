@@ -146,6 +146,7 @@ namespace TrashTD.Core.GameLoop
                     stageData.spawnPoints = mapSource.spawnPoints;
                     stageData.exitPoints = mapSource.exitPoints;
                     stageData.enemyPaths = mapSource.enemyPaths;
+                    stageData.trafficVehicleSprites = mapSource.trafficVehicleSprites;
                 }
             }
             TrashTD.Combat.StageCombatModifiers.ConfigureForEnvironment(EnvironmentStageId);
@@ -169,6 +170,10 @@ namespace TrashTD.Core.GameLoop
             if (EnvironmentStageId == "STAGE_03")
             {
                 CreateStage3SandstormVisuals();
+            }
+            else if (EnvironmentStageId == "STAGE_05")
+            {
+                CreateStage5TrafficEncounter();
             }
             else if (EnvironmentStageId == "STAGE_06")
             {
@@ -1050,6 +1055,14 @@ namespace TrashTD.Core.GameLoop
                     enemy.TakeDamage(AcidRainDamagePerTick, DamageType.Physical);
                 }
             }
+        }
+
+        private void CreateStage5TrafficEncounter()
+        {
+            GameObject encounterObj = new GameObject("Stage5CarEncounter");
+            encounterObj.transform.SetParent(transform);
+            var encounter = encounterObj.AddComponent<Stage5CarEncounter>();
+            encounter.Initialize(gridManager, waveManager, enemyManager, operatorManager, stageData);
         }
 
         private bool TryGetGridClick(out Vector2Int gridPosition)

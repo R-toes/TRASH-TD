@@ -57,6 +57,19 @@ namespace TrashTD.Systems
             }
         }
 
+        public void Initialize(GridManager grid)
+        {
+            gridManager = grid;
+        }
+
+        public void RegisterEnemy(EnemyBase enemy)
+        {
+            if (enemy != null && !activeEnemies.Contains(enemy))
+            {
+                activeEnemies.Add(enemy);
+            }
+        }
+
         private void OnDestroy()
         {
             if (Instance == this)

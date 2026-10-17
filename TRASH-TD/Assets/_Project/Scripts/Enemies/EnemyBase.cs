@@ -866,6 +866,14 @@ namespace TrashTD.Enemies
             }
         }
 
+        /// <summary>
+        /// Take true damage directly (ignoring DEF and RES).
+        /// </summary>
+        public virtual void TakeTrueDamage(int damage)
+        {
+            TakeDamage(damage, DamageType.Physical);
+        }
+
         public bool TryTakeAttackDamage(int damage, DamageType damageType, OperatorBase attacker = null, bool canHitAir = false)
         {
             if (isDead || isInsideHole) return false;

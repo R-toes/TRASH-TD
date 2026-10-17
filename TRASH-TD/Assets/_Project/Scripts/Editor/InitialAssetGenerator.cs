@@ -427,7 +427,7 @@ namespace TrashTD.Editor
             {
                 var mossmoPrefab = CreateMossmoPrefab(mossmoFrameOne, mossmoFrameTwo);
                 var mossmo = CreateOperator("OP_Defender_Mossmo", "Mossmo", OperatorClass.Defender, OperatorPosition.Melee, OperatorRarity.Star3,
-                    hp: 175, atk: 10, def: 30, res: 5, blockCount: 3, range: 1, interval: 1.4f, dp: 15,
+                    hp: 160, atk: 10, def: 30, res: 5, blockCount: 3, range: 1, interval: 1.4f, dp: 15,
                     new[]
                     {
                         new Vector2Int(0, 0),
@@ -451,7 +451,7 @@ namespace TrashTD.Editor
                 var thornchinFrames = new[] { thornchinFrame0, thornchinFrame1, thornchinFrame2, thornchinFrame3 };
                 var thornchinPrefab = CreateThornchinPrefab(thornchinFrames);
                 var thornchin = CreateOperator("OP_Defender_Thornchin", "Thornchin", OperatorClass.Defender, OperatorPosition.Melee, OperatorRarity.Star2,
-                    hp: 240, atk: 40, def: 36, res: 5, blockCount: 3, range: 0, interval: 1.4f, dp: 13,
+                    hp: 150, atk: 40, def: 36, res: 5, blockCount: 3, range: 0, interval: 1.4f, dp: 13,
                     new[] { new Vector2Int(0, 0) },
                     thornchinFrame0, thornchinPrefab);
                 thornchin.roleTags = new[] { "Defense", "Retaliation" };
@@ -1659,6 +1659,25 @@ namespace TrashTD.Editor
                     }
                 }
             }
+
+            var vehicleAssets = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5 vehicles.png");
+            if (vehicleAssets == null || vehicleAssets.Length == 0)
+                vehicleAssets = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 5 vehicles.png");
+
+            var vList = new List<Sprite>();
+            if (vehicleAssets != null)
+            {
+                foreach (var obj in vehicleAssets)
+                {
+                    if (obj is Sprite s)
+                    {
+                        vList.Add(s);
+                    }
+                }
+            }
+            vList.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+            stage.trafficVehicleSprites = vList.ToArray();
+
             stage.backgroundVisualSprite = null;
             stage.upperBackgroundVisualSprites = null;
             stage.squadSizeLimit = 8;

@@ -20,7 +20,7 @@ namespace TrashTD.Combat
         public static bool CanBlock(OperatorBase blocker, EnemyBase enemy)
         {
             if (blocker == null || enemy == null) return false;
-            if (!blocker.IsDeployed) return false;
+            if (!blocker.IsDeployed || blocker.IsStunned) return false;
             if (enemy.IsDead || enemy.IsBlocked || enemy.IsPushingBack || enemy.IsInsideHole) return false;
 
             // Flyers ignore ground blockers

@@ -100,17 +100,17 @@ namespace TrashTD.Operators
         }
 
         /// <summary>
-        /// Attempt to consume the shield when an incoming instance of damage occurs.
-        /// Returns true if the shield negated the damage.
+        /// Pops the bubble shield. Can optionally suppress the "BLOCKED" text if incoming damage was not negated.
+        /// Still triggers pop visual, sound, heal, and counter damage.
         /// </summary>
-        public bool TryConsume(int rawATK, DamageType damageType)
+        public void Pop(bool showBlockedText = true)
         {
-            if (!isActive || recipient == null) return false;
+            if (!isActive || recipient == null) return;
 
             isActive = false;
 
             // 1. Pop visual and sound
-            PopVisual();
+            PopVisual(showBlockedText);
 
             // 2. Heal recipient when the bubble pops
             ApplyPopHeal();
@@ -124,11 +124,21 @@ namespace TrashTD.Operators
                 Destroy(visualObject);
             }
             Destroy(this);
+        }
 
+        /// <summary>
+        /// Attempt to consume the shield when an incoming instance of damage occurs.
+        /// Returns true if the shield negated the damage.
+        /// </summary>
+        public bool TryConsume(int rawATK, DamageType damageType)
+        {
+            if (!isActive || recipient == null) return false;
+
+            Pop(true);
             return true;
         }
 
-        private void PopVisual()
+        private void PopVisual(bool showBlockedText = true)
         {
             Vector3 pos = transform.position;
 
@@ -136,7 +146,10 @@ namespace TrashTD.Operators
             AoeBlastVisual.PlayCircle(pos, 0.5f, new Color(0.35f, 0.88f, 1f, 0.85f));
 
             // Floating indicator on recipient
-            FloatingCombatNumber.ShowText(pos, "BLOCKED", new Color(0.4f, 0.9f, 1f));
+            if (showBlockedText)
+            {
+                FloatingCombatNumber.ShowText(pos, "BLOCKED", new Color(0.4f, 0.9f, 1f));
+            }
 
             // Sound: the caster's Ability clip, else the shared magic sound.
             if (source != null) source.PlayShieldPopSound();
