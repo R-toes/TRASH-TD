@@ -87,7 +87,7 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 | Area | Status |
 |---|---|
 | **Narrative / Lore** | Not defined — no story, factions, or world-building |
-| **Art / Visual Style** | **Superseded** — the team is adding real pixel-art sprite sheets for operators, enemies and UI (e.g. `Resources/UI/Deck BG.png`). Use placeholders only where no art exists yet |
+| **Art / Visual Style** | **Superseded** — the team is adding real pixel-art sprite sheets for operators, enemies and UI (e.g. `Resources/UI/Deck BG.png`) and a pixel-art UI kit (see §7.5). Use placeholders only where no art exists yet |
 | **Audio Direction** | **Superseded** — per-unit SFX exist (see §7.4). Don't invent audio direction beyond that |
 | **Economy beyond card-draft** | Not defined — no currencies, shops, or meta-progression beyond the duplicate-upgrade system |
 | **Persistence model** | Ambiguous — unclear if progression persists between runs or resets per map (could be roguelite). **Do not assume either way** — flag and ask Raim |
@@ -130,7 +130,7 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 
 ---
 
-## 7. Current Implementation Notes (as of 2026-10-16)
+## 7. Current Implementation Notes (as of 2026-10-17)
 
 ### 7.1 Roster
 
@@ -176,3 +176,14 @@ Each asset's `skillDescription` is the authoritative description of that operato
 
 - Per-unit clips load from `Assets/_Project/Audio/Resources/SFX/Operators/<Class>/<Name>/` (and `SFX/Enemies/<Archetype>/<Name>/`) via `UnitSfx`.
 - Operators should call `PlayAttackSound()` / `PlayImpactSound()` so their own clips play, with the shared damage-type sound as fallback. Don't call `AudioManager.PlaySfx` directly for attacks without trying `UnitSfx.Play(data, UnitSfxEvent.Attack)` first.
+
+### 7.5 UI Kit
+
+- Pixel-art UI sprites live in `Assets/Resources/UI/` by category: `panels`, `buttons`, `icons`, `bars`, `cards`, `controls`, `decor`, `minis`. `ui_kit_atlas.json` lists each sprite's rect and category. No code reads it; it is reference only.
+- UI is still built in code (uGUI). Style it through the helpers in `GameplayHUDUI`, not flat `Image.color` fills:
+  - `ApplyButtonContainer(button, ButtonContainerType)`: Primary, Secondary, Dark, Danger, Warning, and the `Icon*` variants (`UI/buttons/btn_<type>_normal`).
+  - `ApplyPanelContainer(go, PanelContainerType, tint?)`: Dark, Metal, Glass, Modal, Rust, Teal, Tooltip (`UI/panels/panel_<type>`). Modal = Metal panel plus hazard-stripe decor.
+  - Both set `Image.Type.Sliced` and cache the sprite. If a panel sprite has no 9-slice border, a per-type border is applied at load time, so set borders in the importer for buttons. If the sprite is missing, the old flat colour stays.
+- Keep UI textures on Point filtering (pixel art). Add new UI sprites under the matching `Resources/UI/<category>/` folder.
+- **Draft range preview:** the card-pick details panel draws each operator's `rangePattern` as a tile grid facing right (`CardDraftOverlayUI.UpdateRangePreview`). It uses the placement-preview colours: cyan for the operator's own tile, green for tiles it can hit. It reads the same data as combat, so never hand-draw or screenshot range previews. A kit that reaches beyond `rangePattern` (e.g. Basurocket's splash) belongs in the ability text.
+- `AudioSettingsUI` loads `panel_dark` / `btn_dark_normal` with its own copy of the loader. Prefer the `GameplayHUDUI` helpers for new UI.

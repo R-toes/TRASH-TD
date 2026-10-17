@@ -48,6 +48,10 @@ namespace TrashTD.UI
         private static readonly Color ACCENT_BRIGHT = new Color(0.30f, 0.95f, 0.58f, 1f);
         private static readonly Color MELEE_COLOR = new Color(0.95f, 0.60f, 0.25f, 1f);
         private static readonly Color RANGED_COLOR = new Color(0.35f, 0.78f, 0.92f, 1f);
+        // Range preview tiles use the same colours as the in-game placement preview (StageBootstrapper).
+        private static readonly Color RANGE_TILE_COLOR = new Color(0.15f, 1f, 0.28f, 1f);
+        private static readonly Color SELF_TILE_COLOR = new Color(0.15f, 0.85f, 1f, 1f);
+        private static readonly Color EMPTY_TILE_COLOR = new Color(1f, 1f, 1f, 0.22f);
 
         // --- Layout (reference resolution 1920x1080, positions relative to screen center) ---
         private const float CardWidth = 360f;
@@ -61,6 +65,11 @@ namespace TrashTD.UI
         private const float PanelCenterX = 650f;     // detail panel (right side)
         private const float PanelWidth = 500f;
         private const float ContentCenterY = 10f;
+        private const float RangeBoxWidth = 156f;
+        private const float RangeBoxHeight = 140f;
+        private const float RangeBoxPadding = 10f;
+        private const float RangeTileGap = 2f;
+        private const float MaxRangeTileSize = 28f;
 
         // Pixel-art portraits are scaled by whole numbers (when they fit) inside this area.
         private static readonly Vector2 PortraitFitArea = new Vector2(
@@ -144,6 +153,8 @@ namespace TrashTD.UI
         private Text detailIntervalText;
         private Text detailPassiveLabel;
         private Text detailPassiveText;
+        private RectTransform detailRangeGrid;
+        private static Sprite rangeTileSprite;
         private Coroutine detailsRoutine;
 
         // --- Buttons ---
@@ -621,6 +632,8 @@ namespace TrashTD.UI
             detailResText.text = op.GetScaledRES(card.rarity).ToString();
             detailBlockText.text = op.blockCount.ToString();
             detailIntervalText.text = op.attackInterval.ToString("0.##") + "s";
+
+            UpdateRangePreview(op);
 
             // Passive / ability text (only shown when the operator has one)
             string passive = FindStringMember(op, PassiveMemberNames);
@@ -1770,7 +1783,7 @@ namespace TrashTD.UI
 
             float tileWidth = (innerWidth - 12f) / 2f;
             float tileHeight = 62f;
-            float rowStep = tileHeight + 8f;
+            float rowStep = tileHeight + 6f;
             float gridTop = 226f;
             float rightX = margin + tileWidth + 12f;
 
@@ -1781,17 +1794,25 @@ namespace TrashTD.UI
             detailBlockText = CreateStatTile(content, "BLOCK", new Color(1.00f, 0.80f, 0.30f, 1f), margin, gridTop + rowStep * 2f, tileWidth, tileHeight);
             detailIntervalText = CreateStatTile(content, "ATK SPD", new Color(0.40f, 0.85f, 0.90f, 1f), rightX, gridTop + rowStep * 2f, tileWidth, tileHeight);
 
+            // Bottom section: range preview (left) + ability (right)
+            const float sectionLabelTop = 446f;
+            const float sectionBodyTop = 470f;
+            CreateDivider(content, 436f, margin);
+            BuildRangePreview(content, margin, sectionLabelTop, sectionBodyTop);
+
+            float abilityX = margin + RangeBoxWidth + 16f;
+
             // Passive / ability (hidden when the operator has none)
             detailPassiveLabel = MakeText(content, "PassiveLabel", "ABILITY", 11, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
             detailPassiveLabel.fontStyle = FontStyle.Bold;
-            StretchTopRT(detailPassiveLabel, margin, margin, 450f, 18f);
+            StretchTopRT(detailPassiveLabel, abilityX, margin, sectionLabelTop, 18f);
 
             detailPassiveText = MakeText(content, "PassiveText", "", 15, TextAnchor.UpperLeft,
                 new Color(0.88f, 0.92f, 0.96f, 1f));
             detailPassiveText.resizeTextForBestFit = true;
             detailPassiveText.resizeTextMinSize = 11;
             detailPassiveText.resizeTextMaxSize = 15;
-            StretchTopRT(detailPassiveText, margin, margin, 474f, 134f);
+            StretchTopRT(detailPassiveText, abilityX, margin, sectionBodyTop, RangeBoxHeight);
 
             detailContentRoot.SetActive(false);
         }
@@ -1890,6 +1911,182 @@ namespace TrashTD.UI
             var image = divider.GetComponent<Image>();
             image.color = new Color(1f, 1f, 1f, 0.08f);
             image.raycastTarget = false;
+        }
+
+        /// <summary>Header + framed box that holds the operator's attack-range diagram.</summary>
+        private void BuildRangePreview(Transform parent, float x, float labelTop, float boxTop)
+        {
+            var rangeLabel = MakeText(parent, "RangeLabel", "RANGE", 11, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
+            rangeLabel.fontStyle = FontStyle.Bold;
+            PlaceTopLeft(rangeLabel.transform, x, labelTop, RangeBoxWidth, 18f);
+
+            // Facing hint: the diagram is drawn facing right, the default placement facing.
+            var facingText = MakeText(parent, "RangeFacing", "FACING", 10, TextAnchor.MiddleRight,
+                new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.7f));
+            PlaceTopLeft(facingText.transform, x, labelTop, RangeBoxWidth - 16f, 18f);
+
+            Sprite arrowSprite = LoadUiSprite("UI/minis/mini_arrow_right", Vector4.zero);
+            if (arrowSprite != null)
+            {
+                var arrow = new GameObject("RangeFacingArrow", typeof(RectTransform), typeof(Image));
+                arrow.transform.SetParent(parent, false);
+                PlaceTopLeft(arrow.transform, x + RangeBoxWidth - 12f, labelTop + 4f, 10f, 10f);
+                var arrowImage = arrow.GetComponent<Image>();
+                arrowImage.sprite = arrowSprite;
+                arrowImage.preserveAspect = true;
+                arrowImage.color = SELF_TILE_COLOR;
+                arrowImage.raycastTarget = false;
+            }
+
+            var box = new GameObject("RangeBox", typeof(RectTransform), typeof(Image));
+            box.transform.SetParent(parent, false);
+            PlaceTopLeft(box.transform, x, boxTop, RangeBoxWidth, RangeBoxHeight);
+            GameplayHUDUI.ApplyPanelContainer(box, GameplayHUDUI.PanelContainerType.Dark);
+            box.GetComponent<Image>().raycastTarget = false;
+
+            var grid = new GameObject("RangeGrid", typeof(RectTransform));
+            grid.transform.SetParent(box.transform, false);
+            detailRangeGrid = grid.GetComponent<RectTransform>();
+            detailRangeGrid.anchorMin = new Vector2(0.5f, 0.5f);
+            detailRangeGrid.anchorMax = new Vector2(0.5f, 0.5f);
+            detailRangeGrid.pivot = new Vector2(0.5f, 0.5f);
+            detailRangeGrid.sizeDelta = Vector2.zero;
+            detailRangeGrid.anchoredPosition = Vector2.zero;
+        }
+
+        /// <summary>
+        /// Draws <see cref="OperatorData.rangePattern"/> — the same offsets combat uses via
+        /// GridManager.GetCellsInRange — as a tile grid facing right.
+        /// </summary>
+        private void UpdateRangePreview(OperatorData op)
+        {
+            if (detailRangeGrid == null) return;
+
+            for (int i = detailRangeGrid.childCount - 1; i >= 0; i--)
+            {
+                Destroy(detailRangeGrid.GetChild(i).gameObject);
+            }
+
+            var rangeCells = new HashSet<Vector2Int>();
+            if (op.rangePattern != null)
+            {
+                foreach (Vector2Int offset in op.rangePattern) rangeCells.Add(offset);
+            }
+
+            int minX = 0, maxX = 0, minY = 0, maxY = 0;
+            foreach (Vector2Int cell in rangeCells)
+            {
+                minX = Mathf.Min(minX, cell.x);
+                maxX = Mathf.Max(maxX, cell.x);
+                minY = Mathf.Min(minY, cell.y);
+                maxY = Mathf.Max(maxY, cell.y);
+            }
+
+            // Pad small patterns to at least 3x3 so the operator's own tile has context around it.
+            while (maxX - minX + 1 < 3) { if (-minX <= maxX) minX--; else maxX++; }
+            while (maxY - minY + 1 < 3) { if (-minY <= maxY) minY--; else maxY++; }
+
+            int cols = maxX - minX + 1;
+            int rows = maxY - minY + 1;
+            float availableWidth = RangeBoxWidth - RangeBoxPadding * 2f;
+            float availableHeight = RangeBoxHeight - RangeBoxPadding * 2f;
+            float tileSize = Mathf.Floor(Mathf.Min(MaxRangeTileSize,
+                (availableWidth - RangeTileGap * (cols - 1)) / cols,
+                (availableHeight - RangeTileGap * (rows - 1)) / rows));
+            float step = tileSize + RangeTileGap;
+            Sprite classIcon = GameplayHUDUI.GetClassIconSprite(op.operatorClass);
+
+            for (int gy = minY; gy <= maxY; gy++)
+            {
+                for (int gx = minX; gx <= maxX; gx++)
+                {
+                    var cell = new Vector2Int(gx, gy);
+                    var position = new Vector2(
+                        Mathf.Round((gx - minX - (cols - 1) * 0.5f) * step),
+                        Mathf.Round((gy - minY - (rows - 1) * 0.5f) * step));
+                    bool isSelf = cell == Vector2Int.zero;
+                    bool inRange = rangeCells.Contains(cell);
+                    Color frame = isSelf ? SELF_TILE_COLOR : inRange ? RANGE_TILE_COLOR : EMPTY_TILE_COLOR;
+                    CreateRangeTile(position, tileSize, frame, inRange, isSelf ? classIcon : null);
+                }
+            }
+        }
+
+        private void CreateRangeTile(Vector2 position, float size, Color frameColor, bool filled, Sprite icon)
+        {
+            if (rangeTileSprite == null)
+            {
+                rangeTileSprite = LoadUiSprite("UI/controls/checkbox_off", new Vector4(3f, 3f, 3f, 3f));
+            }
+
+            var tile = new GameObject("RangeTile", typeof(RectTransform), typeof(Image));
+            tile.transform.SetParent(detailRangeGrid, false);
+            var tileRect = tile.GetComponent<RectTransform>();
+            tileRect.sizeDelta = new Vector2(size, size);
+            tileRect.anchoredPosition = position;
+
+            var frame = tile.GetComponent<Image>();
+            frame.raycastTarget = false;
+            if (rangeTileSprite != null)
+            {
+                frame.sprite = rangeTileSprite;
+                frame.type = Image.Type.Sliced;
+                frame.color = frameColor;
+            }
+            else
+            {
+                frame.color = new Color(frameColor.r, frameColor.g, frameColor.b, frameColor.a * 0.5f);
+            }
+
+            float inset = Mathf.Min(3f, size * 0.2f);
+            if (filled)
+            {
+                var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+                fill.transform.SetParent(tile.transform, false);
+                var fillRect = fill.GetComponent<RectTransform>();
+                StretchFill(fillRect);
+                fillRect.offsetMin = new Vector2(inset, inset);
+                fillRect.offsetMax = new Vector2(-inset, -inset);
+                var fillImage = fill.GetComponent<Image>();
+                fillImage.color = new Color(RANGE_TILE_COLOR.r, RANGE_TILE_COLOR.g, RANGE_TILE_COLOR.b, 0.3f);
+                fillImage.raycastTarget = false;
+            }
+
+            if (icon != null)
+            {
+                var iconObject = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+                iconObject.transform.SetParent(tile.transform, false);
+                var iconRect = iconObject.GetComponent<RectTransform>();
+                StretchFill(iconRect);
+                float iconInset = inset + 1f;
+                iconRect.offsetMin = new Vector2(iconInset, iconInset);
+                iconRect.offsetMax = new Vector2(-iconInset, -iconInset);
+                var iconImage = iconObject.GetComponent<Image>();
+                iconImage.sprite = icon;
+                iconImage.preserveAspect = true;
+                iconImage.raycastTarget = false;
+            }
+        }
+
+        /// <summary>
+        /// Loads a UI-kit sprite (single or multiple sprite mode) with Point filtering, adding a
+        /// 9-slice border when the imported sprite has none.
+        /// </summary>
+        private static Sprite LoadUiSprite(string path, Vector4 border)
+        {
+            Sprite source = Resources.Load<Sprite>(path);
+            if (source == null)
+            {
+                Sprite[] all = Resources.LoadAll<Sprite>(path);
+                if (all != null && all.Length > 0) source = all[0];
+            }
+            if (source == null || source.texture == null) return source;
+
+            source.texture.filterMode = FilterMode.Point;
+            if (border == Vector4.zero || source.border != Vector4.zero) return source;
+
+            return Sprite.Create(source.texture, source.rect, new Vector2(0.5f, 0.5f),
+                source.pixelsPerUnit, 0, SpriteMeshType.FullRect, border);
         }
 
         // ============================
