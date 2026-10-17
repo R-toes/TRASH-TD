@@ -24,6 +24,8 @@ namespace TrashTD.UI
         public float restScale = 1f;
         /// <summary>Extra multiplier used by entrance animations.</summary>
         public float introScale = 1f;
+        /// <summary>Horizontal-only multiplier (e.g. 0 -> 1 for a card flip). Does not affect height.</summary>
+        public float horizontalScale = 1f;
         public float smoothing = 16f;
 
         [Header("Tint")]
@@ -114,7 +116,8 @@ namespace TrashTD.UI
                 else punchOffset = Mathf.Sin(punchTime * 28f) * Mathf.Exp(-punchTime * 9f) * 0.09f;
             }
 
-            transform.localScale = Vector3.one * (scale * introScale + punchOffset);
+            float uniformScale = scale * introScale + punchOffset;
+            transform.localScale = new Vector3(uniformScale * horizontalScale, uniformScale, uniformScale);
 
             // Tint
             if (graphic != null)
@@ -206,6 +209,7 @@ namespace TrashTD.UI
             glow = 0f;
             scale = restScale;
 
+            horizontalScale = 1f;
             transform.localScale = Vector3.one * restScale;
             transform.localRotation = Quaternion.identity;
 

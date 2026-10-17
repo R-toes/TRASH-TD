@@ -15,13 +15,15 @@ namespace TrashTD.UI
 {
     /// <summary>
     /// Runtime-built fullscreen card draft overlay.
-    /// Left: 3 portrait-focused cards (portrait, name, rarity stars).
+    /// Left: 3 portrait-focused cards (portrait, name, rarity stars). Cards are dealt face-down
+    /// after a shuffle animation and only flip to their front when the player clicks them.
     /// Right: a detail panel for the selected card (name, class / position / damage-type chips,
     /// stats and passive/ability text).
     /// Player selects a card, then clicks Confirm to add it to their deck.
-    /// Includes a Reroll button (up to 3 rerolls per stage).
+    /// Includes a Reroll button (up to 3 rerolls per stage); a reroll flips the cards back,
+    /// shuffles and deals a fresh face-down hand.
     /// Integrates with GameManager phase system: shown during CardPick phase.
-    /// Visual polish: fade-in, cards dealt in one by one, rarity colors, selection feedback,
+    /// Visual polish: fade-in, shuffle + deal, flip reveal, rarity colors, selection feedback,
     /// hover/press feedback (MenuButtonFeedback), keyboard shortcuts and optional UI sounds.
     /// </summary>
     public class CardDraftOverlayUI : MonoBehaviour
@@ -48,10 +50,7 @@ namespace TrashTD.UI
         private static readonly Color ACCENT_BRIGHT = new Color(0.30f, 0.95f, 0.58f, 1f);
         private static readonly Color MELEE_COLOR = new Color(0.95f, 0.60f, 0.25f, 1f);
         private static readonly Color RANGED_COLOR = new Color(0.35f, 0.78f, 0.92f, 1f);
-        // Range preview tiles use the same colours as the in-game placement preview (StageBootstrapper).
-        private static readonly Color RANGE_TILE_COLOR = new Color(0.15f, 1f, 0.28f, 1f);
-        private static readonly Color SELF_TILE_COLOR = new Color(0.15f, 0.85f, 1f, 1f);
-        private static readonly Color EMPTY_TILE_COLOR = new Color(1f, 1f, 1f, 0.22f);
+        private static readonly Color BACK_BG = new Color(0.045f, 0.06f, 0.09f, 1f);
 
         // --- Layout (reference resolution 1920x1080, positions relative to screen center) ---
         private const float CardWidth = 360f;
@@ -65,11 +64,18 @@ namespace TrashTD.UI
         private const float PanelCenterX = 650f;     // detail panel (right side)
         private const float PanelWidth = 500f;
         private const float ContentCenterY = 10f;
-        private const float RangeBoxWidth = 156f;
-        private const float RangeBoxHeight = 140f;
-        private const float RangeBoxPadding = 10f;
-        private const float RangeTileGap = 2f;
-        private const float MaxRangeTileSize = 28f;
+
+        // --- Shuffle / flip timings (seconds) ---
+        private const float StackScale = 0.88f;       // cards shrink a little while stacked
+        private const float GatherTime = 0.32f;       // cards slide into a stack
+        private const float GatherFlipTime = 0.24f;  // revealed cards flip back during the gather
+        private const float RiffleOutTime = 0.13f;
+        private const float RiffleInTime = 0.15f;
+        private const float RiffleSpread = 200f;
+        private const float DealTime = 0.42f;
+        private const float DealStagger = 0.11f;
+        private const float FlipHalfOut = 0.11f;
+        private const float FlipHalfIn = 0.22f;
 
         // Pixel-art portraits are scaled by whole numbers (when they fit) inside this area.
         private static readonly Vector2 PortraitFitArea = new Vector2(
@@ -96,6 +102,10 @@ namespace TrashTD.UI
         [SerializeField] private AudioClip rerollClip;
         [SerializeField, Range(0f, 1f)] private float sfxVolume = 0.7f;
 
+        [Header("Card Flip")]
+        [Tooltip("If on, clicking a face-down card flips it AND selects it. If off, the first click only reveals it and a second click selects it.")]
+        [SerializeField] private bool selectOnReveal = true;
+
         // --- References ---
         private Canvas canvas;
         private GameObject overlayRoot;
@@ -108,6 +118,8 @@ namespace TrashTD.UI
 
         // --- Card UI ---
         private GameObject[] cardPanels = new GameObject[3];
+        private RectTransform[] cardRects = new RectTransform[3];
+        private Button[] cardButtonsArr = new Button[3];
         private Image[] cardBackgrounds = new Image[3];
         private Image[] portraitBgImages = new Image[3];
         private Image[] portraitImages = new Image[3];
@@ -123,6 +135,19 @@ namespace TrashTD.UI
         private Image[] classBadgeIcons = new Image[3];
         private Text[] portraitFallbackTexts = new Text[3];
         private Text[] selectHintTexts = new Text[3];
+
+        // --- Card faces (front = the operator card, back = face-down side) ---
+        private GameObject[] cardFronts = new GameObject[3];
+        private GameObject[] cardBacks = new GameObject[3];
+        private Image[] cardFlashes = new Image[3];
+        private Color[] cardRarityColors = new Color[3];
+        private Vector2[] cardSlots = new Vector2[3];
+        private bool[] cardRevealed = new bool[3];
+        private Coroutine[] flipRoutines = new Coroutine[3];
+        private readonly List<DraftCard> pendingOffer = new List<DraftCard>();
+        private bool isShuffling;
+        private bool freshDraft;     // true until the first offer of a draft has been applied
+        private bool offerApplied;   // false while a shuffle is still waiting to fill the cards
 
         // --- Detail panel ---
         private sealed class Chip
@@ -153,8 +178,6 @@ namespace TrashTD.UI
         private Text detailIntervalText;
         private Text detailPassiveLabel;
         private Text detailPassiveText;
-        private RectTransform detailRangeGrid;
-        private static Sprite rangeTileSprite;
         private Coroutine detailsRoutine;
 
         // --- Buttons ---
@@ -337,10 +360,11 @@ namespace TrashTD.UI
 
         private void SelectCardByKey(int index)
         {
+            if (isShuffling) return;
             if (index < 0 || index >= cardPanels.Length || cardPanels[index] == null || !cardPanels[index].activeSelf) return;
 
             PlaySfx(clickClip, 1f);
-            cardFeedbacks[index].Punch();
+            if (cardRevealed[index]) cardFeedbacks[index].Punch();
             OnCardClicked(index);
         }
 
@@ -407,6 +431,9 @@ namespace TrashTD.UI
                 StopCoroutine(hideRoutine);
                 hideRoutine = null;
             }
+
+            // Start every draft with the cards stacked face-down; the shuffle deals them out.
+            ResetCardsForNewDraft();
 
             overlayRoot.SetActive(true);
             overlayVisible = true;
@@ -484,42 +511,72 @@ namespace TrashTD.UI
 
             selectedCardIndex = -1;
 
-            for (int i = 0; i < 3; i++)
-            {
-                bool hasCard = i < cards.Count && cards[i] != null && cards[i].operatorData != null;
-                cardPanels[i].SetActive(hasCard);
-
-                if (hasCard)
-                {
-                    var card = cards[i];
-                    var opData = card.operatorData;
-                    int starCount = Mathf.Clamp((int)card.rarity, 1, 5);
-                    Color rarityColor = GetRarityColor(starCount);
-
-                    // Name + rarity (the only text on the card)
-                    nameTexts[i].text = opData.operatorName;
-                    rarityTexts[i].text = BuildStarString(starCount);
-                    rarityTexts[i].color = rarityColor;
-
-                    // Rarity tint: top stripe, portrait backdrop/frame and hover/selection glow
-                    cardAccents[i].color = rarityColor;
-                    portraitBgImages[i].color = Color.Lerp(PORTRAIT_BG, rarityColor, 0.10f);
-                    portraitFrames[i].effectColor = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.6f);
-                    cardFeedbacks[i].glowColor = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.95f);
-                    classBadgeBackgrounds[i].color = GetClassColor(opData.operatorClass);
-                    classBadgeIcons[i].sprite = GameplayHUDUI.GetClassIconSprite(opData.operatorClass);
-
-                    SetPortrait(i, opData);
-                }
-            }
+            // The new offer is stored and only written onto the cards once they are face-down
+            // (see ShuffleDealRoutine), so a reroll never reveals the new hand early.
+            pendingOffer.Clear();
+            for (int i = 0; i < cards.Count; i++) pendingOffer.Add(cards[i]);
 
             ApplySelectionVisuals();
             UpdateDetailsPanel(false);
-            StartDeal();
+            StartShuffleDeal();
 
             UpdateConfirmButton();
             UpdateRerollButton();
             UpdateDeckCount();
+        }
+
+        /// <summary>Writes the pending offer onto the three cards (they must be face-down).</summary>
+        private void ApplyOfferToCards()
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                DraftCard card = i < pendingOffer.Count ? pendingOffer[i] : null;
+                bool hasCard = card != null && card.operatorData != null;
+                cardPanels[i].SetActive(hasCard);
+                cardRevealed[i] = false;
+                SetFaceVisual(i, false);
+
+                if (!hasCard) continue;
+
+                var opData = card.operatorData;
+                int starCount = Mathf.Clamp((int)card.rarity, 1, 5);
+                Color rarityColor = GetRarityColor(starCount);
+                cardRarityColors[i] = rarityColor;
+
+                // Name + rarity (the only text on the card)
+                nameTexts[i].text = opData.operatorName;
+                rarityTexts[i].text = BuildStarString(starCount);
+                rarityTexts[i].color = rarityColor;
+
+                // Rarity tint: top stripe, portrait backdrop/frame
+                cardAccents[i].color = rarityColor;
+                portraitBgImages[i].color = Color.Lerp(PORTRAIT_BG, rarityColor, 0.10f);
+                portraitFrames[i].effectColor = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.6f);
+                classBadgeBackgrounds[i].color = GetClassColor(opData.operatorClass);
+                classBadgeIcons[i].sprite = GameplayHUDUI.GetClassIconSprite(opData.operatorClass);
+
+                // The hover glow stays neutral while face-down so it can't give away the rarity.
+                cardFeedbacks[i].glowColor = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.95f);
+
+                SetPortrait(i, opData);
+            }
+
+            RecomputeSlots();
+        }
+
+        /// <summary>Slot position of each visible card, centered as a row (replaces the layout group).</summary>
+        private void RecomputeSlots()
+        {
+            int count = 0;
+            for (int i = 0; i < 3; i++) if (cardPanels[i].activeSelf) count++;
+
+            int rank = 0;
+            for (int i = 0; i < 3; i++)
+            {
+                if (!cardPanels[i].activeSelf) continue;
+                cardSlots[i] = new Vector2((rank - (count - 1) * 0.5f) * (CardWidth + CardSpacing), 0f);
+                rank++;
+            }
         }
 
         /// <summary>
@@ -583,6 +640,376 @@ namespace TrashTD.UI
         }
 
         // ============================
+        // Card Faces: shuffle, deal and flip
+        // ============================
+
+        private void SetFaceVisual(int index, bool faceUp)
+        {
+            if (cardFronts[index] != null) cardFronts[index].SetActive(faceUp);
+            if (cardBacks[index] != null) cardBacks[index].SetActive(!faceUp);
+        }
+
+        private void SetCardsInteractable(bool value)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                if (cardButtonsArr[i] != null) cardButtonsArr[i].interactable = value;
+            }
+        }
+
+        private void SetCardPose(int index, Vector2 position, float rotationZ)
+        {
+            cardRects[index].anchoredPosition = position;
+            cardRects[index].localRotation = Quaternion.Euler(0f, 0f, rotationZ);
+        }
+
+        private static Vector2 StackPosition(int orderIndex, int count)
+        {
+            float offset = (orderIndex - (count - 1) * 0.5f) * 4f;
+            return new Vector2(offset, -offset);
+        }
+
+        private void ApplySiblingOrder(List<int> bottomToTop)
+        {
+            for (int a = 0; a < bottomToTop.Count; a++) cardRects[bottomToTop[a]].SetAsLastSibling();
+        }
+
+        /// <summary>Puts every card face-down on one stack in the middle, hidden until the shuffle starts.</summary>
+        private void ResetCardsForNewDraft()
+        {
+            if (dealRoutine != null)
+            {
+                StopCoroutine(dealRoutine);
+                dealRoutine = null;
+            }
+
+            StopAllFlips();
+
+            freshDraft = true;
+            offerApplied = false;
+            isShuffling = true;
+
+            for (int i = 0; i < 3; i++)
+            {
+                if (cardPanels[i] == null) continue;
+
+                cardPanels[i].SetActive(true);
+                cardRevealed[i] = false;
+                SetFaceVisual(i, false);
+                cardRects[i].anchoredPosition = Vector2.zero;
+                cardRects[i].localRotation = Quaternion.identity;
+                cardFeedbacks[i].introScale = StackScale;
+                cardFeedbacks[i].horizontalScale = 1f;
+                cardGroups[i].alpha = 0f;
+            }
+
+            SetCardsInteractable(false);
+        }
+
+        private void StartShuffleDeal()
+        {
+            StopAllFlips();
+
+            if (dealRoutine != null)
+            {
+                StopCoroutine(dealRoutine);
+                dealRoutine = null;
+            }
+
+            if (!isActiveAndEnabled)
+            {
+                // Can't animate: fill the cards and leave them dealt face-down.
+                ApplyOfferToCards();
+                offerApplied = true;
+                freshDraft = false;
+                SettleCards();
+                return;
+            }
+
+            isShuffling = true;
+            offerApplied = false;
+            SetCardsInteractable(false);
+            dealRoutine = StartCoroutine(ShuffleDealRoutine());
+        }
+
+        /// <summary>
+        /// gather (flip back any revealed cards and slide them into a stack) -> fill with the new offer ->
+        /// riffle shuffle -> deal back out, still face-down.
+        /// </summary>
+        private IEnumerator ShuffleDealRoutine()
+        {
+            bool fresh = freshDraft;
+
+            var order = new List<int>(3); // draw order, bottom -> top
+            for (int i = 0; i < 3; i++) if (cardPanels[i].activeSelf) order.Add(i);
+
+            // --- 1. Gather into a stack (skipped for the first deal of a draft) ---
+            if (!fresh && order.Count > 0)
+            {
+                var startPos = new Vector2[3];
+                var wasRevealed = new bool[3];
+                var flippedBack = new bool[3];
+                for (int a = 0; a < order.Count; a++)
+                {
+                    int i = order[a];
+                    startPos[i] = cardRects[i].anchoredPosition;
+                    wasRevealed[i] = cardRevealed[i];
+                }
+
+                float t = 0f;
+                while (t < GatherTime)
+                {
+                    t += Time.unscaledDeltaTime;
+                    float k = EaseInOutCubic(Mathf.Clamp01(t / GatherTime));
+
+                    for (int a = 0; a < order.Count; a++)
+                    {
+                        int i = order[a];
+                        cardRects[i].anchoredPosition = Vector2.Lerp(startPos[i], StackPosition(a, order.Count), k);
+                        cardFeedbacks[i].introScale = Mathf.Lerp(1f, StackScale, k);
+
+                        if (wasRevealed[i])
+                        {
+                            float fk = Mathf.Clamp01(t / GatherFlipTime);
+                            cardFeedbacks[i].horizontalScale = Mathf.Max(0.001f, Mathf.Abs(Mathf.Cos(fk * Mathf.PI)));
+                            if (fk >= 0.5f && !flippedBack[i])
+                            {
+                                flippedBack[i] = true;
+                                SetFaceVisual(i, false);
+                            }
+                        }
+                    }
+
+                    yield return null;
+                }
+
+                for (int a = 0; a < order.Count; a++)
+                {
+                    int i = order[a];
+                    cardFeedbacks[i].horizontalScale = 1f;
+                    SetFaceVisual(i, false);
+                }
+            }
+
+            // --- 2. Every card is face-down: now it is safe to write the new offer onto them ---
+            ApplyOfferToCards();
+            offerApplied = true;
+            freshDraft = false;
+
+            order.Clear();
+            for (int i = 0; i < 3; i++) if (cardPanels[i].activeSelf) order.Add(i);
+            int n = order.Count;
+
+            for (int a = 0; a < n; a++)
+            {
+                int i = order[a];
+                SetCardPose(i, StackPosition(a, n), 0f);
+                cardFeedbacks[i].introScale = StackScale;
+                cardFeedbacks[i].horizontalScale = 1f;
+            }
+
+            ApplySiblingOrder(order);
+
+            if (fresh)
+            {
+                float fade = 0f;
+                while (fade < 0.18f)
+                {
+                    fade += Time.unscaledDeltaTime;
+                    float alpha = Mathf.Clamp01(fade / 0.18f);
+                    for (int a = 0; a < n; a++) cardGroups[order[a]].alpha = alpha;
+                    yield return null;
+                }
+            }
+
+            for (int a = 0; a < n; a++) cardGroups[order[a]].alpha = 1f;
+
+            // --- 3. Riffle shuffle: the top and bottom cards swing out and trade places ---
+            int cycles = fresh ? 2 : 3;
+            if (n >= 2)
+            {
+                for (int c = 0; c < cycles; c++)
+                {
+                    int topCard = order[n - 1];
+                    int bottomCard = order[0];
+                    PlaySfx(hoverClip, 0.85f + 0.12f * c);
+
+                    float t = 0f;
+                    while (t < RiffleOutTime)
+                    {
+                        t += Time.unscaledDeltaTime;
+                        float k = EaseOutCubic(Mathf.Clamp01(t / RiffleOutTime));
+                        SetCardPose(topCard, StackPosition(n - 1, n) + new Vector2(-RiffleSpread * k, 14f * k), 8f * k);
+                        SetCardPose(bottomCard, StackPosition(0, n) + new Vector2(RiffleSpread * k, -14f * k), -8f * k);
+                        yield return null;
+                    }
+
+                    // Trade depth while they are out of the stack
+                    order[0] = topCard;
+                    order[n - 1] = bottomCard;
+                    ApplySiblingOrder(order);
+
+                    Vector2 topOut = cardRects[topCard].anchoredPosition;
+                    Vector2 bottomOut = cardRects[bottomCard].anchoredPosition;
+                    t = 0f;
+                    while (t < RiffleInTime)
+                    {
+                        t += Time.unscaledDeltaTime;
+                        float k = EaseInOutCubic(Mathf.Clamp01(t / RiffleInTime));
+                        SetCardPose(topCard, Vector2.Lerp(topOut, StackPosition(0, n), k), Mathf.Lerp(8f, 0f, k));
+                        SetCardPose(bottomCard, Vector2.Lerp(bottomOut, StackPosition(n - 1, n), k), Mathf.Lerp(-8f, 0f, k));
+                        yield return null;
+                    }
+
+                    SetCardPose(topCard, StackPosition(0, n), 0f);
+                    SetCardPose(bottomCard, StackPosition(n - 1, n), 0f);
+                }
+            }
+
+            // --- 4. Deal back out, top of the stack first, still face-down ---
+            var stackStart = new Vector2[3];
+            var dealSequence = new List<int>(n);
+            for (int a = 0; a < n; a++) stackStart[order[a]] = StackPosition(a, n);
+            for (int a = n - 1; a >= 0; a--) dealSequence.Add(order[a]);
+
+            var soundPlayed = new bool[n];
+            float total = DealTime + DealStagger * Mathf.Max(0, n - 1);
+            float td = 0f;
+            while (td < total)
+            {
+                td += Time.unscaledDeltaTime;
+
+                for (int a = 0; a < n; a++)
+                {
+                    int i = dealSequence[a];
+                    float k = Mathf.Clamp01((td - a * DealStagger) / DealTime);
+                    float eased = EaseOutCubic(k);
+
+                    Vector2 position = Vector2.Lerp(stackStart[i], cardSlots[i], eased);
+                    position.y += Mathf.Sin(k * Mathf.PI) * 36f;
+                    float side = Mathf.Clamp(cardSlots[i].x / (CardWidth + CardSpacing), -1f, 1f);
+                    SetCardPose(i, position, (1f - eased) * side * -6f);
+                    cardFeedbacks[i].introScale = Mathf.Lerp(StackScale, 1f, eased);
+
+                    if (!soundPlayed[a] && k > 0f)
+                    {
+                        soundPlayed[a] = true;
+                        PlaySfx(hoverClip, 1.05f + 0.05f * a);
+                    }
+                }
+
+                yield return null;
+            }
+
+            SettleCards();
+        }
+
+        /// <summary>Puts every card in its slot at rest, in whichever face (up/down) it should show.</summary>
+        private void SettleCards()
+        {
+            isShuffling = false;
+
+            for (int i = 0; i < 3; i++)
+            {
+                if (cardRects[i] == null) continue;
+
+                cardRects[i].anchoredPosition = cardSlots[i];
+                cardRects[i].localRotation = Quaternion.identity;
+                cardFeedbacks[i].introScale = 1f;
+                cardFeedbacks[i].horizontalScale = 1f;
+                cardGroups[i].alpha = 1f;
+                SetFaceVisual(i, cardRevealed[i]);
+                cardRects[i].SetSiblingIndex(i);
+            }
+
+            SetCardsInteractable(true);
+            UpdateRerollButton();
+        }
+
+        private void RevealCard(int index)
+        {
+            if (cardRevealed[index]) return;
+            cardRevealed[index] = true;
+
+            if (!isActiveAndEnabled)
+            {
+                SetFaceVisual(index, true);
+                cardFeedbacks[index].glowColor = RarityGlow(index);
+                return;
+            }
+
+            if (flipRoutines[index] != null) StopCoroutine(flipRoutines[index]);
+            flipRoutines[index] = StartCoroutine(FlipRoutine(index));
+        }
+
+        private IEnumerator FlipRoutine(int index)
+        {
+            MenuButtonFeedback feedback = cardFeedbacks[index];
+            PlaySfx(hoverClip, 1.3f);
+
+            // Half 1: the back squeezes away
+            float t = 0f;
+            while (t < FlipHalfOut)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = Mathf.Clamp01(t / FlipHalfOut);
+                feedback.horizontalScale = Mathf.Max(0.001f, 1f - EaseInCubic(k));
+                feedback.introScale = 1f + 0.06f * k;
+                yield return null;
+            }
+
+            // Swap to the front and let the rarity color show through
+            feedback.horizontalScale = 0.001f;
+            SetFaceVisual(index, true);
+            feedback.glowColor = RarityGlow(index);
+            Color rarityColor = cardRarityColors[index];
+
+            // Half 2: the front springs open, with a short flash in the rarity color
+            t = 0f;
+            while (t < FlipHalfIn)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = Mathf.Clamp01(t / FlipHalfIn);
+                feedback.horizontalScale = Mathf.Max(0.001f, Mathf.LerpUnclamped(0.001f, 1f, EaseOutBack(k)));
+                feedback.introScale = 1.06f - 0.06f * k;
+                cardFlashes[index].color = new Color(rarityColor.r, rarityColor.g, rarityColor.b, (1f - k) * 0.4f);
+                yield return null;
+            }
+
+            feedback.horizontalScale = 1f;
+            feedback.introScale = 1f;
+            cardFlashes[index].color = new Color(1f, 1f, 1f, 0f);
+            flipRoutines[index] = null;
+        }
+
+        private void StopAllFlips()
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                if (flipRoutines[i] != null)
+                {
+                    StopCoroutine(flipRoutines[i]);
+                    flipRoutines[i] = null;
+                }
+
+                if (cardFeedbacks[i] != null)
+                {
+                    cardFeedbacks[i].horizontalScale = 1f;
+                    cardFeedbacks[i].introScale = 1f;
+                }
+
+                if (cardFlashes[i] != null) cardFlashes[i].color = new Color(1f, 1f, 1f, 0f);
+                if (cardRevealed[i]) SetFaceVisual(i, true);
+            }
+        }
+
+        private Color RarityGlow(int index)
+        {
+            Color c = cardRarityColors[index];
+            return new Color(c.r, c.g, c.b, 0.95f);
+        }
+
+        // ============================
         // Detail Panel
         // ============================
 
@@ -632,8 +1059,6 @@ namespace TrashTD.UI
             detailResText.text = op.GetScaledRES(card.rarity).ToString();
             detailBlockText.text = op.blockCount.ToString();
             detailIntervalText.text = op.attackInterval.ToString("0.##") + "s";
-
-            UpdateRangePreview(op);
 
             // Passive / ability text (only shown when the operator has one)
             string passive = FindStringMember(op, PassiveMemberNames);
@@ -761,8 +1186,18 @@ namespace TrashTD.UI
         {
             ClearUiSelection();
 
+            // Cards can't be touched while they are being shuffled and dealt.
+            if (isShuffling) return;
+
             if (index < 0 || draftSystem == null || index >= draftSystem.CurrentOfferedCards.Count)
                 return;
+
+            // A face-down card flips over first.
+            if (!cardRevealed[index])
+            {
+                RevealCard(index);
+                if (!selectOnReveal) return;
+            }
 
             bool changed = selectedCardIndex != index;
             selectedCardIndex = index;
@@ -812,6 +1247,9 @@ namespace TrashTD.UI
             ClearUiSelection();
 
             if (draftSystem == null) return;
+
+            // Wait for the current shuffle to finish before shuffling again.
+            if (isShuffling) return;
 
             var newOffer = draftSystem.RerollOffer();
             if (newOffer == null)
@@ -890,7 +1328,7 @@ namespace TrashTD.UI
             if (draftSystem == null) return;
 
             int remaining = draftSystem.RerollsRemaining;
-            bool canReroll = remaining > 0;
+            bool canReroll = remaining > 0 && !isShuffling;
             rerollButton.interactable = canReroll;
 
             GameplayHUDUI.ApplyButtonContainer(rerollButton, canReroll ? GameplayHUDUI.ButtonContainerType.Warning : GameplayHUDUI.ButtonContainerType.Dark);
@@ -962,7 +1400,7 @@ namespace TrashTD.UI
             if (restoreBar != null) restoreBar.SetActive(false);
         }
 
-        /// <summary>Jumps intro/deal animations to their end state so a restored overlay is laid out correctly.</summary>
+        /// <summary>Jumps intro/shuffle/flip animations to their end state so a restored overlay is laid out correctly.</summary>
         private void FinishAnimations()
         {
             if (introRoutine != null)
@@ -972,11 +1410,21 @@ namespace TrashTD.UI
                 for (int i = 0; i < introRects.Length; i++) introRects[i].anchoredPosition = introTargets[i];
             }
 
+            StopAllFlips();
+
             if (dealRoutine != null)
             {
                 StopCoroutine(dealRoutine);
                 dealRoutine = null;
-                for (int i = 0; i < 3; i++) ApplyDeal(i, 1f);
+
+                if (!offerApplied)
+                {
+                    ApplyOfferToCards();
+                    offerApplied = true;
+                    freshDraft = false;
+                }
+
+                SettleCards();
             }
         }
 
@@ -1028,49 +1476,6 @@ namespace TrashTD.UI
             for (int i = 0; i < introRects.Length; i++) introRects[i].anchoredPosition = introTargets[i];
         }
 
-        private void StartDeal()
-        {
-            if (!isActiveAndEnabled) return;
-
-            if (dealRoutine != null) StopCoroutine(dealRoutine);
-            dealRoutine = StartCoroutine(DealCardsRoutine());
-        }
-
-        // Cards are "dealt" with scale, fade and a slight rotation. Position is left alone
-        // because the HorizontalLayoutGroup owns it.
-        private IEnumerator DealCardsRoutine()
-        {
-            const float duration = 0.42f;
-            const float stagger = 0.1f;
-            float total = duration + stagger * 2f;
-
-            for (int i = 0; i < 3; i++) ApplyDeal(i, 0f);
-
-            float t = 0f;
-            while (t < total)
-            {
-                t += Time.unscaledDeltaTime;
-                for (int i = 0; i < 3; i++)
-                {
-                    ApplyDeal(i, Mathf.Clamp01((t - i * stagger) / duration));
-                }
-
-                yield return null;
-            }
-
-            for (int i = 0; i < 3; i++) ApplyDeal(i, 1f);
-        }
-
-        private void ApplyDeal(int index, float k)
-        {
-            if (cardPanels[index] == null) return;
-
-            float eased = EaseOutCubic(k);
-            cardGroups[index].alpha = Mathf.Clamp01(k * 1.5f);
-            cardFeedbacks[index].introScale = Mathf.LerpUnclamped(0.82f, 1f, EaseOutBack(k));
-            cardPanels[index].transform.localRotation = Quaternion.Euler(0f, 0f, (1f - eased) * (index - 1) * -7f);
-        }
-
         private IEnumerator HideRoutine()
         {
             if (introRoutine != null) { StopCoroutine(introRoutine); introRoutine = null; }
@@ -1098,6 +1503,16 @@ namespace TrashTD.UI
         {
             float u = 1f - t;
             return 1f - u * u * u;
+        }
+
+        private static float EaseInCubic(float t)
+        {
+            return t * t * t;
+        }
+
+        private static float EaseInOutCubic(float t)
+        {
+            return t < 0.5f ? 4f * t * t * t : 1f - Mathf.Pow(-2f * t + 2f, 3f) / 2f;
         }
 
         private static float EaseOutBack(float t)
@@ -1286,7 +1701,8 @@ namespace TrashTD.UI
                 squadIconObj.GetComponent<RectTransform>().pivot = new Vector2(1f, 1f);
             }
 
-            // Card container (row of 3 cards, left side of the screen)
+            // Card container (left side of the screen). Cards are positioned manually
+            // (not by a layout group) so the shuffle/deal animation can move them freely.
             var cardContainer = new GameObject("CardContainer", typeof(RectTransform));
             cardContainer.transform.SetParent(overlayRoot.transform, false);
             var containerRect = cardContainer.GetComponent<RectTransform>();
@@ -1294,14 +1710,6 @@ namespace TrashTD.UI
             containerRect.anchorMax = new Vector2(0.5f, 0.5f);
             containerRect.sizeDelta = new Vector2(CardWidth * 3f + CardSpacing * 2f, CardHeight);
             containerRect.anchoredPosition = new Vector2(ColumnCenterX, ContentCenterY);
-
-            var hlg = cardContainer.AddComponent<HorizontalLayoutGroup>();
-            hlg.spacing = CardSpacing;
-            hlg.childAlignment = TextAnchor.MiddleCenter;
-            hlg.childControlWidth = false;
-            hlg.childControlHeight = false;
-            hlg.childForceExpandWidth = false;
-            hlg.childForceExpandHeight = false;
 
             // Build 3 cards
             for (int i = 0; i < 3; i++)
@@ -1368,7 +1776,7 @@ namespace TrashTD.UI
             BuildMinimizeControls(canvasObj.transform);
 
             // Keyboard hint
-            var hintText = MakeText(overlayRoot.transform, "KeyHints", "1 2 3  SELECT     ENTER  CONFIRM     R  REROLL     M  VIEW MAP & DECK", 12,
+            var hintText = MakeText(overlayRoot.transform, "KeyHints", "1 2 3  FLIP / SELECT     ENTER  CONFIRM     R  REROLL     M  VIEW MAP & DECK", 12,
                 TextAnchor.MiddleCenter, new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.55f));
             PositionRT(hintText, new Vector2(0f, 28f), new Vector2(0.5f, 0f), new Vector2(900f, 24f));
 
@@ -1578,11 +1986,17 @@ namespace TrashTD.UI
 
         private void BuildCard(Transform parent, int index)
         {
-            // Card root
+            // Card root. Anchored to the container's center; its position is driven by
+            // the shuffle/deal animation (cardSlots) rather than a layout group.
             var cardObj = new GameObject($"Card_{index}", typeof(RectTransform), typeof(Image), typeof(Button), typeof(CanvasGroup));
             cardObj.transform.SetParent(parent, false);
             var cardRect = cardObj.GetComponent<RectTransform>();
+            cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+            cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+            cardRect.pivot = new Vector2(0.5f, 0.5f);
             cardRect.sizeDelta = new Vector2(CardWidth, CardHeight);
+            cardRect.anchoredPosition = Vector2.zero;
+            cardRects[index] = cardRect;
 
             var cardImg = cardObj.GetComponent<Image>();
             cardImg.color = CARD_BG;
@@ -1590,17 +2004,25 @@ namespace TrashTD.UI
             var cardBtn = cardObj.GetComponent<Button>();
             int capturedIndex = index;
             cardBtn.onClick.AddListener(() => OnCardClicked(capturedIndex));
+            cardButtonsArr[index] = cardBtn;
 
             // Hover / press / selection visuals come from MenuButtonFeedback (replaces the color tint).
-            cardFeedbacks[index] = AttachFeedback(cardBtn, STAR_COLOR, 1.03f);
+            cardFeedbacks[index] = AttachFeedback(cardBtn, ACCENT_COLOR, 1.03f);
             cardGroups[index] = cardObj.GetComponent<CanvasGroup>();
 
             cardPanels[index] = cardObj;
             cardBackgrounds[index] = cardImg;
 
+            // The front of the card (portrait, name, stars) lives under one container so the
+            // whole face can be shown/hidden when the card flips.
+            var front = new GameObject($"Front_{index}", typeof(RectTransform));
+            front.transform.SetParent(cardObj.transform, false);
+            StretchFill(front.GetComponent<RectTransform>());
+            cardFronts[index] = front;
+
             // Rarity-colored accent stripe along the top edge
             var accent = new GameObject($"Accent_{index}", typeof(RectTransform), typeof(Image));
-            accent.transform.SetParent(cardObj.transform, false);
+            accent.transform.SetParent(front.transform, false);
             var accentRect = accent.GetComponent<RectTransform>();
             accentRect.anchorMin = new Vector2(0f, 1f);
             accentRect.anchorMax = new Vector2(1f, 1f);
@@ -1612,7 +2034,7 @@ namespace TrashTD.UI
 
             // --- Portrait frame: takes up most of the card ---
             var portraitBg = new GameObject($"PortraitBg_{index}", typeof(RectTransform), typeof(Image));
-            portraitBg.transform.SetParent(cardObj.transform, false);
+            portraitBg.transform.SetParent(front.transform, false);
             StretchTopRT(portraitBg.transform, PortraitMargin, PortraitMargin, PortraitTop, PortraitHeight);
             portraitBgImages[index] = portraitBg.GetComponent<Image>();
             portraitBgImages[index].color = PORTRAIT_BG;
@@ -1674,7 +2096,7 @@ namespace TrashTD.UI
             classIconRect.offsetMax = new Vector2(-8f, -8f);
 
             // --- Name (bottom) ---
-            nameTexts[index] = MakeText(cardObj.transform, $"Name_{index}", "", 26,
+            nameTexts[index] = MakeText(front.transform, $"Name_{index}", "", 26,
                 TextAnchor.MiddleCenter, Color.white);
             nameTexts[index].fontStyle = FontStyle.Bold;
             nameTexts[index].resizeTextForBestFit = true;
@@ -1683,15 +2105,140 @@ namespace TrashTD.UI
             StretchTopRT(nameTexts[index], 14f, 14f, 484f, 44f);
 
             // --- Rarity stars (bottom) ---
-            rarityTexts[index] = MakeText(cardObj.transform, $"Rarity_{index}", "", 28,
+            rarityTexts[index] = MakeText(front.transform, $"Rarity_{index}", "", 28,
                 TextAnchor.MiddleCenter, STAR_COLOR);
             StretchTopRT(rarityTexts[index], 14f, 14f, 530f, 40f);
 
             // --- Select hint / selected badge ---
-            selectHintTexts[index] = MakeText(cardObj.transform, $"SelectHint_{index}", "CLICK TO SELECT", 12,
+            selectHintTexts[index] = MakeText(front.transform, $"SelectHint_{index}", "CLICK TO SELECT", 12,
                 TextAnchor.MiddleCenter, STAT_LABEL_COLOR);
             selectHintTexts[index].fontStyle = FontStyle.Bold;
             StretchTopRT(selectHintTexts[index], 14f, 14f, 596f, 24f);
+
+            // --- The back of the card (shown until the player clicks it) ---
+            BuildCardBack(cardObj.transform, index);
+
+            // Brief color flash that plays when the card turns over
+            var flash = new GameObject($"Flash_{index}", typeof(RectTransform), typeof(Image));
+            flash.transform.SetParent(cardObj.transform, false);
+            StretchFill(flash.GetComponent<RectTransform>());
+            cardFlashes[index] = flash.GetComponent<Image>();
+            cardFlashes[index].color = new Color(1f, 1f, 1f, 0f);
+            cardFlashes[index].raycastTarget = false;
+
+            // Cards start face-down
+            cardFronts[index].SetActive(false);
+        }
+
+        /// <summary>Card back: dark face, double frame, a diamond emblem and a "click to reveal" hint.</summary>
+        private void BuildCardBack(Transform card, int index)
+        {
+            var back = new GameObject($"Back_{index}", typeof(RectTransform), typeof(Image));
+            back.transform.SetParent(card, false);
+            StretchFill(back.GetComponent<RectTransform>());
+            var backImage = back.GetComponent<Image>();
+            backImage.color = BACK_BG;
+            backImage.raycastTarget = false;
+            cardBacks[index] = back;
+
+            Color frameColor = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.55f);
+            Color innerFrameColor = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.22f);
+            CreateFrame(back.transform, 14f, 3f, frameColor);
+            CreateFrame(back.transform, 26f, 1f, innerFrameColor);
+
+            // Diamond emblem
+            var diamond = new GameObject("Emblem", typeof(RectTransform), typeof(Image));
+            diamond.transform.SetParent(back.transform, false);
+            var diamondRect = diamond.GetComponent<RectTransform>();
+            diamondRect.anchorMin = new Vector2(0.5f, 0.5f);
+            diamondRect.anchorMax = new Vector2(0.5f, 0.5f);
+            diamondRect.pivot = new Vector2(0.5f, 0.5f);
+            diamondRect.sizeDelta = new Vector2(190f, 190f);
+            diamondRect.anchoredPosition = new Vector2(0f, 10f);
+            diamondRect.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            var diamondImage = diamond.GetComponent<Image>();
+            diamondImage.color = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.10f);
+            diamondImage.raycastTarget = false;
+            CreateFrame(diamond.transform, 0f, 3f, frameColor);
+
+            var emblemText = MakeText(back.transform, "BackEmblem", "TD", 88, TextAnchor.MiddleCenter,
+                new Color(ACCENT_BRIGHT.r, ACCENT_BRIGHT.g, ACCENT_BRIGHT.b, 0.9f));
+            emblemText.fontStyle = FontStyle.Bold;
+            PositionRT(emblemText, new Vector2(0f, 10f), new Vector2(0.5f, 0.5f), new Vector2(260f, 120f));
+
+            // Small diamonds in the corners of the inner frame
+            for (int c = 0; c < 4; c++)
+            {
+                bool right = (c & 1) == 1;
+                bool top = (c & 2) == 2;
+                var corner = new GameObject($"Corner_{c}", typeof(RectTransform), typeof(Image));
+                corner.transform.SetParent(back.transform, false);
+                var cornerRect = corner.GetComponent<RectTransform>();
+                Vector2 anchor = new Vector2(right ? 1f : 0f, top ? 1f : 0f);
+                cornerRect.anchorMin = anchor;
+                cornerRect.anchorMax = anchor;
+                cornerRect.pivot = new Vector2(0.5f, 0.5f);
+                cornerRect.sizeDelta = new Vector2(12f, 12f);
+                cornerRect.anchoredPosition = new Vector2(right ? -26f : 26f, top ? -26f : 26f);
+                cornerRect.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                var cornerImage = corner.GetComponent<Image>();
+                cornerImage.color = frameColor;
+                cornerImage.raycastTarget = false;
+            }
+
+            // Hotkey label near the top and the reveal hint near the bottom
+            var keyText = MakeText(back.transform, "BackKey", $"[ {index + 1} ]", 14, TextAnchor.MiddleCenter,
+                new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.6f));
+            keyText.fontStyle = FontStyle.Bold;
+            StretchTopRT(keyText, 14f, 14f, 44f, 24f);
+
+            var hintText = MakeText(back.transform, "BackHint", "CLICK TO REVEAL", 14, TextAnchor.MiddleCenter,
+                new Color(ACCENT_BRIGHT.r, ACCENT_BRIGHT.g, ACCENT_BRIGHT.b, 0.8f));
+            hintText.fontStyle = FontStyle.Bold;
+            StretchTopRT(hintText, 14f, 14f, CardHeight - 74f, 26f);
+        }
+
+        /// <summary>Hollow rectangle made of four thin strips, inset from the edges of its parent.</summary>
+        private static void CreateFrame(Transform parent, float inset, float thickness, Color color)
+        {
+            for (int side = 0; side < 4; side++)
+            {
+                var strip = new GameObject($"Frame_{side}", typeof(RectTransform), typeof(Image));
+                strip.transform.SetParent(parent, false);
+                var rect = strip.GetComponent<RectTransform>();
+
+                switch (side)
+                {
+                    case 0: // top
+                        rect.anchorMin = new Vector2(0f, 1f);
+                        rect.anchorMax = new Vector2(1f, 1f);
+                        rect.offsetMin = new Vector2(inset, -(inset + thickness));
+                        rect.offsetMax = new Vector2(-inset, -inset);
+                        break;
+                    case 1: // bottom
+                        rect.anchorMin = new Vector2(0f, 0f);
+                        rect.anchorMax = new Vector2(1f, 0f);
+                        rect.offsetMin = new Vector2(inset, inset);
+                        rect.offsetMax = new Vector2(-inset, inset + thickness);
+                        break;
+                    case 2: // left
+                        rect.anchorMin = new Vector2(0f, 0f);
+                        rect.anchorMax = new Vector2(0f, 1f);
+                        rect.offsetMin = new Vector2(inset, inset);
+                        rect.offsetMax = new Vector2(inset + thickness, -inset);
+                        break;
+                    default: // right
+                        rect.anchorMin = new Vector2(1f, 0f);
+                        rect.anchorMax = new Vector2(1f, 1f);
+                        rect.offsetMin = new Vector2(-(inset + thickness), inset);
+                        rect.offsetMax = new Vector2(-inset, -inset);
+                        break;
+                }
+
+                var image = strip.GetComponent<Image>();
+                image.color = color;
+                image.raycastTarget = false;
+            }
         }
 
         private void BuildDetailsPanel(Transform parent)
@@ -1783,7 +2330,7 @@ namespace TrashTD.UI
 
             float tileWidth = (innerWidth - 12f) / 2f;
             float tileHeight = 62f;
-            float rowStep = tileHeight + 6f;
+            float rowStep = tileHeight + 8f;
             float gridTop = 226f;
             float rightX = margin + tileWidth + 12f;
 
@@ -1794,25 +2341,17 @@ namespace TrashTD.UI
             detailBlockText = CreateStatTile(content, "BLOCK", new Color(1.00f, 0.80f, 0.30f, 1f), margin, gridTop + rowStep * 2f, tileWidth, tileHeight);
             detailIntervalText = CreateStatTile(content, "ATK SPD", new Color(0.40f, 0.85f, 0.90f, 1f), rightX, gridTop + rowStep * 2f, tileWidth, tileHeight);
 
-            // Bottom section: range preview (left) + ability (right)
-            const float sectionLabelTop = 446f;
-            const float sectionBodyTop = 470f;
-            CreateDivider(content, 436f, margin);
-            BuildRangePreview(content, margin, sectionLabelTop, sectionBodyTop);
-
-            float abilityX = margin + RangeBoxWidth + 16f;
-
             // Passive / ability (hidden when the operator has none)
             detailPassiveLabel = MakeText(content, "PassiveLabel", "ABILITY", 11, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
             detailPassiveLabel.fontStyle = FontStyle.Bold;
-            StretchTopRT(detailPassiveLabel, abilityX, margin, sectionLabelTop, 18f);
+            StretchTopRT(detailPassiveLabel, margin, margin, 450f, 18f);
 
             detailPassiveText = MakeText(content, "PassiveText", "", 15, TextAnchor.UpperLeft,
                 new Color(0.88f, 0.92f, 0.96f, 1f));
             detailPassiveText.resizeTextForBestFit = true;
             detailPassiveText.resizeTextMinSize = 11;
             detailPassiveText.resizeTextMaxSize = 15;
-            StretchTopRT(detailPassiveText, abilityX, margin, sectionBodyTop, RangeBoxHeight);
+            StretchTopRT(detailPassiveText, margin, margin, 474f, 134f);
 
             detailContentRoot.SetActive(false);
         }
@@ -1911,182 +2450,6 @@ namespace TrashTD.UI
             var image = divider.GetComponent<Image>();
             image.color = new Color(1f, 1f, 1f, 0.08f);
             image.raycastTarget = false;
-        }
-
-        /// <summary>Header + framed box that holds the operator's attack-range diagram.</summary>
-        private void BuildRangePreview(Transform parent, float x, float labelTop, float boxTop)
-        {
-            var rangeLabel = MakeText(parent, "RangeLabel", "RANGE", 11, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
-            rangeLabel.fontStyle = FontStyle.Bold;
-            PlaceTopLeft(rangeLabel.transform, x, labelTop, RangeBoxWidth, 18f);
-
-            // Facing hint: the diagram is drawn facing right, the default placement facing.
-            var facingText = MakeText(parent, "RangeFacing", "FACING", 10, TextAnchor.MiddleRight,
-                new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.7f));
-            PlaceTopLeft(facingText.transform, x, labelTop, RangeBoxWidth - 16f, 18f);
-
-            Sprite arrowSprite = LoadUiSprite("UI/minis/mini_arrow_right", Vector4.zero);
-            if (arrowSprite != null)
-            {
-                var arrow = new GameObject("RangeFacingArrow", typeof(RectTransform), typeof(Image));
-                arrow.transform.SetParent(parent, false);
-                PlaceTopLeft(arrow.transform, x + RangeBoxWidth - 12f, labelTop + 4f, 10f, 10f);
-                var arrowImage = arrow.GetComponent<Image>();
-                arrowImage.sprite = arrowSprite;
-                arrowImage.preserveAspect = true;
-                arrowImage.color = SELF_TILE_COLOR;
-                arrowImage.raycastTarget = false;
-            }
-
-            var box = new GameObject("RangeBox", typeof(RectTransform), typeof(Image));
-            box.transform.SetParent(parent, false);
-            PlaceTopLeft(box.transform, x, boxTop, RangeBoxWidth, RangeBoxHeight);
-            GameplayHUDUI.ApplyPanelContainer(box, GameplayHUDUI.PanelContainerType.Dark);
-            box.GetComponent<Image>().raycastTarget = false;
-
-            var grid = new GameObject("RangeGrid", typeof(RectTransform));
-            grid.transform.SetParent(box.transform, false);
-            detailRangeGrid = grid.GetComponent<RectTransform>();
-            detailRangeGrid.anchorMin = new Vector2(0.5f, 0.5f);
-            detailRangeGrid.anchorMax = new Vector2(0.5f, 0.5f);
-            detailRangeGrid.pivot = new Vector2(0.5f, 0.5f);
-            detailRangeGrid.sizeDelta = Vector2.zero;
-            detailRangeGrid.anchoredPosition = Vector2.zero;
-        }
-
-        /// <summary>
-        /// Draws <see cref="OperatorData.rangePattern"/> — the same offsets combat uses via
-        /// GridManager.GetCellsInRange — as a tile grid facing right.
-        /// </summary>
-        private void UpdateRangePreview(OperatorData op)
-        {
-            if (detailRangeGrid == null) return;
-
-            for (int i = detailRangeGrid.childCount - 1; i >= 0; i--)
-            {
-                Destroy(detailRangeGrid.GetChild(i).gameObject);
-            }
-
-            var rangeCells = new HashSet<Vector2Int>();
-            if (op.rangePattern != null)
-            {
-                foreach (Vector2Int offset in op.rangePattern) rangeCells.Add(offset);
-            }
-
-            int minX = 0, maxX = 0, minY = 0, maxY = 0;
-            foreach (Vector2Int cell in rangeCells)
-            {
-                minX = Mathf.Min(minX, cell.x);
-                maxX = Mathf.Max(maxX, cell.x);
-                minY = Mathf.Min(minY, cell.y);
-                maxY = Mathf.Max(maxY, cell.y);
-            }
-
-            // Pad small patterns to at least 3x3 so the operator's own tile has context around it.
-            while (maxX - minX + 1 < 3) { if (-minX <= maxX) minX--; else maxX++; }
-            while (maxY - minY + 1 < 3) { if (-minY <= maxY) minY--; else maxY++; }
-
-            int cols = maxX - minX + 1;
-            int rows = maxY - minY + 1;
-            float availableWidth = RangeBoxWidth - RangeBoxPadding * 2f;
-            float availableHeight = RangeBoxHeight - RangeBoxPadding * 2f;
-            float tileSize = Mathf.Floor(Mathf.Min(MaxRangeTileSize,
-                (availableWidth - RangeTileGap * (cols - 1)) / cols,
-                (availableHeight - RangeTileGap * (rows - 1)) / rows));
-            float step = tileSize + RangeTileGap;
-            Sprite classIcon = GameplayHUDUI.GetClassIconSprite(op.operatorClass);
-
-            for (int gy = minY; gy <= maxY; gy++)
-            {
-                for (int gx = minX; gx <= maxX; gx++)
-                {
-                    var cell = new Vector2Int(gx, gy);
-                    var position = new Vector2(
-                        Mathf.Round((gx - minX - (cols - 1) * 0.5f) * step),
-                        Mathf.Round((gy - minY - (rows - 1) * 0.5f) * step));
-                    bool isSelf = cell == Vector2Int.zero;
-                    bool inRange = rangeCells.Contains(cell);
-                    Color frame = isSelf ? SELF_TILE_COLOR : inRange ? RANGE_TILE_COLOR : EMPTY_TILE_COLOR;
-                    CreateRangeTile(position, tileSize, frame, inRange, isSelf ? classIcon : null);
-                }
-            }
-        }
-
-        private void CreateRangeTile(Vector2 position, float size, Color frameColor, bool filled, Sprite icon)
-        {
-            if (rangeTileSprite == null)
-            {
-                rangeTileSprite = LoadUiSprite("UI/controls/checkbox_off", new Vector4(3f, 3f, 3f, 3f));
-            }
-
-            var tile = new GameObject("RangeTile", typeof(RectTransform), typeof(Image));
-            tile.transform.SetParent(detailRangeGrid, false);
-            var tileRect = tile.GetComponent<RectTransform>();
-            tileRect.sizeDelta = new Vector2(size, size);
-            tileRect.anchoredPosition = position;
-
-            var frame = tile.GetComponent<Image>();
-            frame.raycastTarget = false;
-            if (rangeTileSprite != null)
-            {
-                frame.sprite = rangeTileSprite;
-                frame.type = Image.Type.Sliced;
-                frame.color = frameColor;
-            }
-            else
-            {
-                frame.color = new Color(frameColor.r, frameColor.g, frameColor.b, frameColor.a * 0.5f);
-            }
-
-            float inset = Mathf.Min(3f, size * 0.2f);
-            if (filled)
-            {
-                var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-                fill.transform.SetParent(tile.transform, false);
-                var fillRect = fill.GetComponent<RectTransform>();
-                StretchFill(fillRect);
-                fillRect.offsetMin = new Vector2(inset, inset);
-                fillRect.offsetMax = new Vector2(-inset, -inset);
-                var fillImage = fill.GetComponent<Image>();
-                fillImage.color = new Color(RANGE_TILE_COLOR.r, RANGE_TILE_COLOR.g, RANGE_TILE_COLOR.b, 0.3f);
-                fillImage.raycastTarget = false;
-            }
-
-            if (icon != null)
-            {
-                var iconObject = new GameObject("Icon", typeof(RectTransform), typeof(Image));
-                iconObject.transform.SetParent(tile.transform, false);
-                var iconRect = iconObject.GetComponent<RectTransform>();
-                StretchFill(iconRect);
-                float iconInset = inset + 1f;
-                iconRect.offsetMin = new Vector2(iconInset, iconInset);
-                iconRect.offsetMax = new Vector2(-iconInset, -iconInset);
-                var iconImage = iconObject.GetComponent<Image>();
-                iconImage.sprite = icon;
-                iconImage.preserveAspect = true;
-                iconImage.raycastTarget = false;
-            }
-        }
-
-        /// <summary>
-        /// Loads a UI-kit sprite (single or multiple sprite mode) with Point filtering, adding a
-        /// 9-slice border when the imported sprite has none.
-        /// </summary>
-        private static Sprite LoadUiSprite(string path, Vector4 border)
-        {
-            Sprite source = Resources.Load<Sprite>(path);
-            if (source == null)
-            {
-                Sprite[] all = Resources.LoadAll<Sprite>(path);
-                if (all != null && all.Length > 0) source = all[0];
-            }
-            if (source == null || source.texture == null) return source;
-
-            source.texture.filterMode = FilterMode.Point;
-            if (border == Vector4.zero || source.border != Vector4.zero) return source;
-
-            return Sprite.Create(source.texture, source.rect, new Vector2(0.5f, 0.5f),
-                source.pixelsPerUnit, 0, SpriteMeshType.FullRect, border);
         }
 
         // ============================
