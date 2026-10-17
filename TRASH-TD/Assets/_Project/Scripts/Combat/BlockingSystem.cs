@@ -21,7 +21,7 @@ namespace TrashTD.Combat
         {
             if (blocker == null || enemy == null) return false;
             if (!blocker.IsDeployed) return false;
-            if (enemy.IsDead || enemy.IsBlocked || enemy.IsPushingBack) return false;
+            if (enemy.IsDead || enemy.IsBlocked || enemy.IsPushingBack || enemy.IsInsideHole) return false;
 
             // Flyers ignore ground blockers
             if (enemy.MovementType == Data.EnemyMovementType.Air) return false;

@@ -192,7 +192,7 @@ namespace TrashTD.Systems
             for (int i = 0; i < activeEnemies.Count; i++)
             {
                 var enemy = activeEnemies[i];
-                if (enemy == null || enemy.IsDead || enemy.IsBlocked || enemy.IsPushingBack) continue;
+                if (enemy == null || enemy.IsDead || enemy.IsBlocked || enemy.IsPushingBack || enemy.IsInsideHole) continue;
                 if (enemy.MovementType == EnemyMovementType.Air) continue;
                 if (enemy.Data != null && enemy.Data.isUnblockable) continue;
 
@@ -255,7 +255,7 @@ namespace TrashTD.Systems
 
             foreach (var enemy in activeEnemies)
             {
-                if (enemy == null || enemy.IsDead) continue;
+                if (enemy == null || enemy.IsDead || enemy.IsInsideHole) continue;
                 if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air) continue;
                 Vector2Int pos = gridManager.WorldToGridPosition(enemy.transform.position);
                 if (cellSet.Contains(pos))
@@ -287,7 +287,7 @@ namespace TrashTD.Systems
 
             foreach (var enemy in activeEnemies)
             {
-                if (enemy == null || enemy.IsDead) continue;
+                if (enemy == null || enemy.IsDead || enemy.IsInsideHole) continue;
                 if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air) continue;
                 if ((enemy.transform.position - center).sqrMagnitude <= sqrRadius)
                 {

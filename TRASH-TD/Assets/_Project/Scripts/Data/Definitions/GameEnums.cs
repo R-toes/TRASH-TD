@@ -63,7 +63,8 @@ namespace TrashTD.Data
         EnemyPath,      // Legacy alias for a ground enemy lane; use LowGround for new stages
         SpawnPoint,     // Enemy entry point
         ExitPoint,      // Objective — enemies reaching here cost life points
-        Trap            // Walkable tile that damages units occupying it over time
+        Trap,           // Walkable tile that damages units occupying it over time
+        Hole            // Hole/ladder tile: ground enemies enter, stay inside, and teleport to the paired hole
     }
 
     public static class TrapTileRules

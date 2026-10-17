@@ -78,6 +78,11 @@ namespace TrashTD.Enemies
         private SpriteRenderer[] chillRenderers;
         private Color[] originalRendererColors;
 
+        private bool isInsideHole;
+        private float holeStayTimer;
+        private Vector3 destinationHolePosition;
+        private const float DefaultHoleStayDuration = 1.5f;
+
         // --- Properties ---
         public EnemyData Data => data;
         public int CurrentHP => currentHP;
@@ -91,6 +96,7 @@ namespace TrashTD.Enemies
         public bool IsDead => isDead;
         public bool IsFrozen => isFrozen;
         public bool IsStunned => isStunned;
+        public bool IsInsideHole => isInsideHole;
         public Vector3 VisualPosition
         {
             get
@@ -178,6 +184,9 @@ namespace TrashTD.Enemies
             rangedAttackStopTimer = 0f;
             currentPathIndex = 0;
             trapDamageTimer = 0f;
+            isInsideHole = false;
+            holeStayTimer = 0f;
+            destinationHolePosition = Vector3.zero;
         }
 
         public void SetGridManager(GridManager manager)
@@ -206,6 +215,12 @@ namespace TrashTD.Enemies
         protected virtual void Update()
         {
             if (isDead) return;
+
+            if (isInsideHole)
+            {
+                UpdateHoleStay(Time.deltaTime);
+                return;
+            }
 
             UpdateSpriteAnimation(Time.deltaTime);
             UpdateTrapDamage(Time.deltaTime);
@@ -250,6 +265,12 @@ namespace TrashTD.Enemies
             if (isDead) return;
 
             float deltaTime = Time.deltaTime;
+            if (isInsideHole)
+            {
+                UpdateHoleStay(deltaTime);
+                return;
+            }
+
             UpdateSpriteAnimation(deltaTime);
             UpdateTrapDamage(deltaTime);
             if (isDead) return;
@@ -294,6 +315,12 @@ namespace TrashTD.Enemies
             if (isDead) return;
 
             float deltaTime = Time.deltaTime;
+            if (isInsideHole)
+            {
+                UpdateHoleStay(deltaTime);
+                return;
+            }
+
             UpdateSpriteAnimation(deltaTime);
             UpdateTrapDamage(deltaTime);
             if (isDead) return;
@@ -543,7 +570,7 @@ namespace TrashTD.Enemies
 
         private void UpdateTrapDamage(float deltaTime)
         {
-            if (gridManager == null) return;
+            if (isDead || isInsideHole || gridManager == null) return;
 
             Vector2Int gridPosition = gridManager.WorldToGridPosition(transform.position);
             GridCell cell = gridManager.GetCell(gridPosition);
@@ -581,6 +608,43 @@ namespace TrashTD.Enemies
 
             if (Vector3.Distance(transform.position, targetPos) < 0.01f)
             {
+                // Check if ground enemy reached a Hole tile
+                if (data != null && data.movementType == EnemyMovementType.Ground && gridManager != null)
+                {
+                    Vector2Int gridPos = gridManager.WorldToGridPosition(transform.position);
+                    GridCell currentCell = gridManager.GetCell(gridPos);
+                    if (currentCell != null && currentCell.TileType == TileType.Hole)
+                    {
+                        Vector3 destWorldPos = transform.position;
+                        if (currentPathIndex + 1 < path.Count)
+                        {
+                            Vector2Int nextPos = gridManager.WorldToGridPosition(path[currentPathIndex + 1]);
+                            GridCell nextCell = gridManager.GetCell(nextPos);
+                            if (nextCell != null && nextCell.TileType == TileType.Hole)
+                            {
+                                destWorldPos = path[currentPathIndex + 1];
+                            }
+                            else
+                            {
+                                GridCell linked = gridManager.GetLinkedHoleCell(gridPos);
+                                destWorldPos = linked != null ? linked.WorldPosition : transform.position;
+                            }
+                        }
+                        else
+                        {
+                            GridCell linked = gridManager.GetLinkedHoleCell(gridPos);
+                            destWorldPos = linked != null ? linked.WorldPosition : transform.position;
+                        }
+
+                        if (destWorldPos != transform.position)
+                        {
+                            currentPathIndex++;
+                            EnterHole(destWorldPos, DefaultHoleStayDuration);
+                            return;
+                        }
+                    }
+                }
+
                 currentPathIndex++;
 
                 if (currentPathIndex >= path.Count)
@@ -591,11 +655,83 @@ namespace TrashTD.Enemies
         }
 
         /// <summary>
+        /// Enter a hole/ladder tile: becomes untargetable, invulnerable, hides visuals,
+        /// and teleports to the destination hole after the duration.
+        /// </summary>
+        public void EnterHole(Vector3 destinationPos, float duration = DefaultHoleStayDuration)
+        {
+            if (isDead || isInsideHole) return;
+
+            isInsideHole = true;
+            holeStayTimer = duration;
+            destinationHolePosition = destinationPos;
+
+            if (isBlocked && blockingOperator != null)
+            {
+                blockingOperator.ReleaseBlock(this);
+            }
+
+            SetVisualsActive(false);
+        }
+
+        /// <summary>
+        /// Exits the hole tile and reappears at the destination.
+        /// </summary>
+        public void ExitHole()
+        {
+            if (!isInsideHole) return;
+
+            transform.position = destinationHolePosition;
+            isInsideHole = false;
+            SetVisualsActive(true);
+
+            if (path != null && currentPathIndex < path.Count)
+            {
+                if (Vector3.Distance(transform.position, path[currentPathIndex]) < 0.1f)
+                {
+                    currentPathIndex++;
+                }
+            }
+
+            if (path != null && currentPathIndex >= path.Count)
+            {
+                ReachExit();
+            }
+        }
+
+        private void UpdateHoleStay(float deltaTime)
+        {
+            if (!isInsideHole) return;
+
+            holeStayTimer -= deltaTime;
+            if (holeStayTimer <= 0f)
+            {
+                ExitHole();
+            }
+        }
+
+        private void SetVisualsActive(bool active)
+        {
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null)
+                    renderers[i].enabled = active;
+            }
+
+            var healthBar = GetComponent<Combat.WorldHealthBar>();
+            if (healthBar != null)
+            {
+                healthBar.SetVisible(active);
+            }
+        }
+
+        /// <summary>
         /// Push this enemy backward along its route by the requested number of grid cells.
         /// </summary>
         public bool PushBack(int cells, float duration = 0.45f)
         {
-            if (isDead || isPushingBack || gridManager == null || path == null || cells <= 0 || currentPathIndex <= 0)
+            if (isDead || isInsideHole || isPushingBack || gridManager == null || path == null || cells <= 0 || currentPathIndex <= 0)
                 return false;
 
             float remainingDistance = gridManager.CellSize * cells;
@@ -713,7 +849,7 @@ namespace TrashTD.Enemies
         /// </summary>
         public virtual void TakeDamage(int damage, DamageType damageType)
         {
-            if (isDead || damage <= 0) return;
+            if (isDead || isInsideHole || damage <= 0) return;
 
             int previousHP = currentHP;
             currentHP = Mathf.Max(0, currentHP - damage);
@@ -732,6 +868,7 @@ namespace TrashTD.Enemies
 
         public bool TryTakeAttackDamage(int damage, DamageType damageType, OperatorBase attacker = null, bool canHitAir = false)
         {
+            if (isDead || isInsideHole) return false;
             bool bypassAirImmunity = canHitAir || (attacker != null && attacker.CanHitAir);
             if (!bypassAirImmunity &&
                 attacker != null && attacker.Data != null &&
@@ -854,7 +991,7 @@ namespace TrashTD.Enemies
             float freezeThreshold,
             float freezeDuration)
         {
-            if (isDead || data == null || amount <= 0f || slowDuration <= 0f || freezeThreshold <= 0f)
+            if (isDead || isInsideHole || data == null || amount <= 0f || slowDuration <= 0f || freezeThreshold <= 0f)
                 return false;
 
             if (slowTimer <= 0f && !isFrozen)
@@ -889,7 +1026,7 @@ namespace TrashTD.Enemies
         /// </summary>
         public void ApplyStun(float duration)
         {
-            if (isDead || duration <= 0f) return;
+            if (isDead || isInsideHole || duration <= 0f) return;
 
             stunTimer = Mathf.Max(stunTimer, duration);
             if (!isStunned)

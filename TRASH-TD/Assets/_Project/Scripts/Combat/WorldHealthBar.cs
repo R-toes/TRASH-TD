@@ -115,6 +115,13 @@ namespace TrashTD.Combat
             fill.gameObject.SetActive(true);
         }
 
+        public void SetVisible(bool visible)
+        {
+            EnsureLines();
+            if (background != null) background.gameObject.SetActive(visible && healthRatio < 1f);
+            if (fill != null) fill.gameObject.SetActive(visible && healthRatio < 1f);
+        }
+
         private static Color GetHealthColor(float ratio)
         {
             if (ratio <= 0.3f) return new Color(1f, 0.2f, 0.18f);

@@ -52,7 +52,8 @@ namespace TrashTD.Core.Grid
                       || tileType == TileType.SpawnPoint
                       || tileType == TileType.ExitPoint
                       || tileType == TileType.LowGround
-                      || tileType == TileType.Trap;
+                      || tileType == TileType.Trap
+                      || tileType == TileType.Hole;
             IsAirPassable = tileType != TileType.Blocked;
         }
 

@@ -402,6 +402,7 @@ namespace TrashTD.Core.GameLoop
                 TileType.SpawnPoint => spawnPointSprite,
                 TileType.ExitPoint => exitPointSprite,
                 TileType.Trap => lowGroundSprite,
+                TileType.Hole => lowGroundSprite,
                 _ => lowGroundSprite
             };
         }

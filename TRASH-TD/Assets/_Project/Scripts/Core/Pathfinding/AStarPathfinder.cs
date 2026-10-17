@@ -15,6 +15,7 @@ namespace TrashTD.Core.Pathfinding
     /// </summary>
     public class AStarPathfinder
     {
+        private GridManager gridManager;
         private PathNode[,] nodeGrid;
         private int width;
         private int height;
@@ -25,6 +26,7 @@ namespace TrashTD.Core.Pathfinding
         /// </summary>
         public void Initialize(GridManager gridManager)
         {
+            this.gridManager = gridManager;
             width = gridManager.Width;
             height = gridManager.Height;
             nodeGrid = new PathNode[width, height];
@@ -174,7 +176,7 @@ namespace TrashTD.Core.Pathfinding
         /// </summary>
         private List<PathNode> GetNeighbors(PathNode node, EnemyMovementType movementType)
         {
-            List<PathNode> neighbors = new List<PathNode>(4);
+            List<PathNode> neighbors = new List<PathNode>(5);
 
             // Right
             if (IsInBounds(node.X + 1, node.Y))
@@ -188,6 +190,20 @@ namespace TrashTD.Core.Pathfinding
             // Down
             if (IsInBounds(node.X, node.Y - 1))
                 neighbors.Add(nodeGrid[node.X, node.Y - 1]);
+
+            // If this node is a Hole, ground enemies can traverse to the linked hole
+            if (movementType == EnemyMovementType.Ground && gridManager != null)
+            {
+                GridCell cell = gridManager.GetCell(node.X, node.Y);
+                if (cell != null && cell.TileType == TileType.Hole)
+                {
+                    GridCell linkedHole = gridManager.GetLinkedHoleCell(new Vector2Int(node.X, node.Y));
+                    if (linkedHole != null && IsInBounds(linkedHole.X, linkedHole.Y))
+                    {
+                        neighbors.Add(nodeGrid[linkedHole.X, linkedHole.Y]);
+                    }
+                }
+            }
 
             return neighbors;
         }

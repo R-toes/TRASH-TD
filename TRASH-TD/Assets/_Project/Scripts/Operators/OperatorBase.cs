@@ -323,7 +323,7 @@ namespace TrashTD.Operators
 
         protected virtual bool CanAttackTarget(EnemyBase target)
         {
-            if (target == null || target.IsDead) return false;
+            if (target == null || target.IsDead || target.IsInsideHole) return false;
             return target.MovementType != EnemyMovementType.Air || CanHitAir;
         }
 

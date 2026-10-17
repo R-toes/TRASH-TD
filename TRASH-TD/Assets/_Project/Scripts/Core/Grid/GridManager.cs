@@ -116,6 +116,30 @@ namespace TrashTD.Core.Grid
         }
 
         /// <summary>
+        /// Finds the linked hole cell paired with the given hole cell position.
+        /// If there are multiple holes, returns the first hole that is not at the source position.
+        /// </summary>
+        public GridCell GetLinkedHoleCell(Vector2Int sourceHolePos)
+        {
+            if (grid == null) return null;
+
+            for (int y = 0; y < Height; y++)
+            {
+                for (int x = 0; x < Width; x++)
+                {
+                    if (x == sourceHolePos.x && y == sourceHolePos.y) continue;
+                    GridCell cell = grid[x, y];
+                    if (cell != null && cell.TileType == TileType.Hole)
+                    {
+                        return cell;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Try to deploy an operator onto a cell. Validates tile type and occupancy.
         /// </summary>
         public bool TryDeploy(int x, int y, OperatorPosition operatorPosition, GameObject operatorObject)
