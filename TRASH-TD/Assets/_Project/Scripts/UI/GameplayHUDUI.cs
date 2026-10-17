@@ -33,6 +33,21 @@ namespace TrashTD.UI
         private static Sprite exitIconSprite;
         private static readonly Dictionary<OperatorClass, Sprite> ClassIconSprites = new Dictionary<OperatorClass, Sprite>();
 
+        private enum ButtonContainerType
+        {
+            Primary,
+            Secondary,
+            Dark,
+            Danger,
+            Warning,
+            IconDark,
+            IconDanger,
+            IconPrimary,
+            IconSecondary
+        }
+
+        private static readonly Dictionary<ButtonContainerType, Sprite> ButtonContainerSprites = new Dictionary<ButtonContainerType, Sprite>();
+
         // ── Palette ──────────────────────────────────────────
         private static readonly Color AccentColor = new Color(0.18f, 0.82f, 0.45f, 1f);
         private static readonly Color DarkButton = new Color(0.10f, 0.12f, 0.16f, 1f);
@@ -394,13 +409,13 @@ namespace TrashTD.UI
             selectedOperatorUpgradeBadge = CreateUpgradeBadge(selectedOperatorLabelRoot.transform, "SelectedOperatorUpgradeBadge", new Vector2(38f, 18f), new Vector2(10f, -29f));
             selectedOperatorUpgradeBadgeGraphic = selectedOperatorUpgradeBadge.GetComponentInChildren<UpgradeArrowGraphic>();
 
-            selectedOperatorShowMoreButton = CreateButton(selectedOperatorLabelRoot.transform, "ShowOperatorDetailsButton", "SHOW MORE", new Vector2(102f, 24f));
+            selectedOperatorShowMoreButton = CreateButton(selectedOperatorLabelRoot.transform, "ShowOperatorDetailsButton", "SHOW MORE", new Vector2(102f, 24f), ButtonContainerType.Dark);
             SetPosition(selectedOperatorShowMoreButton.GetComponent<RectTransform>(), new Vector2(0f, -112f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 1f));
             Text showMoreLabel = selectedOperatorShowMoreButton.GetComponentInChildren<Text>();
             showMoreLabel.fontSize = 11;
             showMoreLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
             showMoreLabel.verticalOverflow = VerticalWrapMode.Truncate;
-            StyleButton(selectedOperatorShowMoreButton, DarkButton, PrepColor, 1.08f);
+            StyleButton(selectedOperatorShowMoreButton, ButtonContainerType.Dark, PrepColor, 1.08f);
             selectedOperatorShowMoreButton.onClick.AddListener(ToggleSelectedOperatorDetails);
 
             selectedOperatorAtkText = CreateText(selectedOperatorLabelRoot.transform, "Atk", string.Empty, 14, TextAnchor.MiddleLeft);
@@ -432,10 +447,9 @@ namespace TrashTD.UI
             selectedOperatorHealthFillRect.offsetMin = Vector2.zero;
             selectedOperatorHealthFillRect.offsetMax = Vector2.zero;
 
-            retreatOperatorButton = CreateButton(root, "RetreatOperatorButton", string.Empty, new Vector2(44f, 44f));
+            retreatOperatorButton = CreateButton(root, "RetreatOperatorButton", string.Empty, new Vector2(44f, 44f), ButtonContainerType.IconDanger);
             SetPosition(retreatOperatorButton.GetComponent<RectTransform>(), new Vector2(185f, 0f), new Vector2(0.5f, 0.5f));
-            retreatOperatorButton.GetComponent<Image>().color = new Color(0.7f, 0.2f, 0.18f, 1f);
-            SetPlacementButtonStyle(retreatOperatorButton, new Color(0.7f, 0.2f, 0.18f, 1f), 28);
+            SetPlacementButtonStyle(retreatOperatorButton, ButtonContainerType.IconDanger, 28);
             retreatOperatorButton.onClick.AddListener(RetreatSelectedOperator);
             retreatFeedback = AttachFeedback(retreatOperatorButton, new Color(1f, 0.45f, 0.4f, 1f), 1.1f);
 
@@ -678,15 +692,15 @@ namespace TrashTD.UI
             CreateFacingButton("FaceDownButton", "↓", OperatorFacing.Down, new Vector2(0f, -58f));
             CreateFacingButton("FaceRightButton", "→", OperatorFacing.Right, new Vector2(58f, 0f));
 
-            var confirmButton = CreateButton(placementControlsRoot.transform, "ConfirmPlacementButton", "PLACE", new Vector2(84f, 34f));
+            var confirmButton = CreateButton(placementControlsRoot.transform, "ConfirmPlacementButton", "PLACE", new Vector2(84f, 34f), ButtonContainerType.Primary);
             SetPlacementButtonPosition(confirmButton, new Vector2(150f, 19f));
-            SetPlacementButtonStyle(confirmButton, new Color(0.12f, 0.58f, 0.28f, 1f), 15);
+            SetPlacementButtonStyle(confirmButton, ButtonContainerType.Primary, 15);
             confirmButton.onClick.AddListener(() => stageBootstrapper?.ConfirmOperatorPlacement());
             confirmFeedback = AttachFeedback(confirmButton, AccentColor, 1.08f);
 
-            var cancelButton = CreateButton(placementControlsRoot.transform, "CancelPlacementButton", "CANCEL", new Vector2(84f, 34f));
+            var cancelButton = CreateButton(placementControlsRoot.transform, "CancelPlacementButton", "CANCEL", new Vector2(84f, 34f), ButtonContainerType.Danger);
             SetPlacementButtonPosition(cancelButton, new Vector2(150f, -21f));
-            SetPlacementButtonStyle(cancelButton, new Color(0.65f, 0.16f, 0.18f, 1f), 14);
+            SetPlacementButtonStyle(cancelButton, ButtonContainerType.Danger, 14);
             cancelButton.onClick.AddListener(() => stageBootstrapper?.CancelOperatorPlacement());
             AttachFeedback(cancelButton, new Color(1f, 0.4f, 0.4f, 1f), 1.08f);
 
@@ -696,9 +710,9 @@ namespace TrashTD.UI
 
         private void CreateFacingButton(string objectName, string label, OperatorFacing facing, Vector2 position)
         {
-            var button = CreateButton(placementControlsRoot.transform, objectName, label, new Vector2(42f, 42f));
+            var button = CreateButton(placementControlsRoot.transform, objectName, label, new Vector2(42f, 42f), ButtonContainerType.IconDark);
             SetPlacementButtonPosition(button, position);
-            SetPlacementButtonStyle(button, new Color(0.08f, 0.1f, 0.13f, 0.96f), 22);
+            SetPlacementButtonStyle(button, ButtonContainerType.IconDark, 22);
             button.onClick.AddListener(() => stageBootstrapper?.SetPlacementFacing(facing));
             AttachFeedback(button, PrepColor, 1.12f);
         }
@@ -710,7 +724,13 @@ namespace TrashTD.UI
 
         private static void SetPlacementButtonStyle(Button button, Color backgroundColor, int fontSize)
         {
-            button.GetComponent<Image>().color = backgroundColor;
+            ButtonContainerType container = ResolveContainerType(backgroundColor);
+            SetPlacementButtonStyle(button, container, fontSize);
+        }
+
+        private static void SetPlacementButtonStyle(Button button, ButtonContainerType containerType, int fontSize)
+        {
+            ApplyButtonContainer(button, containerType);
             Text label = button.GetComponentInChildren<Text>();
             if (label != null)
             {
@@ -1034,10 +1054,10 @@ namespace TrashTD.UI
             waveProgressFill.raycastTarget = false;
 
             // Pause button (top-left)
-            var pauseButton = CreateButton(stageInfoPanel.transform, "PauseButton", string.Empty, new Vector2(50f, 50f));
+            var pauseButton = CreateButton(stageInfoPanel.transform, "PauseButton", string.Empty, new Vector2(50f, 50f), ButtonContainerType.IconDark);
             SetPosition(pauseButton.GetComponent<RectTransform>(), new Vector2(20f, -45f), new Vector2(0f, 1f), new Vector2(50f, 50f), new Vector2(0f, 0.5f));
             pauseButton.onClick.AddListener(PauseGame);
-            StyleButton(pauseButton, DarkButton, Color.white, 1.08f);
+            StyleButton(pauseButton, ButtonContainerType.IconDark, Color.white, 1.08f);
 
             var pauseIcon = GetPauseIconSprite();
             if (pauseIcon != null)
@@ -1213,13 +1233,13 @@ namespace TrashTD.UI
             CreateTrashDropZone(bar.transform);
 
             // Start Wave button
-            startWaveButton = CreateButton(bar.transform, "StartWaveButton", "START\nWAVE", new Vector2(160f, 100f));
+            startWaveButton = CreateButton(bar.transform, "StartWaveButton", "START\nWAVE", new Vector2(160f, 100f), ButtonContainerType.Primary);
             startWaveButtonText = startWaveButton.GetComponentInChildren<Text>();
             var swbRect = startWaveButton.GetComponent<RectTransform>();
             swbRect.anchorMin = new Vector2(1f, 0.5f);
             swbRect.anchorMax = new Vector2(1f, 0.5f);
             swbRect.anchoredPosition = new Vector2(-110f, 0f);
-            startWaveButton.GetComponent<Image>().color = ReadyColor;
+            ApplyButtonContainer(startWaveButton, ButtonContainerType.Primary);
             startWaveButton.onClick.AddListener(StartWave);
             startWaveFeedback = AttachFeedback(startWaveButton, AccentColor, 1.06f, () => PlaySfx(clickClip, 1.1f));
 
@@ -1268,8 +1288,7 @@ namespace TrashTD.UI
             for (int i = 0; i < speedButtons.Length; i++)
             {
                 float speed = i + 1;
-                var button = CreateButton(buttonsRoot.transform, $"Speed{speed:0}xButton", $"{speed:0}x", new Vector2(66f, 30f));
-                button.GetComponent<Image>().color = DarkButton;
+                var button = CreateButton(buttonsRoot.transform, $"Speed{speed:0}xButton", $"{speed:0}x", new Vector2(66f, 30f), ButtonContainerType.Dark);
                 int index = i;
                 button.onClick.AddListener(() => SetGameSpeed(index + 1));
                 speedButtons[i] = button;
@@ -1344,16 +1363,16 @@ namespace TrashTD.UI
             SetPosition(message.GetComponent<RectTransform>(), new Vector2(0f, 32f), new Vector2(0.5f, 0.5f),
                 new Vector2(430f, 32f), new Vector2(0.5f, 0.5f));
 
-            var confirm = CreateButton(card.transform, "ConfirmDiscardButton", "DISCARD", new Vector2(175f, 52f));
+            var confirm = CreateButton(card.transform, "ConfirmDiscardButton", "DISCARD", new Vector2(175f, 52f), ButtonContainerType.Danger);
             SetPosition(confirm.GetComponent<RectTransform>(), new Vector2(-100f, -65f), new Vector2(0.5f, 0.5f),
                 new Vector2(175f, 52f), new Vector2(0.5f, 0.5f));
-            StyleButton(confirm, new Color(0.38f, 0.10f, 0.12f, 1f), LifeColor, 1.05f,
+            StyleButton(confirm, ButtonContainerType.Danger, LifeColor, 1.05f,
                 ConfirmDiscard);
 
-            var cancel = CreateButton(card.transform, "CancelDiscardButton", "CANCEL", new Vector2(175f, 52f));
+            var cancel = CreateButton(card.transform, "CancelDiscardButton", "CANCEL", new Vector2(175f, 52f), ButtonContainerType.Dark);
             SetPosition(cancel.GetComponent<RectTransform>(), new Vector2(100f, -65f), new Vector2(0.5f, 0.5f),
                 new Vector2(175f, 52f), new Vector2(0.5f, 0.5f));
-            StyleButton(cancel, DarkButton, TextDim, 1.05f, CancelDiscard);
+            StyleButton(cancel, ButtonContainerType.Dark, TextDim, 1.05f, CancelDiscard);
 
             discardConfirmationPanel.SetActive(false);
         }
@@ -1405,8 +1424,7 @@ namespace TrashTD.UI
             for (int i = 0; i < speedButtons.Length; i++)
             {
                 bool selected = i == selectedIndex;
-                var image = speedButtons[i].GetComponent<Image>();
-                image.color = selected ? new Color(0.08f, 0.28f, 0.16f, 1f) : DarkButton;
+                ApplyButtonContainer(speedButtons[i], selected ? ButtonContainerType.Primary : ButtonContainerType.Dark);
                 speedFeedbacks[i].restScale = selected ? 1.12f : 1f;
                 speedFeedbacks[i].glowAlways = selected;
                 speedFeedbacks[i].glowColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 1f);
@@ -1906,9 +1924,9 @@ namespace TrashTD.UI
             SetPosition(environmentBriefingDescription.rectTransform, new Vector2(0f, -100f), new Vector2(0.5f, 1f), new Vector2(560f, 150f), new Vector2(0.5f, 1f));
             environmentBriefingDescription.raycastTarget = false;
 
-            Button dismissButton = CreateButton(card.transform, "DismissButton", "UNDERSTOOD", new Vector2(250f, 58f));
+            Button dismissButton = CreateButton(card.transform, "DismissButton", "UNDERSTOOD", new Vector2(250f, 58f), ButtonContainerType.Primary);
             SetPosition(dismissButton.GetComponent<RectTransform>(), new Vector2(0f, 28f), new Vector2(0.5f, 0f), null, new Vector2(0.5f, 0f));
-            StyleButton(dismissButton, ReadyColor, AccentColor, 1.05f);
+            StyleButton(dismissButton, ButtonContainerType.Primary, AccentColor, 1.05f);
             dismissButton.onClick.AddListener(DismissEnvironmentBriefing);
 
             environmentBriefingPanel.SetActive(false);
@@ -2005,15 +2023,15 @@ namespace TrashTD.UI
             subtitle.color = TextDim;
             subtitle.raycastTarget = false;
 
-            var resumeButton = CreateButton(card.transform, "ResumeButton", "RESUME", new Vector2(340f, 70f));
+            var resumeButton = CreateButton(card.transform, "ResumeButton", "RESUME", new Vector2(340f, 70f), ButtonContainerType.Primary);
             SetPosition(resumeButton.GetComponent<RectTransform>(), new Vector2(0f, -250f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
             resumeButton.onClick.AddListener(ResumeGame);
-            StyleButton(resumeButton, AccentColor, new Color(0.4f, 1f, 0.65f, 1f), 1.05f);
+            StyleButton(resumeButton, ButtonContainerType.Primary, new Color(0.4f, 1f, 0.65f, 1f), 1.05f);
 
-            var exitButton = CreateButton(card.transform, "ExitButton", "EXIT TO MENU", new Vector2(340f, 60f));
+            var exitButton = CreateButton(card.transform, "ExitButton", "EXIT TO MENU", new Vector2(340f, 60f), ButtonContainerType.Danger);
             SetPosition(exitButton.GetComponent<RectTransform>(), new Vector2(0f, -402f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
             exitButton.onClick.AddListener(ExitToMenu);
-            StyleButton(exitButton, new Color(0.45f, 0.14f, 0.16f, 1f), new Color(1f, 0.4f, 0.4f, 1f), 1.05f);
+            StyleButton(exitButton, ButtonContainerType.Danger, new Color(1f, 0.4f, 0.4f, 1f), 1.05f);
 
             pausePanel.SetActive(false);
         }
@@ -2048,6 +2066,7 @@ namespace TrashTD.UI
                     phaseColorTarget = DraftColor;
                     startWaveButton.interactable = false;
                     if (startWaveButtonText != null) startWaveButtonText.text = "DRAFTING...";
+                    ApplyButtonContainer(startWaveButton, ButtonContainerType.Dark);
                     startWaveFeedback.SetBaseColor(WaitingColor);
                     startWaveFeedback.glowAlways = false;
                     break;
@@ -2057,7 +2076,8 @@ namespace TrashTD.UI
                     phaseColorTarget = PrepColor;
                     startWaveButton.interactable = true;
                     if (startWaveButtonText != null) startWaveButtonText.text = "START\nWAVE";
-                    startWaveFeedback.SetBaseColor(ReadyColor);
+                    ApplyButtonContainer(startWaveButton, ButtonContainerType.Primary);
+                    startWaveFeedback.SetBaseColor(Color.white);
                     startWaveFeedback.glowAlways = true;
                     break;
 
@@ -2066,6 +2086,7 @@ namespace TrashTD.UI
                     phaseColorTarget = WaveColor;
                     startWaveButton.interactable = false;
                     if (startWaveButtonText != null) startWaveButtonText.text = "WAVE\nACTIVE";
+                    ApplyButtonContainer(startWaveButton, ButtonContainerType.Dark);
                     startWaveFeedback.SetBaseColor(WaitingColor);
                     startWaveFeedback.glowAlways = false;
                     break;
@@ -2335,6 +2356,7 @@ namespace TrashTD.UI
         {
             if (startWaveButton == null) return;
             startWaveButton.interactable = true;
+            ApplyButtonContainer(startWaveButton, active ? ButtonContainerType.Danger : ButtonContainerType.Primary);
             if (startWaveButtonText != null)
                 startWaveButtonText.text = active ? "END\nWAVE" : "START\nWAVE";
         }
@@ -2721,8 +2743,120 @@ namespace TrashTD.UI
 
         private MenuButtonFeedback StyleButton(Button button, Color background, Color glow, float hoverScale, System.Action clicked = null)
         {
-            button.GetComponent<Image>().color = background;
+            ButtonContainerType container = ResolveContainerType(background);
+            return StyleButton(button, container, glow, hoverScale, clicked);
+        }
+
+        private MenuButtonFeedback StyleButton(Button button, ButtonContainerType containerType, Color glow, float hoverScale = 1.05f, System.Action clicked = null)
+        {
+            ApplyButtonContainer(button, containerType);
             return AttachFeedback(button, glow, hoverScale, clicked);
+        }
+
+        private static ButtonContainerType ResolveContainerType(Color color)
+        {
+            if (color == ReadyColor || color == AccentColor || (color.g > 0.4f && color.g > color.r && color.g > color.b))
+                return ButtonContainerType.Primary;
+            if (color == LifeColor || (color.r > 0.35f && color.g < 0.25f && color.b < 0.25f))
+                return ButtonContainerType.Danger;
+            if (color == PrepColor)
+                return ButtonContainerType.Secondary;
+            if (color == DraftColor)
+                return ButtonContainerType.Warning;
+            return ButtonContainerType.Dark;
+        }
+
+        private static Sprite GetButtonContainerSprite(ButtonContainerType type)
+        {
+            if (ButtonContainerSprites.TryGetValue(type, out Sprite cached) && cached != null)
+                return cached;
+
+            string path = type switch
+            {
+                ButtonContainerType.Primary => "UI/buttons/btn_primary_normal",
+                ButtonContainerType.Secondary => "UI/buttons/btn_secondary_normal",
+                ButtonContainerType.Dark => "UI/buttons/btn_dark_normal",
+                ButtonContainerType.Danger => "UI/buttons/btn_danger_normal",
+                ButtonContainerType.Warning => "UI/buttons/btn_warning_normal",
+                ButtonContainerType.IconDark => "UI/buttons/btn_icon_dark_normal",
+                ButtonContainerType.IconDanger => "UI/buttons/btn_icon_danger_normal",
+                ButtonContainerType.IconPrimary => "UI/buttons/btn_icon_primary_normal",
+                ButtonContainerType.IconSecondary => "UI/buttons/btn_icon_secondary_normal",
+                _ => "UI/buttons/btn_dark_normal"
+            };
+
+            Sprite sprite = LoadButtonSprite(path);
+            if (sprite != null)
+            {
+                ButtonContainerSprites[type] = sprite;
+            }
+            return sprite;
+        }
+
+        private static Sprite LoadButtonSprite(string path)
+        {
+            Sprite sprite = Resources.Load<Sprite>(path);
+            if (sprite == null)
+            {
+                Sprite[] all = Resources.LoadAll<Sprite>(path);
+                if (all != null && all.Length > 0) sprite = all[0];
+            }
+
+            if (sprite == null)
+            {
+                var tex = Resources.Load<Texture2D>(path);
+                if (tex != null)
+                {
+                    tex.filterMode = FilterMode.Point;
+                    sprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(5f, 5f, 5f, 5f));
+                }
+            }
+            else if (sprite.border == Vector4.zero && sprite.texture != null)
+            {
+                sprite = Sprite.Create(sprite.texture, sprite.rect, sprite.pivot, 100f, 0, SpriteMeshType.FullRect, new Vector4(5f, 5f, 5f, 5f));
+            }
+
+            return sprite;
+        }
+
+        private static void ApplyButtonContainer(Button button, ButtonContainerType type)
+        {
+            if (button == null) return;
+            Image image = button.GetComponent<Image>();
+            if (image == null) return;
+
+            Sprite sprite = GetButtonContainerSprite(type);
+            if (sprite != null)
+            {
+                image.sprite = sprite;
+                image.type = Image.Type.Sliced;
+                image.color = Color.white;
+            }
+
+            var feedback = button.GetComponent<MenuButtonFeedback>();
+            if (feedback != null)
+            {
+                feedback.SetBaseColor(Color.white);
+            }
+        }
+
+        private static Button CreateButton(Transform parent, string objectName, string label, Vector2 size, ButtonContainerType containerType = ButtonContainerType.Dark)
+        {
+            var buttonObject = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(parent, false);
+            var button = buttonObject.GetComponent<Button>();
+            buttonObject.GetComponent<RectTransform>().sizeDelta = size;
+
+            ApplyButtonContainer(button, containerType);
+
+            var text = CreateText(buttonObject.transform, "Label", label, 22, TextAnchor.MiddleCenter);
+            text.raycastTarget = false;
+            var textRect = text.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            return button;
         }
 
         private MenuButtonFeedback AttachFeedback(Button button, Color glow, float hoverScale = 1.05f, System.Action clicked = null)
@@ -2803,24 +2937,6 @@ namespace TrashTD.UI
             text.alignment = alignment;
             text.color = Color.white;
             return text;
-        }
-
-        private static Button CreateButton(Transform parent, string objectName, string label, Vector2 size)
-        {
-            var buttonObject = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(Button));
-            buttonObject.transform.SetParent(parent, false);
-            var button = buttonObject.GetComponent<Button>();
-            buttonObject.GetComponent<RectTransform>().sizeDelta = size;
-            buttonObject.GetComponent<Image>().color = Color.black;
-
-            var text = CreateText(buttonObject.transform, "Label", label, 22, TextAnchor.MiddleCenter);
-            text.raycastTarget = false;
-            var textRect = text.GetComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = Vector2.zero;
-            textRect.offsetMax = Vector2.zero;
-            return button;
         }
 
         private static void SetPosition(RectTransform rect, Vector2 position, Vector2 anchor, Vector2? size = null, Vector2? pivot = null)

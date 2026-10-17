@@ -123,7 +123,23 @@ namespace TrashTD.Audio
             GameObject buttonObject = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
             buttonObject.transform.SetParent(parent, false);
             buttonObject.GetComponent<RectTransform>().sizeDelta = size;
-            buttonObject.GetComponent<Image>().color = ButtonColor;
+            var image = buttonObject.GetComponent<Image>();
+            var sprite = Resources.Load<Sprite>("UI/buttons/btn_dark_normal");
+            if (sprite == null)
+            {
+                var all = Resources.LoadAll<Sprite>("UI/buttons/btn_dark_normal");
+                if (all != null && all.Length > 0) sprite = all[0];
+            }
+            if (sprite != null)
+            {
+                image.sprite = sprite;
+                image.type = Image.Type.Sliced;
+                image.color = Color.white;
+            }
+            else
+            {
+                image.color = ButtonColor;
+            }
             Text text = CreateText(buttonObject.transform, label, 16, TextAnchor.MiddleCenter);
             SetStretch(text.rectTransform);
             return buttonObject.GetComponent<Button>();
