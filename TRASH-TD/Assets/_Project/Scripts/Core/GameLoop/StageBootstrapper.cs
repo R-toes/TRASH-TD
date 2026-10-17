@@ -247,6 +247,7 @@ namespace TrashTD.Core.GameLoop
             if (operatorManager != null)
             {
                 operatorManager.OnOperatorSelected += HandleOperatorSelected;
+                operatorManager.OnOperatorRetreated += HandleOperatorRetreated;
             }
             cardDraftSystem.ResetForNewStage();
 
@@ -499,6 +500,7 @@ namespace TrashTD.Core.GameLoop
             if (operatorManager != null)
             {
                 operatorManager.OnOperatorSelected -= HandleOperatorSelected;
+                operatorManager.OnOperatorRetreated -= HandleOperatorRetreated;
             }
 
             ClearPlacementPreviewVisuals();
@@ -700,13 +702,34 @@ namespace TrashTD.Core.GameLoop
             Keyboard keyboard = Keyboard.current;
             Mouse mouse = Mouse.current;
 
-            // Universal cancel: Right-click or Escape cancels active placement or drag
-            if ((keyboard != null && keyboard.escapeKey.wasPressedThisFrame) ||
-                (mouse != null && mouse.rightButton.wasPressedThisFrame))
+            // Escape key cancels placement or deselects operator
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
             {
                 if (isPlacementPreviewActive || pendingDeployCard != null || isDraggingToDeploy)
                 {
                     CancelOperatorPlacement();
+                    return;
+                }
+                else if (operatorManager != null && operatorManager.SelectedOperator != null)
+                {
+                    operatorManager.SelectOperator(null);
+                    ClearOperatorRangePreview();
+                    return;
+                }
+            }
+
+            // Right-click cancels active placement or undeploys the currently selected operator
+            if (mouse != null && mouse.rightButton.wasPressedThisFrame)
+            {
+                if (isPlacementPreviewActive || pendingDeployCard != null || isDraggingToDeploy)
+                {
+                    CancelOperatorPlacement();
+                    return;
+                }
+                else if (operatorManager != null && operatorManager.SelectedOperator != null)
+                {
+                    ClearOperatorRangePreview();
+                    operatorManager.RetreatOperator(operatorManager.SelectedOperator);
                     return;
                 }
             }
@@ -1232,10 +1255,12 @@ namespace TrashTD.Core.GameLoop
             if (op == null || op.DeployedCell == null)
             {
                 ClearOperatorRangePreview();
-                gameplayHudUI?.SetSelectedOperatorName(string.Empty, Vector3.zero);
                 return;
             }
 
+            pendingDeployCard = null;
+            isPlacementPreviewActive = false;
+            isDraggingToDeploy = false;
             ClearPlacementPreviewVisuals();
             isOperatorRangePreviewActive = true;
             GridCell[] rangeCells = gridManager.GetCellsInRange(
@@ -1260,10 +1285,13 @@ namespace TrashTD.Core.GameLoop
                 labelPosition);
         }
 
-        private void ClearOperatorRangePreview()
+        private void HandleOperatorRetreated(OperatorBase op)
         {
-            if (!isOperatorRangePreviewActive) return;
+            ClearOperatorRangePreview();
+        }
 
+        public void ClearOperatorRangePreview()
+        {
             isOperatorRangePreviewActive = false;
             ClearPlacementPreviewVisuals();
             gameplayHudUI?.SetSelectedOperatorName(string.Empty, Vector3.zero);

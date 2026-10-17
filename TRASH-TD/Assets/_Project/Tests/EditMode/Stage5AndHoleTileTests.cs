@@ -1261,5 +1261,80 @@ namespace TrashTD.Tests
                 Object.DestroyImmediate(gridObj);
             }
         }
+
+        [Test]
+        public void RightClickKeybind_WhenOperatorAlreadyClicked_UndeploysOperator()
+        {
+            var bootObj = new GameObject("Bootstrapper");
+            var bootstrapper = bootObj.AddComponent<StageBootstrapper>();
+
+            var gmObj = new GameObject("GM");
+            var gm = TestUtility.AddAwakened<GameManager>(gmObj);
+            typeof(GameManager).GetField("currentPhase", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .SetValue(gm, StagePhase.Preparation);
+            typeof(GameManager).GetField("currentState", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .SetValue(gm, GamePlayState.Playing);
+
+            var opMgrObj = new GameObject("OpManager");
+            var opMgr = TestUtility.AddAwakened<OperatorManager>(opMgrObj);
+
+            var deckObj = new GameObject("Deck");
+            var deck = TestUtility.AddAwakened<PlayerDeck>(deckObj);
+
+            var gridObj = new GameObject("GridManager");
+            var grid = gridObj.AddComponent<GridManager>();
+            var stage = ScriptableObject.CreateInstance<StageData>();
+            stage.gridWidth = 5;
+            stage.gridHeight = 5;
+            stage.tileLayout = new TileType[25];
+            grid.InitializeFromStageData(stage);
+            opMgr.Initialize(grid);
+
+            bootstrapper.gridManager = grid;
+            bootstrapper.gameManager = gm;
+            bootstrapper.operatorManager = opMgr;
+            bootstrapper.playerDeck = deck;
+
+            var opData = ScriptableObject.CreateInstance<OperatorData>();
+            opData.operatorName = "TestOp";
+            opData.operatorClass = OperatorClass.Guard;
+            opData.position = OperatorPosition.Melee;
+            opData.rangePattern = new[] { new Vector2Int(0, 0), new Vector2Int(1, 0) };
+
+            var card = new DraftCard(opData, OperatorRarity.Star1);
+            deck.AddCard(card);
+
+            try
+            {
+                // 1. Deploy operator
+                Assert.IsTrue(opMgr.TryDeployOperator(card, new Vector2Int(1, 1), OperatorFacing.Right, out var deployedOp));
+                deck.RemoveCard(0);
+                Assert.AreEqual(0, deck.CardCount);
+
+                // 2. Click/select operator
+                Assert.IsTrue(opMgr.SelectOperator(deployedOp));
+                Assert.AreEqual(deployedOp, opMgr.SelectedOperator);
+
+                // 3. Right-click undeploy trigger (simulates right-click when operator already selected)
+                bootstrapper.ClearOperatorRangePreview();
+                opMgr.RetreatOperator(opMgr.SelectedOperator);
+
+                // Operator should be undeployed and returned to deck, range preview cleared
+                Assert.IsNull(opMgr.SelectedOperator);
+                Assert.AreEqual(1, deck.CardCount);
+                Assert.IsNull(grid.GetCell(new Vector2Int(1, 1)).OccupantOperator);
+            }
+            finally
+            {
+                TestUtility.ClearSingletons();
+                Object.DestroyImmediate(opData);
+                Object.DestroyImmediate(stage);
+                Object.DestroyImmediate(bootObj);
+                Object.DestroyImmediate(gmObj);
+                Object.DestroyImmediate(opMgrObj);
+                Object.DestroyImmediate(deckObj);
+                Object.DestroyImmediate(gridObj);
+            }
+        }
     }
 }
