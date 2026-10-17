@@ -49,7 +49,23 @@ namespace TrashTD.Audio
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.pivot = new Vector2(0.5f, 0.5f);
             panelRect.sizeDelta = new Vector2(520f, 330f);
-            panel.GetComponent<Image>().color = PanelColor;
+            var panelImg = panel.GetComponent<Image>();
+            var panelSprite = Resources.Load<Sprite>("UI/panels/panel_dark");
+            if (panelSprite == null)
+            {
+                var all = Resources.LoadAll<Sprite>("UI/panels/panel_dark");
+                if (all != null && all.Length > 0) panelSprite = all[0];
+            }
+            if (panelSprite != null)
+            {
+                panelImg.sprite = panelSprite;
+                panelImg.type = Image.Type.Sliced;
+                panelImg.color = Color.white;
+            }
+            else
+            {
+                panelImg.color = PanelColor;
+            }
             Outline panelOutline = panel.AddComponent<Outline>();
             panelOutline.effectColor = new Color(0.18f, 0.82f, 0.45f, 0.28f);
             panelOutline.effectDistance = new Vector2(2f, -2f);

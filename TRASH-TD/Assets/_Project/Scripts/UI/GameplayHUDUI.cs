@@ -33,7 +33,7 @@ namespace TrashTD.UI
         private static Sprite exitIconSprite;
         private static readonly Dictionary<OperatorClass, Sprite> ClassIconSprites = new Dictionary<OperatorClass, Sprite>();
 
-        private enum ButtonContainerType
+        public enum ButtonContainerType
         {
             Primary,
             Secondary,
@@ -47,6 +47,19 @@ namespace TrashTD.UI
         }
 
         private static readonly Dictionary<ButtonContainerType, Sprite> ButtonContainerSprites = new Dictionary<ButtonContainerType, Sprite>();
+
+        public enum PanelContainerType
+        {
+            Dark,
+            Metal,
+            Glass,
+            Modal,
+            Rust,
+            Teal,
+            Tooltip
+        }
+
+        private static readonly Dictionary<PanelContainerType, Sprite> PanelContainerSprites = new Dictionary<PanelContainerType, Sprite>();
 
         // ── Palette ──────────────────────────────────────────
         private static readonly Color AccentColor = new Color(0.18f, 0.82f, 0.45f, 1f);
@@ -371,7 +384,7 @@ namespace TrashTD.UI
             labelRect.sizeDelta = new Vector2(250f, 104f);
 
             Image background = selectedOperatorLabelRoot.GetComponent<Image>();
-            background.color = new Color(0.025f, 0.035f, 0.045f, 0.92f);
+            ApplyPanelContainer(selectedOperatorLabelRoot, PanelContainerType.Tooltip);
             background.raycastTarget = false;
 
             var labelBorder = selectedOperatorLabelRoot.AddComponent<Outline>();
@@ -485,7 +498,7 @@ namespace TrashTD.UI
             panelRect.anchoredPosition = new Vector2(-24f, 0f);
 
             Image panelImage = selectedOperatorDetailsPanel.GetComponent<Image>();
-            panelImage.color = new Color(0.045f, 0.055f, 0.075f, 0.96f);
+            ApplyPanelContainer(selectedOperatorDetailsPanel, PanelContainerType.Metal);
             panelImage.raycastTarget = true;
             Outline panelOutline = selectedOperatorDetailsPanel.GetComponent<Outline>();
             panelOutline.effectColor = new Color(1f, 1f, 1f, 0.06f);
@@ -1026,7 +1039,7 @@ namespace TrashTD.UI
             barRect.pivot = new Vector2(0.5f, 1f);
             barRect.sizeDelta = new Vector2(0f, 90f);
             barRect.anchoredPosition = Vector2.zero;
-            stageInfoPanel.GetComponent<Image>().color = BarColor;
+            ApplyPanelContainer(stageInfoPanel, PanelContainerType.Metal);
             topBarRect = barRect;
 
             // Wave progress strip along the bottom edge of the bar (color follows the phase)
@@ -1260,7 +1273,7 @@ namespace TrashTD.UI
             var barRect = bar.GetComponent<RectTransform>();
             // Sits just above the 170px deck bar so it never covers the Start Wave button.
             SetPosition(barRect, new Vector2(-24f, 184f), new Vector2(1f, 0f), new Vector2(246f, 54f), new Vector2(1f, 0f));
-            bar.GetComponent<Image>().color = BarColor;
+            ApplyPanelContainer(bar, PanelContainerType.Dark);
 
             var outline = bar.AddComponent<Outline>();
             outline.effectColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.35f);
@@ -1348,8 +1361,8 @@ namespace TrashTD.UI
             var card = new GameObject("DiscardCard", typeof(RectTransform), typeof(Image));
             card.transform.SetParent(discardConfirmationPanel.transform, false);
             var cardRect = card.GetComponent<RectTransform>();
-            SetPosition(cardRect, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(470f, 240f), new Vector2(0.5f, 0.5f));
-            card.GetComponent<Image>().color = DarkButton;
+            SetPosition(cardRect, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(480f, 260f), new Vector2(0.5f, 0.5f));
+            ApplyModalCard(card);
             var cardOutline = card.AddComponent<Outline>();
             cardOutline.effectColor = AccentColor;
             cardOutline.effectDistance = new Vector2(2f, -2f);
@@ -1360,17 +1373,17 @@ namespace TrashTD.UI
             var message = CreateText(card.transform, "Message", string.Empty, 17, TextAnchor.MiddleCenter);
             message.color = TextDim;
             message.name = "Message";
-            SetPosition(message.GetComponent<RectTransform>(), new Vector2(0f, 32f), new Vector2(0.5f, 0.5f),
+            SetPosition(message.GetComponent<RectTransform>(), new Vector2(0f, 28f), new Vector2(0.5f, 0.5f),
                 new Vector2(430f, 32f), new Vector2(0.5f, 0.5f));
 
             var confirm = CreateButton(card.transform, "ConfirmDiscardButton", "DISCARD", new Vector2(175f, 52f), ButtonContainerType.Danger);
-            SetPosition(confirm.GetComponent<RectTransform>(), new Vector2(-100f, -65f), new Vector2(0.5f, 0.5f),
+            SetPosition(confirm.GetComponent<RectTransform>(), new Vector2(-100f, -60f), new Vector2(0.5f, 0.5f),
                 new Vector2(175f, 52f), new Vector2(0.5f, 0.5f));
             StyleButton(confirm, ButtonContainerType.Danger, LifeColor, 1.05f,
                 ConfirmDiscard);
 
             var cancel = CreateButton(card.transform, "CancelDiscardButton", "CANCEL", new Vector2(175f, 52f), ButtonContainerType.Dark);
-            SetPosition(cancel.GetComponent<RectTransform>(), new Vector2(100f, -65f), new Vector2(0.5f, 0.5f),
+            SetPosition(cancel.GetComponent<RectTransform>(), new Vector2(100f, -60f), new Vector2(0.5f, 0.5f),
                 new Vector2(175f, 52f), new Vector2(0.5f, 0.5f));
             StyleButton(cancel, ButtonContainerType.Dark, TextDim, 1.05f, CancelDiscard);
 
@@ -1711,7 +1724,7 @@ namespace TrashTD.UI
             SetPosition(cooldownToastRect, new Vector2(0f, 188f), new Vector2(0.5f, 0f), new Vector2(560f, 76f), new Vector2(0.5f, 0f));
 
             Image background = toast.GetComponent<Image>();
-            background.color = new Color(0.035f, 0.04f, 0.055f, 0.97f);
+            ApplyPanelContainer(toast, PanelContainerType.Tooltip);
             background.raycastTarget = false;
 
             Outline outline = toast.AddComponent<Outline>();
@@ -1906,7 +1919,7 @@ namespace TrashTD.UI
             card.transform.SetParent(environmentBriefingPanel.transform, false);
             RectTransform cardRect = card.GetComponent<RectTransform>();
             SetPosition(cardRect, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(680f, 380f), new Vector2(0.5f, 0.5f));
-            card.GetComponent<Image>().color = new Color(0.035f, 0.05f, 0.065f, 1f);
+            ApplyModalCard(card);
             Outline cardOutline = card.GetComponent<Outline>();
             cardOutline.effectColor = new Color(WaveColor.r, WaveColor.g, WaveColor.b, 0.8f);
             cardOutline.effectDistance = new Vector2(3f, -3f);
@@ -1925,7 +1938,7 @@ namespace TrashTD.UI
             environmentBriefingDescription.raycastTarget = false;
 
             Button dismissButton = CreateButton(card.transform, "DismissButton", "UNDERSTOOD", new Vector2(250f, 58f), ButtonContainerType.Primary);
-            SetPosition(dismissButton.GetComponent<RectTransform>(), new Vector2(0f, 28f), new Vector2(0.5f, 0f), null, new Vector2(0.5f, 0f));
+            SetPosition(dismissButton.GetComponent<RectTransform>(), new Vector2(0f, 36f), new Vector2(0.5f, 0f), null, new Vector2(0.5f, 0f));
             StyleButton(dismissButton, ButtonContainerType.Primary, AccentColor, 1.05f);
             dismissButton.onClick.AddListener(DismissEnvironmentBriefing);
 
@@ -1995,23 +2008,12 @@ namespace TrashTD.UI
             var card = new GameObject("PauseCard", typeof(RectTransform), typeof(Image));
             card.transform.SetParent(pausePanel.transform, false);
             pauseCard = card.GetComponent<RectTransform>();
-            SetPosition(pauseCard, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(520f, 500f), new Vector2(0.5f, 0.5f));
-            card.GetComponent<Image>().color = new Color(0.045f, 0.055f, 0.075f, 0.98f);
+            SetPosition(pauseCard, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(520f, 520f), new Vector2(0.5f, 0.5f));
+            ApplyModalCard(card);
 
             var border = card.AddComponent<Outline>();
-            border.effectColor = new Color(1f, 1f, 1f, 0.06f);
+            border.effectColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.5f);
             border.effectDistance = new Vector2(2f, -2f);
-
-            var accent = new GameObject("PauseAccent", typeof(RectTransform), typeof(Image));
-            accent.transform.SetParent(card.transform, false);
-            var accentRect = accent.GetComponent<RectTransform>();
-            accentRect.anchorMin = new Vector2(0f, 1f);
-            accentRect.anchorMax = new Vector2(1f, 1f);
-            accentRect.pivot = new Vector2(0.5f, 1f);
-            accentRect.sizeDelta = new Vector2(0f, 4f);
-            var accentImage = accent.GetComponent<Image>();
-            accentImage.color = AccentColor;
-            accentImage.raycastTarget = false;
 
             var title = CreateText(card.transform, "PauseTitle", "PAUSED", 54, TextAnchor.MiddleCenter);
             SetPosition(title.GetComponent<RectTransform>(), new Vector2(0f, -90f), new Vector2(0.5f, 1f), new Vector2(460f, 80f), new Vector2(0.5f, 0.5f));
@@ -2766,7 +2768,7 @@ namespace TrashTD.UI
             return ButtonContainerType.Dark;
         }
 
-        private static Sprite GetButtonContainerSprite(ButtonContainerType type)
+        public static Sprite GetButtonContainerSprite(ButtonContainerType type)
         {
             if (ButtonContainerSprites.TryGetValue(type, out Sprite cached) && cached != null)
                 return cached;
@@ -2819,7 +2821,7 @@ namespace TrashTD.UI
             return sprite;
         }
 
-        private static void ApplyButtonContainer(Button button, ButtonContainerType type)
+        public static void ApplyButtonContainer(Button button, ButtonContainerType type)
         {
             if (button == null) return;
             Image image = button.GetComponent<Image>();
@@ -2837,6 +2839,161 @@ namespace TrashTD.UI
             if (feedback != null)
             {
                 feedback.SetBaseColor(Color.white);
+            }
+        }
+
+        public static Sprite GetPanelContainerSprite(PanelContainerType type)
+        {
+            if (PanelContainerSprites.TryGetValue(type, out Sprite cached) && cached != null)
+                return cached;
+
+            string filename = type switch
+            {
+                PanelContainerType.Dark => "panel_dark",
+                PanelContainerType.Metal => "panel_metal",
+                PanelContainerType.Glass => "panel_glass",
+                PanelContainerType.Modal => "panel_modal",
+                PanelContainerType.Rust => "panel_rust",
+                PanelContainerType.Teal => "panel_teal",
+                PanelContainerType.Tooltip => "panel_tooltip",
+                _ => "panel_dark"
+            };
+
+            Vector4 border = type switch
+            {
+                PanelContainerType.Metal => new Vector4(16f, 16f, 16f, 16f),
+                PanelContainerType.Rust => new Vector4(16f, 16f, 16f, 16f),
+                PanelContainerType.Modal => new Vector4(12f, 14f, 12f, 14f),
+                PanelContainerType.Teal => new Vector4(12f, 12f, 12f, 12f),
+                PanelContainerType.Tooltip => new Vector4(10f, 10f, 10f, 10f),
+                PanelContainerType.Glass => new Vector4(10f, 10f, 10f, 10f),
+                _ => new Vector4(12f, 12f, 12f, 12f)
+            };
+
+            Sprite sprite = LoadPanelSprite("UI/panels/" + filename, border);
+            if (sprite != null)
+            {
+                PanelContainerSprites[type] = sprite;
+            }
+            return sprite;
+        }
+
+        private static Sprite LoadPanelSprite(string path, Vector4 border)
+        {
+            Sprite sprite = Resources.Load<Sprite>(path);
+            if (sprite == null)
+            {
+                Sprite[] all = Resources.LoadAll<Sprite>(path);
+                if (all != null && all.Length > 0) sprite = all[0];
+            }
+
+            if (sprite == null)
+            {
+                var tex = Resources.Load<Texture2D>(path);
+                if (tex != null)
+                {
+                    tex.filterMode = FilterMode.Point;
+                    sprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, border);
+                }
+            }
+            else if (sprite.border == Vector4.zero && sprite.texture != null)
+            {
+                sprite = Sprite.Create(sprite.texture, sprite.rect, sprite.pivot, 100f, 0, SpriteMeshType.FullRect, border);
+            }
+
+            return sprite;
+        }
+
+        private static Sprite hazardBarSprite;
+
+        private static Sprite GetHazardBarSprite()
+        {
+            if (hazardBarSprite != null) return hazardBarSprite;
+
+            hazardBarSprite = Resources.Load<Sprite>("UI/decor/hazard_bar");
+            if (hazardBarSprite == null)
+            {
+                Sprite[] all = Resources.LoadAll<Sprite>("UI/decor/hazard_bar");
+                if (all != null && all.Length > 0) hazardBarSprite = all[0];
+            }
+
+            if (hazardBarSprite == null)
+            {
+                var tex = Resources.Load<Texture2D>("UI/decor/hazard_bar");
+                if (tex != null)
+                {
+                    tex.filterMode = FilterMode.Point;
+                    hazardBarSprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+                }
+            }
+
+            return hazardBarSprite;
+        }
+
+        private static void AttachHazardDecor(Transform card, float insetX = 16f, float insetY = 8f, float barHeight = 20f)
+        {
+            if (card == null) return;
+            if (card.Find("TopHazardBar") != null || card.Find("BottomHazardBar") != null) return;
+
+            Sprite sprite = GetHazardBarSprite();
+            if (sprite == null) return;
+
+            // Top Hazard Bar
+            var topBar = new GameObject("TopHazardBar", typeof(RectTransform), typeof(Image));
+            topBar.transform.SetParent(card, false);
+            var topRect = topBar.GetComponent<RectTransform>();
+            topRect.anchorMin = new Vector2(0f, 1f);
+            topRect.anchorMax = new Vector2(1f, 1f);
+            topRect.pivot = new Vector2(0.5f, 1f);
+            topRect.anchoredPosition = new Vector2(0f, -insetY);
+            topRect.sizeDelta = new Vector2(-insetX * 2f, barHeight);
+            var topImage = topBar.GetComponent<Image>();
+            topImage.sprite = sprite;
+            topImage.type = Image.Type.Tiled;
+            topImage.color = Color.white;
+            topImage.raycastTarget = false;
+
+            // Bottom Hazard Bar
+            var bottomBar = new GameObject("BottomHazardBar", typeof(RectTransform), typeof(Image));
+            bottomBar.transform.SetParent(card, false);
+            var bottomRect = bottomBar.GetComponent<RectTransform>();
+            bottomRect.anchorMin = new Vector2(0f, 0f);
+            bottomRect.anchorMax = new Vector2(1f, 0f);
+            bottomRect.pivot = new Vector2(0.5f, 0f);
+            bottomRect.anchoredPosition = new Vector2(0f, insetY);
+            bottomRect.sizeDelta = new Vector2(-insetX * 2f, barHeight);
+            var bottomImage = bottomBar.GetComponent<Image>();
+            bottomImage.sprite = sprite;
+            bottomImage.type = Image.Type.Tiled;
+            bottomImage.color = Color.white;
+            bottomImage.raycastTarget = false;
+        }
+
+        private static void ApplyModalCard(GameObject card, float insetX = 16f, float insetY = 8f, float barHeight = 20f)
+        {
+            if (card == null) return;
+            ApplyPanelContainer(card, PanelContainerType.Metal);
+            AttachHazardDecor(card.transform, insetX, insetY, barHeight);
+        }
+
+        public static void ApplyPanelContainer(GameObject target, PanelContainerType type, Color? tint = null)
+        {
+            if (target == null) return;
+            if (type == PanelContainerType.Modal)
+            {
+                ApplyModalCard(target);
+                return;
+            }
+
+            var image = target.GetComponent<Image>();
+            if (image == null) return;
+
+            Sprite sprite = GetPanelContainerSprite(type);
+            if (sprite != null)
+            {
+                image.sprite = sprite;
+                image.type = Image.Type.Sliced;
+                image.color = tint ?? Color.white;
             }
         }
 
@@ -2961,7 +3118,7 @@ namespace TrashTD.UI
             return image;
         }
 
-        private static Sprite LoadIconSprite(string iconName)
+        public static Sprite LoadIconSprite(string iconName)
         {
             var sprite = Resources.Load<Sprite>("UI/icons/" + iconName);
             if (sprite != null) return sprite;

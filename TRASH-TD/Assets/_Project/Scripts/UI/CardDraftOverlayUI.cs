@@ -834,9 +834,15 @@ namespace TrashTD.UI
             bool canConfirm = selectedCard != null && playerDeck != null && playerDeck.CanAcceptCard(selectedCard);
             confirmButton.interactable = canConfirm;
 
-            // Button tint transition is disabled (feedback component drives color), so show state here.
-            confirmFeedback.SetBaseColor(canConfirm ? CONFIRM_COLOR : CONFIRM_DISABLED);
+            GameplayHUDUI.ApplyButtonContainer(confirmButton, canConfirm ? GameplayHUDUI.ButtonContainerType.Primary : GameplayHUDUI.ButtonContainerType.Dark);
+            confirmFeedback.SetBaseColor(Color.white);
             confirmFeedback.glowAlways = canConfirm;
+
+            var checkIcon = confirmButton.transform.Find("Icon")?.GetComponent<Image>();
+            if (checkIcon != null)
+            {
+                checkIcon.color = canConfirm ? Color.white : new Color(1f, 1f, 1f, 0.4f);
+            }
 
             if (playerDeck != null && playerDeck.IsFull && canConfirm)
             {
@@ -874,7 +880,8 @@ namespace TrashTD.UI
             bool canReroll = remaining > 0;
             rerollButton.interactable = canReroll;
 
-            rerollFeedback.SetBaseColor(canReroll ? REROLL_COLOR : REROLL_DISABLED);
+            GameplayHUDUI.ApplyButtonContainer(rerollButton, canReroll ? GameplayHUDUI.ButtonContainerType.Warning : GameplayHUDUI.ButtonContainerType.Dark);
+            rerollFeedback.SetBaseColor(Color.white);
 
             rerollButtonText.text = $"REROLL ({remaining})";
             rerollButtonText.color = canReroll ? Color.white : new Color(1f, 1f, 1f, 0.45f);
@@ -1222,6 +1229,19 @@ namespace TrashTD.UI
                 TextAnchor.MiddleCenter, STAT_LABEL_COLOR);
             PositionRT(waveInfoText, new Vector2(ColumnCenterX, -104f), new Vector2(0.5f, 1f), new Vector2(500f, 40f));
 
+            var waveIconSprite = GameplayHUDUI.LoadIconSprite("icon_wave");
+            if (waveIconSprite != null)
+            {
+                var waveIconObj = new GameObject("WaveHeaderIcon", typeof(RectTransform), typeof(Image));
+                waveIconObj.transform.SetParent(overlayRoot.transform, false);
+                var waveIconImg = waveIconObj.GetComponent<Image>();
+                waveIconImg.sprite = waveIconSprite;
+                waveIconImg.color = STAT_LABEL_COLOR;
+                waveIconImg.preserveAspect = true;
+                waveIconImg.raycastTarget = false;
+                PositionRT(waveIconImg, new Vector2(ColumnCenterX - 130f, -104f), new Vector2(0.5f, 1f), new Vector2(22f, 22f));
+            }
+
             // Divider under the header
             var divider = new GameObject("HeaderDivider", typeof(RectTransform), typeof(Image));
             divider.transform.SetParent(overlayRoot.transform, false);
@@ -1238,6 +1258,20 @@ namespace TrashTD.UI
             deckCountText.resizeTextForBestFit = true;
             deckCountText.resizeTextMinSize = 12;
             deckCountText.resizeTextMaxSize = 16;
+
+            var squadIconSprite = GameplayHUDUI.LoadIconSprite("icon_squad");
+            if (squadIconSprite != null)
+            {
+                var squadIconObj = new GameObject("DeckHeaderIcon", typeof(RectTransform), typeof(Image));
+                squadIconObj.transform.SetParent(overlayRoot.transform, false);
+                var squadIconImg = squadIconObj.GetComponent<Image>();
+                squadIconImg.sprite = squadIconSprite;
+                squadIconImg.color = Color.white;
+                squadIconImg.preserveAspect = true;
+                squadIconImg.raycastTarget = false;
+                PositionRT(squadIconImg, new Vector2(-155f, -32f), new Vector2(1f, 1f), new Vector2(24f, 24f));
+                squadIconObj.GetComponent<RectTransform>().pivot = new Vector2(1f, 1f);
+            }
 
             // Card container (row of 3 cards, left side of the screen)
             var cardContainer = new GameObject("CardContainer", typeof(RectTransform));
@@ -1288,20 +1322,20 @@ namespace TrashTD.UI
 
             // Reroll button
             rerollButton = MakeButton(buttonsContainer.transform, "RerollButton", "REROLL (3)",
-                new Vector2(220f, 60f), REROLL_COLOR);
+                new Vector2(220f, 60f), GameplayHUDUI.ButtonContainerType.Warning);
             rerollButtonText = rerollButton.GetComponentInChildren<Text>();
             rerollButton.onClick.AddListener(OnRerollClicked);
             rerollFeedback = AttachFeedback(rerollButton, new Color(1f, 0.85f, 0.35f, 1f), 1.05f);
 
             // Skip button
             skipButton = MakeButton(buttonsContainer.transform, "SkipButton", "SKIP",
-                new Vector2(140f, 60f), SKIP_COLOR);
+                new Vector2(140f, 60f), GameplayHUDUI.ButtonContainerType.Dark, "icon_close");
             skipButton.onClick.AddListener(OnSkipClicked);
             skipFeedback = AttachFeedback(skipButton, Color.white, 1.05f);
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             developerPickButton = MakeButton(buttonsContainer.transform, "DeveloperPickButton", "DEV PICK",
-                new Vector2(200f, 60f), new Color(0.32f, 0.24f, 0.48f, 1f));
+                new Vector2(200f, 60f), GameplayHUDUI.ButtonContainerType.Secondary);
             developerPickButton.onClick.AddListener(ShowDeveloperPicker);
             AttachFeedback(developerPickButton, new Color(0.75f, 0.55f, 1f, 1f), 1.05f);
             BuildDeveloperPicker();
@@ -1309,7 +1343,7 @@ namespace TrashTD.UI
 
             // Confirm button (under the detail panel, where the decision is made)
             confirmButton = MakeButton(overlayRoot.transform, "ConfirmButton", "SELECT A CARD",
-                new Vector2(PanelWidth, 64f), CONFIRM_DISABLED);
+                new Vector2(PanelWidth, 64f), GameplayHUDUI.ButtonContainerType.Dark, "icon_check");
             PositionRT(confirmButton, new Vector2(PanelCenterX, 120f), new Vector2(0.5f, 0f), new Vector2(PanelWidth, 64f));
             confirmButtonText = confirmButton.GetComponentInChildren<Text>();
             confirmButtonText.fontSize = 20;
@@ -1353,13 +1387,13 @@ namespace TrashTD.UI
         /// </summary>
         private void BuildMinimizeControls(Transform canvasRoot)
         {
-            Button viewMap = MakeButton(overlayRoot.transform, "ViewMapButton", "VIEW MAP & DECK (M)", new Vector2(300f, 48f), SKIP_COLOR);
+            Button viewMap = MakeButton(overlayRoot.transform, "ViewMapButton", "VIEW MAP & DECK (M)", new Vector2(300f, 48f), GameplayHUDUI.ButtonContainerType.Dark, "icon_info");
             PositionRT(viewMap, new Vector2(28f, -32f), new Vector2(0f, 1f), new Vector2(300f, 48f));
             viewMap.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
             viewMap.onClick.AddListener(() => SetMinimized(true));
             AttachFeedback(viewMap, Color.white, 1.05f);
 
-            Button back = MakeButton(canvasRoot, "BackToCardPickButton", "BACK TO CARD PICK (M)", new Vector2(460f, 56f), CONFIRM_COLOR);
+            Button back = MakeButton(canvasRoot, "BackToCardPickButton", "BACK TO CARD PICK (M)", new Vector2(460f, 56f), GameplayHUDUI.ButtonContainerType.Primary, "icon_check");
             PositionRT(back, new Vector2(0f, -24f), new Vector2(0.5f, 1f), new Vector2(460f, 56f));
             back.GetComponent<RectTransform>().pivot = new Vector2(0.5f, 1f);
             back.onClick.AddListener(() => SetMinimized(false));
@@ -1401,7 +1435,11 @@ namespace TrashTD.UI
             panelRect.anchorMin = new Vector2(0.5f, 0.5f);
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.sizeDelta = new Vector2(760f, 820f);
-            panel.GetComponent<Image>().color = PANEL_BG;
+            GameplayHUDUI.ApplyPanelContainer(panel, GameplayHUDUI.PanelContainerType.Metal);
+
+            var panelBorder = panel.AddComponent<Outline>();
+            panelBorder.effectColor = new Color(0.82f, 0.65f, 1f, 0.35f);
+            panelBorder.effectDistance = new Vector2(2f, -2f);
 
             var title = MakeText(panel.transform, "Title", "DEVELOPER PICKER", 26,
                 TextAnchor.MiddleLeft, new Color(0.82f, 0.65f, 1f, 1f));
@@ -1409,8 +1447,8 @@ namespace TrashTD.UI
             PositionRT(title, new Vector2(28f, -22f), new Vector2(0f, 1f), new Vector2(570f, 48f));
 
             var closeButton = MakeButton(panel.transform, "CloseButton", "CLOSE",
-                new Vector2(110f, 44f), SKIP_COLOR);
-            PositionRT(closeButton, new Vector2(-24f, -24f), new Vector2(1f, 1f), new Vector2(110f, 44f));
+                new Vector2(120f, 44f), GameplayHUDUI.ButtonContainerType.Danger, "icon_close");
+            PositionRT(closeButton, new Vector2(-24f, -24f), new Vector2(1f, 1f), new Vector2(120f, 44f));
             closeButton.onClick.AddListener(() => developerPickerRoot.SetActive(false));
             AttachFeedback(closeButton, Color.white, 1.04f);
 
@@ -1654,12 +1692,10 @@ namespace TrashTD.UI
             detailsPanelRect.sizeDelta = new Vector2(PanelWidth, CardHeight);
             detailsPanelRect.anchoredPosition = new Vector2(PanelCenterX, ContentCenterY);
 
-            var panelImage = panel.GetComponent<Image>();
-            panelImage.color = PANEL_BG;
-            panelImage.raycastTarget = false;
+            GameplayHUDUI.ApplyPanelContainer(panel, GameplayHUDUI.PanelContainerType.Metal);
 
             var border = panel.AddComponent<Outline>();
-            border.effectColor = new Color(1f, 1f, 1f, 0.06f);
+            border.effectColor = new Color(1f, 1f, 1f, 0.08f);
             border.effectDistance = new Vector2(2f, -2f);
 
             // Rarity-colored stripe along the top edge
@@ -1669,7 +1705,8 @@ namespace TrashTD.UI
             accentRect.anchorMin = new Vector2(0f, 1f);
             accentRect.anchorMax = new Vector2(1f, 1f);
             accentRect.pivot = new Vector2(0.5f, 1f);
-            accentRect.sizeDelta = new Vector2(0f, 4f);
+            accentRect.sizeDelta = new Vector2(-32f, 4f);
+            accentRect.anchoredPosition = new Vector2(0f, -14f);
             detailAccent = accent.GetComponent<Image>();
             detailAccent.color = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.35f);
             detailAccent.raycastTarget = false;
@@ -1767,13 +1804,13 @@ namespace TrashTD.UI
             obj.transform.SetParent(parent, false);
             PlaceTopLeft(obj.transform, x, y, width, height);
 
+            GameplayHUDUI.ApplyPanelContainer(obj, GameplayHUDUI.PanelContainerType.Dark);
             chip.bg = obj.GetComponent<Image>();
-            chip.bg.color = TILE_BG;
             chip.bg.raycastTarget = false;
 
             chip.outline = obj.AddComponent<Outline>();
             chip.outline.effectDistance = new Vector2(1.5f, -1.5f);
-            chip.outline.effectColor = new Color(1f, 1f, 1f, 0.2f);
+            chip.outline.effectColor = new Color(1f, 1f, 1f, 0.15f);
 
             if (showIcon)
             {
@@ -1816,30 +1853,31 @@ namespace TrashTD.UI
             var tile = new GameObject($"Stat_{label}", typeof(RectTransform), typeof(Image));
             tile.transform.SetParent(parent, false);
             PlaceTopLeft(tile.transform, x, y, width, height);
+
+            GameplayHUDUI.ApplyPanelContainer(tile, GameplayHUDUI.PanelContainerType.Dark);
             var tileImage = tile.GetComponent<Image>();
-            tileImage.color = TILE_BG;
             tileImage.raycastTarget = false;
 
-            // Colored bar on the left edge
+            // Colored accent bar on the left edge inside the panel border
             var bar = new GameObject("Bar", typeof(RectTransform), typeof(Image));
             bar.transform.SetParent(tile.transform, false);
             var barRect = bar.GetComponent<RectTransform>();
             barRect.anchorMin = new Vector2(0f, 0f);
             barRect.anchorMax = new Vector2(0f, 1f);
             barRect.pivot = new Vector2(0f, 0.5f);
-            barRect.sizeDelta = new Vector2(4f, 0f);
-            barRect.anchoredPosition = Vector2.zero;
+            barRect.sizeDelta = new Vector2(4f, -16f);
+            barRect.anchoredPosition = new Vector2(10f, 0f);
             var barImage = bar.GetComponent<Image>();
             barImage.color = accent;
             barImage.raycastTarget = false;
 
             var labelText = MakeText(tile.transform, "Label", label, 11, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
             labelText.fontStyle = FontStyle.Bold;
-            PlaceTopLeft(labelText.transform, 18f, 8f, width - 28f, 18f);
+            PlaceTopLeft(labelText.transform, 22f, 8f, width - 30f, 18f);
 
             var valueText = MakeText(tile.transform, "Value", "0", 26, TextAnchor.MiddleLeft, STAT_VALUE_COLOR);
             valueText.fontStyle = FontStyle.Bold;
-            PlaceTopLeft(valueText.transform, 18f, 26f, width - 28f, 32f);
+            PlaceTopLeft(valueText.transform, 22f, 26f, width - 30f, 32f);
 
             return valueText;
         }
@@ -1874,23 +1912,58 @@ namespace TrashTD.UI
         }
 
         private static Button MakeButton(Transform parent, string name, string label,
-            Vector2 size, Color bgColor)
+            Vector2 size, GameplayHUDUI.ButtonContainerType containerType, string iconName = null)
         {
             var obj = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
             obj.transform.SetParent(parent, false);
             obj.GetComponent<RectTransform>().sizeDelta = size;
-            obj.GetComponent<Image>().color = bgColor;
+
+            var button = obj.GetComponent<Button>();
+            GameplayHUDUI.ApplyButtonContainer(button, containerType);
+
+            float iconOffset = 0f;
+            if (!string.IsNullOrEmpty(iconName))
+            {
+                var iconSprite = GameplayHUDUI.LoadIconSprite(iconName);
+                if (iconSprite != null)
+                {
+                    var iconObj = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+                    iconObj.transform.SetParent(obj.transform, false);
+                    var iconImg = iconObj.GetComponent<Image>();
+                    iconImg.sprite = iconSprite;
+                    iconImg.color = Color.white;
+                    iconImg.preserveAspect = true;
+                    iconImg.raycastTarget = false;
+
+                    var iconRect = iconObj.GetComponent<RectTransform>();
+                    iconRect.anchorMin = new Vector2(0f, 0.5f);
+                    iconRect.anchorMax = new Vector2(0f, 0.5f);
+                    iconRect.pivot = new Vector2(0f, 0.5f);
+                    iconRect.anchoredPosition = new Vector2(16f, 0f);
+                    iconRect.sizeDelta = new Vector2(24f, 24f);
+                    iconOffset = 28f;
+                }
+            }
 
             var text = MakeText(obj.transform, "Label", label, 16, TextAnchor.MiddleCenter, Color.white);
             text.fontStyle = FontStyle.Bold;
             var textRect = text.GetComponent<RectTransform>();
             textRect.anchorMin = Vector2.zero;
             textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMin = new Vector2(iconOffset, 0f);
             textRect.offsetMax = Vector2.zero;
             text.raycastTarget = false;
 
-            return obj.GetComponent<Button>();
+            return button;
+        }
+
+        private static Button MakeButton(Transform parent, string name, string label,
+            Vector2 size, Color bgColor)
+        {
+            var container = (bgColor.r > 0.4f && bgColor.g < 0.3f && bgColor.b < 0.3f) ? GameplayHUDUI.ButtonContainerType.Danger :
+                            (bgColor.g > 0.4f && bgColor.g > bgColor.r) ? GameplayHUDUI.ButtonContainerType.Primary :
+                            GameplayHUDUI.ButtonContainerType.Dark;
+            return MakeButton(parent, name, label, size, container);
         }
 
         private static void PositionRT(Component comp, Vector2 anchoredPos, Vector2 anchor, Vector2 size)
