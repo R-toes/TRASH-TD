@@ -99,5 +99,14 @@ namespace TrashTD.Tests
                 UnityEngine.Random.state = previousRandomState;
             }
         }
+
+        [Test]
+        public void Stage6_AssetValidation_MatchesMeltdownName()
+        {
+            var stage6 = Resources.Load<StageData>("Stages/STAGE_06");
+            Assert.IsNotNull(stage6, "STAGE_06 asset should be loaded from Resources/Stages.");
+            Assert.AreEqual("STAGE_06", stage6.stageId);
+            Assert.AreEqual("Meltdown", stage6.mapName);
+        }
     }
 }

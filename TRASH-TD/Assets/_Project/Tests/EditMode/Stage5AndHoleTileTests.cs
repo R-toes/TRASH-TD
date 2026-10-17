@@ -234,5 +234,79 @@ namespace TrashTD.Tests
             Assert.IsNotNull(stage5.wavesHard);
             Assert.GreaterOrEqual(stage5.wavesHard.Length, 30);
         }
+
+        [Test]
+        public void Stage5_EnemyPaths_MatchReroutedDesign()
+        {
+            var stage5 = Resources.Load<StageData>("Stages/STAGE_05");
+            Assert.IsNotNull(stage5, "STAGE_05 asset should be loaded.");
+            Assert.IsNotNull(stage5.enemyPaths);
+            Assert.AreEqual(6, stage5.enemyPaths.Length, "Stage 5 should have 6 configured enemy paths.");
+
+            var exitPos = new Vector2Int(12, 6);
+
+            for (int i = 0; i < stage5.enemyPaths.Length; i++)
+            {
+                var path = stage5.enemyPaths[i];
+                Assert.AreEqual(i, path.spawnPointIndex);
+                Assert.AreEqual(0, path.exitPointIndex);
+                Assert.AreEqual(stage5.spawnPoints[i], path.waypoints[0], $"Path {i} should start at spawn point {stage5.spawnPoints[i]}.");
+                Assert.AreEqual(exitPos, path.waypoints[path.waypoints.Length - 1], $"Path {i} should end at exit point {exitPos}.");
+
+                // Validate each waypoint is on a walkable/hole/exit tile
+                foreach (var wp in path.waypoints)
+                {
+                    TileType tile = stage5.GetTile(wp.x, wp.y);
+                    Assert.IsTrue(tile == TileType.LowGround || tile == TileType.SpawnPoint || tile == TileType.Hole || tile == TileType.ExitPoint,
+                        $"Waypoint {wp} in path {i} must be on walkable, spawn, hole, or exit tile (found {tile}).");
+                }
+            }
+
+            // Path 0: (3,7) -> down col 3 to (3,1) -> hole (5,0) -> teleport to (8,6) -> row 5 -> exit (12,6)
+            var p0 = stage5.enemyPaths[0].waypoints;
+            CollectionAssert.Contains(p0, new Vector2Int(3, 1));
+            CollectionAssert.Contains(p0, new Vector2Int(5, 0));
+            CollectionAssert.Contains(p0, new Vector2Int(8, 6));
+            CollectionAssert.Contains(p0, new Vector2Int(8, 5));
+            CollectionAssert.Contains(p0, new Vector2Int(12, 5));
+
+            // Path 1: (4,7) -> down col 4 to (4,1) -> hole (5,0) -> teleport to (8,6) -> row 4 -> exit (12,6)
+            var p1 = stage5.enemyPaths[1].waypoints;
+            CollectionAssert.Contains(p1, new Vector2Int(4, 1));
+            CollectionAssert.Contains(p1, new Vector2Int(5, 0));
+            CollectionAssert.Contains(p1, new Vector2Int(8, 6));
+            CollectionAssert.Contains(p1, new Vector2Int(8, 4));
+            CollectionAssert.Contains(p1, new Vector2Int(12, 4));
+
+            // Path 2: (0,5) -> straight row 5 -> exit (12,6)
+            var p2 = stage5.enemyPaths[2].waypoints;
+            CollectionAssert.Contains(p2, new Vector2Int(0, 5));
+            CollectionAssert.Contains(p2, new Vector2Int(6, 5));
+            CollectionAssert.Contains(p2, new Vector2Int(12, 5));
+
+            // Path 3: (0,4) -> straight row 4 -> (12,4) -> (12,5) -> exit (12,6)
+            var p3 = stage5.enemyPaths[3].waypoints;
+            CollectionAssert.Contains(p3, new Vector2Int(0, 4));
+            CollectionAssert.Contains(p3, new Vector2Int(6, 4));
+            CollectionAssert.Contains(p3, new Vector2Int(12, 4));
+
+            // Path 4: (0,1) -> row 1 to (3,1) -> up col 3 to (3,5) -> row 5 -> exit (12,6)
+            var p4 = stage5.enemyPaths[4].waypoints;
+            CollectionAssert.Contains(p4, new Vector2Int(0, 1));
+            CollectionAssert.Contains(p4, new Vector2Int(3, 1));
+            CollectionAssert.Contains(p4, new Vector2Int(3, 3));
+            CollectionAssert.Contains(p4, new Vector2Int(3, 5));
+            CollectionAssert.Contains(p4, new Vector2Int(6, 5));
+
+            // Path 5: (12,1) -> row 1 to (4,1) -> up col 4 to (4,4) -> row 4 -> exit (12,6)
+            var p5 = stage5.enemyPaths[5].waypoints;
+            CollectionAssert.Contains(p5, new Vector2Int(12, 1));
+            CollectionAssert.Contains(p5, new Vector2Int(8, 1));
+            CollectionAssert.Contains(p5, new Vector2Int(4, 1));
+            CollectionAssert.Contains(p5, new Vector2Int(4, 3));
+            CollectionAssert.Contains(p5, new Vector2Int(4, 4));
+            CollectionAssert.Contains(p5, new Vector2Int(8, 4));
+            CollectionAssert.Contains(p5, new Vector2Int(12, 4));
+        }
     }
 }

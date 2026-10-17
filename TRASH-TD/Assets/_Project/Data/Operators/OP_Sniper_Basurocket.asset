@@ -21,13 +21,13 @@ MonoBehaviour:
   - AoE
   - Explosive
   - DPS
-  baseHP: 60
-  baseATK: 190
+  baseHP: 50
+  baseATK: 175
   baseDEF: 5
   baseRES: 0
   blockCount: 0
   attackRange: 7
-  attackInterval: 2.5
+  attackInterval: 2.8
   rangePattern:
   - {x: 2, y: 0}
   - {x: 3, y: 0}

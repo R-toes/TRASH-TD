@@ -662,7 +662,7 @@ namespace TrashTD.UI
                 "Secure the scrapline junction.",
                 "Reclaim the ruined market district.",
                 "Push through the cinder dump.",
-                "Take back the clockwork quarry.",
+                "Hold the line through the meltdown.",
                 "Development-only map for enemy and operator testing."
             };
 

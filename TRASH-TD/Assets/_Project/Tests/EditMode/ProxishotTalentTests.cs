@@ -153,5 +153,21 @@ namespace TrashTD.Tests
             Assert.IsTrue(proxishot.IsTargetable, "Proxishot should be targetable again once retreated.");
             Assert.AreEqual(1.0f, spriteRenderer.color.a, 0.001f, "Sprite alpha should be restored to 1.0 on retreat.");
         }
+
+#if UNITY_EDITOR
+        [Test]
+        public void OperatorStats_BasurocketAndProxyshot_MatchExpectedValues()
+        {
+            var basurocket = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>("Assets/_Project/Data/Operators/OP_Sniper_Basurocket.asset");
+            Assert.IsNotNull(basurocket, "OP_Sniper_Basurocket asset should exist.");
+            Assert.AreEqual(50, basurocket.baseHP, "Basurocket HP should be 50.");
+            Assert.AreEqual(175, basurocket.baseATK, "Basurocket ATK should be 175.");
+            Assert.AreEqual(2.8f, basurocket.attackInterval, 0.001f, "Basurocket attack interval should be 2.8.");
+
+            var proxishot = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>("Assets/_Project/Data/Operators/OP_Sniper_Proxishot.asset");
+            Assert.IsNotNull(proxishot, "OP_Sniper_Proxishot asset should exist.");
+            Assert.AreEqual(2.3f, proxishot.attackInterval, 0.001f, "Proxyshot attack interval should be 2.3.");
+        }
+#endif
     }
 }

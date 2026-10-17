@@ -485,7 +485,7 @@ namespace TrashTD.Editor
                 var basuFrames = new[] { basuFrame0, basuFrame1, basuFrame2, basuFrame3 };
                 var basuPrefab = CreateBasurocketPrefab(basuFrames);
                 var basurocket = CreateOperator("OP_Sniper_Basurocket", "Basurocket", OperatorClass.Sniper, OperatorPosition.Ranged, OperatorRarity.Star3,
-                    hp: 90, atk: 190, def: 10, res: 0, blockCount: 0, range: 7, interval: 2.5f, dp: 16,
+                    hp: 50, atk: 175, def: 5, res: 0, blockCount: 0, range: 7, interval: 2.8f, dp: 16,
                     new[]
                     {
                         new Vector2Int(2, 0), new Vector2Int(3, 0), new Vector2Int(4, 0),
@@ -496,6 +496,14 @@ namespace TrashTD.Editor
                 basurocket.skillDescription =
                     "Long-range explosive sniper. Fires up to 7 tiles forward, cannot attack the adjacent tile, and deals high physical area damage on impact.";
                 EditorUtility.SetDirty(basurocket);
+            }
+
+            // 3c. Sniper (Proxyshot / Proxishot)
+            var proxishot = AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Sniper_Proxishot.asset");
+            if (proxishot != null)
+            {
+                proxishot.attackInterval = 2.3f;
+                EditorUtility.SetDirty(proxishot);
             }
 
             // 4. Caster (Pyrolite)
@@ -1728,10 +1736,12 @@ namespace TrashTD.Editor
                     waypoints = new[]
                     {
                         new Vector2Int(3, 7), new Vector2Int(3, 6), new Vector2Int(3, 5),
-                        new Vector2Int(4, 5), new Vector2Int(5, 5), new Vector2Int(6, 5),
-                        new Vector2Int(7, 5), new Vector2Int(8, 5), new Vector2Int(9, 5),
-                        new Vector2Int(10, 5), new Vector2Int(11, 5), new Vector2Int(12, 5),
-                        new Vector2Int(12, 6)
+                        new Vector2Int(3, 4), new Vector2Int(3, 3), new Vector2Int(3, 2),
+                        new Vector2Int(3, 1), new Vector2Int(4, 1), new Vector2Int(5, 1),
+                        new Vector2Int(5, 0),
+                        new Vector2Int(8, 6),
+                        new Vector2Int(8, 5), new Vector2Int(9, 5), new Vector2Int(10, 5),
+                        new Vector2Int(11, 5), new Vector2Int(12, 5), new Vector2Int(12, 6)
                     }
                 },
                 new PathData
@@ -1741,9 +1751,13 @@ namespace TrashTD.Editor
                     waypoints = new[]
                     {
                         new Vector2Int(4, 7), new Vector2Int(4, 6), new Vector2Int(4, 5),
-                        new Vector2Int(5, 5), new Vector2Int(6, 5), new Vector2Int(7, 5),
-                        new Vector2Int(8, 5), new Vector2Int(9, 5), new Vector2Int(10, 5),
-                        new Vector2Int(11, 5), new Vector2Int(12, 5), new Vector2Int(12, 6)
+                        new Vector2Int(4, 4), new Vector2Int(4, 3), new Vector2Int(4, 2),
+                        new Vector2Int(4, 1), new Vector2Int(5, 1),
+                        new Vector2Int(5, 0),
+                        new Vector2Int(8, 6),
+                        new Vector2Int(8, 5), new Vector2Int(8, 4), new Vector2Int(9, 4),
+                        new Vector2Int(10, 4), new Vector2Int(11, 4), new Vector2Int(12, 4),
+                        new Vector2Int(12, 5), new Vector2Int(12, 6)
                     }
                 },
                 new PathData
@@ -1794,11 +1808,12 @@ namespace TrashTD.Editor
                     {
                         new Vector2Int(12, 1), new Vector2Int(11, 1), new Vector2Int(10, 1),
                         new Vector2Int(9, 1), new Vector2Int(8, 1), new Vector2Int(7, 1),
-                        new Vector2Int(6, 1), new Vector2Int(5, 1),
-                        new Vector2Int(5, 0),
-                        new Vector2Int(8, 6),
-                        new Vector2Int(8, 5), new Vector2Int(9, 5), new Vector2Int(10, 5),
-                        new Vector2Int(11, 5), new Vector2Int(12, 5), new Vector2Int(12, 6)
+                        new Vector2Int(6, 1), new Vector2Int(5, 1), new Vector2Int(4, 1),
+                        new Vector2Int(4, 2), new Vector2Int(4, 3), new Vector2Int(4, 4),
+                        new Vector2Int(5, 4), new Vector2Int(6, 4), new Vector2Int(7, 4),
+                        new Vector2Int(8, 4), new Vector2Int(9, 4), new Vector2Int(10, 4),
+                        new Vector2Int(11, 4), new Vector2Int(12, 4), new Vector2Int(12, 5),
+                        new Vector2Int(12, 6)
                     }
                 }
             };
@@ -1934,7 +1949,7 @@ namespace TrashTD.Editor
             return waves.ToArray();
         }
 
-        [MenuItem("TRASH TD/Generate Stage 6 (Clockwork Quarry)")]
+        [MenuItem("TRASH TD/Generate Stage 6 (Meltdown)")]
         public static void GenerateStage6()
         {
             string path = $"{StageDataFolder}/STAGE_06.asset";
@@ -1946,8 +1961,8 @@ namespace TrashTD.Editor
             }
 
             stage.stageId = "STAGE_06";
-            stage.mapName = "Clockwork Quarry";
-            stage.shortDescription = "Hold the line across the quarry while avoiding the toxic hazard.";
+            stage.mapName = "Meltdown";
+            stage.shortDescription = "Hold the line across the meltdown while avoiding the toxic hazard.";
             stage.gridWidth = 12;
             stage.gridHeight = 5;
 
@@ -2165,7 +2180,7 @@ namespace TrashTD.Editor
             EditorUtility.SetDirty(stage);
             AssetDatabase.SaveAssets();
 
-            Debug.Log("<color=green>TRASH TD: Stage 6 (Clockwork Quarry) successfully generated!</color>");
+            Debug.Log("<color=green>TRASH TD: Stage 6 (Meltdown) successfully generated!</color>");
         }
 
         private static WaveData[] DistributeWavesToLanes(WaveData[] sourceWaves)
