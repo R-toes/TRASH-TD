@@ -2030,8 +2030,13 @@ namespace TrashTD.UI
             resumeButton.onClick.AddListener(ResumeGame);
             StyleButton(resumeButton, ButtonContainerType.Primary, new Color(0.4f, 1f, 0.65f, 1f), 1.05f);
 
+            var retryButton = CreateButton(card.transform, "RetryButton", "RETRY", new Vector2(340f, 60f), ButtonContainerType.Secondary);
+            SetPosition(retryButton.GetComponent<RectTransform>(), new Vector2(0f, -332f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
+            retryButton.onClick.AddListener(RetryStage);
+            StyleButton(retryButton, ButtonContainerType.Secondary, new Color(0.55f, 0.75f, 1f, 1f), 1.05f);
+
             var exitButton = CreateButton(card.transform, "ExitButton", "EXIT TO MENU", new Vector2(340f, 60f), ButtonContainerType.Danger);
-            SetPosition(exitButton.GetComponent<RectTransform>(), new Vector2(0f, -402f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
+            SetPosition(exitButton.GetComponent<RectTransform>(), new Vector2(0f, -409f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
             exitButton.onClick.AddListener(ExitToMenu);
             StyleButton(exitButton, ButtonContainerType.Danger, new Color(1f, 0.4f, 0.4f, 1f), 1.05f);
 
@@ -2377,6 +2382,19 @@ namespace TrashTD.UI
             gameManager.ResumeGame();
             AudioManager.Instance?.PlaySfx(SfxId.GameplayResume);
             SetPauseVisible(false);
+        }
+
+        /// <summary>Restarts the current stage on the same difficulty — same flow as the results screen's Retry.</summary>
+        private void RetryStage()
+        {
+            if (gameManager != null)
+            {
+                MainMenuController.SetPendingStage(gameManager.CurrentStage);
+                MainMenuController.SetPendingStageDifficulty(gameManager.CurrentDifficulty);
+            }
+
+            Time.timeScale = 1f;
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
 
         private void ExitToMenu()
