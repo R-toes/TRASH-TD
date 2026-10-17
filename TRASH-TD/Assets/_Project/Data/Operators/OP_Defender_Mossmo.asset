@@ -36,7 +36,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Passive - Symbiotic Spores: Mossmo does not attack. When taking damage (3s cooldown), he heals up to 2 operators in adjacent tiles (including himself) for 50% of NurseBot''s healing power.'
+  skillDescription: 'Mossmo does not attack and is likely to be attacked but when taking damage he heals up to 2 operators in its range including itself'
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5

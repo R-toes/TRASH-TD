@@ -29,7 +29,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 1
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: When Drawgoo dies, draw two random operator cards from the pool.
+  skillDescription: 'When Drawgoo dies, draw two random operator cards from the pool. (If upgraded, draws 1 (60%) or 2 (40%) random 3-star operators instead.)'
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5

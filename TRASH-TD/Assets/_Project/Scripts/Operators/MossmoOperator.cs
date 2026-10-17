@@ -11,13 +11,18 @@ namespace TrashTD.Operators
     /// <summary>
     /// Mossmo — 3-Star Defender.
     /// Does not attack enemies, but blocks up to 3 units.
-    /// Every time he takes damage, he heals up to 2 operators (including himself)
-    /// within adjacent tiles for ~50% of Coalesce's healing power.
+    /// Taunt mechanic: Ranged enemies prioritize attacking Mossmo when the attacker is in a surrounding tile.
+    /// Every time he takes damage, he heals up to 2 operators in range (including himself).
+    /// Heal cooldown: 1s when attacked by enemy, 3s when attacked by environment (acid rain/acid pool).
     /// </summary>
     public class MossmoOperator : DefenderOperator, IHealer
     {
-        private const float HealCooldownDuration = 3.0f;
+        public const float EnemyHealCooldownDuration = 1.0f;
+        public const float EnvironmentHealCooldownDuration = 3.0f;
         private float healCooldownTimer;
+        public float HealCooldownTimer => healCooldownTimer;
+
+        public override bool HasTaunt => true;
 
         public override void Attack(EnemyBase target)
         {
@@ -44,16 +49,44 @@ namespace TrashTD.Operators
         {
             if (currentHP <= 0 || rawATK <= 0) return;
 
-            GridCell originCell = deployedCell;
+            GridCell originCell = GetOriginCell();
             int hpBefore = currentHP;
             base.TakeDamage(rawATK, damageType, attacker);
             int hpAfter = currentHP;
 
-            if (hpBefore > hpAfter && originCell != null && healCooldownTimer <= 0f)
+            if (hpBefore > hpAfter && healCooldownTimer <= 0f)
             {
-                healCooldownTimer = HealCooldownDuration;
+                healCooldownTimer = attacker != null ? EnemyHealCooldownDuration : EnvironmentHealCooldownDuration;
                 TriggerReactiveHeal(originCell);
             }
+        }
+
+        public override void TakeTrueDamage(int damage, bool ignoreShieldNegation = false)
+        {
+            if (currentHP <= 0 || damage <= 0) return;
+
+            GridCell originCell = GetOriginCell();
+            int hpBefore = currentHP;
+            base.TakeTrueDamage(damage, ignoreShieldNegation);
+            int hpAfter = currentHP;
+
+            if (hpBefore > hpAfter && healCooldownTimer <= 0f)
+            {
+                healCooldownTimer = EnvironmentHealCooldownDuration;
+                TriggerReactiveHeal(originCell);
+            }
+        }
+
+        private GridCell GetOriginCell()
+        {
+            if (deployedCell != null) return deployedCell;
+
+            GridManager grid = FindFirstObjectByType<GridManager>();
+            if (grid != null)
+            {
+                return grid.GetCell(grid.WorldToGridPosition(transform.position));
+            }
+            return null;
         }
 
         public void Heal(OperatorBase target)
@@ -69,26 +102,26 @@ namespace TrashTD.Operators
 
         private void TriggerReactiveHeal(GridCell originCell)
         {
-            if (OperatorManager.Instance == null || data == null || originCell == null)
-                return;
+            if (data == null) return;
 
             GridManager gridManager = FindFirstObjectByType<GridManager>();
-            if (gridManager == null) return;
+            List<OperatorBase> candidates = null;
+            if (OperatorManager.Instance != null && gridManager != null && originCell != null)
+            {
+                Vector2Int[] pattern = data.rangePattern != null && data.rangePattern.Length > 0
+                    ? data.rangePattern
+                    : new[]
+                    {
+                        new Vector2Int(0, 0),
+                        new Vector2Int(1, 0),
+                        new Vector2Int(-1, 0),
+                        new Vector2Int(0, 1),
+                        new Vector2Int(0, -1)
+                    };
 
-            // Healing range: adjacent tiles
-            Vector2Int[] pattern = data.rangePattern != null && data.rangePattern.Length > 0
-                ? data.rangePattern
-                : new[]
-                {
-                    new Vector2Int(0, 0),
-                    new Vector2Int(1, 0),
-                    new Vector2Int(-1, 0),
-                    new Vector2Int(0, 1),
-                    new Vector2Int(0, -1)
-                };
-
-            GridCell[] rangeCells = gridManager.GetCellsInRange(originCell.GridPosition, pattern, Facing);
-            List<OperatorBase> candidates = OperatorManager.Instance.GetOperatorsInCells(rangeCells);
+                GridCell[] rangeCells = gridManager.GetCellsInRange(originCell.GridPosition, pattern, Facing);
+                candidates = OperatorManager.Instance.GetOperatorsInCells(rangeCells);
+            }
 
             List<OperatorBase> targetsToHeal = new List<OperatorBase>(2);
 
@@ -130,7 +163,7 @@ namespace TrashTD.Operators
             int healAmount = GetHealAmount();
 
             // Play green restorative pulse visual
-            Vector3 visualOrigin = originCell.WorldPosition;
+            Vector3 visualOrigin = originCell != null ? originCell.WorldPosition : transform.position;
             AoeBlastVisual.PlayCircle(visualOrigin, 1.25f, new Color(0.25f, 0.95f, 0.45f, 0.6f));
             PlayAbilitySound();
 

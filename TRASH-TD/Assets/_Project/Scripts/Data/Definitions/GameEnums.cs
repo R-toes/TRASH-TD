@@ -49,7 +49,8 @@ namespace TrashTD.Data
     public enum DamageType
     {
         Physical,
-        Arts
+        Arts,
+        True
     }
 
     /// <summary>

@@ -926,7 +926,7 @@ namespace TrashTD.UI
                 selectedOperator.CurrentATK,
                 selectedOperator.CurrentRarity,
                 selectedOperator.Data.baseRarity,
-                selectedOperator.Data.skillDescription,
+                selectedOperator.GetSkillDescription(),
                 labelPosition);
         }
 
@@ -984,10 +984,11 @@ namespace TrashTD.UI
             selectedOperatorDetailsRoles.text = data.roleTags != null && data.roleTags.Length > 0
                 ? string.Join(" / ", data.roleTags)
                 : GetOperatorDraftDescription(data.operatorClass);
-            bool hasSkill = !string.IsNullOrWhiteSpace(data.skillDescription);
+            string skillDesc = op.GetSkillDescription();
+            bool hasSkill = !string.IsNullOrWhiteSpace(skillDesc);
             selectedOperatorDetailsSkillHeading.gameObject.SetActive(hasSkill);
             selectedOperatorDetailsSkill.gameObject.SetActive(hasSkill);
-            if (hasSkill) selectedOperatorDetailsSkill.text = data.skillDescription.Trim();
+            if (hasSkill) selectedOperatorDetailsSkill.text = skillDesc.Trim();
         }
 
         private static string GetOperatorDraftDescription(OperatorClass opClass)
@@ -1918,7 +1919,7 @@ namespace TrashTD.UI
             GameObject card = new GameObject("BriefingCard", typeof(RectTransform), typeof(Image), typeof(Outline));
             card.transform.SetParent(environmentBriefingPanel.transform, false);
             RectTransform cardRect = card.GetComponent<RectTransform>();
-            SetPosition(cardRect, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(680f, 380f), new Vector2(0.5f, 0.5f));
+            SetPosition(cardRect, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(740f, 440f), new Vector2(0.5f, 0.5f));
             ApplyModalCard(card);
             Outline cardOutline = card.GetComponent<Outline>();
             cardOutline.effectColor = new Color(WaveColor.r, WaveColor.g, WaveColor.b, 0.8f);
@@ -1926,15 +1927,15 @@ namespace TrashTD.UI
 
             environmentBriefingTitle = CreateText(card.transform, "Title", "ENVIRONMENTAL EFFECT", 30, TextAnchor.MiddleCenter);
             environmentBriefingTitle.color = WaveColor;
-            SetPosition(environmentBriefingTitle.rectTransform, new Vector2(0f, -40f), new Vector2(0.5f, 1f), new Vector2(600f, 52f), new Vector2(0.5f, 1f));
+            SetPosition(environmentBriefingTitle.rectTransform, new Vector2(0f, -40f), new Vector2(0.5f, 1f), new Vector2(660f, 52f), new Vector2(0.5f, 1f));
             environmentBriefingTitle.raycastTarget = false;
 
-            environmentBriefingDescription = CreateText(card.transform, "Description", string.Empty, 20, TextAnchor.MiddleCenter);
+            environmentBriefingDescription = CreateText(card.transform, "Description", string.Empty, 18, TextAnchor.MiddleCenter);
             environmentBriefingDescription.fontStyle = FontStyle.Normal;
             environmentBriefingDescription.horizontalOverflow = HorizontalWrapMode.Wrap;
-            environmentBriefingDescription.verticalOverflow = VerticalWrapMode.Truncate;
+            environmentBriefingDescription.verticalOverflow = VerticalWrapMode.Overflow;
             environmentBriefingDescription.color = new Color(0.86f, 0.9f, 0.95f, 1f);
-            SetPosition(environmentBriefingDescription.rectTransform, new Vector2(0f, -100f), new Vector2(0.5f, 1f), new Vector2(560f, 150f), new Vector2(0.5f, 1f));
+            SetPosition(environmentBriefingDescription.rectTransform, new Vector2(0f, -100f), new Vector2(0.5f, 1f), new Vector2(640f, 210f), new Vector2(0.5f, 1f));
             environmentBriefingDescription.raycastTarget = false;
 
             Button dismissButton = CreateButton(card.transform, "DismissButton", "UNDERSTOOD", new Vector2(250f, 58f), ButtonContainerType.Primary);
@@ -1974,9 +1975,14 @@ namespace TrashTD.UI
                         "A sandstorm sweeps the battlefield. Attack intervals are 5% shorter, " +
                         "and each attack has a 10% chance to miss.";
                     break;
+                case "STAGE_05":
+                    effectDescription =
+                        "Starting from Wave 6, vehicles periodically speed down the boulevard lanes. " +
+                        "Collisions deal ramping true damage to enemies and operators, and stun the first operator struck.";
+                    break;
                 case "STAGE_06":
                     effectDescription =
-                        "Acid rain periodically deals 3 physical damage to deployed operators " +
+                        "Acid rain periodically deals 3 true damage to deployed operators " +
                         "and active enemies every 2 seconds while a wave is running. Operators are protected between waves.";
                     break;
                 default:

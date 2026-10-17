@@ -42,6 +42,7 @@ namespace TrashTD.Combat
         /// </summary>
         public static int CalculateDamage(int rawATK, int def, int res, DamageType damageType)
         {
+            if (damageType == DamageType.True) return Mathf.Max(1, rawATK);
             int mitigation = damageType == DamageType.Physical ? def : res;
             return CalculateDamage(rawATK, mitigation);
         }

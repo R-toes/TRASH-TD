@@ -657,5 +657,374 @@ namespace TrashTD.Tests
                 Assert.AreEqual(150, thornchin.baseHP, "Thornchin base HP should be 150.");
             }
         }
+
+        [Test]
+        public void Stage5CarEncounter_DoesNotSpawnCarsOnFirst5Waves()
+        {
+            var encounterObj = new GameObject("TestCarEncounter");
+            var encounter = encounterObj.AddComponent<Stage5CarEncounter>();
+
+            Assert.AreEqual(6, Stage5CarEncounter.FirstCarWave, "First car wave should be Wave 6.");
+
+            for (int wave = 1; wave <= 5; wave++)
+            {
+                Assert.IsFalse(encounter.CanSpawnCarsOnWave(wave), $"Car encounter should NOT spawn cars on wave {wave}.");
+            }
+
+            Assert.IsTrue(encounter.CanSpawnCarsOnWave(6), "Car encounter SHOULD spawn cars on wave 6.");
+            Assert.IsTrue(encounter.CanSpawnCarsOnWave(10), "Car encounter SHOULD spawn cars on wave 10.");
+
+            Object.DestroyImmediate(encounterObj);
+        }
+
+        [Test]
+        public void DamageCalculator_TrueDamage_BypassesMitigation()
+        {
+            int damage = Combat.DamageCalculator.CalculateDamage(3, def: 999, res: 999, DamageType.True);
+            Assert.AreEqual(3, damage, "True damage must ignore both DEF and RES completely.");
+
+            int trapDamage = Combat.DamageCalculator.CalculateDamage(TrapTileRules.DamagePerTick, def: 50, res: 50, DamageType.True);
+            Assert.AreEqual(TrapTileRules.DamagePerTick, trapDamage, "Acid/trap damage with True damage type must deal full unmitigated damage.");
+        }
+
+        [Test]
+        public void OperatorAndEnemy_TakeTrueDamage_BypassesDEF()
+        {
+            // Operator with high DEF (50 DEF)
+            var opObj = new GameObject("DefenderOp");
+            var op = opObj.AddComponent<BulkheadOperator>();
+            var opData = ScriptableObject.CreateInstance<OperatorData>();
+            opData.baseHP = 100;
+            opData.baseDEF = 50;
+            opData.baseRES = 50;
+            op.Initialize(opData, OperatorRarity.Star1);
+
+            // True damage via TakeTrueDamage: should lose exactly 3 HP, not chip damage (1)
+            op.TakeTrueDamage(3);
+            Assert.AreEqual(97, op.CurrentHP, "Operator should take unmitigated true damage from TakeTrueDamage.");
+
+            // True damage via TakeDamage: should also lose exactly 3 HP
+            op.TakeDamage(3, DamageType.True);
+            Assert.AreEqual(94, op.CurrentHP, "Operator should take unmitigated true damage from TakeDamage(..., DamageType.True).");
+
+            // Enemy with high DEF (50 DEF)
+            var enemyObj = new GameObject("TestEnemy");
+            var enemy = enemyObj.AddComponent<GruntEnemy>();
+            var enemyData = ScriptableObject.CreateInstance<EnemyData>();
+            enemyData.baseHP = 100;
+            enemyData.baseDEF = 50;
+            enemyData.baseRES = 50;
+            enemy.Initialize(enemyData, 0);
+
+            enemy.TakeTrueDamage(3);
+            Assert.AreEqual(97, enemy.CurrentHP, "Enemy should take unmitigated true damage from TakeTrueDamage.");
+
+            enemy.TakeDamage(3, DamageType.True);
+            Assert.AreEqual(94, enemy.CurrentHP, "Enemy should take unmitigated true damage from TakeDamage(..., DamageType.True).");
+
+            Object.DestroyImmediate(opObj);
+            Object.DestroyImmediate(opData);
+            Object.DestroyImmediate(enemyObj);
+            Object.DestroyImmediate(enemyData);
+        }
+
+        [Test]
+        public void Bulkhead_Block4_And_FrenzyIncreasesAtkAndDef()
+        {
+            var bulkheadData = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>("Assets/_Project/Data/Operators/OP_Defender_Bulkhead.asset");
+            if (bulkheadData != null)
+            {
+                Assert.AreEqual(4, bulkheadData.blockCount, "Bulkhead block count must be 4 in asset.");
+                Assert.IsTrue(bulkheadData.skillDescription.Contains("blocking 3 or more enemies"), "Bulkhead skill description should mention 3 or more enemies.");
+            }
+
+            var opObj = new GameObject("BulkheadTest");
+            var op = opObj.AddComponent<BulkheadOperator>();
+            var data = ScriptableObject.CreateInstance<OperatorData>();
+            data.operatorName = "Bulkhead";
+            data.baseHP = 200;
+            data.baseATK = 50;
+            data.baseDEF = 40;
+            data.blockCount = 4;
+            data.operatorClass = OperatorClass.Defender;
+            op.Initialize(data, OperatorRarity.Star1);
+
+            Assert.AreEqual(4, op.GetBlockCount(), "Bulkhead block capacity must be 4.");
+
+            // Before blocking 3: ATK is 50, DEF is 40
+            Assert.AreEqual(50, op.CurrentATK);
+            Assert.AreEqual(40, op.CurrentDEF);
+
+            // Create 4 enemies to block
+            var enemies = new List<EnemyBase>();
+            for (int i = 0; i < 4; i++)
+            {
+                var eObj = new GameObject($"Enemy_{i}");
+                var e = eObj.AddComponent<GruntEnemy>();
+                var eData = ScriptableObject.CreateInstance<EnemyData>();
+                eData.baseHP = 100;
+                e.Initialize(eData, 0);
+                enemies.Add(e);
+            }
+
+            // Block 1
+            op.Deploy(new GridCell(0, 0, TileType.LowGround, Vector3.zero));
+            op.TryBlock(enemies[0]);
+            Assert.IsFalse(op.IsFrenzyActive);
+            Assert.AreEqual(50, op.CurrentATK);
+            Assert.AreEqual(40, op.CurrentDEF);
+
+            // Block 2
+            op.TryBlock(enemies[1]);
+            Assert.IsFalse(op.IsFrenzyActive);
+            Assert.AreEqual(50, op.CurrentATK);
+            Assert.AreEqual(40, op.CurrentDEF);
+
+            // Block 3 -> Frenzy triggers: ATK * 1.20 = 60, DEF * 1.20 = 48
+            op.TryBlock(enemies[2]);
+            Assert.IsTrue(op.IsFrenzyActive);
+            Assert.AreEqual(60, op.CurrentATK, "ATK should increase by 20% (50 -> 60).");
+            Assert.AreEqual(48, op.CurrentDEF, "DEF should increase by 20% (40 -> 48).");
+
+            // Block 4 -> Still frenzy
+            op.TryBlock(enemies[3]);
+            Assert.IsTrue(op.IsFrenzyActive);
+            Assert.AreEqual(60, op.CurrentATK);
+            Assert.AreEqual(48, op.CurrentDEF);
+
+            // Cleanup
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                Object.DestroyImmediate(enemies[i].Data);
+                Object.DestroyImmediate(enemies[i].gameObject);
+            }
+            Object.DestroyImmediate(data);
+            Object.DestroyImmediate(opObj);
+        }
+
+        [Test]
+        public void Mossmo_SkillDescription_And_DoesNotAttack()
+        {
+            var mossmoData = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>("Assets/_Project/Data/Operators/OP_Defender_Mossmo.asset");
+            if (mossmoData != null)
+            {
+                Assert.AreEqual("Mossmo does not attack and is likely to be attacked but when taking damage he heals up to 2 operators in its range including itself",
+                    mossmoData.skillDescription);
+            }
+
+            var opObj = new GameObject("MossmoTest");
+            var op = opObj.AddComponent<MossmoOperator>();
+            var data = ScriptableObject.CreateInstance<OperatorData>();
+            data.operatorName = "Mossmo";
+            data.baseHP = 160;
+            data.baseATK = 10;
+            data.blockCount = 3;
+            data.operatorClass = OperatorClass.Defender;
+            op.Initialize(data, OperatorRarity.Star1);
+
+            Assert.IsTrue(op.HasTaunt, "Mossmo must have HasTaunt enabled.");
+
+            // Mossmo Attack method should do nothing
+            var eObj = new GameObject("DummyEnemy");
+            var e = eObj.AddComponent<GruntEnemy>();
+            var eData = ScriptableObject.CreateInstance<EnemyData>();
+            eData.baseHP = 100;
+            e.Initialize(eData, 0);
+
+            op.Attack(e);
+            Assert.AreEqual(100, e.CurrentHP, "Mossmo must not deal damage on Attack.");
+
+            Object.DestroyImmediate(eData);
+            Object.DestroyImmediate(eObj);
+            Object.DestroyImmediate(data);
+            Object.DestroyImmediate(opObj);
+        }
+
+        [Test]
+        public void Mossmo_TauntMechanic_RangedEnemyPrioritizesMossmoInSurroundingTile()
+        {
+            // Set up GridManager and OperatorManager
+            var opMgrObj = new GameObject("OpManager");
+            var opMgr = opMgrObj.AddComponent<OperatorManager>();
+            opMgr.Initialize(gridManager);
+
+            // Deploy Mossmo at (5, 5)
+            var mossmoObj = new GameObject("Mossmo");
+            mossmoObj.transform.position = gridManager.GridToWorldPosition(5, 5);
+            var mossmo = mossmoObj.AddComponent<MossmoOperator>();
+            var mossmoData = ScriptableObject.CreateInstance<OperatorData>();
+            mossmoData.operatorName = "Mossmo";
+            mossmoData.baseHP = 160;
+            mossmoData.baseDEF = 30;
+            mossmoData.operatorClass = OperatorClass.Defender;
+            mossmoData.position = OperatorPosition.Melee;
+            mossmo.Initialize(mossmoData, OperatorRarity.Star1);
+            mossmo.Deploy(gridManager.GetCell(5, 5));
+            opMgr.RegisterOperator(mossmo);
+
+            // Deploy a Sniper (Ranged operator, normally preferred target) at (5, 6)
+            var sniperObj = new GameObject("Sniper");
+            sniperObj.transform.position = gridManager.GridToWorldPosition(5, 6);
+            var sniper = sniperObj.AddComponent<DefenderOperator>();
+            var sniperData = ScriptableObject.CreateInstance<OperatorData>();
+            sniperData.operatorName = "Sniper";
+            sniperData.baseHP = 80;
+            sniperData.operatorClass = OperatorClass.Sniper;
+            sniperData.position = OperatorPosition.Ranged;
+            sniper.Initialize(sniperData, OperatorRarity.Star1);
+            sniper.Deploy(gridManager.GetCell(5, 6));
+            opMgr.RegisterOperator(sniper);
+
+            // Create EnemyCaster with attack range 3
+            var casterObj = new GameObject("EnemyCaster");
+            var caster = casterObj.AddComponent<EnemyCaster>();
+            var casterData = ScriptableObject.CreateInstance<EnemyData>();
+            casterData.attackRange = 3;
+            casterData.attackInterval = 2.0f;
+            caster.Initialize(casterData, 0);
+            caster.SetGridManager(gridManager);
+
+            // 1. When EnemyCaster is in a surrounding tile of Mossmo (e.g. at (4, 5), dx=1, dy=0)
+            casterObj.transform.position = gridManager.GridToWorldPosition(4, 5);
+            Assert.IsTrue(mossmo.ShouldTauntAttacker(casterObj.transform.position, gridManager), "Mossmo should taunt when attacker is in surrounding tile.");
+
+            // Use reflection to call FindOperatorTarget
+            var findTargetMethod = typeof(EnemyBase).GetMethod("FindOperatorTarget",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var targetWhenSurrounding = (OperatorBase)findTargetMethod.Invoke(caster, new object[] { true });
+            Assert.AreEqual(mossmo, targetWhenSurrounding, "Enemy caster should prioritize Mossmo because of taunt in surrounding tile, even if Sniper is preferred.");
+
+            // 2. When EnemyCaster is NOT in a surrounding tile of Mossmo (e.g. at (3, 5), dx=2, dy=0, but still in attack range 3)
+            casterObj.transform.position = gridManager.GridToWorldPosition(3, 5);
+            Assert.IsFalse(mossmo.ShouldTauntAttacker(casterObj.transform.position, gridManager), "Mossmo should NOT taunt when attacker is beyond surrounding tiles.");
+
+            var targetWhenFar = (OperatorBase)findTargetMethod.Invoke(caster, new object[] { true });
+            Assert.AreEqual(sniper, targetWhenFar, "Enemy caster should target the preferred Ranged operator (Sniper) when outside Mossmo's surrounding tile.");
+
+            // Clean up
+            Object.DestroyImmediate(casterObj);
+            Object.DestroyImmediate(casterData);
+            Object.DestroyImmediate(sniperObj);
+            Object.DestroyImmediate(sniperData);
+            Object.DestroyImmediate(mossmoObj);
+            Object.DestroyImmediate(mossmoData);
+            Object.DestroyImmediate(opMgrObj);
+        }
+
+        [Test]
+        public void Mossmo_Cooldowns_1sForEnemyDamage_3sForEnvironmentDamage()
+        {
+            var opObj = new GameObject("MossmoTest");
+            var op = opObj.AddComponent<MossmoOperator>();
+            var data = ScriptableObject.CreateInstance<OperatorData>();
+            data.operatorName = "Mossmo";
+            data.baseHP = 160;
+            data.baseATK = 15;
+            data.baseDEF = 0;
+            data.operatorClass = OperatorClass.Defender;
+            op.Initialize(data, OperatorRarity.Star1);
+
+            // 1. Attacked by enemy -> Cooldown should be 1.0s
+            var enemyObj = new GameObject("AttackingEnemy");
+            var enemy = enemyObj.AddComponent<GruntEnemy>();
+            var enemyData = ScriptableObject.CreateInstance<EnemyData>();
+            enemyData.baseHP = 100;
+            enemy.Initialize(enemyData, 0);
+
+            // Deal 20 damage via enemy attack
+            op.TakeDamage(20, DamageType.Physical, attacker: enemy);
+            Assert.AreEqual(MossmoOperator.EnemyHealCooldownDuration, op.HealCooldownTimer, 0.05f, "Cooldown after enemy attack should be 1.0s.");
+
+            // Force cooldown to expire
+            typeof(MossmoOperator).GetField("healCooldownTimer",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(op, 0f);
+
+            // 2. Attacked by environment (TakeTrueDamage, e.g. acid rain or acid pool) -> Cooldown should be 3.0s
+            op.TakeTrueDamage(3);
+            Assert.AreEqual(MossmoOperator.EnvironmentHealCooldownDuration, op.HealCooldownTimer, 0.05f, "Cooldown after environmental damage should be 3.0s.");
+
+            // Force cooldown to expire
+            typeof(MossmoOperator).GetField("healCooldownTimer",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(op, 0f);
+
+            // 3. Attacked by environment via TakeDamage with null attacker -> Cooldown should be 3.0s
+            op.TakeDamage(10, DamageType.Physical, attacker: null);
+            Assert.AreEqual(MossmoOperator.EnvironmentHealCooldownDuration, op.HealCooldownTimer, 0.05f, "Cooldown after null attacker damage should be 3.0s.");
+
+            Object.DestroyImmediate(enemyObj);
+            Object.DestroyImmediate(enemyData);
+            Object.DestroyImmediate(opObj);
+            Object.DestroyImmediate(data);
+        }
+
+        [Test]
+        public void Drawgoo_Asset_SkillDescription_And_UpgradeMerge_GrantsRandom3StarOnDeath()
+        {
+            var drawgooData = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>("Assets/_Project/Data/Operators/OP_Guard_Drawgoo.asset");
+            Assert.IsNotNull(drawgooData, "Drawgoo asset should exist.");
+            Assert.IsTrue(drawgooData.skillDescription.Contains("3-star"), "Drawgoo asset description should mention 3-star upgrade.");
+
+            var upgradeObj = new GameObject("UpgradeSystem");
+            var upgradeSys = TestUtility.AddAwakened<RarityUpgradeSystem>(upgradeObj);
+
+            var deckObj = new GameObject("Deck");
+            var deck = TestUtility.AddAwakened<PlayerDeck>(deckObj);
+
+            var opMgrObj = new GameObject("OpManager");
+            var opMgr = TestUtility.AddAwakened<OperatorManager>(opMgrObj);
+            opMgr.Initialize(gridManager);
+
+            var draftObj = new GameObject("DraftSystem");
+            var draftSys = TestUtility.AddAwakened<CardDraftSystem>(draftObj);
+
+            var star3Op = ScriptableObject.CreateInstance<OperatorData>();
+            star3Op.operatorName = "Mossmo";
+            star3Op.operatorClass = OperatorClass.Defender;
+            star3Op.baseRarity = OperatorRarity.Star3;
+
+            var pool = new List<OperatorData> { drawgooData, star3Op };
+            draftSys.SetOperatorPool(pool);
+
+            try
+            {
+                // 1. Add 3 1★ Drawgoos to the deck
+                deck.AddCard(new DraftCard(drawgooData, OperatorRarity.Star1));
+                deck.AddCard(new DraftCard(drawgooData, OperatorRarity.Star1));
+                deck.AddCard(new DraftCard(drawgooData, OperatorRarity.Star1));
+
+                // 3 cards merge into 1 2★ card
+                Assert.AreEqual(1, deck.CardCount);
+                DraftCard mergedCard = deck.DeckSlots[0];
+                Assert.IsNotNull(mergedCard);
+                Assert.AreEqual(OperatorRarity.Star2, mergedCard.rarity);
+
+                // 2. Deploy the 2★ Drawgoo
+                Assert.IsTrue(opMgr.TryDeployOperator(mergedCard, new Vector2Int(0, 0), OperatorFacing.Right, out var deployedOp));
+                deck.RemoveCard(0);
+                Assert.AreEqual(OperatorRarity.Star2, deployedOp.CurrentRarity);
+                Assert.AreEqual("When Drawgoo dies, draw 1 (60%) or 2 (40%) random 3-star operator cards from the pool.", deployedOp.GetSkillDescription());
+
+                // 3. Kill the 2★ Drawgoo
+                TestUtility.ExpectEditModeDestroy();
+                deployedOp.TakeTrueDamage(deployedOp.MaxHP + 100);
+
+                // Deck should now have 1 or 2 cards, and all must be the 3★ operator
+                Assert.IsTrue(deck.CardCount >= 1 && deck.CardCount <= 2);
+                foreach (DraftCard rewardCard in deck.DeckSlots)
+                {
+                    Assert.AreEqual("Mossmo", rewardCard.operatorData.operatorName);
+                    Assert.AreEqual(OperatorRarity.Star3, rewardCard.rarity);
+                }
+            }
+            finally
+            {
+                TestUtility.ClearSingletons();
+                Object.DestroyImmediate(draftObj);
+                Object.DestroyImmediate(opMgrObj);
+                Object.DestroyImmediate(deckObj);
+                Object.DestroyImmediate(upgradeObj);
+                Object.DestroyImmediate(star3Op);
+            }
+        }
     }
 }

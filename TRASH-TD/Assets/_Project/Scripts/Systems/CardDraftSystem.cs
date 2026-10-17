@@ -49,6 +49,26 @@ namespace TrashTD.Systems
 
         public const int STARTING_REROLLS = 3;
 
+        public static CardDraftSystem Instance { get; private set; }
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            Instance = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+        }
+
         public IReadOnlyList<DraftCard> CurrentOfferedCards => currentOfferedCards;
         public int CurrentRound => currentRound;
         public int RerollsRemaining => rerollsRemaining;
@@ -127,8 +147,9 @@ namespace TrashTD.Systems
         /// <summary>
         /// Draw random eligible operator cards directly into the player's deck.
         /// Cards can be queued by PlayerDeck when all deck slots are occupied.
+        /// If targetRarity is specified, draws only operators matching that base rarity.
         /// </summary>
-        public int DrawRandomCardsToDeck(int count)
+        public int DrawRandomCardsToDeck(int count, OperatorRarity? targetRarity = null)
         {
             if (count <= 0) return 0;
 
@@ -147,15 +168,27 @@ namespace TrashTD.Systems
 
             foreach (OperatorData op in availableOperatorPool)
             {
-                if (op != null && op.baseRarity >= OperatorRarity.Star1 && op.baseRarity <= OperatorRarity.Star3)
+                if (op == null) continue;
+
+                if (targetRarity.HasValue)
                 {
-                    eligibleOperators.Add(op);
+                    if (op.baseRarity == targetRarity.Value)
+                    {
+                        eligibleOperators.Add(op);
+                    }
+                }
+                else
+                {
+                    if (op.baseRarity >= OperatorRarity.Star1 && op.baseRarity <= OperatorRarity.Star3)
+                    {
+                        eligibleOperators.Add(op);
+                    }
                 }
             }
 
             if (eligibleOperators.Count == 0)
             {
-                Debug.LogError("CardDraftSystem: Cannot draw operator cards because the operator pool has no eligible operators.");
+                Debug.LogError($"CardDraftSystem: Cannot draw operator cards because the operator pool has no eligible operators{(targetRarity.HasValue ? $" for rarity {targetRarity.Value}" : "")}.");
                 return 0;
             }
 

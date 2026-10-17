@@ -1040,7 +1040,7 @@ namespace TrashTD.Core.GameLoop
                     if (op == null || !op.IsDeployed || op.CurrentHP <= 0) continue;
 
                     TrashTD.Combat.AcidDamageFlash.Flash(op.gameObject);
-                    op.TakeDamage(AcidRainDamagePerTick, DamageType.Physical);
+                    op.TakeTrueDamage(AcidRainDamagePerTick);
                 }
             }
 
@@ -1052,7 +1052,7 @@ namespace TrashTD.Core.GameLoop
                     if (enemy == null || enemy.IsDead) continue;
 
                     TrashTD.Combat.AcidDamageFlash.Flash(enemy.gameObject);
-                    enemy.TakeDamage(AcidRainDamagePerTick, DamageType.Physical);
+                    enemy.TakeTrueDamage(AcidRainDamagePerTick);
                 }
             }
         }
@@ -1117,7 +1117,7 @@ namespace TrashTD.Core.GameLoop
                 op.MaxHP,
                 op.CurrentRarity,
                 op.Data.baseRarity,
-                op.Data.skillDescription,
+                op.GetSkillDescription(),
                 labelPosition);
         }
 

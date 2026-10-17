@@ -490,6 +490,8 @@ namespace TrashTD.Enemies
 
             float range = data.attackRange > 0 ? data.attackRange : 2.5f;
             float sqrRange = range * range;
+            OperatorBase tauntTarget = null;
+            float tauntSqrDistance = float.MaxValue;
             OperatorBase preferredTarget = null;
             OperatorBase fallbackTarget = null;
             float preferredSqrDistance = float.MaxValue;
@@ -503,6 +505,18 @@ namespace TrashTD.Enemies
 
                 float sqrDistance = (op.transform.position - transform.position).sqrMagnitude;
                 if (sqrDistance > sqrRange) continue;
+
+                // Taunt mechanic: Ranged enemies prioritize taunting operators (Mossmo)
+                // if this enemy (the attacker) is in a surrounding tile.
+                if (op.ShouldTauntAttacker(transform.position, gridManager))
+                {
+                    if (sqrDistance < tauntSqrDistance)
+                    {
+                        tauntSqrDistance = sqrDistance;
+                        tauntTarget = op;
+                    }
+                    continue;
+                }
 
                 bool isPreferred = op.Data != null &&
                     (op.Data.position == OperatorPosition.Ranged) == prioritizeRangedOperators;
@@ -521,6 +535,7 @@ namespace TrashTD.Enemies
                 }
             }
 
+            if (tauntTarget != null) return tauntTarget;
             return preferredTarget != null ? preferredTarget : fallbackTarget;
         }
 
@@ -585,7 +600,7 @@ namespace TrashTD.Enemies
             {
                 trapDamageTimer -= TrapTileRules.DamageIntervalSeconds;
                 AcidDamageFlash.Flash(gameObject);
-                TakeDamage(TrapTileRules.DamagePerTick, DamageType.Physical);
+                TakeTrueDamage(TrapTileRules.DamagePerTick);
             }
         }
 
@@ -871,7 +886,7 @@ namespace TrashTD.Enemies
         /// </summary>
         public virtual void TakeTrueDamage(int damage)
         {
-            TakeDamage(damage, DamageType.Physical);
+            TakeDamage(damage, DamageType.True);
         }
 
         public bool TryTakeAttackDamage(int damage, DamageType damageType, OperatorBase attacker = null, bool canHitAir = false)

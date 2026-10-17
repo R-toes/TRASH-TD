@@ -21,6 +21,7 @@ namespace TrashTD.Core.GameLoop
         public const float MaxIntervalSeconds = 10.0f;
         public const int TopLaneY = 5;
         public const int BottomLaneY = 4;
+        public const int FirstCarWave = 6;
 
         [System.Serializable]
         public struct ScheduledCar
@@ -126,8 +127,15 @@ namespace TrashTD.Core.GameLoop
             vehicleSprites = Resources.LoadAll<Sprite>("Levels/Level 5 vehicles");
         }
 
+        public bool CanSpawnCarsOnWave(int waveNumber) => waveNumber >= FirstCarWave;
+
         private void HandleWaveStarted(int currentWave, int totalWaves)
         {
+            if (currentWave < FirstCarWave)
+            {
+                return;
+            }
+
             RollAndScheduleCarsForWave();
         }
 

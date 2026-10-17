@@ -119,7 +119,9 @@ namespace TrashTD.Enemies
                 OperatorBase candidate = operators[i];
                 if (!IsValidTarget(candidate)) continue;
 
-                int priority = GetTargetPriority(candidate);
+                int priority = candidate.ShouldTauntAttacker(transform.position, GridManagerCache)
+                    ? -1
+                    : GetTargetPriority(candidate);
                 Vector3 offset = candidate.transform.position - aimPoint;
                 offset.z = 0f;
                 float score = offset.sqrMagnitude;
@@ -139,7 +141,9 @@ namespace TrashTD.Enemies
 
         private bool IsValidTarget(OperatorBase op)
         {
-            return op != null && op.IsDeployed && op.IsTargetable && IsTargetable(op) && IsTargetInRange(op);
+            if (op == null || !op.IsDeployed || !op.IsTargetable || !IsTargetInRange(op)) return false;
+            if (op.ShouldTauntAttacker(transform.position, GridManagerCache)) return true;
+            return IsTargetable(op);
         }
 
         /// <summary>A point slightly ahead along the remaining path (the flyer's own position if none).</summary>

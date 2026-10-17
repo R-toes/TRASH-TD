@@ -62,6 +62,40 @@ namespace TrashTD.Operators
         public virtual bool IgnoresMissMechanic => false;
         public virtual bool IsCamouflaged => false;
         public virtual bool IsTargetable => !IsCamouflaged;
+        public virtual bool HasTaunt => false;
+
+        /// <summary>
+        /// Checks whether this operator taunts the specified attacker position.
+        /// Ranged enemies prioritize this operator if the attacker is in a surrounding tile.
+        /// </summary>
+        public virtual bool ShouldTauntAttacker(Vector3 attackerWorldPosition, GridManager grid = null)
+        {
+            if (!HasTaunt || !isDeployed || currentHP <= 0 || !IsTargetable)
+                return false;
+
+            if (grid == null)
+            {
+                grid = FindFirstObjectByType<GridManager>();
+            }
+
+            if (grid != null)
+            {
+                Vector2Int opGrid = deployedCell != null
+                    ? deployedCell.GridPosition
+                    : grid.WorldToGridPosition(transform.position);
+                Vector2Int attackerGrid = grid.WorldToGridPosition(attackerWorldPosition);
+
+                int dx = Mathf.Abs(attackerGrid.x - opGrid.x);
+                int dy = Mathf.Abs(attackerGrid.y - opGrid.y);
+                return dx <= 1 && dy <= 1;
+            }
+
+            // Fallback for scenes/tests without GridManager
+            float cellSize = 1.0f;
+            return Mathf.Abs(attackerWorldPosition.x - transform.position.x) <= cellSize * 1.5f &&
+                   Mathf.Abs(attackerWorldPosition.y - transform.position.y) <= cellSize * 1.5f;
+        }
+
         public bool IsStunned => isStunned;
         public float StunTimer => stunTimer;
         public IReadOnlyList<EnemyBase> BlockedEnemies => blockedEnemies;
@@ -361,7 +395,7 @@ namespace TrashTD.Operators
                 {
                     trapDamageTimer -= TrapTileRules.DamageIntervalSeconds;
                     TrashTD.Combat.AcidDamageFlash.Flash(gameObject);
-                    TakeDamage(TrapTileRules.DamagePerTick, DamageType.Physical);
+                    TakeTrueDamage(TrapTileRules.DamagePerTick);
                 }
                 if (!isDeployed) return;
             }
@@ -427,8 +461,7 @@ namespace TrashTD.Operators
                 return;
             }
 
-            int mitigation = damageType == DamageType.Physical ? CurrentDEF : currentRES;
-            int damage = Combat.DamageCalculator.CalculateDamage(rawATK, mitigation);
+            int damage = Combat.DamageCalculator.CalculateDamage(rawATK, CurrentDEF, currentRES, damageType);
             int previousHP = currentHP;
             currentHP = Mathf.Max(0, currentHP - damage);
             int actualDamage = previousHP - currentHP;
@@ -460,7 +493,7 @@ namespace TrashTD.Operators
                 {
                     shield.Pop(false);
                 }
-                else if (shield.TryConsume(damage, DamageType.Physical))
+                else if (shield.TryConsume(damage, DamageType.True))
                 {
                     return;
                 }
@@ -471,7 +504,7 @@ namespace TrashTD.Operators
             int actualDamage = previousHP - currentHP;
             if (actualDamage > 0)
             {
-                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualDamage, DamageType.Physical);
+                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualDamage, DamageType.True);
                 TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
             }
 
@@ -570,20 +603,57 @@ namespace TrashTD.Operators
             UpdateStunVisual();
         }
 
+        /// <summary>
+        /// Rolls the number of 3-star operator cards granted by an upgraded Drawgoo on death.
+        /// 60% chance for 1 card, 40% chance for 2 cards.
+        /// </summary>
+        public static int RollUpgradedDrawgooCardCount(float roll = -1f)
+        {
+            if (roll < 0f) roll = UnityEngine.Random.value;
+            return roll < 0.60f ? 1 : 2;
+        }
+
+        /// <summary>
+        /// Gets the skill description for this operator, which may vary depending on rarity/upgrades.
+        /// </summary>
+        public virtual string GetSkillDescription()
+        {
+            if (data == null) return string.Empty;
+            if (data.drawTwoCardsOnDeath)
+            {
+                if (currentRarity >= OperatorRarity.Star2)
+                {
+                    return "When Drawgoo dies, draw 1 (60%) or 2 (40%) random 3-star operator cards from the pool.";
+                }
+                return "When Drawgoo dies, draw two random operator cards from the pool.";
+            }
+            return data.skillDescription;
+        }
+
         /// <summary>Called when the operator dies.</summary>
         protected virtual void OnDeath()
         {
             if (data == null || !data.drawTwoCardsOnDeath) return;
 
             TrashTD.Systems.CardDraftSystem draftSystem =
-                FindFirstObjectByType<TrashTD.Systems.CardDraftSystem>();
+                TrashTD.Systems.CardDraftSystem.Instance != null
+                    ? TrashTD.Systems.CardDraftSystem.Instance
+                    : FindFirstObjectByType<TrashTD.Systems.CardDraftSystem>();
             if (draftSystem == null)
             {
                 Debug.LogError($"{data.operatorName} died, but no CardDraftSystem is active to resolve its death skill.");
                 return;
             }
 
-            draftSystem.DrawRandomCardsToDeck(2);
+            if (currentRarity >= OperatorRarity.Star2)
+            {
+                int count = RollUpgradedDrawgooCardCount();
+                draftSystem.DrawRandomCardsToDeck(count, OperatorRarity.Star3);
+            }
+            else
+            {
+                draftSystem.DrawRandomCardsToDeck(2);
+            }
         }
     }
 }
