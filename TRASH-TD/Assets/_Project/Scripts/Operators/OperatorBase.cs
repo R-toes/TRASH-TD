@@ -278,6 +278,7 @@ namespace TrashTD.Operators
         }
 
         public Vector2Int[] GetRangePattern() => data.rangePattern;
+        public virtual Vector2Int[] GetTalentRangePattern() => data != null ? data.GetTalentRangePattern() : null;
         public virtual float GetAttackInterval() => Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval);
         public DamageType GetDamageType() => data.damageType;
 

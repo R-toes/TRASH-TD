@@ -1263,6 +1263,23 @@ namespace TrashTD.Core.GameLoop
             isDraggingToDeploy = false;
             ClearPlacementPreviewVisuals();
             isOperatorRangePreviewActive = true;
+
+            // Talent activation range layer (red, lower opacity)
+            Vector2Int[] talentPattern = op.GetTalentRangePattern();
+            if (talentPattern != null && talentPattern.Length > 0)
+            {
+                GridCell[] talentCells = gridManager.GetCellsInRange(
+                    op.DeployedCell.GridPosition,
+                    talentPattern,
+                    op.Facing);
+                Color talentColor = new Color(1f, 0.22f, 0.22f, 0.40f);
+                for (int i = 0; i < talentCells.Length; i++)
+                {
+                    DrawTalentCell(talentCells[i].WorldPosition, talentColor);
+                }
+            }
+
+            // Attack range layer (green)
             GridCell[] rangeCells = gridManager.GetCellsInRange(
                 op.DeployedCell.GridPosition,
                 op.GetRangePattern(),
@@ -1331,6 +1348,23 @@ namespace TrashTD.Core.GameLoop
 
             bool squadFull = operatorManager == null || operatorManager.IsAtSquadLimit;
             bool canDeploy = targetCell.CanDeploy(pendingDeployCard.operatorData.position) && !squadFull;
+
+            // Talent activation range layer (red, lower opacity)
+            Vector2Int[] talentPattern = pendingDeployCard.operatorData.GetTalentRangePattern();
+            if (talentPattern != null && talentPattern.Length > 0)
+            {
+                GridCell[] talentCells = gridManager.GetCellsInRange(
+                    placementGridPosition,
+                    talentPattern,
+                    placementFacing);
+                Color talentColor = new Color(1f, 0.22f, 0.22f, 0.40f);
+                for (int i = 0; i < talentCells.Length; i++)
+                {
+                    DrawTalentCell(talentCells[i].WorldPosition, talentColor);
+                }
+            }
+
+            // Attack range layer (green)
             GridCell[] rangeCells = gridManager.GetCellsInRange(
                 placementGridPosition,
                 pendingDeployCard.operatorData.rangePattern,
@@ -1403,7 +1437,48 @@ namespace TrashTD.Core.GameLoop
             return opData.portrait;
         }
 
-        private void DrawCellOutline(Vector3 center, Color color)
+        private static Sprite sharedCellFillSprite;
+
+        private Sprite GetCellFillSprite()
+        {
+            if (sharedCellFillSprite != null) return sharedCellFillSprite;
+
+            Texture2D texture = new Texture2D(2, 2);
+            Color[] pixels = new Color[] { Color.white, Color.white, Color.white, Color.white };
+            texture.SetPixels(pixels);
+            texture.Apply();
+
+            sharedCellFillSprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, 2f, 2f),
+                new Vector2(0.5f, 0.5f),
+                2f);
+            return sharedCellFillSprite;
+        }
+
+        private void DrawTalentCell(Vector3 center, Color color)
+        {
+            DrawCellFill(center, new Color(color.r, color.g, color.b, 0.14f), 47);
+            DrawCellOutline(center, color, 48);
+        }
+
+        private void DrawCellFill(Vector3 center, Color color, int sortingOrder = 47)
+        {
+            if (gridManager == null) return;
+            GameObject fillObject = new GameObject("TalentRangeFill");
+            fillObject.transform.SetParent(transform, false);
+            fillObject.transform.position = new Vector3(center.x, center.y, 0.06f);
+            float size = gridManager.CellSize * 0.92f;
+            fillObject.transform.localScale = new Vector3(size, size, 1f);
+
+            SpriteRenderer sr = fillObject.AddComponent<SpriteRenderer>();
+            sr.sprite = GetCellFillSprite();
+            sr.color = color;
+            sr.sortingOrder = sortingOrder;
+            placementPreviewVisuals.Add(fillObject);
+        }
+
+        private void DrawCellOutline(Vector3 center, Color color, int sortingOrder = 50)
         {
             float halfSize = gridManager.CellSize * 0.46f;
             center.z = 0.05f;
@@ -1415,8 +1490,9 @@ namespace TrashTD.Core.GameLoop
                 center + new Vector3(halfSize, -halfSize, 0f)
             };
 
-            CreatePreviewLine("PlacementOutlineGlow", gridManager.CellSize * 0.14f, new Color(color.r, color.g, color.b, 0.28f), corners, true);
-            CreatePreviewLine("PlacementOutline", gridManager.CellSize * 0.045f, color, corners, true);
+            float alpha = color.a > 0f ? color.a : 1f;
+            CreatePreviewLine("PlacementOutlineGlow", gridManager.CellSize * 0.14f, new Color(color.r, color.g, color.b, 0.28f * alpha), corners, true, sortingOrder);
+            CreatePreviewLine("PlacementOutline", gridManager.CellSize * 0.045f, color, corners, true, sortingOrder);
         }
 
         private void DrawFacingMarker(Vector3 center, OperatorFacing activeFacing)
@@ -1465,7 +1541,7 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
-        private void CreatePreviewLine(string objectName, float width, Color color, Vector3[] points, bool closed)
+        private void CreatePreviewLine(string objectName, float width, Color color, Vector3[] points, bool closed, int sortingOrder = 50)
         {
             GameObject lineObject = new GameObject(objectName);
             lineObject.transform.SetParent(transform, false);
@@ -1480,7 +1556,7 @@ namespace TrashTD.Core.GameLoop
             line.endColor = color;
             line.numCapVertices = 2;
             line.material = GetPlacementPreviewMaterial();
-            line.sortingOrder = 50;
+            line.sortingOrder = sortingOrder;
             placementPreviewVisuals.Add(lineObject);
         }
 

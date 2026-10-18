@@ -134,5 +134,36 @@ namespace TrashTD.Data
             // RES scales linearly: +5 per rarity tier above 1★
             return baseRES + (((int)rarity - 1) * 5);
         }
+
+        [Header("Talent Activation Range")]
+        [Tooltip("Optional talent activation range pattern. If unset and operator has bonusWhenIsolated or is Shadeslice, defaults to the diamond pattern.")]
+        public Vector2Int[] talentRangePattern;
+
+        public static readonly Vector2Int[] ShadesliceTalentPattern = new Vector2Int[]
+        {
+            new Vector2Int(0, 1),
+            new Vector2Int(0, -1),
+            new Vector2Int(1, 0),
+            new Vector2Int(-1, 0),
+            new Vector2Int(0, 2),
+            new Vector2Int(0, -2),
+            new Vector2Int(2, 0),
+            new Vector2Int(-2, 0),
+            new Vector2Int(1, 1),
+            new Vector2Int(1, -1),
+            new Vector2Int(-1, 1),
+            new Vector2Int(-1, -1)
+        };
+
+        public virtual Vector2Int[] GetTalentRangePattern()
+        {
+            if (talentRangePattern != null && talentRangePattern.Length > 0)
+                return talentRangePattern;
+
+            if (bonusWhenIsolated || operatorName == "Shadeslice")
+                return ShadesliceTalentPattern;
+
+            return null;
+        }
     }
 }
