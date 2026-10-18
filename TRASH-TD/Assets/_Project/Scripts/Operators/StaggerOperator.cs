@@ -70,18 +70,19 @@ namespace TrashTD.Operators
             base.TakeDamage(rawATK, damageType, attacker);
         }
 
-        public override bool TakeTrueDamage(int damage, bool ignoreShieldNegation = false)
+        public override bool TakeTrueDamage(int damage, bool ignoreShieldNegation = false, bool canDodge = false)
         {
             if (IsCombatPaused || currentHP <= 0 || damage <= 0) return false;
 
             // Vehicles from Stage 5 call TakeTrueDamage with ignoreShieldNegation: true and can be dodged.
-            // Acid rain and acid tile call TakeTrueDamage with ignoreShieldNegation: false and cannot be dodged.
-            if (ignoreShieldNegation && TryRollDodge())
+            // Stage 2 falling items call TakeTrueDamage with canDodge: true and can be dodged.
+            // Acid rain, acid tiles, and stage 4 heat pass canDodge: false, ignoreShieldNegation: false and cannot be dodged.
+            if ((ignoreShieldNegation || canDodge) && TryRollDodge())
             {
                 return false;
             }
 
-            return base.TakeTrueDamage(damage, ignoreShieldNegation);
+            return base.TakeTrueDamage(damage, ignoreShieldNegation, canDodge);
         }
 
         protected override EnemyBase FindTarget()

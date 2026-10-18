@@ -489,9 +489,10 @@ namespace TrashTD.Operators
         /// Take true damage directly (ignoring DEF and RES).
         /// If ignoreShieldNegation is true (e.g. Stage 5 traffic collision),
         /// damage bypasses shield negation but still pops the bubble.
+        /// If canDodge is true (e.g. Stage 2 falling items), operators with dodge (e.g. Stag-ger) can roll to dodge.
         /// Returns true if damage was dealt, false if prevented, dodged or absorbed.
         /// </summary>
-        public virtual bool TakeTrueDamage(int damage, bool ignoreShieldNegation = false)
+        public virtual bool TakeTrueDamage(int damage, bool ignoreShieldNegation = false, bool canDodge = false)
         {
             if (IsCombatPaused || currentHP <= 0 || damage <= 0) return false;
 

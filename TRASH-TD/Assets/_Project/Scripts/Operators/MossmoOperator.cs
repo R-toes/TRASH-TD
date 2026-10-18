@@ -61,13 +61,13 @@ namespace TrashTD.Operators
             }
         }
 
-        public override bool TakeTrueDamage(int damage, bool ignoreShieldNegation = false)
+        public override bool TakeTrueDamage(int damage, bool ignoreShieldNegation = false, bool canDodge = false)
         {
             if (currentHP <= 0 || damage <= 0) return false;
 
             GridCell originCell = GetOriginCell();
             int hpBefore = currentHP;
-            bool dealt = base.TakeTrueDamage(damage, ignoreShieldNegation);
+            bool dealt = base.TakeTrueDamage(damage, ignoreShieldNegation, canDodge);
             int hpAfter = currentHP;
 
             if (hpBefore > hpAfter && healCooldownTimer <= 0f)

@@ -24,6 +24,32 @@ MonoBehaviour:
   visualTilePixelSize: 32
   visualTileOffset: {x: 0, y: 0}
   foregroundVisualSprite: {fileID: -4403071843503546491, guid: 052a4ac04151ce44e9aedcc1e7305c90, type: 3}
+  trafficVehicleSprites: []
+  fallingItemSprites:
+  - {fileID: 191470672610691335, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: -6319792324956253407, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: 5586389696828116147, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: 7788657867860091330, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: -6599398961828431675, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: 6541091843208299545, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: -5221818919961957570, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: -1870844757466312522, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: -7371332948346304985, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: -8487733776429139732, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: -2094113086512706487, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: 2682034919003391175, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: 2310665729511311612, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: 2335252772662308028, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: -3682148900195073215, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: -2680133385481178503, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: 1370938597750004264, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: -923807471123966603, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: -144410052290623479, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: 5383885184397080112, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: -5285035970347622093, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: -5348409213832150693, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: 4506998135829002854, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
+  - {fileID: -3013489668798773276, guid: cf2ba074fe8312140ac3c027e5112f92, type: 3}
   spawnPoints:
   - {x: 10, y: 6}
   - {x: 0, y: 0}

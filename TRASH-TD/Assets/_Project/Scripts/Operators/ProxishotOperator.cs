@@ -65,6 +65,18 @@ namespace TrashTD.Operators
             }
         }
 
+        public override bool TakeTrueDamage(int damage, bool ignoreShieldNegation = false, bool canDodge = false)
+        {
+            if (IsCombatPaused || currentHP <= 0 || damage <= 0) return false;
+
+            bool dealt = base.TakeTrueDamage(damage, ignoreShieldNegation, canDodge);
+            if (currentHP > 0)
+            {
+                ActivateCamouflage();
+            }
+            return dealt;
+        }
+
         public void ActivateCamouflage()
         {
             bool wasCamouflaged = IsCamouflaged;

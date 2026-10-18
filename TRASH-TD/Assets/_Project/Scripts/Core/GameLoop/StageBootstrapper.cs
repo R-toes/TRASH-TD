@@ -177,6 +177,7 @@ namespace TrashTD.Core.GameLoop
                     stageData.exitPoints = mapSource.exitPoints;
                     stageData.enemyPaths = mapSource.enemyPaths;
                     stageData.trafficVehicleSprites = mapSource.trafficVehicleSprites;
+                    stageData.fallingItemSprites = mapSource.fallingItemSprites;
                 }
             }
             TrashTD.Combat.StageCombatModifiers.ConfigureForEnvironment(EnvironmentStageId);
@@ -196,8 +197,11 @@ namespace TrashTD.Core.GameLoop
             // 3. Center Camera
             CenterCameraOnGrid();
 
-            // Acid rain remains a Stage 6 effect; Stage 3 uses its sandstorm combat modifiers.
-            if (EnvironmentStageId == "STAGE_03")
+            if (EnvironmentStageId == "STAGE_02")
+            {
+                CreateStage2FallingItemsHazard();
+            }
+            else if (EnvironmentStageId == "STAGE_03")
             {
                 CreateStage3SandstormVisuals();
             }
@@ -1210,6 +1214,14 @@ namespace TrashTD.Core.GameLoop
                     enemy.TakeTrueDamage(AcidRainDamagePerTick);
                 }
             }
+        }
+
+        private void CreateStage2FallingItemsHazard()
+        {
+            GameObject hazardObj = new GameObject("Stage2FallingItemsHazard");
+            hazardObj.transform.SetParent(transform);
+            var hazard = hazardObj.AddComponent<Stage2FallingItemsHazard>();
+            hazard.Initialize(gridManager, waveManager, operatorManager, stageData);
         }
 
         private void CreateStage5TrafficEncounter()

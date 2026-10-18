@@ -90,6 +90,9 @@ namespace TrashTD.Data
         [Tooltip("Optional vehicle sprites for traffic encounters (e.g. Stage 5 boulevard traffic)")]
         public Sprite[] trafficVehicleSprites;
 
+        [Tooltip("Optional falling item sprites for Stage 2 thrown-items mechanic")]
+        public Sprite[] fallingItemSprites;
+
         [Tooltip("Spawn point positions on the grid (enemy entry points)")]
         public Vector2Int[] spawnPoints;
 

@@ -50,9 +50,9 @@ namespace TrashTD.Operators
             ResetNotAttackedTimer();
         }
 
-        public override bool TakeTrueDamage(int damage, bool ignoreShieldNegation = false)
+        public override bool TakeTrueDamage(int damage, bool ignoreShieldNegation = false, bool canDodge = false)
         {
-            bool dealt = base.TakeTrueDamage(damage, ignoreShieldNegation);
+            bool dealt = base.TakeTrueDamage(damage, ignoreShieldNegation, canDodge);
             ResetNotAttackedTimer();
             return dealt;
         }
