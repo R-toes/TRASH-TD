@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using TrashTD.Combat;
 using TrashTD.Core.Grid;
@@ -219,11 +220,16 @@ namespace TrashTD.Operators
             // Priority 2: If not blocking, search for enemies within attack range pattern
             if (EnemyManager.Instance != null && deployedCell != null && data != null && data.rangePattern != null)
             {
-                var gridManager = FindFirstObjectByType<GridManager>();
+                var gridManager = FindAnyObjectByType<GridManager>();
                 if (gridManager != null)
                 {
                     var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
-                    var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells);
+                    var rangeCellList = new List<GridCell>(rangeCells);
+                    if (deployedCell != null && !rangeCellList.Contains(deployedCell))
+                    {
+                        rangeCellList.Add(deployedCell);
+                    }
+                    var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCellList);
 
                     EnemyBase lowestHP = null;
                     int lowestHPValue = int.MaxValue;

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TrashTD.Combat;
 using TrashTD.Core.Grid;
+using TrashTD.Data;
 using TrashTD.Enemies;
 using TrashTD.Systems;
 
@@ -10,19 +11,84 @@ namespace TrashTD.Operators
     /// <summary>
     /// Stag-ger — 2-Star Guard (2 Block).
     /// Ability: Six-Limb Slugger — Deals damage to all blocked enemies in reach
-    /// (including his tile and adjacent tiles on his sides and back where allies block enemies).
+    /// (including his tile and forward range where enemies are blocked).
     /// If no enemies are blocked, attacks a single unblocked enemy in range ahead.
+    /// Has a 20% to dodge any attack, atk then increase by 50% in the next attack if the dodge is successful.
     /// Range covers one tile ahead.
     /// </summary>
     public class StaggerOperator : GuardOperator
     {
+        public const float DodgeChance = 0.20f;
+
         private readonly List<EnemyBase> targetBuffer = new List<EnemyBase>();
+        private bool hasDodgeAtkBuff;
+
+        public bool HasDodgeAtkBuff => hasDodgeAtkBuff;
+
+        /// <summary>
+        /// Random value generator for dodge roll in [0, 1).
+        /// Overridable in unit tests for deterministic testing.
+        /// </summary>
+        public System.Func<float> RandomValueProvider { get; set; } = () => Random.value;
+
+        protected override void OnDeployed()
+        {
+            base.OnDeployed();
+            hasDodgeAtkBuff = false;
+        }
+
+        protected override void OnRetreated()
+        {
+            hasDodgeAtkBuff = false;
+            base.OnRetreated();
+        }
+
+        public bool TryRollDodge()
+        {
+            float roll = RandomValueProvider != null ? RandomValueProvider() : Random.value;
+            if (roll < DodgeChance)
+            {
+                hasDodgeAtkBuff = true;
+                FloatingCombatNumber.ShowText(transform.position, "DODGE!", new Color(0.2f, 0.85f, 1f));
+                return true;
+            }
+
+            return false;
+        }
+
+        public override void TakeDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
+        {
+            if (IsCombatPaused || currentHP <= 0 || rawATK <= 0) return;
+
+            // Attacks from enemies can be dodged (20% chance).
+            // Environmental damage (overheat from stage 4, acid pools, etc.) has attacker == null and cannot be dodged.
+            if (attacker != null && TryRollDodge())
+            {
+                return;
+            }
+
+            base.TakeDamage(rawATK, damageType, attacker);
+        }
+
+        public override bool TakeTrueDamage(int damage, bool ignoreShieldNegation = false)
+        {
+            if (IsCombatPaused || currentHP <= 0 || damage <= 0) return false;
+
+            // Vehicles from Stage 5 call TakeTrueDamage with ignoreShieldNegation: true and can be dodged.
+            // Acid rain and acid tile call TakeTrueDamage with ignoreShieldNegation: false and cannot be dodged.
+            if (ignoreShieldNegation && TryRollDodge())
+            {
+                return false;
+            }
+
+            return base.TakeTrueDamage(damage, ignoreShieldNegation);
+        }
 
         protected override EnemyBase FindTarget()
         {
             if (!isDeployed) return null;
 
-            // 1. If any enemies are blocked (by Stag-ger or by allies in front/sides/back), prioritize blocked targets
+            // 1. If any enemies are blocked (by Stag-ger or in range ahead), prioritize blocked targets
             List<EnemyBase> blockedTargets = GetBlockedTargetsInRange();
             if (blockedTargets.Count > 0)
             {
@@ -50,6 +116,10 @@ namespace TrashTD.Operators
 
             List<EnemyBase> blockedTargets = GetBlockedTargetsInRange();
 
+            int attackAtk = hasDodgeAtkBuff
+                ? Mathf.RoundToInt(currentATK * 1.5f)
+                : currentATK;
+
             // Ability: If any enemies are blocked, strike ALL blocked enemies simultaneously
             if (blockedTargets.Count > 0)
             {
@@ -63,12 +133,15 @@ namespace TrashTD.Operators
                     MeleeSwipeVisual.Play(
                         transform.position,
                         enemy.VisualPosition,
-                        new Color(1f, 0.45f, 0.1f, 1f));
+                        hasDodgeAtkBuff
+                            ? new Color(1f, 0.92f, 0.25f, 1f)
+                            : new Color(1f, 0.45f, 0.1f, 1f));
 
-                    int damage = DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(enemy));
+                    int damage = DamageCalculator.CalculateDamage(attackAtk, GetTargetMitigation(enemy));
                     enemy.TryTakeAttackDamage(damage, data.damageType, this);
                 }
 
+                hasDodgeAtkBuff = false;
                 return;
             }
 
@@ -77,17 +150,20 @@ namespace TrashTD.Operators
             MeleeSwipeVisual.Play(
                 transform.position,
                 target.VisualPosition,
-                new Color(1f, 0.78f, 0.3f, 1f));
+                hasDodgeAtkBuff
+                    ? new Color(1f, 0.95f, 0.35f, 1f)
+                    : new Color(1f, 0.78f, 0.3f, 1f));
 
-            int singleDamage = DamageCalculator.CalculateDamage(currentATK, GetTargetMitigation(target));
+            int singleDamage = DamageCalculator.CalculateDamage(attackAtk, GetTargetMitigation(target));
             target.TryTakeAttackDamage(singleDamage, data.damageType, this);
+            hasDodgeAtkBuff = false;
         }
 
         /// <summary>
         /// Gathers all blocked enemies in reach:
         /// - Enemies blocked by Stag-ger directly
-        /// - Enemies blocked on Stag-ger's own tile
-        /// - Enemies blocked on adjacent tiles (front, sides, back) by allies or within cells
+        /// - Enemies blocked on Stag-ger's own tile or within forward range pattern
+        /// - Enemies blocked by allies deployed within his attack range
         /// </summary>
         private List<EnemyBase> GetBlockedTargetsInRange()
         {
@@ -106,7 +182,7 @@ namespace TrashTD.Operators
                 }
             }
 
-            // 2. Check Stag-ger's own tile, the tile ahead in range, and adjacent tiles (sides & back)
+            // 2. Check Stag-ger's own tile and forward range pattern tiles
             if (deployedCell != null)
             {
                 GridManager gridManager = FindFirstObjectByType<GridManager>();
@@ -117,21 +193,7 @@ namespace TrashTD.Operators
                     // Stag-ger's own cell
                     reachCells.Add(deployedCell);
 
-                    // 4-directional adjacent neighbors (front, back, left side, right side)
-                    GridCell[] neighbors = gridManager.GetNeighbors(deployedCell.GridPosition.x, deployedCell.GridPosition.y);
-                    if (neighbors != null)
-                    {
-                        for (int n = 0; n < neighbors.Length; n++)
-                        {
-                            GridCell neighbor = neighbors[n];
-                            if (neighbor != null && !reachCells.Contains(neighbor))
-                            {
-                                reachCells.Add(neighbor);
-                            }
-                        }
-                    }
-
-                    // Forward range pattern cells (if any additional cells)
+                    // Forward range pattern cells
                     if (data != null && data.rangePattern != null)
                     {
                         GridCell[] rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);

@@ -20,7 +20,7 @@ MonoBehaviour:
   - Multi-Target
   - Brawler
   baseHP: 110
-  baseATK: 55
+  baseATK: 75
   baseDEF: 22
   baseRES: 0
   blockCount: 2
@@ -32,7 +32,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Passive - Six-Limb Slugger: When attacking, strikes all blocked enemies (including enemies blocked by allies on its tile). '
+  skillDescription: 'Passive - Six-Limb Slugger: When attacking, strikes all blocked enemies on his tile and in range ahead simultaneously (including enemies blocked by allies). If no enemies are blocked, attacks a single target in range. Has a 20% to dodge any attack, atk then increase by 50% in the next attack if the dodge is successful'
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5

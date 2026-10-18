@@ -245,20 +245,24 @@ namespace TrashTD.Core.GameLoop
                     float tilesTravelled = Mathf.Max(0f, (targetX - LastAllyHitX) / cellSize);
                     int damage = CalculateDamage(tilesTravelled);
 
+                    bool damageDealt = false;
                     if (damage > 0)
                     {
-                        op.TakeTrueDamage(damage, ignoreShieldNegation: true);
+                        damageDealt = op.TakeTrueDamage(damage, ignoreShieldNegation: true);
                     }
 
-                    LastAllyHitX = targetX;
-
-                    // First operator hit gets stunned if not killed
-                    if (!hasHitFirstOperator)
+                    if (damageDealt)
                     {
-                        hasHitFirstOperator = true;
-                        if (op != null && op.IsDeployed && op.CurrentHP > 0)
+                        LastAllyHitX = targetX;
+
+                        // First operator hit gets stunned if not killed
+                        if (!hasHitFirstOperator)
                         {
-                            op.ApplyStun(StunDuration);
+                            hasHitFirstOperator = true;
+                            if (op != null && op.IsDeployed && op.CurrentHP > 0)
+                            {
+                                op.ApplyStun(StunDuration);
+                            }
                         }
                     }
                 }

@@ -53,11 +53,16 @@ namespace TrashTD.Systems
 
             if (gridManager == null)
             {
-                gridManager = FindFirstObjectByType<GridManager>();
+                gridManager = FindAnyObjectByType<GridManager>();
             }
         }
 
         public void Initialize(GridManager grid)
+        {
+            gridManager = grid;
+        }
+
+        public void SetGridManager(GridManager grid)
         {
             gridManager = grid;
         }
@@ -86,7 +91,7 @@ namespace TrashTD.Systems
             if (enemyData == null || path == null || path.Count == 0) return null;
             if (gridManager == null)
             {
-                gridManager = FindFirstObjectByType<GridManager>();
+                gridManager = FindAnyObjectByType<GridManager>();
             }
 
             GameObject enemyObj;
@@ -266,12 +271,65 @@ namespace TrashTD.Systems
                 if (c != null) cellSet.Add(c.GridPosition);
             }
 
+            if (cellSet.Count == 0) return result;
+
+            float cellSize = gridManager.CellSize > 0f ? gridManager.CellSize : 1.0f;
+            float tolerance = 0.35f * cellSize;
+            Vector3 origin = gridManager.GridOrigin;
+
             foreach (var enemy in activeEnemies)
             {
                 if (enemy == null || enemy.IsDead || enemy.IsInsideHole) continue;
                 if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air) continue;
+
+                bool matches = false;
+
+                // 1. Direct discrete grid position check
                 Vector2Int pos = gridManager.WorldToGridPosition(enemy.transform.position);
                 if (cellSet.Contains(pos))
+                {
+                    matches = true;
+                }
+
+                // 2. If blocked, check both the blocker's tile and the adjacent path tile (in between tiles)
+                if (!matches && enemy.IsBlocked)
+                {
+                    if (enemy.BlockingOperator != null)
+                    {
+                        var blocker = enemy.BlockingOperator;
+                        Vector2Int blockerPos = blocker.DeployedCell != null
+                            ? blocker.DeployedCell.GridPosition
+                            : gridManager.WorldToGridPosition(blocker.transform.position);
+
+                        if (cellSet.Contains(blockerPos) || cellSet.Contains(enemy.BlockedAdjacentGridPos))
+                        {
+                            matches = true;
+                        }
+                    }
+                }
+
+                // 3. Spatial bounding overlap check (handles transitioning enemies in-between tiles before leaving range)
+                if (!matches)
+                {
+                    Vector3 enemyPos = enemy.transform.position;
+                    int minX = Mathf.FloorToInt((enemyPos.x - tolerance - origin.x) / cellSize);
+                    int maxX = Mathf.FloorToInt((enemyPos.x + tolerance - origin.x) / cellSize);
+                    int minY = Mathf.FloorToInt((enemyPos.y - tolerance - origin.y) / cellSize);
+                    int maxY = Mathf.FloorToInt((enemyPos.y + tolerance - origin.y) / cellSize);
+
+                    for (int x = minX; x <= maxX && !matches; x++)
+                    {
+                        for (int y = minY; y <= maxY && !matches; y++)
+                        {
+                            if (cellSet.Contains(new Vector2Int(x, y)))
+                            {
+                                matches = true;
+                            }
+                        }
+                    }
+                }
+
+                if (matches)
                 {
                     result.Add(enemy);
                 }

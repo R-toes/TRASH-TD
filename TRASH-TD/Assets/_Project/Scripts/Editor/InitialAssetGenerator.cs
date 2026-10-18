@@ -354,7 +354,7 @@ namespace TrashTD.Editor
                     OperatorPosition.Melee,
                     OperatorRarity.Star2,
                     hp: 145,
-                    atk: 60,
+                    atk: 75,
                     def: 22,
                     res: 0,
                     blockCount: 2,
@@ -367,7 +367,7 @@ namespace TrashTD.Editor
                 stagger.damageType = DamageType.Physical;
                 stagger.roleTags = new[] { "Multi-Target", "Brawler" };
                 stagger.skillDescription =
-                    "Passive - Six-Limb Slugger: When attacking, strikes all blocked enemies on his tile and adjacent tiles simultaneously (including enemies blocked by allies on his sides or back). If no enemies are blocked, attacks a single target in range.";
+                    "Passive - Six-Limb Slugger: When attacking, strikes all blocked enemies on his tile and in range ahead simultaneously (including enemies blocked by allies). If no enemies are blocked, attacks a single target in range. Has a 20% to dodge any attack, atk then increase by 50% in the next attack if the dodge is successful";
                 EditorUtility.SetDirty(stagger);
             }
 

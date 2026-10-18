@@ -1,6 +1,9 @@
+using System.Collections.Generic;
 using UnityEngine;
 using TrashTD.Combat;
 using TrashTD.Enemies;
+using TrashTD.Core.Grid;
+using TrashTD.Systems;
 
 namespace TrashTD.Operators
 {
@@ -21,7 +24,7 @@ namespace TrashTD.Operators
 
         protected override EnemyBase FindTarget()
         {
-            // Priority: attack blocked enemies — target highest HP (chip down the toughest)
+            // Priority 1: attack blocked enemies — target highest HP (chip down the toughest)
             if (blockedEnemies.Count > 0)
             {
                 EnemyBase highestHP = null;
@@ -39,7 +42,44 @@ namespace TrashTD.Operators
                 if (highestHP != null) return highestHP;
             }
 
-            // Defenders have very short range — only attack blocked enemies
+            // Priority 2: If not blocking, search for enemies within range pattern or own tile (e.g. enemy held at boundary)
+            if (EnemyManager.Instance != null && deployedCell != null)
+            {
+                var gridManager = Object.FindAnyObjectByType<GridManager>();
+                if (gridManager != null)
+                {
+                    var rangeCellList = new List<GridCell>();
+                    if (data != null && data.rangePattern != null)
+                    {
+                        var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
+                        if (rangeCells != null)
+                        {
+                            rangeCellList.AddRange(rangeCells);
+                        }
+                    }
+                    if (!rangeCellList.Contains(deployedCell))
+                    {
+                        rangeCellList.Add(deployedCell);
+                    }
+
+                    var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCellList, data.position);
+                    EnemyBase highestHP = null;
+                    int highestHPValue = 0;
+
+                    for (int i = 0; i < candidates.Count; i++)
+                    {
+                        var enemy = candidates[i];
+                        if (enemy != null && CanAttackTarget(enemy) && enemy.CurrentHP > highestHPValue)
+                        {
+                            highestHP = enemy;
+                            highestHPValue = enemy.CurrentHP;
+                        }
+                    }
+
+                    return highestHP;
+                }
+            }
+
             return null;
         }
 

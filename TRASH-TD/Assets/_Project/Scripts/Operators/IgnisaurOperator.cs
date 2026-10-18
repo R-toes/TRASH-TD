@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using TrashTD.Audio;
 using TrashTD.Combat;
@@ -96,7 +97,7 @@ namespace TrashTD.Operators
                 return true;
             }
 
-            var gridManager = FindFirstObjectByType<GridManager>();
+            var gridManager = FindAnyObjectByType<GridManager>();
             if (gridManager != null && deployedCell != null)
             {
                 Vector2Int targetPos = gridManager.WorldToGridPosition(target.transform.position);
@@ -149,11 +150,16 @@ namespace TrashTD.Operators
             // Priority 2: Enemies in range pattern (ground and aerial)
             if (EnemyManager.Instance != null && deployedCell != null && data != null && data.rangePattern != null)
             {
-                var gridManager = FindFirstObjectByType<GridManager>();
+                var gridManager = FindAnyObjectByType<GridManager>();
                 if (gridManager != null)
                 {
                     var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
-                    var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells);
+                    var rangeCellList = new List<GridCell>(rangeCells);
+                    if (deployedCell != null && !rangeCellList.Contains(deployedCell))
+                    {
+                        rangeCellList.Add(deployedCell);
+                    }
+                    var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCellList);
 
                     EnemyBase lowestHP = null;
                     int lowestHPValue = int.MaxValue;

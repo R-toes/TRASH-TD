@@ -60,6 +60,8 @@ namespace TrashTD.Enemies
         // --- State ---
         protected bool isBlocked;
         protected OperatorBase blockingOperator;
+        protected Vector3 blockedPosition;
+        protected Vector2Int blockedAdjacentGridPos;
         protected bool isDead;
         protected float attackTimer;
         private float rangedAttackStopTimer;
@@ -92,6 +94,9 @@ namespace TrashTD.Enemies
         public int CurrentRES => currentRES;
         public float CurrentMoveSpeed => currentMoveSpeed;
         public bool IsBlocked => isBlocked;
+        public OperatorBase BlockingOperator => blockingOperator;
+        public Vector3 BlockedPosition => blockedPosition;
+        public Vector2Int BlockedAdjacentGridPos => blockedAdjacentGridPos;
         public bool IsPushingBack => isPushingBack;
         public bool IsDead => isDead;
         public bool IsFrozen => isFrozen;
@@ -231,6 +236,15 @@ namespace TrashTD.Enemies
 
             if (isBlocked)
             {
+                if (Vector3.Distance(transform.position, blockedPosition) > 0.02f)
+                {
+                    transform.position = Vector3.MoveTowards(transform.position, blockedPosition, currentMoveSpeed * Time.deltaTime);
+                }
+                else
+                {
+                    transform.position = blockedPosition;
+                }
+
                 // Attack the blocking operator while blocked
                 AttackBlocker();
             }
@@ -370,8 +384,21 @@ namespace TrashTD.Enemies
                 }
             }
 
-            if (!isBlocked)
+            if (isBlocked)
+            {
+                if (Vector3.Distance(transform.position, blockedPosition) > 0.02f)
+                {
+                    transform.position = Vector3.MoveTowards(transform.position, blockedPosition, currentMoveSpeed * deltaTime);
+                }
+                else
+                {
+                    transform.position = blockedPosition;
+                }
+            }
+            else
+            {
                 MoveAlongPath();
+            }
         }
 
         private List<FrontAttackTarget> FindOperatorsInFront(
@@ -956,6 +983,93 @@ namespace TrashTD.Enemies
         {
             isBlocked = true;
             blockingOperator = blocker;
+
+            Vector2Int blockerGridPos = blocker != null && blocker.DeployedCell != null
+                ? blocker.DeployedCell.GridPosition
+                : (gridManager != null && blocker != null ? gridManager.WorldToGridPosition(blocker.transform.position) : Vector2Int.zero);
+
+            blockedAdjacentGridPos = blockerGridPos;
+            bool foundInPath = false;
+
+            if (path != null && path.Count > 0)
+            {
+                int bestIdx = -1;
+                if (gridManager != null)
+                {
+                    for (int i = 0; i < path.Count; i++)
+                    {
+                        if (gridManager.WorldToGridPosition(path[i]) == blockerGridPos)
+                        {
+                            if (bestIdx == -1 || Mathf.Abs(i - currentPathIndex) < Mathf.Abs(bestIdx - currentPathIndex))
+                            {
+                                bestIdx = i;
+                            }
+                        }
+                    }
+                }
+                else if (blocker != null)
+                {
+                    float minDist = float.MaxValue;
+                    for (int i = 0; i < path.Count; i++)
+                    {
+                        float d = Vector3.Distance(path[i], blocker.transform.position);
+                        if (d < minDist && d <= 1.0f)
+                        {
+                            minDist = d;
+                            bestIdx = i;
+                        }
+                    }
+                }
+
+                if (bestIdx != -1)
+                {
+                    foundInPath = true;
+                    // The enemy approaches the blocker from path[bestIdx - 1] towards path[bestIdx].
+                    // When blocked, the enemy is stopped in front of the blocker (on the incoming/entrance boundary).
+                    if (bestIdx > 0)
+                    {
+                        blockedAdjacentGridPos = gridManager != null
+                            ? gridManager.WorldToGridPosition(path[bestIdx - 1])
+                            : blockerGridPos;
+                        blockedPosition = (path[bestIdx - 1] + path[bestIdx]) * 0.5f;
+                        currentPathIndex = bestIdx;
+                    }
+                    else
+                    {
+                        // Blocker is on the very first waypoint (spawn)
+                        blockedAdjacentGridPos = blockerGridPos;
+                        blockedPosition = path[bestIdx];
+                        currentPathIndex = bestIdx;
+                    }
+                }
+            }
+
+            if (!foundInPath)
+            {
+                if (blocker != null)
+                {
+                    Vector2Int forwardOffset = blocker.Facing.ToOffset();
+                    blockedAdjacentGridPos = blockerGridPos + forwardOffset;
+                    if (gridManager != null)
+                    {
+                        Vector3 forwardWorld = gridManager.GridToWorldPosition(blockedAdjacentGridPos);
+                        blockedPosition = (blocker.transform.position + forwardWorld) * 0.5f;
+                    }
+                    else
+                    {
+                        blockedPosition = blocker.transform.position + (Vector3)(Vector2)forwardOffset * 0.5f;
+                    }
+                }
+                else
+                {
+                    blockedPosition = transform.position;
+                }
+            }
+
+            if (!Application.isPlaying)
+            {
+                transform.position = blockedPosition;
+            }
         }
 
         /// <summary>

@@ -8,6 +8,21 @@ namespace TrashTD.Data
         Down
     }
 
+    public static class OperatorFacingExtensions
+    {
+        public static UnityEngine.Vector2Int ToOffset(this OperatorFacing facing)
+        {
+            return facing switch
+            {
+                OperatorFacing.Right => UnityEngine.Vector2Int.right,
+                OperatorFacing.Up => UnityEngine.Vector2Int.up,
+                OperatorFacing.Left => UnityEngine.Vector2Int.left,
+                OperatorFacing.Down => UnityEngine.Vector2Int.down,
+                _ => UnityEngine.Vector2Int.right
+            };
+        }
+    }
+
     /// <summary>
     /// The five operator classes as defined in GDD 1.3.
     /// </summary>

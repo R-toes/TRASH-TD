@@ -488,10 +488,11 @@ namespace TrashTD.Operators
         /// Take true damage directly (ignoring DEF and RES).
         /// If ignoreShieldNegation is true (e.g. Stage 5 traffic collision),
         /// damage bypasses shield negation but still pops the bubble.
+        /// Returns true if damage was dealt, false if prevented, dodged or absorbed.
         /// </summary>
-        public virtual void TakeTrueDamage(int damage, bool ignoreShieldNegation = false)
+        public virtual bool TakeTrueDamage(int damage, bool ignoreShieldNegation = false)
         {
-            if (IsCombatPaused || currentHP <= 0 || damage <= 0) return;
+            if (IsCombatPaused || currentHP <= 0 || damage <= 0) return false;
 
             var shield = GetComponent<BubbleShield>();
             if (shield != null && shield.IsActive)
@@ -502,7 +503,7 @@ namespace TrashTD.Operators
                 }
                 else if (shield.TryConsume(damage, DamageType.True))
                 {
-                    return;
+                    return false;
                 }
             }
 
@@ -519,6 +520,8 @@ namespace TrashTD.Operators
             {
                 Die();
             }
+
+            return actualDamage > 0;
         }
 
         public bool TryTakeAttackDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)

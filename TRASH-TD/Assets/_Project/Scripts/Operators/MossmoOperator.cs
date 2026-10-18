@@ -61,13 +61,13 @@ namespace TrashTD.Operators
             }
         }
 
-        public override void TakeTrueDamage(int damage, bool ignoreShieldNegation = false)
+        public override bool TakeTrueDamage(int damage, bool ignoreShieldNegation = false)
         {
-            if (currentHP <= 0 || damage <= 0) return;
+            if (currentHP <= 0 || damage <= 0) return false;
 
             GridCell originCell = GetOriginCell();
             int hpBefore = currentHP;
-            base.TakeTrueDamage(damage, ignoreShieldNegation);
+            bool dealt = base.TakeTrueDamage(damage, ignoreShieldNegation);
             int hpAfter = currentHP;
 
             if (hpBefore > hpAfter && healCooldownTimer <= 0f)
@@ -75,6 +75,8 @@ namespace TrashTD.Operators
                 healCooldownTimer = EnvironmentHealCooldownDuration;
                 TriggerReactiveHeal(originCell);
             }
+
+            return dealt;
         }
 
         private GridCell GetOriginCell()

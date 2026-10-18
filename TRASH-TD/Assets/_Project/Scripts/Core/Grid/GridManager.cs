@@ -29,6 +29,9 @@ namespace TrashTD.Core.Grid
         /// <summary>Cell size in world units.</summary>
         public float CellSize => cellSize;
 
+        /// <summary>Origin of the grid in world space.</summary>
+        public Vector3 GridOrigin => gridOrigin;
+
         /// <summary>
         /// Initialize the grid from stage data.
         /// Call this when a stage is loaded.
