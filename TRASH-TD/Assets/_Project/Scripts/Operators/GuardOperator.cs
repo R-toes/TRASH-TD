@@ -85,7 +85,9 @@ namespace TrashTD.Operators
             if (target.TryTakeAttackDamage(damage, data.damageType)) PlayImpactSound();
         }
 
-        private bool HasAdjacentOperator()
+        public bool IsIsolated => !HasAdjacentOperator();
+
+        protected virtual bool HasAdjacentOperator()
         {
             if (OperatorManager.Instance == null || deployedCell == null) return false;
 
@@ -98,14 +100,19 @@ namespace TrashTD.Operators
                     continue;
 
                 Vector2Int offset = other.DeployedCell.GridPosition - ownPosition;
-                if (Mathf.Abs(offset.x) <= 2 && Mathf.Abs(offset.y) <= 2 &&
-                    (offset.x != 0 || offset.y != 0))
+                if (IsOperatorInIsolationRange(offset))
                 {
                     return true;
                 }
             }
 
             return false;
+        }
+
+        protected virtual bool IsOperatorInIsolationRange(Vector2Int offset)
+        {
+            int manhattanDistance = Mathf.Abs(offset.x) + Mathf.Abs(offset.y);
+            return manhattanDistance <= 2 && (offset.x != 0 || offset.y != 0);
         }
 
         private void CreateIsolationAura()
