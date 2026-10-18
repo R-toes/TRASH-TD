@@ -29,7 +29,7 @@ namespace TrashTD.UI
     public class CardDraftOverlayUI : MonoBehaviour
     {
         // --- Colors ---
-        private static readonly Color BG_OVERLAY = new Color(0.02f, 0.03f, 0.05f, 0.92f);
+        private static readonly Color BG_OVERLAY = new Color(0.02f, 0.03f, 0.05f, 1f);
         private static readonly Color CARD_BG = new Color(0.08f, 0.10f, 0.14f, 1f);
         private static readonly Color CARD_SELECTED = new Color(0.15f, 0.25f, 0.45f, 1f);
         private static readonly Color CARD_HOVER = new Color(0.12f, 0.16f, 0.24f, 1f);
@@ -1772,8 +1772,10 @@ namespace TrashTD.UI
             skipFeedback = AttachFeedback(skipButton, Color.white, 1.05f);
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            developerPickButton = MakeButton(buttonsContainer.transform, "DeveloperPickButton", "DEV PICK",
-                new Vector2(200f, 60f), GameplayHUDUI.ButtonContainerType.Secondary);
+            developerPickButton = MakeButton(overlayRoot.transform, "DeveloperPickButton", "D",
+                new Vector2(48f, 48f), GameplayHUDUI.ButtonContainerType.Secondary);
+            PositionRT(developerPickButton, new Vector2(28f, -32f), new Vector2(0f, 1f), new Vector2(48f, 48f));
+            developerPickButton.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
             developerPickButton.onClick.AddListener(ShowDeveloperPicker);
             AttachFeedback(developerPickButton, new Color(0.75f, 0.55f, 1f, 1f), 1.05f);
             BuildDeveloperPicker();
@@ -1790,10 +1792,10 @@ namespace TrashTD.UI
             confirmFeedback = AttachFeedback(confirmButton, ACCENT_BRIGHT, 1.03f);
 
             // View map & deck controls
-            BuildMinimizeControls(canvasObj.transform);
+            BuildMinimizeControls(canvasObj.transform, buttonsContainer.transform);
 
             // Keyboard hint
-            var hintText = MakeText(overlayRoot.transform, "KeyHints", "1 2 3  FLIP / SELECT     ENTER  CONFIRM     R  REROLL     M  VIEW MAP & DECK", 12,
+            var hintText = MakeText(overlayRoot.transform, "KeyHints", "1 2 3  FLIP / SELECT     ENTER  CONFIRM     R  REROLL     M  MINIMIZE", 12,
                 TextAnchor.MiddleCenter, new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.55f));
             PositionRT(hintText, new Vector2(0f, 28f), new Vector2(0.5f, 0f), new Vector2(900f, 24f));
 
@@ -1820,35 +1822,39 @@ namespace TrashTD.UI
         }
 
         /// <summary>
-        /// "VIEW MAP & DECK" button on the overlay, plus the bar that brings the draft back while minimized.
+        /// Minimize and restore controls for viewing the map and editing the deck while drafting.
         /// While minimized, the gameplay HUD's deck bar is used to rearrange and discard cards.
         /// </summary>
-        private void BuildMinimizeControls(Transform canvasRoot)
+        private void BuildMinimizeControls(Transform canvasRoot, Transform buttonsContainer)
         {
-            Button viewMap = MakeButton(overlayRoot.transform, "ViewMapButton", "VIEW MAP & DECK (M)", new Vector2(300f, 48f), GameplayHUDUI.ButtonContainerType.Dark, "icon_info");
-            PositionRT(viewMap, new Vector2(28f, -32f), new Vector2(0f, 1f), new Vector2(300f, 48f));
-            viewMap.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
-            viewMap.onClick.AddListener(() => SetMinimized(true));
-            AttachFeedback(viewMap, Color.white, 1.05f);
+            Button minimize;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            minimize = MakeButton(buttonsContainer, "MinimizeDraftButton", "MINIMIZE",
+                new Vector2(200f, 60f), GameplayHUDUI.ButtonContainerType.Dark, "icon_minus");
+#else
+            minimize = MakeButton(overlayRoot.transform, "MinimizeDraftButton", "MINIMIZE",
+                new Vector2(200f, 48f), GameplayHUDUI.ButtonContainerType.Dark, "icon_minus");
+            PositionRT(minimize, new Vector2(28f, -32f), new Vector2(0f, 1f), new Vector2(200f, 48f));
+            minimize.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
+#endif
+            minimize.onClick.AddListener(() => StartCoroutine(MinimizeAfterClick()));
+            AttachFeedback(minimize, Color.white, 1.05f);
 
-            Button back = MakeButton(canvasRoot, "BackToCardPickButton", "BACK TO CARD PICK (M)", new Vector2(460f, 56f), GameplayHUDUI.ButtonContainerType.Primary, "icon_check");
-            PositionRT(back, new Vector2(0f, -24f), new Vector2(0.5f, 1f), new Vector2(460f, 56f));
+            Button back = MakeButton(canvasRoot, "BackToCardPickButton", "RESUME", new Vector2(200f, 48f), GameplayHUDUI.ButtonContainerType.Primary);
+            PositionRT(back, new Vector2(0f, -24f), new Vector2(0.5f, 1f), new Vector2(200f, 48f));
             back.GetComponent<RectTransform>().pivot = new Vector2(0.5f, 1f);
             back.onClick.AddListener(() => SetMinimized(false));
             MenuButtonFeedback backFeedback = AttachFeedback(back, ACCENT_BRIGHT, 1.04f);
             backFeedback.glowAlways = true;
 
-            var deckHint = MakeText(back.transform, "DeckEditHint", "DRAG DECK CARDS TO REARRANGE, OR ONTO DISCARD TO REMOVE", 13,
-                TextAnchor.MiddleCenter, Color.white);
-            PositionRT(deckHint, new Vector2(0f, -8f), new Vector2(0.5f, 0f), new Vector2(620f, 26f));
-            deckHint.rectTransform.pivot = new Vector2(0.5f, 1f);
-            deckHint.raycastTarget = false;
-            var hintShadow = deckHint.gameObject.AddComponent<Shadow>();
-            hintShadow.effectColor = new Color(0f, 0f, 0f, 0.9f);
-            hintShadow.effectDistance = new Vector2(2f, -2f);
-
             restoreBar = back.gameObject;
             restoreBar.SetActive(false);
+        }
+
+        private IEnumerator MinimizeAfterClick()
+        {
+            yield return new WaitForEndOfFrame();
+            SetMinimized(true);
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

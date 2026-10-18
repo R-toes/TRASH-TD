@@ -64,7 +64,6 @@ namespace TrashTD.UI
         // ── Palette ──────────────────────────────────────────
         private static readonly Color AccentColor = new Color(0.18f, 0.82f, 0.45f, 1f);
         private static readonly Color DarkButton = new Color(0.10f, 0.12f, 0.16f, 1f);
-        private static readonly Color BarColor = new Color(0.03f, 0.04f, 0.06f, 0.88f);
         private static readonly Color DraftColor = new Color(1f, 0.78f, 0.25f, 1f);
         private static readonly Color PrepColor = new Color(0.5f, 0.8f, 1f, 1f);
         private static readonly Color WaveColor = new Color(1f, 0.45f, 0.35f, 1f);
@@ -81,6 +80,7 @@ namespace TrashTD.UI
         [SerializeField, Range(0f, 1f)] private float sfxVolume = 0.7f;
 
         private Sprite[] deckBgSprites;
+        private Sprite[] topBarBgSprites;
 
         private Canvas canvas;
         private GameObject pausePanel;
@@ -182,7 +182,10 @@ namespace TrashTD.UI
         private RectTransform waveProgressFillRect;
         private Image waveProgressFill;
         private Image dangerFlashImage;
+        private Image topBarBgAnimImage;
         private Image deckBgAnimImage;
+        private float topBarBgAnimTime;
+        private int topBarBgAnimFrame;
         private float deckBgAnimTime;
         private int deckBgAnimFrame;
         private CanvasGroup phaseBannerGroup;
@@ -247,6 +250,7 @@ namespace TrashTD.UI
             if (lifeLostClip == null) lifeLostClip = AudioManager.Instance?.GetClip(SfxId.GameplayLifeLost);
 
             EnsureEventSystem();
+            topBarBgSprites = Resources.LoadAll<Sprite>("UI/Top Panel BG");
             // Load the Deck BG sprite sheet frames from Resources at runtime.
             // The asset lives at Assets/Resources/UI/Deck BG.png (sprite mode: Multiple).
             deckBgSprites = Resources.LoadAll<Sprite>("UI/Deck BG");
@@ -1042,7 +1046,13 @@ namespace TrashTD.UI
             barRect.pivot = new Vector2(0.5f, 1f);
             barRect.sizeDelta = new Vector2(0f, 90f);
             barRect.anchoredPosition = Vector2.zero;
-            ApplyPanelContainer(stageInfoPanel, PanelContainerType.Metal);
+            if (topBarBgSprites != null && topBarBgSprites.Length > 0)
+            {
+                topBarBgAnimImage = stageInfoPanel.GetComponent<Image>();
+                topBarBgAnimImage.sprite = topBarBgSprites[0];
+                topBarBgAnimImage.type = Image.Type.Simple;
+                topBarBgAnimImage.color = Color.white;
+            }
             topBarRect = barRect;
 
             // Wave progress strip along the bottom edge of the bar (color follows the phase)
@@ -1071,7 +1081,7 @@ namespace TrashTD.UI
 
             // Pause button (top-left)
             var pauseButton = CreateButton(stageInfoPanel.transform, "PauseButton", string.Empty, new Vector2(50f, 50f), ButtonContainerType.IconDark);
-            SetPosition(pauseButton.GetComponent<RectTransform>(), new Vector2(20f, -45f), new Vector2(0f, 1f), new Vector2(50f, 50f), new Vector2(0f, 0.5f));
+            SetPosition(pauseButton.GetComponent<RectTransform>(), new Vector2(10f, -41f), new Vector2(0f, 1f), new Vector2(50f, 50f), new Vector2(0f, 0.5f));
             pauseButton.onClick.AddListener(PauseGame);
             StyleButton(pauseButton, ButtonContainerType.IconDark, Color.white, 1.08f);
 
@@ -1086,11 +1096,11 @@ namespace TrashTD.UI
                 if (label != null) label.text = "||";
             }
 
-            phaseHeaderText = CreateText(stageInfoPanel.transform, "PhaseHeaderText", "PHASE", 28, TextAnchor.MiddleLeft);
+            phaseHeaderText = CreateText(stageInfoPanel.transform, "PhaseHeaderText", "PHASE", 18, TextAnchor.MiddleLeft);
             SetPosition(phaseHeaderText.GetComponent<RectTransform>(), new Vector2(95f, -28f), new Vector2(0f, 1f), new Vector2(220f, 32f), new Vector2(0f, 0.5f));
 
             // Phase text remains directly below the wave title.
-            phaseText = CreateText(stageInfoPanel.transform, "PhaseText", "PREPARATION", 18, TextAnchor.MiddleLeft);
+            phaseText = CreateText(stageInfoPanel.transform, "PhaseText", "PREPARATION", 12, TextAnchor.MiddleLeft);
             phaseText.color = PrepColor;
             SetPosition(phaseText.GetComponent<RectTransform>(), new Vector2(95f, -60f), new Vector2(0f, 1f), new Vector2(220f, 26f), new Vector2(0f, 0.5f));
 
@@ -1132,7 +1142,9 @@ namespace TrashTD.UI
             barRect.pivot = new Vector2(0.5f, 0f);
             barRect.sizeDelta = new Vector2(0f, bgHeight);
             barRect.anchoredPosition = Vector2.zero;
-            bar.GetComponent<Image>().color = BarColor;
+            Image barImage = bar.GetComponent<Image>();
+            barImage.color = Color.clear;
+            barImage.raycastTarget = false;
             deckBarRect = barRect;
 
             // Deck background sprite-sheet animation — aspect-correct, anchored to
@@ -1159,19 +1171,6 @@ namespace TrashTD.UI
                 deckBgAnimImage.raycastTarget = false;
                 deckBgAnimImage.type = Image.Type.Simple;
             }
-
-            // Thin accent line along the top edge
-            var edge = new GameObject("DeckBarEdge", typeof(RectTransform), typeof(Image));
-            edge.transform.SetParent(bar.transform, false);
-            var edgeRect = edge.GetComponent<RectTransform>();
-            edgeRect.anchorMin = new Vector2(0f, 1f);
-            edgeRect.anchorMax = new Vector2(1f, 1f);
-            edgeRect.pivot = new Vector2(0.5f, 1f);
-            edgeRect.sizeDelta = new Vector2(0f, 2f);
-            edgeRect.anchoredPosition = Vector2.zero;
-            var edgeImage = edge.GetComponent<Image>();
-            edgeImage.color = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.45f);
-            edgeImage.raycastTarget = false;
 
             // Deck slots container matching the DeckBgAnim sprite dimensions
             var slotsContainer = new GameObject("DeckSlots", typeof(RectTransform));
@@ -2141,7 +2140,7 @@ namespace TrashTD.UI
                     break;
 
                 case StagePhase.WaveActive:
-                    if (phaseText != null) phaseText.text = "WAVE IN PROGRESS";
+                    if (phaseText != null) phaseText.text = "Invading";
                     phaseColorTarget = WaveColor;
                     startWaveButton.interactable = false;
                     if (startWaveButtonText != null) startWaveButtonText.text = "WAVE\nACTIVE";
@@ -2167,7 +2166,7 @@ namespace TrashTD.UI
                     }
                     else if (phase == StagePhase.WaveActive)
                     {
-                        ShowPhaseBanner("WAVE IN PROGRESS", "Hold the line", WaveColor);
+                        ShowPhaseBanner("Invading", "Hold the line", WaveColor);
                         PlaySfx(waveStartClip, 1f);
                     }
                 }
@@ -2624,6 +2623,20 @@ namespace TrashTD.UI
         private void UpdateAnimations(float dt, float time)
         {
             float k = 1f - Mathf.Exp(-8f * dt);
+
+            // Top bar background sprite-sheet animation (~12 fps)
+            if (topBarBgAnimImage != null && topBarBgSprites != null && topBarBgSprites.Length > 1)
+            {
+                const float topBarBgFps = 12f;
+                topBarBgAnimTime += dt;
+                int newFrame = Mathf.FloorToInt(topBarBgAnimTime * topBarBgFps) % topBarBgSprites.Length;
+                if (newFrame != topBarBgAnimFrame)
+                {
+                    topBarBgAnimFrame = newFrame;
+                    if (topBarBgSprites[topBarBgAnimFrame] != null)
+                        topBarBgAnimImage.sprite = topBarBgSprites[topBarBgAnimFrame];
+                }
+            }
 
             // Deck background sprite-sheet animation (~12 fps)
             if (deckBgAnimImage != null && deckBgSprites != null && deckBgSprites.Length > 1)
