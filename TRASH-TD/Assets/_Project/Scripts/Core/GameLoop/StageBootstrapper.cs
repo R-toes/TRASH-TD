@@ -28,6 +28,7 @@ namespace TrashTD.Core.GameLoop
         private static Sprite weatherDotSprite;
         private static Texture2D dustCloudTexture;
         private static Material dustCloudMaterial;
+        private static readonly Color TalentRangeColor = new Color(1f, 0.55f, 0.08f, 0.45f);
 
         private const string DefaultSandboxMapStageId = "STAGE_01";
 
@@ -1264,7 +1265,7 @@ namespace TrashTD.Core.GameLoop
             ClearPlacementPreviewVisuals();
             isOperatorRangePreviewActive = true;
 
-            // Talent activation range layer (red, lower opacity)
+            // Talent activation range layer (orange, lower opacity)
             Vector2Int[] talentPattern = op.GetTalentRangePattern();
             if (talentPattern != null && talentPattern.Length > 0)
             {
@@ -1272,10 +1273,9 @@ namespace TrashTD.Core.GameLoop
                     op.DeployedCell.GridPosition,
                     talentPattern,
                     op.Facing);
-                Color talentColor = new Color(1f, 0.22f, 0.22f, 0.40f);
                 for (int i = 0; i < talentCells.Length; i++)
                 {
-                    DrawTalentCell(talentCells[i].WorldPosition, talentColor);
+                    DrawTalentCell(talentCells[i].WorldPosition, TalentRangeColor);
                 }
             }
 
@@ -1349,7 +1349,7 @@ namespace TrashTD.Core.GameLoop
             bool squadFull = operatorManager == null || operatorManager.IsAtSquadLimit;
             bool canDeploy = targetCell.CanDeploy(pendingDeployCard.operatorData.position) && !squadFull;
 
-            // Talent activation range layer (red, lower opacity)
+            // Talent activation range layer (orange, lower opacity)
             Vector2Int[] talentPattern = pendingDeployCard.operatorData.GetTalentRangePattern();
             if (talentPattern != null && talentPattern.Length > 0)
             {
@@ -1357,10 +1357,9 @@ namespace TrashTD.Core.GameLoop
                     placementGridPosition,
                     talentPattern,
                     placementFacing);
-                Color talentColor = new Color(1f, 0.22f, 0.22f, 0.40f);
                 for (int i = 0; i < talentCells.Length; i++)
                 {
-                    DrawTalentCell(talentCells[i].WorldPosition, talentColor);
+                    DrawTalentCell(talentCells[i].WorldPosition, TalentRangeColor);
                 }
             }
 
@@ -1458,7 +1457,7 @@ namespace TrashTD.Core.GameLoop
 
         private void DrawTalentCell(Vector3 center, Color color)
         {
-            DrawCellFill(center, new Color(color.r, color.g, color.b, 0.14f), 47);
+            DrawCellFill(center, new Color(color.r, color.g, color.b, 0.16f), 47);
             DrawCellOutline(center, color, 48);
         }
 
