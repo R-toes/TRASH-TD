@@ -88,6 +88,10 @@ namespace TrashTD.Operators
             }
         }
 
+        public bool IsInIsolationPattern(Vector2Int offset) => IsOperatorInIsolationRange(offset);
+
+        public override Vector2Int[] GetTalentRangePattern() => OperatorData.ShadesliceTalentPattern;
+
         protected override bool IsOperatorInIsolationRange(Vector2Int offset)
         {
             int manhattanDistance = Mathf.Abs(offset.x) + Mathf.Abs(offset.y);
