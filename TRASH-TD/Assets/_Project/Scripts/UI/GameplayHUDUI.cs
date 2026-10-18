@@ -95,8 +95,13 @@ namespace TrashTD.UI
         private Text squadCountText;
         private GameObject selectedOperatorLabelRoot;
         private GameObject environmentBriefingPanel;
+        private RectTransform environmentBriefingCardRect;
         private Text environmentBriefingTitle;
         private Text environmentBriefingDescription;
+        private GameObject stage2ThrownItemsRoot;
+        private Image stage2GlassIcon;
+        private Image stage2MetalIcon;
+        private Image stage2ToolsIcon;
         private bool environmentBriefingDismissed;
         private Text selectedOperatorNameText;
         private Text selectedOperatorSkillDescriptionText;
@@ -163,8 +168,8 @@ namespace TrashTD.UI
             get
             {
                 if (environmentBriefingDismissed || gameManager == null || gameManager.CurrentStage == null) return false;
-                string stageId = gameManager.CurrentStage.stageId;
-                return stageId == "STAGE_03" || stageId == "STAGE_04" || stageId == "STAGE_06";
+                string stageId = stageBootstrapper != null ? stageBootstrapper.EnvironmentStageId : gameManager.CurrentStage.stageId;
+                return stageId == "STAGE_02" || stageId == "STAGE_03" || stageId == "STAGE_04" || stageId == "STAGE_05" || stageId == "STAGE_06";
             }
         }
 
@@ -1958,8 +1963,8 @@ namespace TrashTD.UI
 
             GameObject card = new GameObject("BriefingCard", typeof(RectTransform), typeof(Image), typeof(Outline));
             card.transform.SetParent(environmentBriefingPanel.transform, false);
-            RectTransform cardRect = card.GetComponent<RectTransform>();
-            SetPosition(cardRect, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(740f, 440f), new Vector2(0.5f, 0.5f));
+            environmentBriefingCardRect = card.GetComponent<RectTransform>();
+            SetPosition(environmentBriefingCardRect, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(740f, 440f), new Vector2(0.5f, 0.5f));
             ApplyModalCard(card);
             Outline cardOutline = card.GetComponent<Outline>();
             cardOutline.effectColor = new Color(WaveColor.r, WaveColor.g, WaveColor.b, 0.8f);
@@ -1978,12 +1983,71 @@ namespace TrashTD.UI
             SetPosition(environmentBriefingDescription.rectTransform, new Vector2(0f, -100f), new Vector2(0.5f, 1f), new Vector2(640f, 210f), new Vector2(0.5f, 1f));
             environmentBriefingDescription.raycastTarget = false;
 
+            CreateStage2BriefingItemsDisplay(card.transform);
+
             Button dismissButton = CreateButton(card.transform, "DismissButton", "UNDERSTOOD", new Vector2(250f, 58f), ButtonContainerType.Primary);
-            SetPosition(dismissButton.GetComponent<RectTransform>(), new Vector2(0f, 36f), new Vector2(0.5f, 0f), null, new Vector2(0.5f, 0f));
+            SetPosition(dismissButton.GetComponent<RectTransform>(), new Vector2(0f, 32f), new Vector2(0.5f, 0f), null, new Vector2(0.5f, 0f));
             StyleButton(dismissButton, ButtonContainerType.Primary, AccentColor, 1.05f);
             dismissButton.onClick.AddListener(DismissEnvironmentBriefing);
 
             environmentBriefingPanel.SetActive(false);
+        }
+
+        private void CreateStage2BriefingItemsDisplay(Transform parent)
+        {
+            stage2ThrownItemsRoot = new GameObject("Stage2ItemsRoot", typeof(RectTransform));
+            stage2ThrownItemsRoot.transform.SetParent(parent, false);
+            RectTransform rootRect = stage2ThrownItemsRoot.GetComponent<RectTransform>();
+            SetPosition(rootRect, new Vector2(0f, -178f), new Vector2(0.5f, 1f), new Vector2(780f, 245f), new Vector2(0.5f, 1f));
+
+            // Create 3 item cards side by side: Glass (-260), Metal (0), Tools (+260)
+            stage2GlassIcon = CreateBriefingItemCard(stage2ThrownItemsRoot.transform, -260f, "Glass", "GLASS", new Color(0.4f, 0.9f, 1f, 1f), "<b>Weak DoT Damage</b>\nInflicts continuous bleeding damage over 5s.");
+            stage2MetalIcon = CreateBriefingItemCard(stage2ThrownItemsRoot.transform, 0f, "Metal", "METAL", new Color(1f, 0.8f, 0.3f, 1f), "<b>Direct True Damage</b>\nDeals heavy burst damage upon impact.");
+            stage2ToolsIcon = CreateBriefingItemCard(stage2ThrownItemsRoot.transform, 260f, "Tools", "TOOLS", new Color(1f, 0.45f, 0.45f, 1f), "<b>True Damage + Stun</b>\nDeals direct damage and stuns operators for 2s.");
+
+            stage2ThrownItemsRoot.SetActive(false);
+        }
+
+        private Image CreateBriefingItemCard(Transform parent, float xPos, string cardName, string title, Color titleColor, string description)
+        {
+            GameObject box = new GameObject($"Card_{cardName}", typeof(RectTransform), typeof(Image), typeof(Outline));
+            box.transform.SetParent(parent, false);
+            RectTransform boxRect = box.GetComponent<RectTransform>();
+            SetPosition(boxRect, new Vector2(xPos, 0f), new Vector2(0.5f, 0.5f), new Vector2(245f, 240f), new Vector2(0.5f, 0.5f));
+
+            Image boxImg = box.GetComponent<Image>();
+            boxImg.color = new Color(0.04f, 0.06f, 0.09f, 0.92f);
+
+            Outline boxOutline = box.GetComponent<Outline>();
+            boxOutline.effectColor = new Color(titleColor.r, titleColor.g, titleColor.b, 0.55f);
+            boxOutline.effectDistance = new Vector2(1.5f, -1.5f);
+
+            // Sprite preview container
+            GameObject iconBg = new GameObject("IconBg", typeof(RectTransform), typeof(Image));
+            iconBg.transform.SetParent(box.transform, false);
+            RectTransform iconBgRect = iconBg.GetComponent<RectTransform>();
+            SetPosition(iconBgRect, new Vector2(0f, 62f), new Vector2(0.5f, 0.5f), new Vector2(64f, 64f), new Vector2(0.5f, 0.5f));
+            iconBg.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.06f);
+
+            Image iconImg = CreateIconImage(iconBg.transform, "Icon", null, Color.white, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(52f, 52f), new Vector2(0.5f, 0.5f));
+
+            // Title
+            Text titleText = CreateText(box.transform, "Title", title, 18, TextAnchor.MiddleCenter);
+            titleText.color = titleColor;
+            SetPosition(titleText.rectTransform, new Vector2(0f, 12f), new Vector2(0.5f, 0.5f), new Vector2(220f, 26f), new Vector2(0.5f, 0.5f));
+            titleText.raycastTarget = false;
+
+            // Description
+            Text descText = CreateText(box.transform, "Desc", description, 13, TextAnchor.MiddleCenter);
+            descText.fontStyle = FontStyle.Normal;
+            descText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            descText.verticalOverflow = VerticalWrapMode.Overflow;
+            descText.lineSpacing = 1.15f;
+            descText.color = new Color(0.85f, 0.88f, 0.92f, 1f);
+            SetPosition(descText.rectTransform, new Vector2(0f, -50f), new Vector2(0.5f, 0.5f), new Vector2(225f, 90f), new Vector2(0.5f, 0.5f));
+            descText.raycastTarget = false;
+
+            return iconImg;
         }
 
         private IEnumerator ShowEnvironmentBriefingWhenReady()
@@ -2007,34 +2071,127 @@ namespace TrashTD.UI
                 if (environmentStage != null) environmentName = environmentStage.mapName;
             }
 
-            string effectDescription;
-            switch (environmentStageId)
+            if (environmentStageId == "STAGE_02")
             {
-                case "STAGE_03":
-                    effectDescription =
-                        "A sandstorm sweeps the battlefield. Attack intervals are 5% shorter, " +
-                        "and each attack has a 10% chance to miss.";
-                    break;
-                case "STAGE_04":
-                    effectDescription =
-                        "Extreme heat builds up on deployed operators each round. " +
-                        "Overheated operators ignite and suffer continuous burn damage until retreated to the bench to cool down.";
-                    break;
-                case "STAGE_05":
-                    effectDescription =
-                        "Starting from Wave 6, vehicles periodically speed down the boulevard lanes. " +
-                        "Collisions deal ramping true damage to enemies and operators, and stun the first operator struck.";
-                    break;
-                case "STAGE_06":
-                    effectDescription =
-                        "Acid rain periodically deals 3 true damage to deployed operators " +
-                        "and active enemies every 2 seconds while a wave is running. Operators are protected between waves.";
-                    break;
-                default:
-                    yield break;
+                if (environmentBriefingCardRect != null)
+                {
+                    environmentBriefingCardRect.sizeDelta = new Vector2(840f, 570f);
+                }
+
+                environmentBriefingTitle.text = "HAZARD ALERT";
+                SetPosition(environmentBriefingTitle.rectTransform, new Vector2(0f, -36f), new Vector2(0.5f, 1f), new Vector2(700f, 40f), new Vector2(0.5f, 1f));
+
+                environmentBriefingDescription.text =
+                    $"<color=#FFD040>{environmentName}</color>\n" +
+                    "Enemies are throwing scavenged items across the battlefield every 10 seconds!\n" +
+                    "Watch out for the 3 types of thrown debris:";
+                SetPosition(environmentBriefingDescription.rectTransform, new Vector2(0f, -86f), new Vector2(0.5f, 1f), new Vector2(760f, 80f), new Vector2(0.5f, 1f));
+                environmentBriefingDescription.fontSize = 15;
+                environmentBriefingDescription.lineSpacing = 1.15f;
+
+                // Load sprites from stage or hazard
+                Sprite[] itemSprites = stage.fallingItemSprites;
+                if (itemSprites == null || itemSprites.Length == 0)
+                {
+                    var hazard = FindFirstObjectByType<TrashTD.Core.GameLoop.Stage2FallingItemsHazard>();
+                    if (hazard != null) itemSprites = hazard.ItemSprites;
+                }
+                if (itemSprites == null || itemSprites.Length == 0)
+                {
+                    itemSprites = Resources.LoadAll<Sprite>("Levels/Level 2 thrown-items");
+                }
+#if UNITY_EDITOR
+                if (itemSprites == null || itemSprites.Length == 0)
+                {
+                    var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 2 thrown-items.png");
+                    if (assets != null)
+                    {
+                        var list = new List<Sprite>();
+                        foreach (var obj in assets)
+                        {
+                            if (obj is Sprite s) list.Add(s);
+                        }
+                        if (list.Count > 0)
+                        {
+                            list.Sort((a, b) => TrashTD.Core.GameLoop.Stage2FallingItemsHazard.ExtractTrailingIndex(a.name).CompareTo(TrashTD.Core.GameLoop.Stage2FallingItemsHazard.ExtractTrailingIndex(b.name)));
+                            itemSprites = list.ToArray();
+                        }
+                    }
+                }
+#endif
+
+                if (stage2ThrownItemsRoot != null)
+                {
+                    stage2ThrownItemsRoot.SetActive(true);
+
+                    // Glass: index 0 (0..7)
+                    if (stage2GlassIcon != null && itemSprites != null && itemSprites.Length > 0)
+                    {
+                        stage2GlassIcon.sprite = itemSprites[0];
+                        stage2GlassIcon.color = Color.white;
+                    }
+
+                    // Metal: index 8 (8..15)
+                    if (stage2MetalIcon != null && itemSprites != null && itemSprites.Length > 8)
+                    {
+                        stage2MetalIcon.sprite = itemSprites[8];
+                        stage2MetalIcon.color = Color.white;
+                    }
+
+                    // Tools: index 16 (16..23)
+                    if (stage2ToolsIcon != null && itemSprites != null && itemSprites.Length > 16)
+                    {
+                        stage2ToolsIcon.sprite = itemSprites[16];
+                        stage2ToolsIcon.color = Color.white;
+                    }
+                }
+            }
+            else
+            {
+                if (environmentBriefingCardRect != null)
+                {
+                    environmentBriefingCardRect.sizeDelta = new Vector2(740f, 440f);
+                }
+                if (stage2ThrownItemsRoot != null)
+                {
+                    stage2ThrownItemsRoot.SetActive(false);
+                }
+                environmentBriefingTitle.text = "ENVIRONMENTAL EFFECT";
+                SetPosition(environmentBriefingTitle.rectTransform, new Vector2(0f, -40f), new Vector2(0.5f, 1f), new Vector2(660f, 52f), new Vector2(0.5f, 1f));
+                SetPosition(environmentBriefingDescription.rectTransform, new Vector2(0f, -100f), new Vector2(0.5f, 1f), new Vector2(640f, 210f), new Vector2(0.5f, 1f));
+                environmentBriefingDescription.fontSize = 18;
+                environmentBriefingDescription.lineSpacing = 1f;
+
+                string effectDescription;
+                switch (environmentStageId)
+                {
+                    case "STAGE_03":
+                        effectDescription =
+                            "A sandstorm sweeps the battlefield. Attack intervals are 5% shorter, " +
+                            "and each attack has a 10% chance to miss.";
+                        break;
+                    case "STAGE_04":
+                        effectDescription =
+                            "Extreme heat builds up on deployed operators each round. " +
+                            "Overheated operators ignite and suffer continuous burn damage until retreated to the bench to cool down.";
+                        break;
+                    case "STAGE_05":
+                        effectDescription =
+                            "Starting from Wave 6, vehicles periodically speed down the boulevard lanes. " +
+                            "Collisions deal ramping true damage to enemies and operators, and stun the first operator struck.";
+                        break;
+                    case "STAGE_06":
+                        effectDescription =
+                            "Acid rain periodically deals 3 true damage to deployed operators " +
+                            "and active enemies every 2 seconds while a wave is running. Operators are protected between waves.";
+                        break;
+                    default:
+                        yield break;
+                }
+
+                environmentBriefingDescription.text = $"{environmentName}\n\n{effectDescription}";
             }
 
-            environmentBriefingDescription.text = $"{environmentName}\n\n{effectDescription}";
             environmentBriefingPanel.SetActive(true);
         }
 

@@ -87,13 +87,31 @@ namespace TrashTD.Tests
         [Test]
         public void HazardConstants_MatchSpecifications()
         {
-            Assert.AreEqual(5.0f, Stage2FallingItemsHazard.DropIntervalSeconds, "Drop interval must be 5 seconds.");
+            Assert.AreEqual(10.0f, Stage2FallingItemsHazard.DropIntervalSeconds, "Drop interval must be 10 seconds.");
             Assert.AreEqual(3.0f, Stage2FallingItemsHazard.FallHeightInTiles, "Fall height must be 3 tiles.");
             Assert.AreEqual(15, Stage2FallingItemsHazard.DirectTrueDamageAmount, "Direct true damage must be 15.");
             Assert.AreEqual(15, Stage2FallingItemsHazard.StunItemTrueDamageAmount, "Stun item true damage must be 15.");
             Assert.AreEqual(2.0f, Stage2FallingItemsHazard.StunDurationSeconds, "Stun duration must be 2 seconds.");
             Assert.AreEqual(2, Stage2FallingItemsHazard.DotDamagePerTick, "DoT tick damage must be 2.");
             Assert.AreEqual(5.0f, Stage2FallingItemsHazard.DotDurationSeconds, "DoT duration must be 5 seconds.");
+        }
+
+        [Test]
+        public void DropProbabilities_When1To3OperatorsDeployed_RatesAre60Random_20Ally_20Enemies()
+        {
+            for (int count = 1; count <= 3; count++)
+            {
+                var (ally, enemy, random) = Stage2FallingItemsHazard.GetDropProbabilities(count);
+                Assert.AreEqual(0.20f, ally, 0.001f, $"Ally chance should be 20% for {count} deployed operators.");
+                Assert.AreEqual(0.20f, enemy, 0.001f, $"Enemy chance should be 20% for {count} deployed operators.");
+                Assert.AreEqual(0.60f, random, 0.001f, $"Random tile chance should be 60% for {count} deployed operators.");
+            }
+
+            // When 4 or more operators are deployed
+            var (ally4, enemy4, random4) = Stage2FallingItemsHazard.GetDropProbabilities(4);
+            Assert.AreEqual(0.40f, ally4, 0.001f, "Ally chance should be 40% when 4+ deployed.");
+            Assert.AreEqual(0.20f, enemy4, 0.001f, "Enemy chance should be 20% when 4+ deployed.");
+            Assert.AreEqual(0.40f, random4, 0.001f, "Random tile chance should be 40% when 4+ deployed.");
         }
 
         [Test]

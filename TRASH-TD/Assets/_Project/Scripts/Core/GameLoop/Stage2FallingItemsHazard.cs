@@ -41,7 +41,7 @@ namespace TrashTD.Core.GameLoop
     /// </summary>
     public class Stage2FallingItemsHazard : MonoBehaviour
     {
-        public const float DropIntervalSeconds = 5.0f;
+        public const float DropIntervalSeconds = 10.0f;
         public const float FallHeightInTiles = 3.0f;
         public const float FallDurationSeconds = 0.40f;
 
@@ -152,14 +152,34 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
+        public static (float allyChance, float enemyChance, float randomTileChance) GetDropProbabilities(int deployedOperatorCount)
+        {
+            // If there are only 1-3 operators deployed in the stage during wave phase: 60% random tile, 20% ally, 20% enemies
+            if (deployedOperatorCount >= 1 && deployedOperatorCount <= 3)
+            {
+                return (0.20f, 0.20f, 0.60f);
+            }
+
+            if (deployedOperatorCount == 0)
+            {
+                return (0.00f, 0.20f, 0.80f);
+            }
+
+            // Default rate (4 or more operators deployed): 40% ally, 20% enemies, 40% random tile
+            return (0.40f, 0.20f, 0.40f);
+        }
+
         public void ExecuteDropRoll()
         {
             float roll = UnityEngine.Random.value;
             int spriteIndex = UnityEngine.Random.Range(0, itemSprites != null && itemSprites.Length > 0 ? itemSprites.Length : 24);
 
-            if (roll < 0.40f)
+            int deployedCount = GetDeployedOperatorCount();
+            var (allyChance, enemyChance, _) = GetDropProbabilities(deployedCount);
+
+            if (roll < allyChance)
             {
-                // 40%: Hits a random deployed operator
+                // Ally hit
                 OperatorBase targetOp = GetRandomDeployedOperator();
                 if (targetOp != null && targetOp.DeployedCell != null)
                 {
@@ -167,9 +187,9 @@ namespace TrashTD.Core.GameLoop
                     return;
                 }
             }
-            else if (roll >= 0.80f)
+            else if (roll < allyChance + enemyChance)
             {
-                // 20%: Hits a random enemy
+                // Enemy hit
                 EnemyBase targetEnemy = GetRandomAliveEnemy();
                 if (targetEnemy != null)
                 {
@@ -178,7 +198,7 @@ namespace TrashTD.Core.GameLoop
                 }
             }
 
-            // 40% (or fallback): Chooses a random deployable tile
+            // Random deployable tile (or fallback)
             GridCell randomCell = GetRandomDeployableTile();
             if (randomCell != null)
             {
@@ -413,6 +433,24 @@ namespace TrashTD.Core.GameLoop
                     enemy.ApplyStun(StunDurationSeconds);
                     break;
             }
+        }
+
+        public int GetDeployedOperatorCount()
+        {
+            if (operatorManager == null) return 0;
+            var deployed = operatorManager.DeployedOperators;
+            if (deployed == null || deployed.Count == 0) return 0;
+
+            int count = 0;
+            for (int i = 0; i < deployed.Count; i++)
+            {
+                var op = deployed[i];
+                if (op != null && op.IsDeployed && op.CurrentHP > 0 && op.DeployedCell != null)
+                {
+                    count++;
+                }
+            }
+            return count;
         }
 
         public OperatorBase GetRandomDeployedOperator()
