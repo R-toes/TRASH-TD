@@ -136,9 +136,9 @@ namespace TrashTD.Audio
                 byEvent = new Dictionary<string, List<AudioClip>>();
                 foreach (AudioClip clip in Resources.LoadAll<AudioClip>(folder))
                 {
-                    string eventName = StripVariant(clip.name);
-                    if (!byEvent.TryGetValue(eventName, out List<AudioClip> list))
-                        byEvent[eventName] = list = new List<AudioClip>();
+                    string clipEvent = StripVariant(clip.name);
+                    if (!byEvent.TryGetValue(clipEvent, out List<AudioClip> list))
+                        byEvent[clipEvent] = list = new List<AudioClip>();
                     list.Add(clip);
                 }
                 FolderCache[folder] = byEvent;
