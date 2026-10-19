@@ -96,6 +96,7 @@ namespace TrashTD.Core.GameLoop
         private bool isOperatorRangePreviewActive;
         private bool isDraggingToDeploy;
         private Vector3 sweepAnchorWorldPosition;
+        private int lastQuickDeployFrame = -1;
 
         public bool IsDraggingToDeploy => isDraggingToDeploy;
         public OperatorFacing PlacementFacing => placementFacing;
@@ -776,6 +777,20 @@ namespace TrashTD.Core.GameLoop
                 }
             }
 
+            // Deck slot keybinds 1 - 8: Quick-deploy card from deck to the tile under the cursor
+            if (isPreparing)
+            {
+                int deckSlotKey = GetDeckSlotHotkey(keyboard);
+                if (deckSlotKey >= 0)
+                {
+                    bool blockedByUi = (gameplayHudUI != null && (gameplayHudUI.IsPaused || gameplayHudUI.IsEnvironmentBriefingActive));
+                    if (!blockedByUi)
+                    {
+                        TryQuickDeployFromDeck(deckSlotKey, mouse);
+                    }
+                }
+            }
+
             // 1. Drag-and-Release sweep in progress
             if (isPreparing && isDraggingToDeploy)
             {
@@ -798,9 +813,37 @@ namespace TrashTD.Core.GameLoop
                     }
                 }
 
-                // PointerUp: Releasing the mouse button executes the choice, placing the operator
-                if (mouse != null && mouse.leftButton.wasReleasedThisFrame)
+                // Keyboard facing fallback
+                if (keyboard != null)
                 {
+                    OperatorFacing nextFacing = GetFacingInput(keyboard);
+                    if (nextFacing != placementFacing)
+                    {
+                        placementFacing = nextFacing;
+                        RefreshPlacementPreview();
+                    }
+                }
+
+                // Keyboard confirm fallback
+                bool confirmWithKeyboard = keyboard != null &&
+                    (keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame);
+                if (confirmWithKeyboard)
+                {
+                    isDraggingToDeploy = false;
+                    ConfirmOperatorPlacement();
+                    return;
+                }
+
+                // PointerUp / Click: Releasing the mouse button executes the choice, placing the operator
+                if (mouse != null && mouse.leftButton.wasReleasedThisFrame && Time.frameCount != lastQuickDeployFrame)
+                {
+                    bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+                    if (pointerOverUI)
+                    {
+                        CancelOperatorPlacement();
+                        return;
+                    }
+
                     isDraggingToDeploy = false;
                     ConfirmOperatorPlacement();
                     return;
@@ -1377,6 +1420,93 @@ namespace TrashTD.Core.GameLoop
             gameplayHudUI?.SetSelectedOperatorName(string.Empty, Vector3.zero);
         }
 
+        private int GetDeckSlotHotkey(Keyboard keyboard)
+        {
+            if (keyboard == null) return -1;
+
+            if (keyboard.digit1Key.wasPressedThisFrame || keyboard.numpad1Key.wasPressedThisFrame) return 0;
+            if (keyboard.digit2Key.wasPressedThisFrame || keyboard.numpad2Key.wasPressedThisFrame) return 1;
+            if (keyboard.digit3Key.wasPressedThisFrame || keyboard.numpad3Key.wasPressedThisFrame) return 2;
+            if (keyboard.digit4Key.wasPressedThisFrame || keyboard.numpad4Key.wasPressedThisFrame) return 3;
+            if (keyboard.digit5Key.wasPressedThisFrame || keyboard.numpad5Key.wasPressedThisFrame) return 4;
+            if (keyboard.digit6Key.wasPressedThisFrame || keyboard.numpad6Key.wasPressedThisFrame) return 5;
+            if (keyboard.digit7Key.wasPressedThisFrame || keyboard.numpad7Key.wasPressedThisFrame) return 6;
+            if (keyboard.digit8Key.wasPressedThisFrame || keyboard.numpad8Key.wasPressedThisFrame) return 7;
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1)) return 0;
+            if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2)) return 1;
+            if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3)) return 2;
+            if (Input.GetKeyDown(KeyCode.Alpha4) || Input.GetKeyDown(KeyCode.Keypad4)) return 3;
+            if (Input.GetKeyDown(KeyCode.Alpha5) || Input.GetKeyDown(KeyCode.Keypad5)) return 4;
+            if (Input.GetKeyDown(KeyCode.Alpha6) || Input.GetKeyDown(KeyCode.Keypad6)) return 5;
+            if (Input.GetKeyDown(KeyCode.Alpha7) || Input.GetKeyDown(KeyCode.Keypad7)) return 6;
+            if (Input.GetKeyDown(KeyCode.Alpha8) || Input.GetKeyDown(KeyCode.Keypad8)) return 7;
+#endif
+
+            return -1;
+        }
+
+        private void TryQuickDeployFromDeck(int slotIndex, Mouse mouse)
+        {
+            if (playerDeck == null || gridManager == null || operatorManager == null) return;
+            if (!IsSandbox && operatorManager.IsAtSquadLimit) return;
+
+            DraftCard card = playerDeck.GetCard(slotIndex);
+            if (card == null || card.operatorData == null) return;
+            if (card.cooldownRoundsRemaining > 0) return;
+
+            // Cursor must not be over UI (e.g. HUD, buttons)
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+
+            Vector2 mouseScreen = mouse != null ? mouse.position.ReadValue() : Vector2.zero;
+            if (!TryGetGridPosition(mouseScreen, out Vector2Int cursorGridPos)) return;
+            if (!gridManager.IsInBounds(cursorGridPos)) return;
+
+            GridCell targetCell = gridManager.GetCell(cursorGridPos);
+            if (targetCell == null) return;
+
+            // Tile must be deployable for this operator's position (Melee vs Ranged) and not occupied
+            if (!targetCell.CanDeploy(card.operatorData.position)) return;
+
+            // Clear previous visuals cleanly if replacing an active preview
+            if (isPlacementPreviewActive)
+            {
+                ClearPlacementPreviewVisuals();
+            }
+
+            // Deselect any selected operator on field
+            operatorManager.SelectOperator(null);
+            isOperatorRangePreviewActive = false;
+
+            // Highlight the selected deck slot in HUD
+            gameplayHudUI?.SetSelectedDeckSlot(slotIndex);
+
+            // Put operator on the tile and enter Phase 2 (facing sweep)
+            pendingDeployCard = card;
+            placementGridPosition = cursorGridPos;
+            sweepAnchorWorldPosition = targetCell.WorldPosition;
+            placementFacing = OperatorFacing.Right;
+            isPlacementPreviewActive = true;
+            isDraggingToDeploy = true;
+            lastQuickDeployFrame = Time.frameCount;
+
+            // Calculate initial facing from displacement if cursor is slightly away from tile center
+            Camera gameCamera = Camera.main;
+            if (gameCamera != null && mouse != null)
+            {
+                Vector3 mouseWorld = gameCamera.ScreenToWorldPoint(new Vector3(mouseScreen.x, mouseScreen.y, -gameCamera.transform.position.z));
+                Vector2 displacement = (Vector2)(mouseWorld - sweepAnchorWorldPosition);
+                float minSweepDist = gridManager.CellSize * 0.20f;
+                if (displacement.sqrMagnitude >= minSweepDist * minSweepDist)
+                {
+                    placementFacing = CalculateFacingFromDisplacement(displacement, placementFacing);
+                }
+            }
+
+            RefreshPlacementPreview();
+        }
+
         private OperatorFacing GetFacingInput(Keyboard keyboard)
         {
             if (keyboard == null) return placementFacing;
@@ -1647,6 +1777,7 @@ namespace TrashTD.Core.GameLoop
             isOperatorRangePreviewActive = false;
             ClearPlacementPreviewVisuals();
             gameplayHudUI?.SetPlacementControls(false);
+            gameplayHudUI?.SetSelectedDeckSlot(-1);
         }
     }
 }

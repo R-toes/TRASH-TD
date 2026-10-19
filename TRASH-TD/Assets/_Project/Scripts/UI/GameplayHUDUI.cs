@@ -2722,6 +2722,12 @@ namespace TrashTD.UI
             Debug.Log($"[Deck] Selected slot {index}: {card.operatorData.operatorName} ({card.rarity}) - click or drag to a valid tile to deploy.");
         }
 
+        public void SetSelectedDeckSlot(int index)
+        {
+            selectedDeckSlot = index;
+            UpdateDeckSelectionVisuals();
+        }
+
         // ============================
         // Actions
         // ============================
