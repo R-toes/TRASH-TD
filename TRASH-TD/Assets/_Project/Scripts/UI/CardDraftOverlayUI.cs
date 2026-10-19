@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -1894,19 +1895,34 @@ namespace TrashTD.UI
             panelBorder.effectDistance = new Vector2(2f, -2f);
 
             var title = MakeText(panel.transform, "Title", "DEVELOPER PICKER", 26,
-                TextAnchor.MiddleLeft, new Color(0.82f, 0.65f, 1f, 1f));
+                TextAnchor.MiddleCenter, new Color(0.82f, 0.65f, 1f, 1f));
             title.fontStyle = FontStyle.Bold;
-            PositionRT(title, new Vector2(28f, -22f), new Vector2(0f, 1f), new Vector2(570f, 48f));
+            var titleRect = title.GetComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0.5f, 1f);
+            titleRect.anchorMax = new Vector2(0.5f, 1f);
+            titleRect.pivot = new Vector2(0.5f, 1f);
+            titleRect.anchoredPosition = new Vector2(0f, -20f);
+            titleRect.sizeDelta = new Vector2(480f, 38f);
 
             var closeButton = MakeButton(panel.transform, "CloseButton", "CLOSE",
-                new Vector2(120f, 44f), GameplayHUDUI.ButtonContainerType.Danger, "icon_close");
-            PositionRT(closeButton, new Vector2(-24f, -24f), new Vector2(1f, 1f), new Vector2(120f, 44f));
+                new Vector2(110f, 40f), GameplayHUDUI.ButtonContainerType.Danger, "icon_close");
+            var closeRect = closeButton.GetComponent<RectTransform>();
+            closeRect.anchorMin = new Vector2(1f, 1f);
+            closeRect.anchorMax = new Vector2(1f, 1f);
+            closeRect.pivot = new Vector2(1f, 1f);
+            closeRect.anchoredPosition = new Vector2(-20f, -18f);
+            closeRect.sizeDelta = new Vector2(110f, 40f);
             closeButton.onClick.AddListener(() => developerPickerRoot.SetActive(false));
             AttachFeedback(closeButton, Color.white, 1.04f);
 
             var hint = MakeText(panel.transform, "Hint", "Choose an operator from this stage's draft pool.",
-                14, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
-            PositionRT(hint, new Vector2(28f, -76f), new Vector2(0f, 1f), new Vector2(700f, 30f));
+                14, TextAnchor.MiddleCenter, STAT_LABEL_COLOR);
+            var hintRect = hint.GetComponent<RectTransform>();
+            hintRect.anchorMin = new Vector2(0.5f, 1f);
+            hintRect.anchorMax = new Vector2(0.5f, 1f);
+            hintRect.pivot = new Vector2(0.5f, 1f);
+            hintRect.anchoredPosition = new Vector2(0f, -60f);
+            hintRect.sizeDelta = new Vector2(680f, 26f);
 
             var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
             viewport.transform.SetParent(panel.transform, false);
@@ -1914,7 +1930,7 @@ namespace TrashTD.UI
             viewportRect.anchorMin = new Vector2(0f, 0f);
             viewportRect.anchorMax = new Vector2(1f, 1f);
             viewportRect.offsetMin = new Vector2(20f, 20f);
-            viewportRect.offsetMax = new Vector2(-20f, -122f);
+            viewportRect.offsetMax = new Vector2(-20f, -96f);
             viewport.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.18f);
             viewport.GetComponent<Mask>().showMaskGraphic = true;
 
@@ -1963,10 +1979,16 @@ namespace TrashTD.UI
             int addedCount = 0;
             if (operators != null)
             {
-                for (int i = 0; i < operators.Count; i++)
+                var sortedOperators = operators
+                    .Where(op => op != null)
+                    .OrderBy(op => op.operatorClass)
+                    .ThenBy(op => (int)op.baseRarity)
+                    .ThenBy(op => op.operatorName)
+                    .ToList();
+
+                for (int i = 0; i < sortedOperators.Count; i++)
                 {
-                    OperatorData opData = operators[i];
-                    if (opData == null) continue;
+                    OperatorData opData = sortedOperators[i];
                     int stars = Mathf.Clamp((int)opData.baseRarity, 1, 5);
 
                     Button option = MakeButton(
