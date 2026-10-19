@@ -81,7 +81,10 @@ namespace TrashTD.UI
 
         private Sprite[] deckBgSprites;
         private Sprite[] topBarBgSprites;
-        // Bottom Right Panel BG frames: _0 = 1x, _1 = 2x, _2 = 3x speed (gauge needle green / yellow / red).
+        // Bottom Right Panel BG animations (1x, 2x, 3x speed animations, with legacy fallback).
+        private Sprite[] bottomRightBg1xSprites;
+        private Sprite[] bottomRightBg2xSprites;
+        private Sprite[] bottomRightBg3xSprites;
         private Sprite[] bottomRightBgSprites;
 
         private Canvas canvas;
@@ -195,12 +198,16 @@ namespace TrashTD.UI
         private int topBarBgAnimFrame;
         private float deckBgAnimTime;
         private int deckBgAnimFrame;
-        // Speed panel crossfade: the "from" image shows the previous gauge frame and the "to" image
-        // fades in over it, so switching speed sweeps the needle instead of popping.
+        // Speed panel animation and crossfade: each speed (1x, 2x, 3x) has its own animated sprite loop.
+        // When speed changes, "to" fades in over "from" for a smooth transition.
         private Image bottomRightBgFromImage;
         private Image bottomRightBgToImage;
-        private int bottomRightBgFrame = -1;
+        private int bottomRightBgFromSpeed = 0;
+        private int bottomRightBgToSpeed = 0;
         private float bottomRightBgFade = 1f;
+        private float bottomRightBgAnimTime;
+        private int bottomRightBgAnimFrame = -1;
+        private int currentSpeedSelectionIndex = -1;
         private CanvasGroup phaseBannerGroup;
         private RectTransform phaseBannerContent;
         private Text phaseBannerTitle;
@@ -267,9 +274,10 @@ namespace TrashTD.UI
             // Load the Deck BG sprite sheet frames from Resources at runtime.
             // The asset lives at Assets/Resources/UI/Deck BG.png (sprite mode: Multiple).
             deckBgSprites = Resources.LoadAll<Sprite>("UI/Deck BG");
-            bottomRightBgSprites = Resources.LoadAll<Sprite>("UI/Bottom Right Panel BG");
-            // LoadAll doesn't guarantee order; the frame index must match the speed.
-            System.Array.Sort(bottomRightBgSprites, (a, b) => string.CompareOrdinal(a.name, b.name));
+            bottomRightBg1xSprites = LoadAndSortSprites("UI/Bottom Right Panel BG 1x animation");
+            bottomRightBg2xSprites = LoadAndSortSprites("UI/Bottom Right Panel BG 2x animation");
+            bottomRightBg3xSprites = LoadAndSortSprites("UI/Bottom Right Panel BG 3x animation");
+            bottomRightBgSprites = LoadAndSortSprites("UI/Bottom Right Panel BG");
             BuildHud();
             if (canvas != null && pausePanel != null)
             {
@@ -320,6 +328,14 @@ namespace TrashTD.UI
 
         private void Update()
         {
+            if (gameManager != null)
+            {
+                int currentSpeed = Mathf.Clamp(Mathf.RoundToInt(gameManager.GameSpeed) - 1, 0, 2);
+                if (currentSpeed != currentSpeedSelectionIndex)
+                {
+                    UpdateSpeedSelection(gameManager.GameSpeed);
+                }
+            }
             RefreshCounters();
             RefreshSelectedOperatorInfo();
             UpdateAnimations(Time.unscaledDeltaTime, Time.unscaledTime);
@@ -1285,7 +1301,7 @@ namespace TrashTD.UI
             SetPosition(panel.GetComponent<RectTransform>(), Vector2.zero, new Vector2(1f, 0f),
                 new Vector2(BottomRightPanelWidthPx * pxScale, BottomRightPanelHeightPx * pxScale), new Vector2(1f, 0f));
 
-            if (bottomRightBgSprites != null && bottomRightBgSprites.Length > 0)
+            if (HasAnyBottomRightSprites())
             {
                 bottomRightBgFromImage = CreateBottomRightBgLayer(panel.transform, "BottomRightBgFrom");
                 bottomRightBgToImage = CreateBottomRightBgLayer(panel.transform, "BottomRightBgTo");
@@ -1359,32 +1375,106 @@ namespace TrashTD.UI
             return image;
         }
 
-        // Points the speed gauge at the frame for this speed. The first call snaps; later calls crossfade
-        // (driven by UpdateAnimations on unscaled time, so it looks the same at 1x, 3x or while paused).
-        private void SetBottomRightBgFrame(int frame)
+        // Sets the speed animation set (0 = 1x, 1 = 2x, 2 = 3x). The first call snaps; later calls crossfade
+        // smoothly over 0.2s while continuing the 12 fps animation loop on unscaled time.
+        private void SetBottomRightBgSpeed(int speedIndex)
         {
-            if (bottomRightBgToImage == null || bottomRightBgSprites == null || bottomRightBgSprites.Length == 0) return;
+            if (bottomRightBgToImage == null || !HasAnyBottomRightSprites()) return;
 
-            frame = Mathf.Clamp(frame, 0, bottomRightBgSprites.Length - 1);
-            if (frame == bottomRightBgFrame) return;
+            speedIndex = Mathf.Clamp(speedIndex, 0, 2);
+            if (bottomRightBgToSpeed == speedIndex && bottomRightBgFade >= 1f && bottomRightBgAnimFrame >= 0) return;
 
-            if (bottomRightBgFrame < 0)
+            if (bottomRightBgAnimFrame < 0)
             {
-                bottomRightBgFromImage.sprite = bottomRightBgSprites[frame];
+                bottomRightBgFromSpeed = speedIndex;
+                bottomRightBgToSpeed = speedIndex;
                 bottomRightBgFade = 1f;
+                bottomRightBgAnimFrame = 0;
+                Sprite initialSprite = GetBottomRightSprite(speedIndex, 0);
+                if (initialSprite != null)
+                {
+                    if (bottomRightBgFromImage != null)
+                    {
+                        bottomRightBgFromImage.sprite = initialSprite;
+                        SetImageAlpha(bottomRightBgFromImage, 1f);
+                    }
+                    if (bottomRightBgToImage != null)
+                    {
+                        bottomRightBgToImage.sprite = initialSprite;
+                        SetImageAlpha(bottomRightBgToImage, 1f);
+                    }
+                }
             }
             else
             {
-                // Mid-fade, start from whichever frame is currently more visible.
-                bottomRightBgFromImage.sprite = bottomRightBgFade >= 0.5f
-                    ? bottomRightBgToImage.sprite
-                    : bottomRightBgFromImage.sprite;
+                // Mid-fade, start from whichever speed is currently more visible.
+                bottomRightBgFromSpeed = bottomRightBgFade >= 0.5f
+                    ? bottomRightBgToSpeed
+                    : bottomRightBgFromSpeed;
+                bottomRightBgToSpeed = speedIndex;
                 bottomRightBgFade = 0f;
+                if (bottomRightBgToImage != null)
+                {
+                    SetImageAlpha(bottomRightBgToImage, 0f);
+                }
+            }
+        }
+
+        private Sprite GetBottomRightSprite(int speedIndex, int animIndex)
+        {
+            Sprite[] set = speedIndex switch
+            {
+                0 => bottomRightBg1xSprites,
+                1 => bottomRightBg2xSprites,
+                2 => bottomRightBg3xSprites,
+                _ => null
+            };
+
+            if (set != null && set.Length > 0)
+            {
+                return set[animIndex % set.Length];
             }
 
-            bottomRightBgFrame = frame;
-            bottomRightBgToImage.sprite = bottomRightBgSprites[frame];
-            SetImageAlpha(bottomRightBgToImage, bottomRightBgFade);
+            if (bottomRightBgSprites != null && bottomRightBgSprites.Length > 0)
+            {
+                int frame = Mathf.Clamp(speedIndex, 0, bottomRightBgSprites.Length - 1);
+                return bottomRightBgSprites[frame];
+            }
+
+            return null;
+        }
+
+        private bool HasAnyBottomRightSprites()
+        {
+            return (bottomRightBg1xSprites != null && bottomRightBg1xSprites.Length > 0) ||
+                   (bottomRightBg2xSprites != null && bottomRightBg2xSprites.Length > 0) ||
+                   (bottomRightBg3xSprites != null && bottomRightBg3xSprites.Length > 0) ||
+                   (bottomRightBgSprites != null && bottomRightBgSprites.Length > 0);
+        }
+
+        private static Sprite[] LoadAndSortSprites(string resourcePath)
+        {
+            Sprite[] sprites = Resources.LoadAll<Sprite>(resourcePath);
+            if (sprites != null && sprites.Length > 1)
+            {
+                System.Array.Sort(sprites, (a, b) =>
+                {
+                    if (a == null && b == null) return 0;
+                    if (a == null) return -1;
+                    if (b == null) return 1;
+                    return GetSpriteIndex(a).CompareTo(GetSpriteIndex(b));
+                });
+            }
+            return sprites;
+        }
+
+        private static int GetSpriteIndex(Sprite s)
+        {
+            if (s == null) return 0;
+            int idx = s.name.LastIndexOf('_');
+            if (idx >= 0 && int.TryParse(s.name.Substring(idx + 1), out int num))
+                return num;
+            return 0;
         }
 
         private static void SetImageAlpha(Image image, float alpha)
@@ -1514,7 +1604,8 @@ namespace TrashTD.UI
             if (speedButtons == null) return;
 
             int selectedIndex = Mathf.Clamp(Mathf.RoundToInt(speed) - 1, 0, speedButtons.Length - 1);
-            SetBottomRightBgFrame(selectedIndex);
+            currentSpeedSelectionIndex = selectedIndex;
+            SetBottomRightBgSpeed(selectedIndex);
             for (int i = 0; i < speedButtons.Length; i++)
             {
                 bool selected = i == selectedIndex;
@@ -2880,12 +2971,42 @@ namespace TrashTD.UI
                 }
             }
 
-            // Speed gauge crossfade (~0.2s)
-            if (bottomRightBgToImage != null && bottomRightBgFade < 1f)
+            // Bottom Right Panel animated sprite-sheet and speed crossfade
+            if (bottomRightBgToImage != null && HasAnyBottomRightSprites())
             {
-                const float speedGaugeFadeDuration = 0.2f;
-                bottomRightBgFade = Mathf.Min(1f, bottomRightBgFade + dt / speedGaugeFadeDuration);
-                SetImageAlpha(bottomRightBgToImage, Mathf.SmoothStep(0f, 1f, bottomRightBgFade));
+                const float bottomRightBgFps = 12f;
+                bottomRightBgAnimTime += dt;
+                int animIndex = Mathf.FloorToInt(bottomRightBgAnimTime * bottomRightBgFps);
+                bottomRightBgAnimFrame = animIndex;
+
+                if (bottomRightBgFade < 1f)
+                {
+                    const float speedGaugeFadeDuration = 0.2f;
+                    bottomRightBgFade = Mathf.Min(1f, bottomRightBgFade + dt / speedGaugeFadeDuration);
+                    SetImageAlpha(bottomRightBgToImage, Mathf.SmoothStep(0f, 1f, bottomRightBgFade));
+                }
+
+                Sprite toSprite = GetBottomRightSprite(bottomRightBgToSpeed, animIndex);
+                if (toSprite != null)
+                {
+                    bottomRightBgToImage.sprite = toSprite;
+                }
+
+                if (bottomRightBgFromImage != null)
+                {
+                    if (bottomRightBgFade < 1f)
+                    {
+                        Sprite fromSprite = GetBottomRightSprite(bottomRightBgFromSpeed, animIndex);
+                        if (fromSprite != null)
+                        {
+                            bottomRightBgFromImage.sprite = fromSprite;
+                        }
+                    }
+                    else if (toSprite != null)
+                    {
+                        bottomRightBgFromImage.sprite = toSprite;
+                    }
+                }
             }
 
             // Phase color follows the current phase (text + wave progress strip)
