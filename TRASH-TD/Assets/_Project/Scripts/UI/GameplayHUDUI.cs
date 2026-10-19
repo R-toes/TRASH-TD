@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -220,6 +221,9 @@ namespace TrashTD.UI
         private Coroutine cooldownToastRoutine;
         private CanvasGroup pauseGroup;
         private RectTransform pauseCard;
+        private AudioSettingsUI audioSettingsUI;
+        private CardDraftOverlayUI draftOverlayUI;
+        private int lastEscapeHandledFrame = -1;
 
         // Animation state
         private AudioSource sfxSource;
@@ -251,6 +255,7 @@ namespace TrashTD.UI
         private void Awake()
         {
             draftSystem = FindFirstObjectByType<CardDraftSystem>();
+            draftOverlayUI = FindFirstObjectByType<CardDraftOverlayUI>();
             waveManager = FindFirstObjectByType<WaveManager>();
             enemyManager = FindFirstObjectByType<EnemyManager>();
             gameManager = FindFirstObjectByType<GameManager>();
@@ -284,7 +289,7 @@ namespace TrashTD.UI
                 Transform pauseCard = pausePanel.transform.Find("PauseCard");
                 if (pauseCard != null)
                 {
-                    AudioSettingsUI.Create(
+                    audioSettingsUI = AudioSettingsUI.Create(
                         canvas.transform,
                         pauseCard,
                         button => StyleButton(button, DarkButton, TextDim, 1.05f),
@@ -328,6 +333,7 @@ namespace TrashTD.UI
 
         private void Update()
         {
+            HandleKeyboardInput();
             if (gameManager != null)
             {
                 int currentSpeed = Mathf.Clamp(Mathf.RoundToInt(gameManager.GameSpeed) - 1, 0, 2);
@@ -2764,6 +2770,85 @@ namespace TrashTD.UI
                 startWaveButtonText.text = active ? "END\nWAVE" : "START\nWAVE";
         }
 
+        public bool IsPaused => (pausePanel != null && pausePanel.activeSelf) || (gameManager != null && gameManager.CurrentState == GamePlayState.Paused);
+        public bool HasConsumedEscapeThisFrame => Time.frameCount == lastEscapeHandledFrame;
+
+        public void ConsumeEscapeKey()
+        {
+            lastEscapeHandledFrame = Time.frameCount;
+        }
+
+        public void TogglePause()
+        {
+            if (gameManager == null) return;
+            if (gameManager.CurrentState == GamePlayState.Paused)
+                ResumeGame();
+            else if (gameManager.CurrentState == GamePlayState.Playing)
+                PauseGame();
+        }
+
+        public void HandleEscapeKey()
+        {
+            if (Time.frameCount == lastEscapeHandledFrame) return;
+            lastEscapeHandledFrame = Time.frameCount;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (draftOverlayUI != null && draftOverlayUI.IsDeveloperPickerOpen)
+            {
+                draftOverlayUI.CloseDeveloperPicker();
+                return;
+            }
+#endif
+
+            if (audioSettingsUI != null && audioSettingsUI.IsOpen)
+            {
+                audioSettingsUI.Close();
+                return;
+            }
+
+            if (IsPaused)
+            {
+                ResumeGame();
+                return;
+            }
+
+            if (discardConfirmationPanel != null && discardConfirmationPanel.activeSelf)
+            {
+                CancelDiscard();
+                return;
+            }
+
+            if (environmentBriefingPanel != null && environmentBriefingPanel.activeSelf)
+            {
+                DismissEnvironmentBriefing();
+                return;
+            }
+
+            if (stageBootstrapper != null && stageBootstrapper.IsPlacementOrSelectionActive())
+            {
+                stageBootstrapper.CancelPlacementOrSelection();
+                return;
+            }
+
+            if (gameManager != null && gameManager.CurrentState == GamePlayState.Playing)
+            {
+                PauseGame();
+            }
+        }
+
+        private void HandleKeyboardInput()
+        {
+            var keyboard = Keyboard.current;
+            bool escapePressed = keyboard != null && keyboard.escapeKey.wasPressedThisFrame;
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (!escapePressed && Input.GetKeyDown(KeyCode.Escape)) escapePressed = true;
+#endif
+            if (escapePressed)
+            {
+                HandleEscapeKey();
+            }
+        }
+
         private void PauseGame()
         {
             if (gameManager == null) return;
@@ -2775,6 +2860,10 @@ namespace TrashTD.UI
         private void ResumeGame()
         {
             if (gameManager == null) return;
+            if (audioSettingsUI != null && audioSettingsUI.IsOpen)
+            {
+                audioSettingsUI.Close();
+            }
             gameManager.ResumeGame();
             AudioManager.Instance?.PlaySfx(SfxId.GameplayResume);
             SetPauseVisible(false);

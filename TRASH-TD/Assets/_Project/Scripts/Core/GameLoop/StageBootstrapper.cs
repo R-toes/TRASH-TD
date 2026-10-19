@@ -690,6 +690,25 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
+        public bool IsPlacementOrSelectionActive()
+        {
+            return isPlacementPreviewActive || pendingDeployCard != null || isDraggingToDeploy ||
+                   (operatorManager != null && operatorManager.SelectedOperator != null);
+        }
+
+        public void CancelPlacementOrSelection()
+        {
+            if (isPlacementPreviewActive || pendingDeployCard != null || isDraggingToDeploy)
+            {
+                CancelOperatorPlacement();
+            }
+            else if (operatorManager != null && operatorManager.SelectedOperator != null)
+            {
+                operatorManager.SelectOperator(null);
+                ClearOperatorRangePreview();
+            }
+        }
+
         private void Update()
         {
             UpdateBackgroundAnimations();
@@ -713,18 +732,30 @@ namespace TrashTD.Core.GameLoop
             Keyboard keyboard = Keyboard.current;
             Mouse mouse = Mouse.current;
 
-            // Escape key cancels placement or deselects operator
+            // Escape key cancels placement or deselects operator, or delegates to GameplayHUDUI
             if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
             {
+                if (gameplayHudUI != null && gameplayHudUI.HasConsumedEscapeThisFrame)
+                {
+                    return;
+                }
+
                 if (isPlacementPreviewActive || pendingDeployCard != null || isDraggingToDeploy)
                 {
                     CancelOperatorPlacement();
+                    gameplayHudUI?.ConsumeEscapeKey();
                     return;
                 }
                 else if (operatorManager != null && operatorManager.SelectedOperator != null)
                 {
                     operatorManager.SelectOperator(null);
                     ClearOperatorRangePreview();
+                    gameplayHudUI?.ConsumeEscapeKey();
+                    return;
+                }
+                else if (gameplayHudUI != null)
+                {
+                    gameplayHudUI.HandleEscapeKey();
                     return;
                 }
             }

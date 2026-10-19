@@ -18,6 +18,8 @@ namespace TrashTD.Audio
         private Slider musicSlider;
         private Slider sfxSlider;
         public Button SettingsButton { get; private set; }
+        public bool IsOpen => panel != null && panel.activeSelf;
+        public void Close() => Hide();
 
         public static AudioSettingsUI Create(
             Transform canvasRoot,

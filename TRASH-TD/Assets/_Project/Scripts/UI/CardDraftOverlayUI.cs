@@ -349,6 +349,14 @@ namespace TrashTD.UI
             SceneManager.activeSceneChanged -= HandleActiveSceneChanged;
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public bool IsDeveloperPickerOpen => developerPickerRoot != null && developerPickerRoot.activeSelf;
+        public void CloseDeveloperPicker()
+        {
+            if (developerPickerRoot != null) developerPickerRoot.SetActive(false);
+        }
+#endif
+
         private void HandleKeyboardShortcuts()
         {
             if (gameplayHudUI != null && gameplayHudUI.IsEnvironmentBriefingActive) return;
@@ -357,8 +365,18 @@ namespace TrashTD.UI
             if (keyboard == null) return;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (developerPickerRoot != null && developerPickerRoot.activeSelf) return;
+            if (developerPickerRoot != null && developerPickerRoot.activeSelf)
+            {
+                if (keyboard.escapeKey.wasPressedThisFrame)
+                {
+                    developerPickerRoot.SetActive(false);
+                    gameplayHudUI?.ConsumeEscapeKey();
+                }
+                return;
+            }
 #endif
+
+            if (gameplayHudUI != null && gameplayHudUI.IsPaused) return;
 
             if (keyboard.digit1Key.wasPressedThisFrame) SelectCardByKey(0);
             if (keyboard.digit2Key.wasPressedThisFrame) SelectCardByKey(1);
