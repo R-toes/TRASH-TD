@@ -22,6 +22,8 @@ SFX/
 - **Missing files are fine.** Each sound marked *fallback* below plays an existing sound until you add its own. Everything else stays silent until a file exists.
 - **Repeats are throttled.** The same unit's sound won't restart within 0.08 s, and the same shared sound within 0.05 s, so 40 rushers or 5 burning operators don't stack into noise.
 - **Ambience** files loop. Make them seamless loops, 10–30 s. They fade in and out.
+- **Attack sounds stop when the impact plays.** If a unit has an `Impact` file, its still-running `Attack` sound is cut (quick 0.04 s fade) the moment the impact plays, so a long launch or charge-up never overlaps its own explosion. Melee swings that hit instantly are left alone.
+- **Volume per file:** see "Adjusting volume" below.
 - Folder names are the unit's in-game name with spaces and symbols removed ("Chi Paw" → `ChiPaw`, "Stag-ger" → `Stagger`). Renaming a unit means renaming its folder. Operators are grouped by their in-game class (Drawgoo is a Defender).
 
 ## Shared sounds
@@ -179,3 +181,16 @@ Every stage can have a background loop that plays under the music for the whole 
 - `Ambience_2`, `Ambience_3`, ... are allowed: one is picked at random when the stage starts.
 - The sandbox plays the ambience of the map it shows. Retrying a stage keeps the loop going.
 - A new stage only needs a `Stages/StageNN/` folder; no code changes.
+
+## Adjusting volume — `Audio/Resources/SfxVolumeSettings.asset`
+
+Unity's audio import settings have no volume, so per-file volume lives in one settings asset:
+
+1. In the Project window, select `Assets/_Project/Audio/Resources/SfxVolumeSettings`.
+2. In the Inspector, press **+** under **Clips** to add a row.
+3. Drag the audio file into **Clip** and set **Volume** (1 = as recorded, 0.5 = half).
+
+- Works for every sound effect: operators, enemies, UI, stage sounds. Not music or ambience.
+- Changes apply immediately, even while the game is running in Play mode (edits made in Play mode are kept).
+- Volume can only go down. To make a file louder than recorded, boost it in an audio editor.
+- Each variation (`Attack`, `Attack_2`, ...) is its own row.

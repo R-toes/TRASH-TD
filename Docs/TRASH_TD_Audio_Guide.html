@@ -78,24 +78,36 @@
   .toc li { break-inside: avoid; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12pt; }
   .small { font-size: 8.4pt; color: var(--dim); }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 9pt; margin: 6pt 0 10pt; }
+  .card {
+    border: 1px solid var(--line); border-radius: 5pt; padding: 7pt 9pt 8pt; break-inside: avoid;
+    background: #fff;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card h4 { margin: 0 0 1pt; font-size: 10.5pt; }
+  .card .path { font-family: Consolas, "Courier New", monospace; font-size: 8.2pt; color: var(--accent); margin-bottom: 5pt; word-break: break-all; }
+  .card pre { margin: 0 0 5pt; background: var(--soft); border: none; padding: 5pt 7pt; font-size: 8.6pt; }
+  .card .ex { font-size: 8.2pt; color: var(--dim); }
+  .card .ex code { font-size: 7.9pt; white-space: normal; word-break: break-all; }
 </style>
 </head>
 <body>
 
 <h1>TRASH TD — Audio Guide</h1>
 <div class="subtitle">How to add music and sound effects, where every file goes and what it must be called</div>
-<div class="meta">For everyone adding audio to the project. No code changes are needed for anything in sections 1–7.<br>
+<div class="meta">For everyone adding audio to the project. No code changes are needed for anything in sections 1–8.<br>
 Updated 2026-10-19 · The same lists live in <code>Assets/_Project/Audio/SFX_GUIDE.md</code></div>
 
 <ol class="toc">
   <li>Quick start</li>
   <li>Folder map</li>
+  <li>Every file name, by folder</li>
   <li>Naming and file rules</li>
   <li>Music and stage ambience</li>
   <li>Shared sound effects</li>
   <li>Operator sounds</li>
   <li>Enemy sounds</li>
-  <li>Unity import settings</li>
+  <li>Unity import settings and volume</li>
   <li>Testing your sounds</li>
   <li>Committing</li>
   <li>Troubleshooting</li>
@@ -104,13 +116,13 @@ Updated 2026-10-19 · The same lists live in <code>Assets/_Project/Audio/SFX_GUI
 
 <h2>1. Quick start</h2>
 <ol class="steps">
-  <li><b>Find the sound you want to add</b> in the tables in sections 4–7. Each row gives the folder and the exact file name.</li>
+  <li><b>Find the sound you want to add</b> in section 3 (every file name) or the tables in sections 5–8. Each row gives the folder and the exact file name.</li>
   <li><b>Drop the file into that folder</b> in the Unity Project window (or Explorer). Every audio path in this guide starts at
     <code>Assets/_Project/Audio/Resources/</code>. The folders already exist.</li>
   <li><b>Name it exactly as listed.</b> Only the name matters; the extension doesn't (<code>.wav</code>, <code>.mp3</code> or <code>.ogg</code>).
     Names are case-sensitive: <code>Attack</code>, not <code>attack</code>.</li>
   <li><b>Press Play.</b> The game finds the file by name. Nothing to drag into the Inspector, no code to change.</li>
-  <li><b>Commit the file and its <code>.meta</code></b> (section 10).</li>
+  <li><b>Commit the file and its <code>.meta</code></b> (section 11).</li>
 </ol>
 <div class="box">
   <p><b>Example.</b> To give Deadeye a rifle shot, save it as
@@ -134,7 +146,147 @@ Updated 2026-10-19 · The same lists live in <code>Assets/_Project/Audio/SFX_GUI
     └── Enemies/{Archetype}/{EnemyName}/    one folder per enemy</pre>
 <p>Never put a file loose in <code>SFX/</code> or <code>Music/</code> unless this guide says so. The game only looks in the folders listed.</p>
 
-<h2>3. Naming and file rules</h2>
+<div class="page-break"></div>
+<h2>3. Every file name, by folder</h2>
+<p>These are all the file names the game looks for. Add an extension when you save (<code>Attack.wav</code>, <code>Victory.mp3</code>);
+everything else must match exactly. Every path starts at <code>Assets/_Project/Audio/Resources/</code>. Sections 5–8 explain when each one plays.</p>
+
+<div class="cards">
+
+  <div class="card">
+    <h4>Operators</h4>
+    <div class="path">SFX/Operators/{Class}/{OperatorName}/</div>
+<pre>Deploy      placed on the field
+Attack      attack starts (Medics: each heal)
+Impact      attack lands
+Ability     special skill triggers
+Death       dies</pre>
+    <div class="ex">Example: <code>SFX/Operators/Sniper/Basurocket/Attack.wav</code>, <code>…/Basurocket/Impact.mp3</code></div>
+  </div>
+
+  <div class="card">
+    <h4>Operator extra abilities</h4>
+    <div class="path">only in these operators' folders</div>
+<pre>Guard/Shadeslice   Ability_Regen
+Guard/Stagger      Ability_Dodge
+                   Ability_Empowered
+Caster/Chillpath   Ability_Freeze
+                   Ability_ExtraHit</pre>
+    <div class="ex">Example: <code>SFX/Operators/Guard/Stagger/Ability_Dodge.wav</code>. Each falls back to that operator's plain <code>Ability</code>.</div>
+  </div>
+
+  <div class="card">
+    <h4>Enemies</h4>
+    <div class="path">SFX/Enemies/{Archetype}/{EnemyName}/</div>
+<pre>Attack      attack starts
+Impact      projectile lands (ranged enemies)
+Death       dies</pre>
+    <div class="ex">Example: <code>SFX/Enemies/Tank/SandHulk/Attack.wav</code>, <code>SFX/Enemies/Flyer/Skyshard/Impact.wav</code></div>
+  </div>
+
+  <div class="card">
+    <h4>Music</h4>
+    <div class="path">Music/</div>
+<pre>MainMenuMusic
+GameplayMusic
+Stages/Stage01     … one per stage …
+Stages/Stage06</pre>
+    <div class="ex">Example: <code>Music/Stages/Stage04.ogg</code> plays on Stage 4.</div>
+  </div>
+
+  <div class="card wide">
+    <h4>All operator and enemy folders</h4>
+    <div class="path">SFX/Operators/… and SFX/Enemies/… (all already exist)</div>
+<pre>Operators/Guard/ChiPaw          Operators/Sniper/Basurocket       Enemies/Grunt/SludgeGrunt
+Operators/Guard/Echosquire      Operators/Sniper/Deadeye          Enemies/Grunt/SandPlastic
+Operators/Guard/Ignisaur        Operators/Sniper/Proxishot        Enemies/Rusher/ToxicRusher
+Operators/Guard/Scrapper        Operators/Caster/Castiel          Enemies/Tank/PollutionTank
+Operators/Guard/Shadeslice      Operators/Caster/Chillpath        Enemies/Tank/SandHulk
+Operators/Guard/Stagger         Operators/Caster/Pyrolite         Enemies/Caster/SandPoncho
+Operators/Defender/Bulkhead     Operators/Medic/Bubblets          Enemies/Caster/SmogCaster
+Operators/Defender/Drawgoo      Operators/Medic/Coalesce          Enemies/Flyer/TalonRat
+Operators/Defender/Mossmo       Operators/Medic/Progeny           Enemies/Flyer/Skyshard
+Operators/Defender/Thornchin                                      Enemies/Flyer/AcidFlyer</pre>
+  </div>
+
+  <div class="card">
+    <h4>UI</h4>
+    <div class="path">SFX/UI/</div>
+<pre>ButtonHover
+ButtonClick
+ButtonBack
+ButtonConfirm
+ButtonDenied
+CardShuffle
+CardDeal
+CardFlip
+Reroll
+CardDiscard</pre>
+    <div class="ex">Example: <code>SFX/UI/CardFlip.wav</code></div>
+  </div>
+
+  <div class="card">
+    <h4>Gameplay</h4>
+    <div class="path">SFX/Gameplay/</div>
+<pre>Deploy
+Retreat
+OperatorDeath
+EnemyDeath
+WaveStart
+WaveCleared
+LifeLost
+Victory
+Defeat
+Pause
+Resume
+CardUpgrade</pre>
+    <div class="ex">Example: <code>SFX/Gameplay/Victory.mp3</code></div>
+  </div>
+
+  <div class="card">
+    <h4>Combat</h4>
+    <div class="path">SFX/Combat/</div>
+<pre>MeleeAttack
+RangedPhysicalAttack
+MagicAttack
+Stun
+Miss</pre>
+    <div class="ex">Example: <code>SFX/Combat/Stun.wav</code></div>
+  </div>
+
+  <div class="card">
+    <h4>Tiles</h4>
+    <div class="path">SFX/Tiles/</div>
+<pre>TrapTick
+HoleEnter
+HoleExit</pre>
+    <div class="ex">Example: <code>SFX/Tiles/HoleEnter.wav</code></div>
+  </div>
+
+  <div class="card wide">
+    <h4>Stages</h4>
+    <div class="path">SFX/Stages/StageNN/</div>
+<pre>Stage01/   Ambience
+Stage02/   Ambience   ItemFall   ItemLandGlass   ItemLandMetal   ItemLandTools
+Stage03/   Ambience
+Stage04/   Ambience   HeatUp     Ignite          BurnTick        Extinguish
+Stage05/   Ambience   CarPass    CarHit
+Stage06/   Ambience   AcidTick</pre>
+    <div class="ex">Example: <code>SFX/Stages/Stage05/CarHit.wav</code>, <code>SFX/Stages/Stage03/Ambience.ogg</code></div>
+  </div>
+
+  <div class="card wide">
+    <h4>Variations (any of the names above)</h4>
+    <div class="path">same folder, add _2, _3, … to the name</div>
+<pre>Attack.wav      Attack_2.wav      Attack_3.wav          one is picked at random each time
+CarHit.wav      CarHit_2.wav
+Ability_Dodge.wav   Ability_Dodge_2.wav</pre>
+    <div class="ex">Music doesn't use variations.</div>
+  </div>
+
+</div>
+
+<h2>4. Naming and file rules</h2>
 <table>
   <thead><tr><th style="width:24%">Rule</th><th>Details</th></tr></thead>
   <tbody>
@@ -146,6 +298,8 @@ Updated 2026-10-19 · The same lists live in <code>Assets/_Project/Audio/SFX_GUI
     <tr><td><b>Missing files are fine</b></td><td>Sounds marked <span class="tag">fallback</span> play an existing sound until their own file is added. Everything else is silent until a file exists. Nothing breaks.</td></tr>
     <tr><td><b>Crowd control</b></td><td>The same unit's sound won't restart within 0.08 s, and the same shared sound within 0.05 s. 40 rushers attacking or 5 burning operators won't stack into noise, so you don't need to make sounds quieter for that.</td></tr>
     <tr><td><b>Enemy volume</b></td><td>Enemy sounds play at 70% (deaths at 80%) since many more enemies are on screen. Master them at the same loudness as operator sounds.</td></tr>
+    <tr><td><b>Attack stops on impact</b></td><td>If a unit has an <code>Impact</code> file, its still-running <code>Attack</code> sound is cut (a quick 0.04 s fade) the moment the impact plays, so a long launch or charge-up never overlaps its own explosion. Melee swings that hit instantly are left alone. Long attack sounds are fine.</td></tr>
+    <tr><td><b>Volume per file</b></td><td>Set in <code>SfxVolumeSettings</code>; see section 9.</td></tr>
     <tr><td><b>Loops</b></td><td>Music and the <code>Ambience</code> files loop. Make them seamless (no silence at the start or end). Ambience fades in and out automatically.</td></tr>
     <tr><td><b>Unit folder names</b></td><td>The unit's in-game name with spaces and symbols removed: "Chi Paw" → <code>ChiPaw</code>, "Stag-ger" → <code>Stagger</code>. If a unit is renamed, its folder must be renamed too.</td></tr>
     <tr><td><b>Unit class</b></td><td>Operators are grouped by their in-game class, not their asset name: Drawgoo lives in <code>Defender/</code>.</td></tr>
@@ -153,7 +307,7 @@ Updated 2026-10-19 · The same lists live in <code>Assets/_Project/Audio/SFX_GUI
 </table>
 
 <div class="page-break"></div>
-<h2>4. Music and stage ambience</h2>
+<h2>5. Music and stage ambience</h2>
 <h3>Music</h3>
 <p>Folder: <code>Assets/_Project/Audio/Resources/Music/</code></p>
 <table>
@@ -197,7 +351,7 @@ Updated 2026-10-19 · The same lists live in <code>Assets/_Project/Audio/SFX_GUI
   <li>The sandbox plays the ambience of the map it shows. Retrying a stage keeps the loop going.</li>
 </ul>
 
-<h2>5. Shared sound effects</h2>
+<h2>6. Shared sound effects</h2>
 <p>All under <code>Assets/_Project/Audio/Resources/SFX/</code>. <span class="ok">exists</span> means a file is already there; you can replace it with a better one using the same name.</p>
 
 <h3>UI/</h3>
@@ -277,7 +431,7 @@ Updated 2026-10-19 · The same lists live in <code>Assets/_Project/Audio/SFX_GUI
 </table>
 
 <div class="page-break"></div>
-<h2>6. Operator sounds</h2>
+<h2>7. Operator sounds</h2>
 <p>Folder: <code>SFX/Operators/{Class}/{OperatorName}/</code>. Every operator folder can hold these files:</p>
 <table>
   <thead><tr><th style="width:22%">File</th><th>When it plays</th></tr></thead>
@@ -317,7 +471,7 @@ Updated 2026-10-19 · The same lists live in <code>Assets/_Project/Audio/SFX_GUI
 </table>
 <p class="small">The Attack and Impact columns describe what the sound should be. Every operator also takes <code>Deploy</code> and <code>Death</code>.</p>
 
-<h2>7. Enemy sounds</h2>
+<h2>8. Enemy sounds</h2>
 <p>Folder: <code>SFX/Enemies/{Archetype}/{EnemyName}/</code>. Files: <code>Attack</code> (attack starts), <code>Impact</code> (its projectile lands, ranged enemies only) and
 <code>Death</code> <span class="tag">fallback: Gameplay/EnemyDeath</span>. Enemies have no shared attack fallback, so they stay silent until their own <code>Attack</code> exists.</p>
 <table>
@@ -337,7 +491,7 @@ Updated 2026-10-19 · The same lists live in <code>Assets/_Project/Audio/SFX_GUI
 </table>
 
 <div class="page-break"></div>
-<h2>8. Unity import settings</h2>
+<h2>9. Unity import settings and volume</h2>
 <p>Unity imports audio with usable defaults, so this is optional. These settings keep memory low and avoid hitches. Select the file in the Project window and change them in the Inspector, then press <b>Apply</b>.</p>
 <table>
   <thead><tr><th style="width:24%">Kind of sound</th><th style="width:26%">Load Type</th><th>Other settings</th></tr></thead>
@@ -348,6 +502,22 @@ Updated 2026-10-19 · The same lists live in <code>Assets/_Project/Audio/SFX_GUI
     <tr><td>Music</td><td>Streaming</td><td>Keep stereo. Vorbis, quality around 70%.</td></tr>
   </tbody>
 </table>
+
+<h3>Adjusting the volume of a file</h3>
+<p>Unity's audio import settings have no volume, so per-file volume lives in one settings asset:
+<code>Assets/_Project/Audio/Resources/SfxVolumeSettings</code>.</p>
+<ol class="steps">
+  <li>Select <code>SfxVolumeSettings</code> in the Project window.</li>
+  <li>In the Inspector, press <b>+</b> under <b>Clips</b> to add a row.</li>
+  <li>Drag the audio file into <b>Clip</b> and set <b>Volume</b> (1 = as recorded, 0.5 = half).</li>
+</ol>
+<ul>
+  <li>Works for every sound effect: operators, enemies, UI and stage sounds. Not music or ambience.</li>
+  <li>Changes apply right away, even while the game runs in Play mode, and edits made in Play mode are kept.</li>
+  <li>Volume can only go down. To make a file louder than recorded, boost it in an audio editor.</li>
+  <li>Each variation (<code>Attack</code>, <code>Attack_2</code>, …) is its own row.</li>
+</ul>
+
 <h3>Recording and mastering tips</h3>
 <ul>
   <li>Trim silence from the start of every effect. Even 50 ms of lead-in makes a hit feel late.</li>
@@ -356,16 +526,16 @@ Updated 2026-10-19 · The same lists live in <code>Assets/_Project/Audio/SFX_GUI
   <li>Variations should differ in character (a different swing, a different crunch), not just volume.</li>
 </ul>
 
-<h2>9. Testing your sounds</h2>
+<h2>10. Testing your sounds</h2>
 <ol>
   <li>Open the gameplay scene and press Play. Pick the stage that uses your sound; in the sandbox stage you can deploy cards mid-wave and the squad limit is lifted.</li>
   <li>Trigger the moment from the tables: deploy the operator, let it attack, retreat it, let an enemy die, and so on.</li>
-  <li>If you hear the old sound or nothing, check section 11.</li>
+  <li>If you hear the old sound or nothing, check section 12.</li>
   <li>Check volume against what's around it: at 3× speed with a full wave, your sound should still be readable but not dominate.</li>
 </ol>
 <div class="box"><p>Files added while the game is running are picked up the next time you press Play.</p></div>
 
-<h2>10. Committing</h2>
+<h2>11. Committing</h2>
 <ul>
   <li>Commit <b>both</b> the audio file and the <code>.meta</code> file Unity creates next to it. Without the <code>.meta</code>, teammates' copies of Unity give it a new ID.</li>
   <li>Don't delete the <code>.keep</code> files in the folders; they keep empty folders in git.</li>
@@ -373,7 +543,7 @@ Updated 2026-10-19 · The same lists live in <code>Assets/_Project/Audio/SFX_GUI
   <li>Keep source files (project files, uncompressed multitrack recordings) out of the repo; only the final exports go into <code>Assets</code>.</li>
 </ul>
 
-<h2>11. Troubleshooting</h2>
+<h2>12. Troubleshooting</h2>
 <table>
   <thead><tr><th style="width:32%">Problem</th><th>Check</th></tr></thead>
   <tbody>
@@ -382,13 +552,13 @@ Updated 2026-10-19 · The same lists live in <code>Assets/_Project/Audio/SFX_GUI
     <tr><td>Wrong unit folder</td><td>The folder must match the unit's in-game name with spaces and symbols removed, under its in-game class. Drawgoo is <code>Defender/Drawgoo</code>.</td></tr>
     <tr><td>Only one of my variations ever plays</td><td>Variations must be named <code>Name_2</code>, <code>Name_3</code>, … with a number after the underscore.</td></tr>
     <tr><td>A loop clicks or has a gap</td><td>Trim the start/end to zero crossings, or crossfade the loop point in your editor. Check for leading silence added by MP3 encoding; use OGG or WAV for loops.</td></tr>
-    <tr><td>A sound is too loud or quiet</td><td>Adjust the file itself; the game's own volume settings apply on top (player SFX slider, 70% for enemies).</td></tr>
+    <tr><td>A sound is too loud or quiet</td><td>Lower it with a row in <code>SfxVolumeSettings</code> (section 9), or boost the file itself in an audio editor. The player's SFX slider and the 70% enemy level apply on top.</td></tr>
     <tr><td>The sound plays at the wrong moment</td><td>Check the file name against the table: <code>Attack</code> is the swing or shot, <code>Impact</code> is the hit landing.</td></tr>
   </tbody>
 </table>
 
 <div class="page-break"></div>
-<h2>12. For programmers: adding a new sound trigger</h2>
+<h2>13. For programmers: adding a new sound trigger</h2>
 <p>Everything above works by dropping files. A new <i>moment</i> that should make a sound needs a few lines of code. Code lives in
 <code>Scripts/Audio/AudioManager.cs</code> (shared sounds) and <code>Scripts/Audio/UnitSfx.cs</code> (unit sounds).</p>
 

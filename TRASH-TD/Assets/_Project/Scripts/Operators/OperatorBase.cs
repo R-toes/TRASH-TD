@@ -247,28 +247,60 @@ namespace TrashTD.Operators
         /// <summary>Attack sound: the operator's own Attack clip, else the shared one for its damage type.</summary>
         protected void PlayAttackSound()
         {
-            if (data == null || AudioManager.Instance == null) return;
-            if (UnitSfx.Play(data, UnitSfxEvent.Attack)) return;
+            if (data == null) return;
 
-            if (data.damageType == DamageType.Arts)
-            {
-                AudioManager.Instance.PlaySfx(SfxId.GameplayMagicAttack);
-            }
-            else if (data.position == OperatorPosition.Ranged)
-            {
-                AudioManager.Instance.PlaySfx(SfxId.GameplayRangedPhysicalAttack);
-            }
-            else
-            {
-                AudioManager.Instance.PlaySfx(SfxId.GameplayMeleeAttack);
-            }
+            SfxId fallback = data.damageType == DamageType.Arts ? SfxId.GameplayMagicAttack
+                : data.position == OperatorPosition.Ranged ? SfxId.GameplayRangedPhysicalAttack
+                : SfxId.GameplayMeleeAttack;
+            PlayAttackSound(fallback);
+        }
+
+        /// <summary>Attack sound: the operator's own Attack clip, else the given shared sound.</summary>
+        protected void PlayAttackSound(SfxId fallback)
+        {
+            if (data == null || AudioManager.Instance == null) return;
+
+            AudioSource voice;
+            if (!UnitSfx.Play(data, UnitSfxEvent.Attack, out voice))
+                voice = AudioManager.Instance.PlaySfx(fallback);
+            TrackAttackSound(voice);
         }
 
         /// <summary>
         /// The operator's own Impact clip (projectile landing, explosion), if it has one. Called whenever one of its
-        /// hits lands; repeats within a moment are throttled, so an AoE hit plays it once.
+        /// hits lands; repeats within a moment are throttled, so an AoE hit plays it once. When the impact plays, the
+        /// attack sound still running (a long launch or charge-up) is cut so the two don't overlap.
         /// </summary>
-        public void PlayImpactSound() => UnitSfx.Play(data, UnitSfxEvent.Impact);
+        public void PlayImpactSound()
+        {
+            if (UnitSfx.Play(data, UnitSfxEvent.Impact, out AudioSource impactVoice) && impactVoice != null)
+                CutAttackSound();
+        }
+
+        // Melee swings land in the same moment they start; an attack sound younger than this is left alone, or the
+        // swing would be silenced.
+        private const float MinAttackSoundBeforeCut = 0.1f;
+
+        private AudioSource attackVoice;
+        private AudioClip attackVoiceClip;
+        private float attackVoiceStartTime;
+
+        private void TrackAttackSound(AudioSource voice)
+        {
+            attackVoice = voice;
+            attackVoiceClip = voice != null ? voice.clip : null;
+            attackVoiceStartTime = Time.unscaledTime;
+        }
+
+        private void CutAttackSound()
+        {
+            if (attackVoice == null) return;
+
+            if (Time.unscaledTime - attackVoiceStartTime >= MinAttackSoundBeforeCut)
+                AudioManager.Instance?.StopSfx(attackVoice, attackVoiceClip);
+            attackVoice = null;
+            attackVoiceClip = null;
+        }
 
         /// <summary>The operator's own Ability clip, else the given shared sound (if any).</summary>
         protected void PlayAbilitySound(SfxId? fallback = null)

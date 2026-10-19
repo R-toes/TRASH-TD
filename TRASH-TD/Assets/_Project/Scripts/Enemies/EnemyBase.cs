@@ -569,11 +569,35 @@ namespace TrashTD.Enemies
         // Enemy sounds sit a little under operator sounds: there are many more enemies on screen.
         private const float EnemySfxVolume = 0.7f;
 
-        /// <summary>The enemy's own Attack clip (swing, shot, cast), if it has one.</summary>
-        protected void PlayAttackSound() => UnitSfx.Play(data, UnitSfxEvent.Attack, EnemySfxVolume);
+        // Melee hits land in the same moment the swing starts; an attack sound younger than this is left alone.
+        private const float MinAttackSoundBeforeCut = 0.1f;
 
-        /// <summary>The enemy's own Impact clip (its projectile landing), if it has one.</summary>
-        protected void PlayImpactSound() => UnitSfx.Play(data, UnitSfxEvent.Impact, EnemySfxVolume);
+        private AudioSource attackVoice;
+        private AudioClip attackVoiceClip;
+        private float attackVoiceStartTime;
+
+        /// <summary>The enemy's own Attack clip (swing, shot, cast), if it has one.</summary>
+        protected void PlayAttackSound()
+        {
+            UnitSfx.Play(data, UnitSfxEvent.Attack, out attackVoice, EnemySfxVolume);
+            attackVoiceClip = attackVoice != null ? attackVoice.clip : null;
+            attackVoiceStartTime = Time.unscaledTime;
+        }
+
+        /// <summary>
+        /// The enemy's own Impact clip (its projectile landing), if it has one. When it plays, the attack sound
+        /// still running is cut so the two don't overlap.
+        /// </summary>
+        protected void PlayImpactSound()
+        {
+            if (!UnitSfx.Play(data, UnitSfxEvent.Impact, out AudioSource impactVoice, EnemySfxVolume) || impactVoice == null) return;
+            if (attackVoice == null) return;
+
+            if (Time.unscaledTime - attackVoiceStartTime >= MinAttackSoundBeforeCut)
+                AudioManager.Instance?.StopSfx(attackVoice, attackVoiceClip);
+            attackVoice = null;
+            attackVoiceClip = null;
+        }
 
         private void AttackOperator(OperatorBase target)
         {

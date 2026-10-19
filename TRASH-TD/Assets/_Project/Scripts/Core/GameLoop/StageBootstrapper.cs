@@ -946,6 +946,8 @@ namespace TrashTD.Core.GameLoop
             dustVelocity.space = ParticleSystemSimulationSpace.World;
             dustVelocity.x = new ParticleSystem.MinMaxCurve(1.2f, 2f);
             dustVelocity.y = new ParticleSystem.MinMaxCurve(-0.08f, 0.08f);
+            // All three axes must use the same curve mode (two constants), or Unity errors.
+            dustVelocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
             ParticleSystemRenderer dustRenderer = dust.GetComponent<ParticleSystemRenderer>();
             dustRenderer.sharedMaterial = GetDustCloudMaterial();
             dustRenderer.sortingOrder = 8;

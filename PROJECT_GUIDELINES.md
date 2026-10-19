@@ -199,6 +199,7 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - Operators should call `PlayAttackSound()` / `PlayImpactSound()` so their own clips play, with the shared damage-type sound as fallback. Don't call `AudioManager.PlaySfx` directly for attacks without trying `UnitSfx.Play(data, UnitSfxEvent.Attack)` first. An enemy's `TryTakeAttackDamage(dmg, type, this)` plays the attacker's Impact. Pass `this`.
 - Special triggers call `PlayAbilitySound()`. When an operator has more than one trigger, use `PlayAbilitySound("Name")` (file `Ability_Name`, falls back to `Ability`).
 - Shared sounds are `SfxId` values mapped to files in `AudioManager.SfxPaths`, in `SFX/UI`, `Gameplay`, `Combat`, `Tiles` and `Stages/StageNN`. Add a new shared sound there, never as a loose file in `SFX/`. Stage ambience is `SFX/Stages/StageNN/Ambience` for any stage (`AudioManager.PlayStageAmbience`). Stage music is `Music/Stages/StageNN`, falling back to `Music/GameplayMusic` (`AudioManager.PlayStageMusic`).
+- Per-clip SFX volume is set in `Audio/Resources/SfxVolumeSettings.asset` (Inspector), applied in `AudioManager.PlaySfx`. Every sound plays on its own pooled voice; `PlaySfx` returns it so it can be stopped with `StopSfx`. An operator's/enemy's running Attack sound is cut when its Impact plays (not within 0.1 s, so melee swings survive).
 - Sounds tied to the game state (victory, defeat, wave cleared, card upgrade, deploy/retreat, deaths) are raised from events in `AudioManager`, not from UI code.
 
 ### 7.5 UI Kit

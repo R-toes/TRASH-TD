@@ -268,6 +268,8 @@ namespace TrashTD.Core.GameLoop
             velocity.space = ParticleSystemSimulationSpace.World;
             velocity.y = new ParticleSystem.MinMaxCurve(0.45f, 0.80f);
             velocity.x = new ParticleSystem.MinMaxCurve(-0.10f, 0.10f);
+            // All three axes must use the same curve mode (two constants), or Unity errors.
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
             // Organic turbulence noise: creates natural lazy drifting and wandering
             var noise = ps.noise;
@@ -461,6 +463,8 @@ namespace TrashTD.Core.GameLoop
                 velocity.space = ParticleSystemSimulationSpace.World;
                 velocity.y = new ParticleSystem.MinMaxCurve(0.35f, 0.65f);
                 velocity.x = new ParticleSystem.MinMaxCurve(-0.08f, 0.08f);
+                // All three axes must use the same curve mode (two constants), or Unity errors.
+                velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
                 var rot = ps.rotationOverLifetime;
                 rot.enabled = true;
@@ -557,6 +561,8 @@ namespace TrashTD.Core.GameLoop
             velocity.space = ParticleSystemSimulationSpace.World;
             velocity.y = new ParticleSystem.MinMaxCurve(0.35f, 0.7f);
             velocity.x = new ParticleSystem.MinMaxCurve(-0.1f, 0.1f);
+            // All three axes must use the same curve mode (two constants), or Unity errors.
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
             // Horizontal optical waver / turbulence
             var noise = ps.noise;

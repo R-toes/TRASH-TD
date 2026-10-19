@@ -84,11 +84,12 @@ namespace TrashTD.Audio
         private const float DefaultSfxVolume = 0.8f;
 
         // One-shots get their own source each, so a random pitch on one sound doesn't bend the others playing.
-        private const int SfxVoiceCount = 12;
+        private const int SfxVoiceCount = 24;
         // The same shared sound won't restart sooner than this (several burn/acid ticks in one frame play once).
         private const float MinSharedRepeatSeconds = 0.05f;
         private const float AmbienceFadeSpeed = 1.5f;
         private const float DefaultAmbienceLevel = 0.45f;
+        private const float StopFadeSeconds = 0.04f;
         // Every stage's ambience is SFX/Stages/StageNN/Ambience (see PlayStageAmbience).
         private const string StageAmbienceClipName = "Ambience";
 
@@ -151,8 +152,12 @@ namespace TrashTD.Audio
         [SerializeField, Range(0f, 1f)] private float sfxVolume = DefaultSfxVolume;
 
         private AudioSource musicSource;
+        // Each voice plays one sound at a time, so a sound can be stopped on its own (see StopSfx).
         private readonly List<AudioSource> sfxVoices = new List<AudioSource>();
+        private float[] voiceLevels;     // per-sound volume before the player's SFX volume
+        private bool[] voiceStopping;    // fading out after StopSfx
         private int nextVoice;
+        private SfxVolumeSettings volumeSettings;
         private readonly Dictionary<SfxId, float> sharedLastPlayed = new Dictionary<SfxId, float>();
         private AudioSource ambienceSource;
         private float ambienceLevel;
@@ -196,6 +201,9 @@ namespace TrashTD.Audio
                 voice.spatialBlend = 0f;
                 sfxVoices.Add(voice);
             }
+            voiceLevels = new float[SfxVoiceCount];
+            voiceStopping = new bool[SfxVoiceCount];
+            volumeSettings = Resources.Load<SfxVolumeSettings>(SfxVolumeSettings.ResourceName);
             ambienceSource = gameObject.AddComponent<AudioSource>();
             ambienceSource.loop = true;
             ambienceSource.playOnAwake = false;
@@ -216,14 +224,33 @@ namespace TrashTD.Audio
             HandleSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
         }
 
+        // Fades run on unscaled time, so they behave the same at any game speed or while paused.
         private void Update()
         {
-            // Ambience fades in/out on unscaled time, so it behaves the same at any game speed or while paused.
+            UpdateStoppingVoices();
+
             if (!ambienceSource.isPlaying) return;
 
             float target = sfxVolume * ambienceLevel;
             ambienceSource.volume = Mathf.MoveTowards(ambienceSource.volume, target, AmbienceFadeSpeed * Time.unscaledDeltaTime);
             if (ambienceLevel <= 0f && ambienceSource.volume <= 0f) ambienceSource.Stop();
+        }
+
+        private void UpdateStoppingVoices()
+        {
+            for (int i = 0; i < sfxVoices.Count; i++)
+            {
+                if (!voiceStopping[i]) continue;
+
+                AudioSource voice = sfxVoices[i];
+                float fullVolume = sfxVolume * voiceLevels[i];
+                voice.volume = Mathf.MoveTowards(voice.volume, 0f, fullVolume / StopFadeSeconds * Time.unscaledDeltaTime);
+                if (voice.volume <= 0f || !voice.isPlaying)
+                {
+                    voice.Stop();
+                    voiceStopping[i] = false;
+                }
+            }
         }
 
         private void OnDestroy()
@@ -288,28 +315,54 @@ namespace TrashTD.Audio
             return string.IsNullOrEmpty(stageId) ? null : stageId.Replace("STAGE_", "Stage");
         }
 
-        public void PlaySfx(SfxId id, float volume = 1f, float pitch = 1f)
+        /// <summary>Plays a shared sound. Returns the voice playing it (for StopSfx), or null if it has no file or was throttled.</summary>
+        public AudioSource PlaySfx(SfxId id, float volume = 1f, float pitch = 1f)
         {
             float now = Time.unscaledTime;
-            if (sharedLastPlayed.TryGetValue(id, out float last) && now - last < MinSharedRepeatSeconds) return;
+            if (sharedLastPlayed.TryGetValue(id, out float last) && now - last < MinSharedRepeatSeconds) return null;
             sharedLastPlayed[id] = now;
 
-            PlaySfx(GetClip(id), volume, pitch);
+            return PlaySfx(GetClip(id), volume, pitch);
         }
 
         /// <summary>Plays the sound if its file exists yet, otherwise the fallback (keeps placeholders audible).</summary>
-        public void PlaySfxOrFallback(SfxId id, SfxId fallback, float volume = 1f, float pitch = 1f)
+        public AudioSource PlaySfxOrFallback(SfxId id, SfxId fallback, float volume = 1f, float pitch = 1f)
         {
-            PlaySfx(GetClip(id) != null ? id : fallback, volume, pitch);
+            return PlaySfx(GetClip(id) != null ? id : fallback, volume, pitch);
         }
 
-        public void PlaySfx(AudioClip clip, float volume = 1f, float pitch = 1f)
+        /// <summary>
+        /// Plays a clip on its own voice, scaled by its row in SfxVolumeSettings (if any).
+        /// Returns the voice playing it (for StopSfx), or null if nothing played.
+        /// </summary>
+        public AudioSource PlaySfx(AudioClip clip, float volume = 1f, float pitch = 1f)
         {
-            if (clip == null || sfxVoices.Count == 0) return;
+            if (clip == null || sfxVoices.Count == 0) return null;
 
-            AudioSource voice = GetFreeVoice();
+            int index = GetFreeVoiceIndex();
+            AudioSource voice = sfxVoices[index];
+            float clipVolume = volumeSettings != null ? volumeSettings.GetVolume(clip) : 1f;
+            voiceLevels[index] = Mathf.Clamp01(volume) * clipVolume;
+            voiceStopping[index] = false;
+
+            voice.Stop();
+            voice.clip = clip;
             voice.pitch = pitch;
-            voice.PlayOneShot(clip, Mathf.Clamp01(volume));
+            voice.volume = sfxVolume * voiceLevels[index];
+            voice.Play();
+            return voice;
+        }
+
+        /// <summary>
+        /// Quickly fades out a sound started by PlaySfx (about 0.04 s, so it doesn't click). Does nothing if that voice
+        /// has finished or moved on to another clip.
+        /// </summary>
+        public void StopSfx(AudioSource voice, AudioClip clip)
+        {
+            if (voice == null || clip == null || !voice.isPlaying || voice.clip != clip) return;
+
+            int index = sfxVoices.IndexOf(voice);
+            if (index >= 0) voiceStopping[index] = true;
         }
 
         /// <summary>Starts a looping ambience (fades in), replacing any current one. A null clip fades ambience out.</summary>
@@ -358,27 +411,37 @@ namespace TrashTD.Audio
         private void ApplyVolumes()
         {
             if (musicSource != null) musicSource.volume = musicVolume;
-            foreach (AudioSource voice in sfxVoices)
-                if (voice != null) voice.volume = sfxVolume;
+            for (int i = 0; i < sfxVoices.Count; i++)
+                if (sfxVoices[i] != null && !voiceStopping[i]) sfxVoices[i].volume = sfxVolume * voiceLevels[i];
             if (ambienceSource != null) ambienceSource.volume = sfxVolume * ambienceLevel;
         }
 
-        private AudioSource GetFreeVoice()
+        private int GetFreeVoiceIndex()
         {
             for (int i = 0; i < sfxVoices.Count; i++)
             {
-                AudioSource voice = sfxVoices[(nextVoice + i) % sfxVoices.Count];
-                if (!voice.isPlaying)
+                int index = (nextVoice + i) % sfxVoices.Count;
+                if (!sfxVoices[index].isPlaying)
                 {
-                    nextVoice = (nextVoice + i + 1) % sfxVoices.Count;
-                    return voice;
+                    nextVoice = (index + 1) % sfxVoices.Count;
+                    return index;
                 }
             }
 
-            // All busy: share the next voice in turn (its pitch now applies to both sounds).
-            AudioSource shared = sfxVoices[nextVoice];
-            nextVoice = (nextVoice + 1) % sfxVoices.Count;
-            return shared;
+            // All busy: take over the voice closest to finishing its sound.
+            int stolen = 0;
+            float mostDone = -1f;
+            for (int i = 0; i < sfxVoices.Count; i++)
+            {
+                AudioSource voice = sfxVoices[i];
+                float done = voice.clip != null && voice.clip.length > 0f ? voice.time / voice.clip.length : 1f;
+                if (done > mostDone)
+                {
+                    mostDone = done;
+                    stolen = i;
+                }
+            }
+            return stolen;
         }
 
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)

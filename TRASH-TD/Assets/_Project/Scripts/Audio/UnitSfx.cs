@@ -65,13 +65,28 @@ namespace TrashTD.Audio
         /// <summary>Plays the operator's clip for the event. Returns false if it has none (throttled repeats count as played).</summary>
         public static bool Play(OperatorData data, UnitSfxEvent sfxEvent, float volume = 1f)
         {
-            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume);
+            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out _);
+        }
+
+        /// <summary>
+        /// As Play, also giving the voice now playing the clip (null if it was throttled), so the caller can stop it
+        /// early with AudioManager.StopSfx.
+        /// </summary>
+        public static bool Play(OperatorData data, UnitSfxEvent sfxEvent, out AudioSource voice, float volume = 1f)
+        {
+            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out voice);
         }
 
         /// <summary>Plays the enemy's clip for the event. Returns false if it has none (throttled repeats count as played).</summary>
         public static bool Play(EnemyData data, UnitSfxEvent sfxEvent, float volume = 1f)
         {
-            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume);
+            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out _);
+        }
+
+        /// <summary>As Play, also giving the voice now playing the clip (null if it was throttled).</summary>
+        public static bool Play(EnemyData data, UnitSfxEvent sfxEvent, out AudioSource voice, float volume = 1f)
+        {
+            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out voice);
         }
 
         /// <summary>
@@ -81,8 +96,8 @@ namespace TrashTD.Audio
         public static bool PlayAbility(OperatorData data, string abilityName, float volume = 1f)
         {
             string folder = GetFolder(data);
-            if (!string.IsNullOrEmpty(abilityName) && PlayFrom(folder, AbilityClipName(abilityName), volume)) return true;
-            return PlayFrom(folder, nameof(UnitSfxEvent.Ability), volume);
+            if (!string.IsNullOrEmpty(abilityName) && PlayFrom(folder, AbilityClipName(abilityName), volume, out _)) return true;
+            return PlayFrom(folder, nameof(UnitSfxEvent.Ability), volume, out _);
         }
 
         public static string AbilityClipName(string abilityName) => $"{nameof(UnitSfxEvent.Ability)}_{abilityName}";
@@ -111,8 +126,9 @@ namespace TrashTD.Audio
             return builder.Length > 0 ? builder.ToString() : "Unnamed";
         }
 
-        private static bool PlayFrom(string folder, string eventName, float volume)
+        private static bool PlayFrom(string folder, string eventName, float volume, out AudioSource voice)
         {
+            voice = null;
             List<AudioClip> clips = GetClips(folder, eventName);
             if (clips == null) return false;
 
@@ -123,7 +139,7 @@ namespace TrashTD.Audio
             LastPlayed[key] = now;
 
             AudioClip clip = clips[Random.Range(0, clips.Count)];
-            AudioManager.Instance?.PlaySfx(clip, volume, Random.Range(0.96f, 1.04f));
+            voice = AudioManager.Instance?.PlaySfx(clip, volume, Random.Range(0.96f, 1.04f));
             return true;
         }
 
