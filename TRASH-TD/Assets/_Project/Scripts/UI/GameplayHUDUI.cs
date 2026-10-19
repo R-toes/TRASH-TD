@@ -81,6 +81,8 @@ namespace TrashTD.UI
 
         private Sprite[] deckBgSprites;
         private Sprite[] topBarBgSprites;
+        // Bottom Right Panel BG frames: _0 = 1x, _1 = 2x, _2 = 3x speed (gauge needle green / yellow / red).
+        private Sprite[] bottomRightBgSprites;
 
         private Canvas canvas;
         private GameObject pausePanel;
@@ -193,6 +195,12 @@ namespace TrashTD.UI
         private int topBarBgAnimFrame;
         private float deckBgAnimTime;
         private int deckBgAnimFrame;
+        // Speed panel crossfade: the "from" image shows the previous gauge frame and the "to" image
+        // fades in over it, so switching speed sweeps the needle instead of popping.
+        private Image bottomRightBgFromImage;
+        private Image bottomRightBgToImage;
+        private int bottomRightBgFrame = -1;
+        private float bottomRightBgFade = 1f;
         private CanvasGroup phaseBannerGroup;
         private RectTransform phaseBannerContent;
         private Text phaseBannerTitle;
@@ -259,6 +267,9 @@ namespace TrashTD.UI
             // Load the Deck BG sprite sheet frames from Resources at runtime.
             // The asset lives at Assets/Resources/UI/Deck BG.png (sprite mode: Multiple).
             deckBgSprites = Resources.LoadAll<Sprite>("UI/Deck BG");
+            bottomRightBgSprites = Resources.LoadAll<Sprite>("UI/Bottom Right Panel BG");
+            // LoadAll doesn't guarantee order; the frame index must match the speed.
+            System.Array.Sort(bottomRightBgSprites, (a, b) => string.CompareOrdinal(a.name, b.name));
             BuildHud();
             if (canvas != null && pausePanel != null)
             {
@@ -360,7 +371,6 @@ namespace TrashTD.UI
             CreateDangerFlash(root);
             CreateTopBar(root);
             CreateDeckBar(root);
-            CreateSpeedBar(root);
             // Trash drop zone is created and parented inside CreateDeckBar to align with the deck background
             CreateDiscardConfirmationPanel(root);
             CreatePhaseBanner(root);
@@ -1256,52 +1266,62 @@ namespace TrashTD.UI
             }
 
             CreateTrashDropZone(bar.transform);
+            CreateBottomRightPanel(bar.transform, bgScale);
+        }
 
-            // Start Wave button
-            startWaveButton = CreateButton(bar.transform, "StartWaveButton", "START\nWAVE", new Vector2(160f, 100f), ButtonContainerType.Primary);
+        // Bottom Right Panel BG is 140x113 px per frame: a gauge housing on top (x = 47..139, y = 0..55 from
+        // the top) over a full-width base the same 57-58px height as the Deck BG, so it uses the deck's scale.
+        // It is parented to the deck bar so it slides in with it. Screens on the sprite (px, from the top-left):
+        //   speed screen  x = 51..138, y = 26..51  -> 1x / 2x / 3x buttons
+        //   left screen   x = 20..75,  y = 70..93  -> squad count
+        //   hazard screen x = 80..136, y = 64..101 -> Start Wave button
+        private const float BottomRightPanelWidthPx = 140f;
+        private const float BottomRightPanelHeightPx = 113f;
+
+        private void CreateBottomRightPanel(Transform deckBar, float pxScale)
+        {
+            var panel = new GameObject("BottomRightPanel", typeof(RectTransform));
+            panel.transform.SetParent(deckBar, false);
+            SetPosition(panel.GetComponent<RectTransform>(), Vector2.zero, new Vector2(1f, 0f),
+                new Vector2(BottomRightPanelWidthPx * pxScale, BottomRightPanelHeightPx * pxScale), new Vector2(1f, 0f));
+
+            if (bottomRightBgSprites != null && bottomRightBgSprites.Length > 0)
+            {
+                bottomRightBgFromImage = CreateBottomRightBgLayer(panel.transform, "BottomRightBgFrom");
+                bottomRightBgToImage = CreateBottomRightBgLayer(panel.transform, "BottomRightBgTo");
+            }
+            else
+            {
+                // Sprite missing: fall back to the kit's dark panel so the controls stay readable.
+                panel.AddComponent<Image>().raycastTarget = false;
+                ApplyPanelContainer(panel, PanelContainerType.Dark);
+            }
+
+            // Converts a point on the sprite (px from its top-left) to a position anchored at the panel's bottom-right.
+            Vector2 PanelPx(float x, float yFromTop) => new Vector2(
+                (x - BottomRightPanelWidthPx) * pxScale,
+                (BottomRightPanelHeightPx - yFromTop) * pxScale);
+
+            // Start Wave button fills the hazard-striped screen
+            startWaveButton = CreateButton(panel.transform, "StartWaveButton", "START\nWAVE", new Vector2(152f, 100f), ButtonContainerType.Primary);
             startWaveButtonText = startWaveButton.GetComponentInChildren<Text>();
-            var swbRect = startWaveButton.GetComponent<RectTransform>();
-            swbRect.anchorMin = new Vector2(1f, 0.5f);
-            swbRect.anchorMax = new Vector2(1f, 0.5f);
-            swbRect.anchoredPosition = new Vector2(-110f, 0f);
+            SetPosition(startWaveButton.GetComponent<RectTransform>(), PanelPx(108f, 82.5f), new Vector2(1f, 0f),
+                new Vector2(152f, 100f), new Vector2(0.5f, 0.5f));
             ApplyButtonContainer(startWaveButton, ButtonContainerType.Primary);
             startWaveButton.onClick.AddListener(StartWave);
             startWaveFeedback = AttachFeedback(startWaveButton, AccentColor, 1.06f, () => PlaySfx(clickClip, 1.1f));
 
-            squadCountText = CreateText(bar.transform, "SquadCountText", "SQUAD 0/8", 16, TextAnchor.MiddleRight);
-            RectTransform squadRect = squadCountText.GetComponent<RectTransform>();
-            squadRect.anchorMin = new Vector2(1f, 0.5f);
-            squadRect.anchorMax = new Vector2(1f, 0.5f);
-            squadRect.pivot = new Vector2(1f, 0.5f);
-            squadRect.sizeDelta = new Vector2(195f, 54f);
-            squadRect.anchoredPosition = new Vector2(-205f, 0f);
+            squadCountText = CreateText(panel.transform, "SquadCountText", "SQUAD 0/8", 16, TextAnchor.MiddleCenter);
+            SetPosition(squadCountText.GetComponent<RectTransform>(), PanelPx(47.5f, 81.5f), new Vector2(1f, 0f),
+                new Vector2(150f, 60f), new Vector2(0.5f, 0.5f));
             squadCountText.raycastTarget = false;
-        }
-
-        private void CreateSpeedBar(Transform root)
-        {
-            var bar = new GameObject("GameSpeedBar", typeof(RectTransform), typeof(Image));
-            bar.transform.SetParent(root, false);
-            var barRect = bar.GetComponent<RectTransform>();
-            // Sits just above the 170px deck bar so it never covers the Start Wave button.
-            SetPosition(barRect, new Vector2(-24f, 184f), new Vector2(1f, 0f), new Vector2(246f, 54f), new Vector2(1f, 0f));
-            ApplyPanelContainer(bar, PanelContainerType.Dark);
-
-            var outline = bar.AddComponent<Outline>();
-            outline.effectColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.35f);
-            outline.effectDistance = new Vector2(2f, -2f);
-
-            var title = CreateText(bar.transform, "SpeedTitle", "SPEED", 14, TextAnchor.MiddleCenter);
-            title.color = TextDim;
-            title.raycastTarget = false;
-            SetPosition(title.GetComponent<RectTransform>(), new Vector2(0f, 15f), new Vector2(0.5f, 1f), new Vector2(246f, 20f), new Vector2(0.5f, 1f));
 
             var buttonsRoot = new GameObject("SpeedButtons", typeof(RectTransform));
-            buttonsRoot.transform.SetParent(bar.transform, false);
+            buttonsRoot.transform.SetParent(panel.transform, false);
             var buttonsRect = buttonsRoot.GetComponent<RectTransform>();
-            SetPosition(buttonsRect, new Vector2(0f, -7f), new Vector2(0.5f, 0.5f), new Vector2(216f, 32f), new Vector2(0.5f, 0.5f));
+            SetPosition(buttonsRect, PanelPx(94.5f, 38.5f), new Vector2(1f, 0f), new Vector2(240f, 48f), new Vector2(0.5f, 0.5f));
             var layout = buttonsRoot.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 6f;
+            layout.spacing = 8f;
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.childControlWidth = false;
             layout.childControlHeight = false;
@@ -1313,7 +1333,7 @@ namespace TrashTD.UI
             for (int i = 0; i < speedButtons.Length; i++)
             {
                 float speed = i + 1;
-                var button = CreateButton(buttonsRoot.transform, $"Speed{speed:0}xButton", $"{speed:0}x", new Vector2(66f, 30f), ButtonContainerType.Dark);
+                var button = CreateButton(buttonsRoot.transform, $"Speed{speed:0}xButton", $"{speed:0}x", new Vector2(72f, 44f), ButtonContainerType.Dark);
                 int index = i;
                 button.onClick.AddListener(() => SetGameSpeed(index + 1));
                 speedButtons[i] = button;
@@ -1325,6 +1345,53 @@ namespace TrashTD.UI
             }
 
             UpdateSpeedSelection(gameManager != null ? gameManager.GameSpeed : 1f);
+        }
+
+        private static Image CreateBottomRightBgLayer(Transform parent, string objectName)
+        {
+            var layer = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+            layer.transform.SetParent(parent, false);
+            Stretch(layer.GetComponent<RectTransform>());
+            Image image = layer.GetComponent<Image>();
+            image.type = Image.Type.Simple;
+            image.preserveAspect = false;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        // Points the speed gauge at the frame for this speed. The first call snaps; later calls crossfade
+        // (driven by UpdateAnimations on unscaled time, so it looks the same at 1x, 3x or while paused).
+        private void SetBottomRightBgFrame(int frame)
+        {
+            if (bottomRightBgToImage == null || bottomRightBgSprites == null || bottomRightBgSprites.Length == 0) return;
+
+            frame = Mathf.Clamp(frame, 0, bottomRightBgSprites.Length - 1);
+            if (frame == bottomRightBgFrame) return;
+
+            if (bottomRightBgFrame < 0)
+            {
+                bottomRightBgFromImage.sprite = bottomRightBgSprites[frame];
+                bottomRightBgFade = 1f;
+            }
+            else
+            {
+                // Mid-fade, start from whichever frame is currently more visible.
+                bottomRightBgFromImage.sprite = bottomRightBgFade >= 0.5f
+                    ? bottomRightBgToImage.sprite
+                    : bottomRightBgFromImage.sprite;
+                bottomRightBgFade = 0f;
+            }
+
+            bottomRightBgFrame = frame;
+            bottomRightBgToImage.sprite = bottomRightBgSprites[frame];
+            SetImageAlpha(bottomRightBgToImage, bottomRightBgFade);
+        }
+
+        private static void SetImageAlpha(Image image, float alpha)
+        {
+            Color c = image.color;
+            c.a = alpha;
+            image.color = c;
         }
 
         private void CreateTrashDropZone(Transform parent)
@@ -1446,6 +1513,7 @@ namespace TrashTD.UI
             if (speedButtons == null) return;
 
             int selectedIndex = Mathf.Clamp(Mathf.RoundToInt(speed) - 1, 0, speedButtons.Length - 1);
+            SetBottomRightBgFrame(selectedIndex);
             for (int i = 0; i < speedButtons.Length; i++)
             {
                 bool selected = i == selectedIndex;
@@ -2807,6 +2875,14 @@ namespace TrashTD.UI
                     if (deckBgSprites[deckBgAnimFrame] != null)
                         deckBgAnimImage.sprite = deckBgSprites[deckBgAnimFrame];
                 }
+            }
+
+            // Speed gauge crossfade (~0.2s)
+            if (bottomRightBgToImage != null && bottomRightBgFade < 1f)
+            {
+                const float speedGaugeFadeDuration = 0.2f;
+                bottomRightBgFade = Mathf.Min(1f, bottomRightBgFade + dt / speedGaugeFadeDuration);
+                SetImageAlpha(bottomRightBgToImage, Mathf.SmoothStep(0f, 1f, bottomRightBgFade));
             }
 
             // Phase color follows the current phase (text + wave progress strip)

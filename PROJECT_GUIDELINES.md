@@ -34,6 +34,7 @@ Final Damage = max(ATK - DEF, ATK * 0.05)
 | Low Ground | Melee operators | Ground enemy path tiles |
 | High Ground / Ranged | Ranged operators (sometimes melee) | Elevated positions |
 | Blocked / Hazard | Nobody | Spikes, water, unwalkable |
+| Hole (`TileType.Hole`) | Nobody | Paired ladder/pipe tiles (Stage 5). A ground enemy entering one hides for 1.5 s (untargetable, invulnerable, unblockable) and comes out at the linked hole (`GridManager.GetLinkedHoleCell`) |
 
 ### 1.4 Rarity & Upgrade Rules
 
@@ -61,6 +62,9 @@ Any UI, system, or flow that involves "select your squad before the stage" is **
 - Drafted cards go into the player's **deck** (`PlayerDeck`); operators are deployed from the deck bar.
 - On the draft screen, **"View Map & Deck"** lets the player rearrange and discard deck cards during the pick (no deploying from there).
 - At most **8 operators** can be deployed at once (`StageData.squadSizeLimit`; unlimited in Sandbox).
+- **Deploying:** pick a deck card, click a tile, then hold and drag from the operator to set its facing. Release to confirm. Esc cancels. **Right-click** cancels placement or undeploys the selected operator.
+- **Preparation refund:** an operator deployed and retreated within the same Preparation phase, before it has fought (`DeployedDuringCurrentPreparation && !HasFoughtInWave`), returns with **no recall cooldown**. Every other retreat uses the normal class cooldown. Always refunded in Sandbox.
+- The draft overlay has card flip and shuffle animations. Card frame sprites exist in `Resources/UI/cards/` but are **not wired up yet**.
 
 ---
 
@@ -74,7 +78,7 @@ Per GDD section 1.10 and the course's software-reuse objective:
 - **Adding a new creature or enemy must not require modifying existing code** — only creating a new data asset and (optionally) a new prefab
 - Architecture patterns (inheritance, interfaces, composition) are part of the assignment deliverable — favor reusable, extensible patterns over one-off implementations
 - **Stage data lives in `Assets/Resources/Stages/*.asset`** — the single source of stage data.
-- **Known deviation:** operators with a unique kit (e.g. Ignisaur, Proxishot, Chillpath) currently need a subclass *and* a name check in `OperatorManager` (`ShouldReplaceWithSpecializedComponent` / `AddClassComponent`); 4-frame sprite sheets need a name check in `OperatorSpriteAnimation`. Plain operators still need only a data asset + prefab. Prefer moving these name checks into `OperatorData` fields over adding more of them.
+- **Known deviation:** operators with a unique kit (e.g. Ignisaur, Proxishot, Chillpath, Shadeslice) currently need a subclass *and* a name check in `OperatorManager` (`ShouldReplaceWithSpecializedComponent` / `AddClassComponent`); 4-frame sprite sheets need a name check in `OperatorSpriteAnimation`; `OperatorData.GetTalentRangePattern` also checks for `"Shadeslice"` by name. Plain operators still need only a data asset + prefab. Prefer moving these name checks into `OperatorData` fields over adding more of them.
 - **Draft pool:** `StageBootstrapper` fills `operatorPool` from `Assets/_Project/Data/Operators` **in the Editor only**. A player build only offers operators serialized in the scene's `operatorPool` — add new operators there before building.
 
 ---
@@ -130,7 +134,7 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 
 ---
 
-## 7. Current Implementation Notes (as of 2026-10-17)
+## 7. Current Implementation Notes (as of 2026-10-19)
 
 ### 7.1 Roster
 
@@ -148,12 +152,24 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - **Ignisaur** (Guard): Physical melee on its own tile / blocked enemies, Arts projectiles on forward range tiles, can hit air. *Protean*: faster attacks when not blocking, +25% ATK when blocking.
 - **Proxishot** (Sniper): attacks never miss (ignores enemy and stage miss chance); when hit, gains 5 s Camouflage (enemies can't target it). Replaces the old "+3% ATK per enemy type killed" trait.
 - **Chillpath** (Caster): chill → slow → freeze; faster attacks after freezing; every 4th attack hits one extra target (or the same one again).
+- **Shadeslice** (Guard, reworked into `ShadesliceOperator`): 2.0× damage when no ally stands in its talent pattern (12-tile diamond, `OperatorData.ShadesliceTalentPattern`). After 5 s without being attacked, it regenerates 2.5% max HP per second.
+- **Stag-ger** (Guard): hits every blocked enemy on its tile and in range ahead, including enemies blocked by allies. With nothing blocked, it hits one target. 20% dodge; a successful dodge gives +50% ATK on the next attack.
+- **Drawgoo** (Defender): on death, draws 2 random cards. An upgraded Drawgoo instead draws 3★ cards: 1 card (60%) or 2 (40%) (`CardDraftSystem.DrawRandomCardsToDeck(count, targetRarity)`).
+- **Mossmo** (Defender): doesn't attack. It **taunts** (`HasTaunt`): ranged enemies on a surrounding tile target it first. When it takes damage, it heals up to 2 operators in range, itself included.
+- **Talent range overlay:** `OperatorData.talentRangePattern` (optional) is drawn in orange under the green attack range in the placement preview. Use `GetTalentRangePattern()`.
 
 **Enemies (10):** Grunt (Sludge, Sand Plastic), Rusher (Toxic), Tank (Pollution, Sand Hulk), Caster (Sand Poncho, Smog), Air (Flying Melee, Flying Ranged, Acid Flyer). Acid Flyer and Smog Caster now have sprites but are **not yet used in waves** — confirm they're fully configured before adding them.
 
-**Stages:** STAGE_01, STAGE_02, STAGE_03, STAGE_06, plus STAGE_SANDBOX (development sandbox with multiple maps; cards can be deployed mid-wave and the squad limit is lifted).
+**Stages:** STAGE_01 through STAGE_06 (Stage 5 = "Boulevard"), plus STAGE_SANDBOX (development sandbox with multiple maps; cards can be deployed mid-wave and the squad limit is lifted).
 
-**Stage environments:** Stage 3 = sandstorm (attack intervals ×0.95, 10% miss chance, wind/dust particles, animated background). Stage 6 = acid rain (3 physical damage to operators and enemies every 2 s while a wave runs, rain particles). The sandbox runs the environment of whichever map is selected — key environment checks on `StageBootstrapper.EnvironmentStageId`, not `stageData.stageId` (which is `SANDBOX` there).
+**Stage environments** (each has its own component created by `StageBootstrapper`, and an environment briefing in `GameplayHUDUI`; the constants in each script are authoritative, and some doc comments are out of date):
+- **Stage 2 — falling items** (`Stage2FallingItemsHazard`): every 10 s an item drops on a random operator (40%), deployable tile (40%) or enemy (20%). Glass: 2 true damage/s for 5 s. Metal: 15 true damage. Tools: 15 true damage + 2 s stun. Thornchin doesn't retaliate. The hit pops Bubblets' shield, triggers Mossmo's heal, and can be dodged by Stag-ger. Proxishot still gains camo. Sprites come from `StageData.fallingItemSprites`.
+- **Stage 3 — sandstorm:** attack intervals ×0.95, 10% miss chance, wind/dust particles, animated background.
+- **Stage 4 — factory heat** (`Stage4HeatHazard`): each wave adds 1 heat stack to deployed operators. At 5 stacks they burn for 15 damage/s. Only retreating ends the burn. Heat is stored on the `DraftCard` (`heatStacks`) and drops by 2 per round while benched. Merges keep the highest heat. `OperatorHeatBar` displays it.
+- **Stage 5 — traffic** (`Stage5CarEncounter` / `Stage5TrafficCar`): from wave 6, 5 rolls per wave at 20% each. Each success queues a car on lane y=4 or y=5, 5–10 s apart. A car deals true damage to ground enemies and operators it passes: 40, plus 20 for every 2 tiles travelled. It ignores shield negation but pops bubbles. The first operator hit (if it survives) is stunned for 5 s. Stage 5 also uses Hole tiles (§1.3).
+- **Stage 6 — acid rain:** 3 physical damage to operators and enemies every 2 s while a wave runs, rain particles.
+- The sandbox runs the environment of whichever map is selected — key environment checks on `StageBootstrapper.EnvironmentStageId`, not `stageData.stageId` (which is `SANDBOX` there).
+- Hazards must respect `IsCombatPaused` (§7.3): no hazard damage, drops or car spawns outside `WaveActive`.
 
 ### 7.2 Wave Design Rules
 
@@ -170,6 +186,10 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - `CombatProjectileVisual.Fire(start, EnemyBase target, ...)` follows a moving target — prefer it over the fixed-position overload.
 - `OperatorBase.IgnoresMissMechanic`, `IsCamouflaged`, `IsTargetable` — enemies skip operators that aren't targetable.
 - **Nothing happens between waves.** `OperatorBase.IsCombatPaused` is true in every phase except `WaveActive` (Card Pick and Preparation; never in Sandbox). While paused, operators take no damage of any kind (enemy, trap, weather), receive no healing, gain/lose no shields, and run no attacks, heals or abilities. Any operator with its own `Update`/`TakeDamage` override must respect it.
+- **True damage:** `DamageType.True` ignores DEF and RES (minimum 1). Hazards use `OperatorBase.TakeTrueDamage(dmg, ignoreShieldNegation, canDodge)` / `EnemyBase.TakeTrueDamage(dmg)`, not the ATK-based formula. Operator overrides of damage handling must also override `TakeTrueDamage`.
+- **Stun:** `OperatorBase.ApplyStun(duration)` releases blocked enemies. While stunned, `GetBlockCount()` returns 0 and the operator can't attack. Use `GetBlockCount()`, not `data.blockCount`.
+- **Blocking position:** a blocked enemy stops on the boundary in front of its blocker (`EnemyBase.BlockedPosition`). Range checks for blocked enemies count both the blocker's tile and the adjacent path tile. Defenders also attack enemies in their range pattern when they aren't blocking.
+- Skip enemies with `IsInsideHole` in any targeting, blocking or status code.
 - Enemy attack timers are "time since last attack", capped at one interval. Ground melee enemies spawn ready and keep charging while walking, so they **hit their blocker immediately on contact**; air combat enemies and Sand Hulk's frontal slam work the same way. Enemy casters keep their wind-up before the first shot.
 
 ### 7.4 Audio
@@ -184,6 +204,7 @@ Each asset's `skillDescription` is the authoritative description of that operato
   - `ApplyButtonContainer(button, ButtonContainerType)`: Primary, Secondary, Dark, Danger, Warning, and the `Icon*` variants (`UI/buttons/btn_<type>_normal`).
   - `ApplyPanelContainer(go, PanelContainerType, tint?)`: Dark, Metal, Glass, Modal, Rust, Teal, Tooltip (`UI/panels/panel_<type>`). Modal = Metal panel plus hazard-stripe decor.
   - Both set `Image.Type.Sliced` and cache the sprite. If a panel sprite has no 9-slice border, a per-type border is applied at load time, so set borders in the importer for buttons. If the sprite is missing, the old flat colour stays.
+- **Bottom-right panel** (`Resources/UI/Bottom Right Panel BG`, 3 frames of 140×113): frame `_0`/`_1`/`_2` = 1×/2×/3× game speed (the gauge needle). `GameplayHUDUI.CreateBottomRightPanel` builds it as a child of the deck bar, at the Deck BG's pixel scale. The speed buttons, squad count and Start Wave button sit on the sprite's screens, positioned in sprite pixels (`PanelPx`). Changing speed crossfades the frames over about 0.2 s on unscaled time. HUD animations must use unscaled time so they don't speed up at 2×/3× or freeze while paused.
 - Keep UI textures on Point filtering (pixel art). Add new UI sprites under the matching `Resources/UI/<category>/` folder.
 - **Draft range preview:** the card-pick details panel draws each operator's `rangePattern` as a tile grid facing right (`CardDraftOverlayUI.UpdateRangePreview`). It uses the placement-preview colours: cyan for the operator's own tile, green for tiles it can hit. It reads the same data as combat, so never hand-draw or screenshot range previews. A kit that reaches beyond `rangePattern` (e.g. Basurocket's splash) belongs in the ability text.
 - `AudioSettingsUI` loads `panel_dark` / `btn_dark_normal` with its own copy of the loader. Prefer the `GameplayHUDUI` helpers for new UI.
