@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using TrashTD.Audio;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
 using TrashTD.Enemies;
@@ -217,6 +218,8 @@ namespace TrashTD.Core.GameLoop
             {
                 CreateStage6AcidRain();
             }
+
+            PlayEnvironmentAudio();
 
             // 4. Initialize Draft System
 #if UNITY_EDITOR
@@ -640,6 +643,7 @@ namespace TrashTD.Core.GameLoop
 
             if (operatorManager == null || (!IsSandbox && operatorManager.IsAtSquadLimit))
             {
+                AudioManager.Instance?.PlaySfx(SfxId.UiDenied);
                 RefreshPlacementPreview();
                 return;
             }
@@ -647,6 +651,7 @@ namespace TrashTD.Core.GameLoop
             GridCell targetCell = gridManager != null ? gridManager.GetCell(placementGridPosition) : null;
             if (targetCell == null || !targetCell.CanDeploy(pendingDeployCard.operatorData.position))
             {
+                AudioManager.Instance?.PlaySfx(SfxId.UiDenied);
                 RefreshPlacementPreview();
                 return;
             }
@@ -659,6 +664,7 @@ namespace TrashTD.Core.GameLoop
                     out _))
             {
                 Debug.LogWarning($"Cannot deploy {deployedCard.operatorData.operatorName} here.");
+                AudioManager.Instance?.PlaySfx(SfxId.UiDenied);
                 return;
             }
 
@@ -1189,8 +1195,20 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
+        /// <summary>Stage music plus looping weather/factory ambience for the current environment.</summary>
+        private void PlayEnvironmentAudio()
+        {
+            AudioManager audio = AudioManager.Instance;
+            if (audio == null) return;
+
+            audio.PlayStageMusic(EnvironmentStageId);
+            audio.PlayStageAmbience(EnvironmentStageId);
+        }
+
         private void ApplyStage6AcidRainDamage()
         {
+            AudioManager.Instance?.PlaySfx(SfxId.Stage6AcidTick, 0.6f);
+
             if (operatorManager != null)
             {
                 for (int i = operatorManager.DeployedOperators.Count - 1; i >= 0; i--)

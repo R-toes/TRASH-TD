@@ -627,6 +627,7 @@ namespace TrashTD.Enemies
             {
                 trapDamageTimer -= TrapTileRules.DamageIntervalSeconds;
                 AcidDamageFlash.Flash(gameObject);
+                AudioManager.Instance?.PlaySfx(SfxId.TileTrapTick, 0.6f);
                 TakeTrueDamage(TrapTileRules.DamagePerTick);
             }
         }
@@ -714,6 +715,7 @@ namespace TrashTD.Enemies
             }
 
             SetVisualsActive(false);
+            AudioManager.Instance?.PlaySfx(SfxId.TileHoleEnter, 0.7f);
         }
 
         /// <summary>
@@ -726,6 +728,7 @@ namespace TrashTD.Enemies
             transform.position = destinationHolePosition;
             isInsideHole = false;
             SetVisualsActive(true);
+            AudioManager.Instance?.PlaySfx(SfxId.TileHoleExit, 0.7f);
 
             if (path != null && currentPathIndex < path.Count)
             {
@@ -936,6 +939,7 @@ namespace TrashTD.Enemies
                     !Combat.StageCombatModifiers.TryAttackHit(data.operatorAttackMissChance))
                 {
                     FloatingCombatNumber.ShowMiss(VisualPosition);
+                    AudioManager.Instance?.PlaySfx(SfxId.CombatMiss, 0.6f);
                     return false;
                 }
             }

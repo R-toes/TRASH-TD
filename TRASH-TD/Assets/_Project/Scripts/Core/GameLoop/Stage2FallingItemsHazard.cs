@@ -232,6 +232,7 @@ namespace TrashTD.Core.GameLoop
             sr.sprite = spriteToUse;
             sr.sortingOrder = 45; // Render cleanly above grid art/tiles, below unit overlays
 
+            AudioManager.Instance?.PlaySfx(SfxId.Stage2ItemFall, 0.8f);
             StartCoroutine(FallingItemRoutine(itemObject, startPosition, targetPosition, itemSet, targetedOperator, targetedEnemy));
         }
 
@@ -294,8 +295,11 @@ namespace TrashTD.Core.GameLoop
 
         public void OnItemImpact(Vector3 impactWorldPos, Stage2ItemSet set, OperatorBase targetedOperator, EnemyBase targetedEnemy)
         {
-            // Impact sound
-            AudioManager.Instance?.PlaySfx(SfxId.GameplayMeleeAttack);
+            // Impact sound per item type (glass / metal / tools); the generic melee hit until those files exist
+            SfxId landSfx = set == Stage2ItemSet.WeakDotTrueDamage ? SfxId.Stage2ItemLandGlass
+                : set == Stage2ItemSet.DirectTrueDamage ? SfxId.Stage2ItemLandMetal
+                : SfxId.Stage2ItemLandTools;
+            AudioManager.Instance?.PlaySfxOrFallback(landSfx, SfxId.GameplayMeleeAttack);
 
             // Impact visual ring/puff
             MeleeSwipeVisual.Play(impactWorldPos, impactWorldPos + Vector3.up * 0.1f, new Color(1f, 0.75f, 0.2f, 0.8f));

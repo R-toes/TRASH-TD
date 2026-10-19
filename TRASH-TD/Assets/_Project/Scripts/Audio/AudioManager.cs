@@ -2,29 +2,70 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using TrashTD.Core.GameLoop;
+using TrashTD.Data;
 using TrashTD.Enemies;
 using TrashTD.Operators;
 using TrashTD.Systems;
 
 namespace TrashTD.Audio
 {
+    /// <summary>
+    /// Shared (non-unit) sounds. Each maps to a file under Assets/_Project/Audio/Resources/SFX/ (see SfxPaths and
+    /// Audio/SFX_GUIDE.md). Per-unit sounds go through UnitSfx instead.
+    /// </summary>
     public enum SfxId
     {
+        // UI
         UiHover,
         UiClick,
         UiBack,
         UiDenied,
         UiConfirm,
+        UiCardShuffle,
+        UiCardDeal,
+        UiCardFlip,
+        UiReroll,
+        UiCardDiscard,
+
+        // Gameplay flow
         GameplayDeploy,
         GameplayRetreat,
         GameplayWaveStart,
+        GameplayWaveCleared,
         GameplayEnemyDeath,
+        GameplayOperatorDeath,
         GameplayLifeLost,
+        GameplayVictory,
+        GameplayDefeat,
         GameplayPause,
         GameplayResume,
+        GameplayCardUpgrade,
+
+        // Combat fallbacks and shared combat events
         GameplayRangedPhysicalAttack,
         GameplayMagicAttack,
-        GameplayMeleeAttack
+        GameplayMeleeAttack,
+        CombatStun,
+        CombatMiss,
+
+        // Special tiles (any stage)
+        TileTrapTick,
+        TileHoleEnter,
+        TileHoleExit,
+
+        // Stage environments
+        Stage2ItemFall,
+        Stage2ItemLandGlass,
+        Stage2ItemLandMetal,
+        Stage2ItemLandTools,
+        Stage4HeatUp,
+        Stage4Ignite,
+        Stage4BurnTick,
+        Stage4Extinguish,
+        Stage5CarPass,
+        Stage5CarHit,
+        Stage6AcidTick
     }
 
     /// <summary>
@@ -42,23 +83,66 @@ namespace TrashTD.Audio
         private const float DefaultMusicVolume = 0.5f;
         private const float DefaultSfxVolume = 0.8f;
 
-        private static readonly Dictionary<SfxId, string> SfxNames = new Dictionary<SfxId, string>
+        // One-shots get their own source each, so a random pitch on one sound doesn't bend the others playing.
+        private const int SfxVoiceCount = 12;
+        // The same shared sound won't restart sooner than this (several burn/acid ticks in one frame play once).
+        private const float MinSharedRepeatSeconds = 0.05f;
+        private const float AmbienceFadeSpeed = 1.5f;
+        private const float DefaultAmbienceLevel = 0.45f;
+        // Every stage's ambience is SFX/Stages/StageNN/Ambience (see PlayStageAmbience).
+        private const string StageAmbienceClipName = "Ambience";
+
+        /// <summary>
+        /// File for each shared sound: "{folder}/{name}" under Resources/SFX. Variants ({name}_2, {name}_3, ...)
+        /// are picked at random, as with unit sounds. This table is the list of shared file names.
+        /// </summary>
+        public static readonly IReadOnlyDictionary<SfxId, string> SfxPaths = new Dictionary<SfxId, string>
         {
-            { SfxId.UiHover, "UI_ButtonHover" },
-            { SfxId.UiClick, "UI_ButtonClick" },
-            { SfxId.UiBack, "UI_ButtonBack" },
-            { SfxId.UiDenied, "UI_ButtonDenied" },
-            { SfxId.UiConfirm, "UI_ButtonConfirm" },
-            { SfxId.GameplayDeploy, "Gameplay_Deploy" },
-            { SfxId.GameplayRetreat, "Gameplay_Retreat" },
-            { SfxId.GameplayWaveStart, "Gameplay_WaveStart" },
-            { SfxId.GameplayEnemyDeath, "Gameplay_EnemyDeath" },
-            { SfxId.GameplayLifeLost, "Gameplay_LifeLost" },
-            { SfxId.GameplayPause, "Gameplay_Pause" },
-            { SfxId.GameplayResume, "Gameplay_Resume" },
-            { SfxId.GameplayRangedPhysicalAttack, "Operator_RangedPhysicalAttack" },
-            { SfxId.GameplayMagicAttack, "Operator_MagicAttack" },
-            { SfxId.GameplayMeleeAttack, "Operator_MeleeAttack" }
+            { SfxId.UiHover, "UI/ButtonHover" },
+            { SfxId.UiClick, "UI/ButtonClick" },
+            { SfxId.UiBack, "UI/ButtonBack" },
+            { SfxId.UiDenied, "UI/ButtonDenied" },
+            { SfxId.UiConfirm, "UI/ButtonConfirm" },
+            { SfxId.UiCardShuffle, "UI/CardShuffle" },
+            { SfxId.UiCardDeal, "UI/CardDeal" },
+            { SfxId.UiCardFlip, "UI/CardFlip" },
+            { SfxId.UiReroll, "UI/Reroll" },
+            { SfxId.UiCardDiscard, "UI/CardDiscard" },
+
+            { SfxId.GameplayDeploy, "Gameplay/Deploy" },
+            { SfxId.GameplayRetreat, "Gameplay/Retreat" },
+            { SfxId.GameplayWaveStart, "Gameplay/WaveStart" },
+            { SfxId.GameplayWaveCleared, "Gameplay/WaveCleared" },
+            { SfxId.GameplayEnemyDeath, "Gameplay/EnemyDeath" },
+            { SfxId.GameplayOperatorDeath, "Gameplay/OperatorDeath" },
+            { SfxId.GameplayLifeLost, "Gameplay/LifeLost" },
+            { SfxId.GameplayVictory, "Gameplay/Victory" },
+            { SfxId.GameplayDefeat, "Gameplay/Defeat" },
+            { SfxId.GameplayPause, "Gameplay/Pause" },
+            { SfxId.GameplayResume, "Gameplay/Resume" },
+            { SfxId.GameplayCardUpgrade, "Gameplay/CardUpgrade" },
+
+            { SfxId.GameplayRangedPhysicalAttack, "Combat/RangedPhysicalAttack" },
+            { SfxId.GameplayMagicAttack, "Combat/MagicAttack" },
+            { SfxId.GameplayMeleeAttack, "Combat/MeleeAttack" },
+            { SfxId.CombatStun, "Combat/Stun" },
+            { SfxId.CombatMiss, "Combat/Miss" },
+            
+            { SfxId.TileTrapTick, "Tiles/TrapTick" },
+            { SfxId.TileHoleEnter, "Tiles/HoleEnter" },
+            { SfxId.TileHoleExit, "Tiles/HoleExit" },
+
+            { SfxId.Stage2ItemFall, "Stages/Stage02/ItemFall" },
+            { SfxId.Stage2ItemLandGlass, "Stages/Stage02/ItemLandGlass" },
+            { SfxId.Stage2ItemLandMetal, "Stages/Stage02/ItemLandMetal" },
+            { SfxId.Stage2ItemLandTools, "Stages/Stage02/ItemLandTools" },
+            { SfxId.Stage4HeatUp, "Stages/Stage04/HeatUp" },
+            { SfxId.Stage4Ignite, "Stages/Stage04/Ignite" },
+            { SfxId.Stage4BurnTick, "Stages/Stage04/BurnTick" },
+            { SfxId.Stage4Extinguish, "Stages/Stage04/Extinguish" },
+            { SfxId.Stage5CarPass, "Stages/Stage05/CarPass" },
+            { SfxId.Stage5CarHit, "Stages/Stage05/CarHit" },
+            { SfxId.Stage6AcidTick, "Stages/Stage06/AcidTick" }
         };
 
         public static AudioManager Instance { get; private set; }
@@ -67,11 +151,18 @@ namespace TrashTD.Audio
         [SerializeField, Range(0f, 1f)] private float sfxVolume = DefaultSfxVolume;
 
         private AudioSource musicSource;
-        private AudioSource sfxSource;
+        private readonly List<AudioSource> sfxVoices = new List<AudioSource>();
+        private int nextVoice;
+        private readonly Dictionary<SfxId, float> sharedLastPlayed = new Dictionary<SfxId, float>();
+        private AudioSource ambienceSource;
+        private float ambienceLevel;
         private AudioClip mainMenuMusic;
         private AudioClip gameplayMusic;
         private EnemyManager enemyManager;
         private OperatorManager operatorManager;
+        private GameManager gameManager;
+        private WaveManager waveManager;
+        private RarityUpgradeSystem upgradeSystem;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void CreateInstance()
@@ -98,9 +189,19 @@ namespace TrashTD.Audio
             musicSource.loop = true;
             musicSource.playOnAwake = false;
             musicSource.spatialBlend = 0f;
-            sfxSource = gameObject.AddComponent<AudioSource>();
-            sfxSource.playOnAwake = false;
-            sfxSource.spatialBlend = 0f;
+            for (int i = 0; i < SfxVoiceCount; i++)
+            {
+                AudioSource voice = gameObject.AddComponent<AudioSource>();
+                voice.playOnAwake = false;
+                voice.spatialBlend = 0f;
+                sfxVoices.Add(voice);
+            }
+            ambienceSource = gameObject.AddComponent<AudioSource>();
+            ambienceSource.loop = true;
+            ambienceSource.playOnAwake = false;
+            ambienceSource.spatialBlend = 0f;
+            ambienceSource.volume = 0f;
+
             musicVolume = PlayerPrefs.GetFloat(MusicVolumeKey, DefaultMusicVolume);
             sfxVolume = PlayerPrefs.GetFloat(SfxVolumeKey, DefaultSfxVolume);
             ApplyVolumes();
@@ -115,6 +216,16 @@ namespace TrashTD.Audio
             HandleSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
         }
 
+        private void Update()
+        {
+            // Ambience fades in/out on unscaled time, so it behaves the same at any game speed or while paused.
+            if (!ambienceSource.isPlaying) return;
+
+            float target = sfxVolume * ambienceLevel;
+            ambienceSource.volume = Mathf.MoveTowards(ambienceSource.volume, target, AmbienceFadeSpeed * Time.unscaledDeltaTime);
+            if (ambienceLevel <= 0f && ambienceSource.volume <= 0f) ambienceSource.Stop();
+        }
+
         private void OnDestroy()
         {
             if (Instance == this)
@@ -125,11 +236,13 @@ namespace TrashTD.Audio
             }
         }
 
+        /// <summary>The shared clip for this id (a random variant if there are several), or null if none exists yet.</summary>
         public AudioClip GetClip(SfxId id)
         {
-            string clipName;
-            if (!SfxNames.TryGetValue(id, out clipName)) return null;
-            return Resources.Load<AudioClip>(SfxResourcesFolder + clipName);
+            if (!SfxPaths.TryGetValue(id, out string path)) return null;
+
+            int slash = path.LastIndexOf('/');
+            return UnitSfx.GetRandomClip(SfxResourcesFolder + path.Substring(0, slash), path.Substring(slash + 1));
         }
 
         public void PlayMainMenuMusic()
@@ -142,17 +255,85 @@ namespace TrashTD.Audio
             PlayMusic(gameplayMusic);
         }
 
+        /// <summary>
+        /// Plays the stage's own track, Music/Stages/Stage02 for "STAGE_02" (the sandbox passes the map it shows),
+        /// or GameplayMusic if that stage has none yet. The same track keeps playing across retries.
+        /// </summary>
+        public void PlayStageMusic(string stageId)
+        {
+            string stageFolder = ToStageFolderName(stageId);
+            AudioClip stageMusic = stageFolder != null
+                ? Resources.Load<AudioClip>(MusicResourcesFolder + "Stages/" + stageFolder)
+                : null;
+
+            PlayMusic(stageMusic != null ? stageMusic : gameplayMusic);
+        }
+
+        /// <summary>
+        /// Loops the stage's ambience, SFX/Stages/Stage02/Ambience for "STAGE_02" (a random one of Ambience,
+        /// Ambience_2, ... if there are several), or fades ambience out if the stage has none. Keeps playing across retries.
+        /// </summary>
+        public void PlayStageAmbience(string stageId, float level = DefaultAmbienceLevel)
+        {
+            string stageFolder = ToStageFolderName(stageId);
+            AudioClip clip = stageFolder != null
+                ? UnitSfx.GetRandomClip(SfxResourcesFolder + "Stages/" + stageFolder, StageAmbienceClipName)
+                : null;
+            PlayAmbience(clip, level);
+        }
+
+        /// <summary>"STAGE_02" -> "Stage02", the folder/file name used for that stage's music and SFX.</summary>
+        public static string ToStageFolderName(string stageId)
+        {
+            return string.IsNullOrEmpty(stageId) ? null : stageId.Replace("STAGE_", "Stage");
+        }
+
         public void PlaySfx(SfxId id, float volume = 1f, float pitch = 1f)
         {
+            float now = Time.unscaledTime;
+            if (sharedLastPlayed.TryGetValue(id, out float last) && now - last < MinSharedRepeatSeconds) return;
+            sharedLastPlayed[id] = now;
+
             PlaySfx(GetClip(id), volume, pitch);
+        }
+
+        /// <summary>Plays the sound if its file exists yet, otherwise the fallback (keeps placeholders audible).</summary>
+        public void PlaySfxOrFallback(SfxId id, SfxId fallback, float volume = 1f, float pitch = 1f)
+        {
+            PlaySfx(GetClip(id) != null ? id : fallback, volume, pitch);
         }
 
         public void PlaySfx(AudioClip clip, float volume = 1f, float pitch = 1f)
         {
-            if (clip == null || sfxSource == null) return;
+            if (clip == null || sfxVoices.Count == 0) return;
 
-            sfxSource.pitch = pitch;
-            sfxSource.PlayOneShot(clip, Mathf.Clamp01(volume));
+            AudioSource voice = GetFreeVoice();
+            voice.pitch = pitch;
+            voice.PlayOneShot(clip, Mathf.Clamp01(volume));
+        }
+
+        /// <summary>Starts a looping ambience (fades in), replacing any current one. A null clip fades ambience out.</summary>
+        public void PlayAmbience(AudioClip clip, float level = DefaultAmbienceLevel)
+        {
+            if (clip == null)
+            {
+                StopAmbience();
+                return;
+            }
+
+            if (ambienceSource.clip != clip || !ambienceSource.isPlaying)
+            {
+                ambienceSource.clip = clip;
+                ambienceSource.volume = 0f;
+                ambienceSource.Play();
+            }
+            ambienceLevel = Mathf.Clamp01(level);
+        }
+
+        /// <summary>Fades the stage ambience out.</summary>
+        public void StopAmbience()
+        {
+            ambienceLevel = 0f;
         }
 
         public float MusicVolume => musicVolume;
@@ -169,7 +350,7 @@ namespace TrashTD.Audio
         public void SetSfxVolume(float volume)
         {
             sfxVolume = Mathf.Clamp01(volume);
-            if (sfxSource != null) sfxSource.volume = sfxVolume;
+            ApplyVolumes();
             PlayerPrefs.SetFloat(SfxVolumeKey, sfxVolume);
             PlayerPrefs.Save();
         }
@@ -177,12 +358,33 @@ namespace TrashTD.Audio
         private void ApplyVolumes()
         {
             if (musicSource != null) musicSource.volume = musicVolume;
-            if (sfxSource != null) sfxSource.volume = sfxVolume;
+            foreach (AudioSource voice in sfxVoices)
+                if (voice != null) voice.volume = sfxVolume;
+            if (ambienceSource != null) ambienceSource.volume = sfxVolume * ambienceLevel;
+        }
+
+        private AudioSource GetFreeVoice()
+        {
+            for (int i = 0; i < sfxVoices.Count; i++)
+            {
+                AudioSource voice = sfxVoices[(nextVoice + i) % sfxVoices.Count];
+                if (!voice.isPlaying)
+                {
+                    nextVoice = (nextVoice + i + 1) % sfxVoices.Count;
+                    return voice;
+                }
+            }
+
+            // All busy: share the next voice in turn (its pitch now applies to both sounds).
+            AudioSource shared = sfxVoices[nextVoice];
+            nextVoice = (nextVoice + 1) % sfxVoices.Count;
+            return shared;
         }
 
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             UnsubscribeFromGameplayEvents();
+            StopAmbience();
 
             if (scene.name == MainMenuScene)
             {
@@ -208,6 +410,9 @@ namespace TrashTD.Audio
         {
             enemyManager = FindFirstObjectByType<EnemyManager>();
             operatorManager = FindFirstObjectByType<OperatorManager>();
+            gameManager = FindFirstObjectByType<GameManager>();
+            waveManager = FindFirstObjectByType<WaveManager>();
+            upgradeSystem = FindFirstObjectByType<RarityUpgradeSystem>();
 
             if (enemyManager != null) enemyManager.OnEnemyDied += HandleEnemyDied;
             if (operatorManager != null)
@@ -215,6 +420,13 @@ namespace TrashTD.Audio
                 operatorManager.OnOperatorDeployed += HandleOperatorDeployed;
                 operatorManager.OnOperatorRetreated += HandleOperatorRetreated;
             }
+            if (gameManager != null)
+            {
+                gameManager.OnStageVictory += HandleStageVictory;
+                gameManager.OnStageDefeat += HandleStageDefeat;
+            }
+            if (waveManager != null) waveManager.OnSingleWaveFinished += HandleWaveCleared;
+            if (upgradeSystem != null) upgradeSystem.OnOperatorUpgraded += HandleOperatorUpgraded;
         }
 
         private void UnsubscribeFromGameplayEvents()
@@ -225,9 +437,19 @@ namespace TrashTD.Audio
                 operatorManager.OnOperatorDeployed -= HandleOperatorDeployed;
                 operatorManager.OnOperatorRetreated -= HandleOperatorRetreated;
             }
+            if (gameManager != null)
+            {
+                gameManager.OnStageVictory -= HandleStageVictory;
+                gameManager.OnStageDefeat -= HandleStageDefeat;
+            }
+            if (waveManager != null) waveManager.OnSingleWaveFinished -= HandleWaveCleared;
+            if (upgradeSystem != null) upgradeSystem.OnOperatorUpgraded -= HandleOperatorUpgraded;
 
             enemyManager = null;
             operatorManager = null;
+            gameManager = null;
+            waveManager = null;
+            upgradeSystem = null;
         }
 
         private void HandleEnemyDied(EnemyBase enemy)
@@ -241,6 +463,19 @@ namespace TrashTD.Audio
             if (op == null || !UnitSfx.Play(op.Data, UnitSfxEvent.Deploy))
                 PlaySfx(SfxId.GameplayDeploy);
         }
-        private void HandleOperatorRetreated(OperatorBase op) => PlaySfx(SfxId.GameplayRetreat);
+
+        // Deaths also raise OnOperatorRetreated; they already played a death sound, so only real retreats play this.
+        private void HandleOperatorRetreated(OperatorBase op)
+        {
+            if (op != null && op.CurrentHP <= 0) return;
+            PlaySfx(SfxId.GameplayRetreat);
+        }
+
+        private void HandleStageVictory(int stars) => PlaySfx(SfxId.GameplayVictory);
+        private void HandleStageDefeat() => PlaySfx(SfxId.GameplayDefeat);
+        private void HandleWaveCleared() => PlaySfx(SfxId.GameplayWaveCleared);
+
+        private void HandleOperatorUpgraded(OperatorData data, OperatorRarity oldRarity, OperatorRarity newRarity) =>
+            PlaySfx(SfxId.GameplayCardUpgrade);
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TrashTD.Audio;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
 using TrashTD.Systems;
@@ -252,6 +253,7 @@ namespace TrashTD.Core.GameLoop
             var car = carObj.AddComponent<Stage5TrafficCar>();
             car.Initialize(laneY, carSprite, gridManager, enemyManager, operatorManager);
             activeCars.Add(car);
+            AudioManager.Instance?.PlaySfx(SfxId.Stage5CarPass);
             return car;
         }
     }

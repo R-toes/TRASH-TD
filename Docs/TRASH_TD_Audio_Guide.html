@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TRASH TD Audio Guide</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+  :root {
+    --ink: #1d2126;
+    --dim: #5b6470;
+    --line: #d5dae0;
+    --soft: #f2f4f6;
+    --accent: #0f7b6c;
+    --accent-soft: #e3f3f0;
+    --warn: #9a5b00;
+    --warn-soft: #fff4e0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 9.6pt;
+    line-height: 1.45;
+    color: var(--ink);
+    background: #fff;
+  }
+  h1 { font-size: 24pt; margin: 0 0 4pt; letter-spacing: -0.3pt; }
+  h2 {
+    font-size: 14pt; margin: 18pt 0 6pt; padding-bottom: 3pt;
+    border-bottom: 2px solid var(--accent); break-after: avoid;
+  }
+  h3 { font-size: 11pt; margin: 12pt 0 4pt; break-after: avoid; }
+  p { margin: 0 0 6pt; }
+  ul, ol { margin: 0 0 6pt; padding-left: 16pt; }
+  li { margin-bottom: 2pt; }
+  code {
+    font-family: Consolas, "Courier New", monospace; font-size: 8.8pt;
+    background: var(--soft); padding: 0 3pt; border-radius: 2pt;
+  }
+  pre {
+    font-family: Consolas, "Courier New", monospace; font-size: 8.6pt; line-height: 1.4;
+    background: var(--soft); border: 1px solid var(--line); border-radius: 4pt;
+    padding: 7pt 9pt; margin: 4pt 0 8pt; white-space: pre-wrap; break-inside: avoid;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 4pt 0 10pt; font-size: 8.9pt; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
+  th {
+    text-align: left; background: var(--soft); font-weight: 600;
+    border-bottom: 1.5px solid #aab2bc; padding: 4pt 6pt;
+  }
+  td { border-bottom: 1px solid var(--line); padding: 3.5pt 6pt; vertical-align: top; }
+  td code { white-space: nowrap; }
+  .page-break { break-before: page; }
+  .subtitle { color: var(--dim); font-size: 11pt; margin-bottom: 14pt; }
+  .meta { color: var(--dim); font-size: 8.8pt; margin-bottom: 16pt; }
+  .box {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: 7pt 10pt; margin: 6pt 0 10pt; border-radius: 0 4pt 4pt 0; break-inside: avoid;
+  }
+  .box.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .box p:last-child, .box ul:last-child, .box ol:last-child { margin-bottom: 0; }
+  .steps { counter-reset: step; list-style: none; padding: 0; }
+  .steps li {
+    counter-increment: step; position: relative; padding-left: 24pt; margin-bottom: 6pt;
+  }
+  .steps li::before {
+    content: counter(step); position: absolute; left: 0; top: 0;
+    width: 16pt; height: 16pt; border-radius: 50%; background: var(--accent); color: #fff;
+    font-weight: 700; font-size: 8.5pt; text-align: center; line-height: 16pt;
+  }
+  .ok { color: var(--accent); font-weight: 700; }
+  .tag {
+    display: inline-block; font-size: 7.6pt; font-weight: 600; padding: 0 4pt; border-radius: 3pt;
+    background: var(--warn-soft); color: var(--warn); white-space: nowrap;
+  }
+  .toc { columns: 2; column-gap: 20pt; padding-left: 14pt; }
+  .toc li { break-inside: avoid; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12pt; }
+  .small { font-size: 8.4pt; color: var(--dim); }
+</style>
+</head>
+<body>
+
+<h1>TRASH TD — Audio Guide</h1>
+<div class="subtitle">How to add music and sound effects, where every file goes and what it must be called</div>
+<div class="meta">For everyone adding audio to the project. No code changes are needed for anything in sections 1–7.<br>
+Updated 2026-10-19 · The same lists live in <code>Assets/_Project/Audio/SFX_GUIDE.md</code></div>
+
+<ol class="toc">
+  <li>Quick start</li>
+  <li>Folder map</li>
+  <li>Naming and file rules</li>
+  <li>Music and stage ambience</li>
+  <li>Shared sound effects</li>
+  <li>Operator sounds</li>
+  <li>Enemy sounds</li>
+  <li>Unity import settings</li>
+  <li>Testing your sounds</li>
+  <li>Committing</li>
+  <li>Troubleshooting</li>
+  <li>For programmers: adding a new sound trigger</li>
+</ol>
+
+<h2>1. Quick start</h2>
+<ol class="steps">
+  <li><b>Find the sound you want to add</b> in the tables in sections 4–7. Each row gives the folder and the exact file name.</li>
+  <li><b>Drop the file into that folder</b> in the Unity Project window (or Explorer). Every audio path in this guide starts at
+    <code>Assets/_Project/Audio/Resources/</code>. The folders already exist.</li>
+  <li><b>Name it exactly as listed.</b> Only the name matters; the extension doesn't (<code>.wav</code>, <code>.mp3</code> or <code>.ogg</code>).
+    Names are case-sensitive: <code>Attack</code>, not <code>attack</code>.</li>
+  <li><b>Press Play.</b> The game finds the file by name. Nothing to drag into the Inspector, no code to change.</li>
+  <li><b>Commit the file and its <code>.meta</code></b> (section 10).</li>
+</ol>
+<div class="box">
+  <p><b>Example.</b> To give Deadeye a rifle shot, save it as
+  <code>Assets/_Project/Audio/Resources/SFX/Operators/Sniper/Deadeye/Attack.wav</code>. Every Deadeye shot now plays it.
+  Add <code>Attack_2.wav</code> and <code>Attack_3.wav</code> and each shot picks one of the three at random.</p>
+</div>
+
+<h2>2. Folder map</h2>
+<pre>Assets/_Project/Audio/Resources/
+├── Music/
+│   ├── MainMenuMusic          main menu
+│   ├── GameplayMusic          any stage without its own track
+│   └── Stages/                Stage01 … Stage06
+└── SFX/
+    ├── UI/                    buttons, draft cards
+    ├── Gameplay/              deploy, retreat, waves, lives, victory/defeat, pause
+    ├── Combat/                shared attack fallbacks, stun, miss
+    ├── Tiles/                 trap and hole tiles (any stage)
+    ├── Stages/Stage01 … Stage06/   stage ambience loops and hazards
+    ├── Operators/{Class}/{OperatorName}/   one folder per operator
+    └── Enemies/{Archetype}/{EnemyName}/    one folder per enemy</pre>
+<p>Never put a file loose in <code>SFX/</code> or <code>Music/</code> unless this guide says so. The game only looks in the folders listed.</p>
+
+<h2>3. Naming and file rules</h2>
+<table>
+  <thead><tr><th style="width:24%">Rule</th><th>Details</th></tr></thead>
+  <tbody>
+    <tr><td><b>Exact names</b></td><td>Use the names in the tables exactly, with the same capitals and no spaces. <code>ItemLandGlass</code>, not <code>Item Land Glass</code>.</td></tr>
+    <tr><td><b>Any format</b></td><td><code>.wav</code>, <code>.mp3</code> and <code>.ogg</code> all work. WAV is best for short effects; OGG or MP3 for music and long loops.</td></tr>
+    <tr><td><b>Variations</b></td><td>Add <code>_2</code>, <code>_3</code>, … to any name (<code>Attack_2</code>, <code>CarHit_2</code>, <code>Ability_Dodge_2</code>). One is picked at random each time.
+      The plain name counts as one of them and can be left out. Music doesn't use variations.</td></tr>
+    <tr><td><b>Pitch</b></td><td>Unit sounds get a small random pitch shift every time (±4%), so even one file doesn't sound robotic. Don't bake big pitch differences into variations.</td></tr>
+    <tr><td><b>Missing files are fine</b></td><td>Sounds marked <span class="tag">fallback</span> play an existing sound until their own file is added. Everything else is silent until a file exists. Nothing breaks.</td></tr>
+    <tr><td><b>Crowd control</b></td><td>The same unit's sound won't restart within 0.08 s, and the same shared sound within 0.05 s. 40 rushers attacking or 5 burning operators won't stack into noise, so you don't need to make sounds quieter for that.</td></tr>
+    <tr><td><b>Enemy volume</b></td><td>Enemy sounds play at 70% (deaths at 80%) since many more enemies are on screen. Master them at the same loudness as operator sounds.</td></tr>
+    <tr><td><b>Loops</b></td><td>Music and the <code>Ambience</code> files loop. Make them seamless (no silence at the start or end). Ambience fades in and out automatically.</td></tr>
+    <tr><td><b>Unit folder names</b></td><td>The unit's in-game name with spaces and symbols removed: "Chi Paw" → <code>ChiPaw</code>, "Stag-ger" → <code>Stagger</code>. If a unit is renamed, its folder must be renamed too.</td></tr>
+    <tr><td><b>Unit class</b></td><td>Operators are grouped by their in-game class, not their asset name: Drawgoo lives in <code>Defender/</code>.</td></tr>
+  </tbody>
+</table>
+
+<div class="page-break"></div>
+<h2>4. Music and stage ambience</h2>
+<h3>Music</h3>
+<p>Folder: <code>Assets/_Project/Audio/Resources/Music/</code></p>
+<table>
+  <thead><tr><th style="width:28%">File</th><th style="width:12%">Status</th><th>When it plays</th></tr></thead>
+  <tbody>
+    <tr><td><code>MainMenuMusic</code></td><td class="ok">exists</td><td>Main menu.</td></tr>
+    <tr><td><code>GameplayMusic</code></td><td class="ok">exists</td><td>Any stage that doesn't have its own track yet.</td></tr>
+    <tr><td><code>Stages/Stage01</code></td><td></td><td>Stage 1.</td></tr>
+    <tr><td><code>Stages/Stage02</code></td><td></td><td>Stage 2 (falling items).</td></tr>
+    <tr><td><code>Stages/Stage03</code></td><td></td><td>Stage 3 (sandstorm).</td></tr>
+    <tr><td><code>Stages/Stage04</code></td><td></td><td>Stage 4 (factory heat).</td></tr>
+    <tr><td><code>Stages/Stage05</code></td><td></td><td>Stage 5, Boulevard (traffic).</td></tr>
+    <tr><td><code>Stages/Stage06</code></td><td></td><td>Stage 6 (acid rain).</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li>Stage tracks can be added one at a time; stages without one keep playing <code>GameplayMusic</code>.</li>
+  <li>The sandbox plays the track of whichever map is selected.</li>
+  <li>Retrying a stage keeps the track going instead of restarting it.</li>
+  <li>Players set music volume separately from sound effects in the pause menu.</li>
+</ul>
+
+<h3>Stage ambience</h3>
+<p>Every stage can have a background loop that plays quietly under the music for the whole stage. Folder:
+<code>Assets/_Project/Audio/Resources/SFX/Stages/StageNN/</code>, file name <code>Ambience</code>. Stages without one are silent.</p>
+<table>
+  <thead><tr><th style="width:28%">File</th><th>Suggested ambience</th></tr></thead>
+  <tbody>
+    <tr><td><code>Stages/Stage01/Ambience</code></td><td>Junkyard: light wind, distant clanks, flies.</td></tr>
+    <tr><td><code>Stages/Stage02/Ambience</code></td><td>Street / landfill crowd: distant voices, things being tossed.</td></tr>
+    <tr><td><code>Stages/Stage03/Ambience</code></td><td>Sandstorm wind and blowing grit.</td></tr>
+    <tr><td><code>Stages/Stage04/Ambience</code></td><td>Factory hum, furnace roar, machinery, hissing steam.</td></tr>
+    <tr><td><code>Stages/Stage05/Ambience</code></td><td>Boulevard traffic rumble, distant horns.</td></tr>
+    <tr><td><code>Stages/Stage06/Ambience</code></td><td>Acid rain on metal and puddles.</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li>Make it a seamless loop, 10–30 s, without one-off events that repeat noticeably.</li>
+  <li>The game plays it at 45% of the SFX volume and fades it in and out, so master it at normal loudness.</li>
+  <li><code>Ambience_2</code>, <code>Ambience_3</code>, … are allowed; one is picked at random when the stage starts.</li>
+  <li>The sandbox plays the ambience of the map it shows. Retrying a stage keeps the loop going.</li>
+</ul>
+
+<h2>5. Shared sound effects</h2>
+<p>All under <code>Assets/_Project/Audio/Resources/SFX/</code>. <span class="ok">exists</span> means a file is already there; you can replace it with a better one using the same name.</p>
+
+<h3>UI/</h3>
+<table>
+  <thead><tr><th style="width:24%">File</th><th>When it plays</th></tr></thead>
+  <tbody>
+    <tr><td><code>ButtonHover</code> <span class="ok">exists</span></td><td>Pointer moves onto any button.</td></tr>
+    <tr><td><code>ButtonClick</code> <span class="ok">exists</span></td><td>Any button press.</td></tr>
+    <tr><td><code>ButtonBack</code> <span class="ok">exists</span></td><td>Back and close buttons.</td></tr>
+    <tr><td><code>ButtonConfirm</code> <span class="ok">exists</span></td><td>A draft card is picked.</td></tr>
+    <tr><td><code>ButtonDenied</code> <span class="ok">exists</span></td><td>Something isn't allowed: locked stage, card still on cooldown, squad full, can't deploy on that tile.</td></tr>
+    <tr><td><code>CardShuffle</code></td><td>Draft cards riffle-shuffle (once per swap). <span class="tag">fallback: ButtonHover</span></td></tr>
+    <tr><td><code>CardDeal</code></td><td>Each draft card slides into place. <span class="tag">fallback: ButtonHover</span></td></tr>
+    <tr><td><code>CardFlip</code></td><td>A draft card flips face-up. <span class="tag">fallback: ButtonHover</span></td></tr>
+    <tr><td><code>Reroll</code></td><td>The draft reroll button. <span class="tag">fallback: ButtonClick</span></td></tr>
+    <tr><td><code>CardDiscard</code></td><td>A deck card is discarded (after confirming).</td></tr>
+  </tbody>
+</table>
+
+<h3>Gameplay/</h3>
+<table>
+  <thead><tr><th style="width:24%">File</th><th>When it plays</th></tr></thead>
+  <tbody>
+    <tr><td><code>Deploy</code> <span class="ok">exists</span></td><td>An operator is placed. Used when the operator has no <code>Deploy</code> of its own.</td></tr>
+    <tr><td><code>Retreat</code></td><td>An operator is recalled to the deck (not when it dies).</td></tr>
+    <tr><td><code>OperatorDeath</code></td><td>An operator dies. Used when it has no <code>Death</code> of its own.</td></tr>
+    <tr><td><code>EnemyDeath</code> <span class="ok">exists</span></td><td>An enemy dies. Used when it has no <code>Death</code> of its own.</td></tr>
+    <tr><td><code>WaveStart</code> <span class="ok">exists</span></td><td>A wave begins.</td></tr>
+    <tr><td><code>WaveCleared</code></td><td>Every enemy of a wave is dead (not after the last wave).</td></tr>
+    <tr><td><code>LifeLost</code> <span class="ok">exists</span></td><td>An enemy reaches the exit.</td></tr>
+    <tr><td><code>Victory</code></td><td>Stage cleared.</td></tr>
+    <tr><td><code>Defeat</code></td><td>Out of lives.</td></tr>
+    <tr><td><code>Pause</code></td><td>The pause menu opens.</td></tr>
+    <tr><td><code>Resume</code></td><td>The pause menu closes.</td></tr>
+    <tr><td><code>CardUpgrade</code></td><td>3 copies merge into a higher-rarity card.</td></tr>
+  </tbody>
+</table>
+
+<h3>Combat/</h3>
+<table>
+  <thead><tr><th style="width:24%">File</th><th>When it plays</th></tr></thead>
+  <tbody>
+    <tr><td><code>MeleeAttack</code> <span class="ok">exists</span></td><td>Attack sound for melee physical operators without their own <code>Attack</code>.</td></tr>
+    <tr><td><code>RangedPhysicalAttack</code> <span class="ok">exists</span></td><td>Attack sound for ranged physical operators without their own <code>Attack</code>.</td></tr>
+    <tr><td><code>MagicAttack</code> <span class="ok">exists</span></td><td>Attack sound for Arts operators without their own <code>Attack</code>.</td></tr>
+    <tr><td><code>Stun</code></td><td>An operator gets stunned (falling tools, car hit).</td></tr>
+    <tr><td><code>Miss</code></td><td>An attack misses: the sandstorm's miss chance, or Sand Plastic / Sand Poncho / Sand Hulk evading an operator.</td></tr>
+  </tbody>
+</table>
+
+<h3>Tiles/</h3>
+<table>
+  <thead><tr><th style="width:24%">File</th><th>When it plays</th></tr></thead>
+  <tbody>
+    <tr><td><code>TrapTick</code></td><td>A trap tile damages a unit standing on it (every tick).</td></tr>
+    <tr><td><code>HoleEnter</code></td><td>A ground enemy drops into a hole tile.</td></tr>
+    <tr><td><code>HoleExit</code></td><td>It climbs out of the paired hole.</td></tr>
+  </tbody>
+</table>
+
+<h3>Stages/</h3>
+<table>
+  <thead><tr><th style="width:14%">Folder</th><th style="width:18%">File</th><th>When it plays</th></tr></thead>
+  <tbody>
+    <tr><td><code>Stage02</code></td><td><code>ItemFall</code></td><td>An item starts falling (every 10 s).</td></tr>
+    <tr><td><code>Stage02</code></td><td><code>ItemLandGlass</code></td><td>Glass item lands (damage over time). <span class="tag">fallback: Combat/MeleeAttack</span></td></tr>
+    <tr><td><code>Stage02</code></td><td><code>ItemLandMetal</code></td><td>Metal item lands (burst damage). <span class="tag">fallback: Combat/MeleeAttack</span></td></tr>
+    <tr><td><code>Stage02</code></td><td><code>ItemLandTools</code></td><td>Tools item lands (damage + stun). <span class="tag">fallback: Combat/MeleeAttack</span></td></tr>
+    <tr><td><code>Stage04</code></td><td><code>HeatUp</code></td><td>An operator gains a heat stack.</td></tr>
+    <tr><td><code>Stage04</code></td><td><code>Ignite</code></td><td>An operator reaches 5 stacks and catches fire.</td></tr>
+    <tr><td><code>Stage04</code></td><td><code>BurnTick</code></td><td>Burning damage (once per second while anyone burns).</td></tr>
+    <tr><td><code>Stage04</code></td><td><code>Extinguish</code></td><td>A burning operator is retreated.</td></tr>
+    <tr><td><code>Stage05</code></td><td><code>CarPass</code></td><td>A car enters the boulevard (engine, horn or pass-by).</td></tr>
+    <tr><td><code>Stage05</code></td><td><code>CarHit</code></td><td>A car runs into an enemy or operator.</td></tr>
+    <tr><td><code>Stage06</code></td><td><code>AcidTick</code></td><td>Acid rain damage tick (every 2 s).</td></tr>
+  </tbody>
+</table>
+
+<div class="page-break"></div>
+<h2>6. Operator sounds</h2>
+<p>Folder: <code>SFX/Operators/{Class}/{OperatorName}/</code>. Every operator folder can hold these files:</p>
+<table>
+  <thead><tr><th style="width:22%">File</th><th>When it plays</th></tr></thead>
+  <tbody>
+    <tr><td><code>Deploy</code></td><td>Placed on the field. <span class="tag">fallback: Gameplay/Deploy</span></td></tr>
+    <tr><td><code>Attack</code></td><td>The attack starts: swing, shot, launch, cast. For Medics, each heal. <span class="tag">fallback: Combat/ sound for its damage type</span></td></tr>
+    <tr><td><code>Impact</code></td><td>The attack lands: hit, bullet impact, explosion. Plays once per volley, even when it hits several enemies.</td></tr>
+    <tr><td><code>Ability</code></td><td>The operator's special trigger (see the table below).</td></tr>
+    <tr><td><code>Ability_{Name}</code></td><td>Operators with more than one trigger have named ones. Each falls back to the plain <code>Ability</code>, so one <code>Ability</code> file covers all of them.</td></tr>
+    <tr><td><code>Death</code></td><td>Dies. <span class="tag">fallback: Gameplay/OperatorDeath</span></td></tr>
+  </tbody>
+</table>
+
+<table>
+  <thead><tr><th style="width:21%">Folder</th><th style="width:21%">Attack</th><th style="width:16%">Impact</th><th>Ability files</th></tr></thead>
+  <tbody>
+    <tr><td><code>Guard/ChiPaw</code></td><td>chi paw strike</td><td>strike lands</td><td><code>Ability</code>: knockback (every 4th hit)</td></tr>
+    <tr><td><code>Guard/Echosquire</code></td><td>slash</td><td>hit / life drain</td><td>—</td></tr>
+    <tr><td><code>Guard/Ignisaur</code></td><td>claw (melee) or fireball (ranged)</td><td>hit</td><td>—</td></tr>
+    <tr><td><code>Guard/Scrapper</code></td><td>swing</td><td>hit</td><td><code>Ability</code>: stuns an enemy (20% chance)</td></tr>
+    <tr><td><code>Guard/Shadeslice</code></td><td>slash</td><td>hit</td><td><code>Ability_Regen</code>: starts regenerating after 5 s untouched</td></tr>
+    <tr><td><code>Guard/Stagger</code></td><td>slugger swing</td><td>hit</td><td><code>Ability_Dodge</code>: dodges an attack<br><code>Ability_Empowered</code>: the +50% ATK strike after a dodge</td></tr>
+    <tr><td><code>Defender/Bulkhead</code></td><td>bash</td><td>hit</td><td><code>Ability</code>: ATK/DEF buff switches on (blocking 3+)</td></tr>
+    <tr><td><code>Defender/Drawgoo</code></td><td>attack</td><td>hit</td><td><code>Ability</code>: draws cards when it dies (plays after <code>Death</code>)</td></tr>
+    <tr><td><code>Defender/Mossmo</code></td><td colspan="2"><i>doesn't attack</i></td><td><code>Ability</code>: reactive heal pulse</td></tr>
+    <tr><td><code>Defender/Thornchin</code></td><td>attack</td><td>hit</td><td><code>Ability</code>: spine retaliation <span class="tag">fallback: Combat/MeleeAttack</span></td></tr>
+    <tr><td><code>Sniper/Basurocket</code></td><td>rocket launch</td><td><b>explosion</b></td><td>—</td></tr>
+    <tr><td><code>Sniper/Deadeye</code></td><td>rifle shot</td><td>bullet hit</td><td>—</td></tr>
+    <tr><td><code>Sniper/Proxishot</code></td><td>shotgun blast</td><td>pellets hit</td><td><code>Ability</code>: turns camouflaged</td></tr>
+    <tr><td><code>Caster/Castiel</code></td><td>beam cast</td><td>beam tick</td><td>—</td></tr>
+    <tr><td><code>Caster/Chillpath</code></td><td>frost cast</td><td>frost hit</td><td><code>Ability_Freeze</code>: freezes an enemy (and gains haste)<br><code>Ability_ExtraHit</code>: every 4th attack's bonus bolt</td></tr>
+    <tr><td><code>Caster/Pyrolite</code></td><td>fire cast</td><td>fire burst</td><td>—</td></tr>
+    <tr><td><code>Medic/Bubblets</code></td><td>shield cast</td><td>—</td><td><code>Ability</code>: bubble pop <span class="tag">fallback: Combat/MagicAttack</span></td></tr>
+    <tr><td><code>Medic/Coalesce</code></td><td>heal</td><td>—</td><td><code>Ability</code>: bonus heal (20% chance on low-HP allies)</td></tr>
+    <tr><td><code>Medic/Progeny</code></td><td>heal</td><td>—</td><td><code>Ability</code>: chain-heal bounce</td></tr>
+  </tbody>
+</table>
+<p class="small">The Attack and Impact columns describe what the sound should be. Every operator also takes <code>Deploy</code> and <code>Death</code>.</p>
+
+<h2>7. Enemy sounds</h2>
+<p>Folder: <code>SFX/Enemies/{Archetype}/{EnemyName}/</code>. Files: <code>Attack</code> (attack starts), <code>Impact</code> (its projectile lands, ranged enemies only) and
+<code>Death</code> <span class="tag">fallback: Gameplay/EnemyDeath</span>. Enemies have no shared attack fallback, so they stay silent until their own <code>Attack</code> exists.</p>
+<table>
+  <thead><tr><th style="width:28%">Folder</th><th style="width:36%">Attack</th><th>Impact</th></tr></thead>
+  <tbody>
+    <tr><td><code>Grunt/SludgeGrunt</code></td><td>melee hit</td><td>—</td></tr>
+    <tr><td><code>Grunt/SandPlastic</code></td><td>melee hit / sand throw</td><td>sand lands</td></tr>
+    <tr><td><code>Rusher/ToxicRusher</code></td><td>melee hit</td><td>—</td></tr>
+    <tr><td><code>Tank/PollutionTank</code></td><td>heavy slam</td><td>—</td></tr>
+    <tr><td><code>Tank/SandHulk</code></td><td>shockwave slam</td><td>—</td></tr>
+    <tr><td><code>Caster/SandPoncho</code></td><td>cast</td><td>spell lands</td></tr>
+    <tr><td><code>Caster/SmogCaster</code></td><td>cast</td><td>spell lands</td></tr>
+    <tr><td><code>Flyer/TalonRat</code></td><td>claw swipe</td><td>—</td></tr>
+    <tr><td><code>Flyer/Skyshard</code></td><td>shard shot</td><td>shard blast</td></tr>
+    <tr><td><code>Flyer/AcidFlyer</code></td><td>acid spit</td><td>acid splash</td></tr>
+  </tbody>
+</table>
+
+<div class="page-break"></div>
+<h2>8. Unity import settings</h2>
+<p>Unity imports audio with usable defaults, so this is optional. These settings keep memory low and avoid hitches. Select the file in the Project window and change them in the Inspector, then press <b>Apply</b>.</p>
+<table>
+  <thead><tr><th style="width:24%">Kind of sound</th><th style="width:26%">Load Type</th><th>Other settings</th></tr></thead>
+  <tbody>
+    <tr><td>Short effects (UI, attacks, hits, ticks)</td><td>Decompress On Load</td><td>Force To Mono on. Compression Format: Vorbis or ADPCM.</td></tr>
+    <tr><td>Longer one-shots (Victory, Defeat, CarPass)</td><td>Compressed In Memory</td><td>Force To Mono on unless the stereo matters. Vorbis.</td></tr>
+    <tr><td>Ambience loops</td><td>Compressed In Memory</td><td>Keep stereo. Vorbis.</td></tr>
+    <tr><td>Music</td><td>Streaming</td><td>Keep stereo. Vorbis, quality around 70%.</td></tr>
+  </tbody>
+</table>
+<h3>Recording and mastering tips</h3>
+<ul>
+  <li>Trim silence from the start of every effect. Even 50 ms of lead-in makes a hit feel late.</li>
+  <li>Keep attacks short (under ~0.5 s). Fast operators attack about once a second, and the game is often played at 2× or 3× speed.</li>
+  <li>Bring all effects to a similar loudness and leave headroom (peaks around −1 dBFS). The game layers many sounds at once.</li>
+  <li>Variations should differ in character (a different swing, a different crunch), not just volume.</li>
+</ul>
+
+<h2>9. Testing your sounds</h2>
+<ol>
+  <li>Open the gameplay scene and press Play. Pick the stage that uses your sound; in the sandbox stage you can deploy cards mid-wave and the squad limit is lifted.</li>
+  <li>Trigger the moment from the tables: deploy the operator, let it attack, retreat it, let an enemy die, and so on.</li>
+  <li>If you hear the old sound or nothing, check section 11.</li>
+  <li>Check volume against what's around it: at 3× speed with a full wave, your sound should still be readable but not dominate.</li>
+</ol>
+<div class="box"><p>Files added while the game is running are picked up the next time you press Play.</p></div>
+
+<h2>10. Committing</h2>
+<ul>
+  <li>Commit <b>both</b> the audio file and the <code>.meta</code> file Unity creates next to it. Without the <code>.meta</code>, teammates' copies of Unity give it a new ID.</li>
+  <li>Don't delete the <code>.keep</code> files in the folders; they keep empty folders in git.</li>
+  <li>Moving or renaming an existing file? Do it inside Unity (or move the <code>.meta</code> with it) so its ID is kept.</li>
+  <li>Keep source files (project files, uncompressed multitrack recordings) out of the repo; only the final exports go into <code>Assets</code>.</li>
+</ul>
+
+<h2>11. Troubleshooting</h2>
+<table>
+  <thead><tr><th style="width:32%">Problem</th><th>Check</th></tr></thead>
+  <tbody>
+    <tr><td>The sound never plays</td><td>The name is exact (capitals, no spaces, no extra suffix like <code>Attack_final</code>). The file is in the right folder under <code>Resources</code>. Unity imported it (it shows in the Project window with a waveform icon).</td></tr>
+    <tr><td>The old placeholder still plays</td><td>The sound has a fallback and your file isn't being found. Same checks as above.</td></tr>
+    <tr><td>Wrong unit folder</td><td>The folder must match the unit's in-game name with spaces and symbols removed, under its in-game class. Drawgoo is <code>Defender/Drawgoo</code>.</td></tr>
+    <tr><td>Only one of my variations ever plays</td><td>Variations must be named <code>Name_2</code>, <code>Name_3</code>, … with a number after the underscore.</td></tr>
+    <tr><td>A loop clicks or has a gap</td><td>Trim the start/end to zero crossings, or crossfade the loop point in your editor. Check for leading silence added by MP3 encoding; use OGG or WAV for loops.</td></tr>
+    <tr><td>A sound is too loud or quiet</td><td>Adjust the file itself; the game's own volume settings apply on top (player SFX slider, 70% for enemies).</td></tr>
+    <tr><td>The sound plays at the wrong moment</td><td>Check the file name against the table: <code>Attack</code> is the swing or shot, <code>Impact</code> is the hit landing.</td></tr>
+  </tbody>
+</table>
+
+<div class="page-break"></div>
+<h2>12. For programmers: adding a new sound trigger</h2>
+<p>Everything above works by dropping files. A new <i>moment</i> that should make a sound needs a few lines of code. Code lives in
+<code>Scripts/Audio/AudioManager.cs</code> (shared sounds) and <code>Scripts/Audio/UnitSfx.cs</code> (unit sounds).</p>
+
+<h3>A new shared sound (UI, gameplay, stage hazard)</h3>
+<ol>
+  <li>Add a value to the <code>SfxId</code> enum in <code>AudioManager.cs</code>.</li>
+  <li>Add its file path to <code>AudioManager.SfxPaths</code>, e.g. <code>{ SfxId.Stage5Horn, "Stages/Stage05/Horn" }</code>. Use an existing folder; never a loose file in <code>SFX/</code>.</li>
+  <li>Play it where the moment happens:</li>
+</ol>
+<pre>AudioManager.Instance?.PlaySfx(SfxId.Stage5Horn);                 // silent until the file exists
+AudioManager.Instance?.PlaySfxOrFallback(SfxId.Stage5Horn,        // plays the fallback until then
+                                         SfxId.GameplayMeleeAttack);
+AudioManager.Instance?.PlayAmbience(clip);                        // a custom loop (stage ambience is automatic)</pre>
+
+<h3>A new operator ability sound</h3>
+<pre>PlayAbilitySound();           // the operator's Ability file
+PlayAbilitySound("Overdrive"); // Ability_Overdrive, falling back to Ability</pre>
+<p>Use a named ability only when the operator has more than one trigger.</p>
+
+<h3>Attacks and hits</h3>
+<ul>
+  <li>Operators call <code>PlayAttackSound()</code> when an attack starts. It plays the operator's <code>Attack</code> file or the shared damage-type sound.</li>
+  <li>Hits go through <code>enemy.TryTakeAttackDamage(damage, type, this)</code>. Passing <code>this</code> plays the operator's <code>Impact</code> automatically.</li>
+  <li>Enemies use <code>PlayAttackSound()</code> / <code>PlayImpactSound()</code> in <code>EnemyBase</code>.</li>
+</ul>
+
+<h3>Game-state sounds</h3>
+<p>Victory, defeat, wave cleared, card upgrade, deploy, retreat and deaths are raised from game events in <code>AudioManager.SubscribeToGameplayEvents</code>, not from UI code. Hook new game-state sounds there.</p>
+
+<h3>New units and stages</h3>
+<ul>
+  <li><b>New operator or enemy:</b> create its folder under <code>SFX/Operators/{Class}/</code> or <code>SFX/Enemies/{Archetype}/</code> with a <code>.keep</code> file. No code needed.</li>
+  <li><b>New stage:</b> its music (<code>Music/Stages/StageNN</code>) and ambience (<code>SFX/Stages/StageNN/Ambience</code>) are found automatically. Hazard sounds go in <code>SFX/Stages/StageNN/</code> with new <code>SfxId</code> values.</li>
+</ul>
+
+<div class="box warn">
+  <p><b>Keep the lists current.</b> When you add a trigger, add its row to <code>Assets/_Project/Audio/SFX_GUIDE.md</code> and to this PDF
+  (source: <code>Docs/TRASH_TD_Audio_Guide.html</code>), and note it in <code>PROJECT_GUIDELINES.md</code> §7.4.</p>
+</div>
+
+</body>
+</html>

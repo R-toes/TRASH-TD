@@ -16,6 +16,18 @@ namespace TrashTD.Operators
 
         public override int CurrentATK => IsFrenzyActive ? Mathf.RoundToInt(currentATK * AtkMultiplier) : base.CurrentATK;
         public override int CurrentDEF => IsFrenzyActive ? Mathf.RoundToInt(currentDEF * DefMultiplier) : base.CurrentDEF;
+
+        private bool wasFrenzyActive;
+
+        protected override void Update()
+        {
+            base.Update();
+
+            // Ability sound when the buff switches on (blocked count reaches the threshold).
+            bool frenzyActive = isDeployed && IsFrenzyActive;
+            if (frenzyActive && !wasFrenzyActive) PlayAbilitySound();
+            wasFrenzyActive = frenzyActive;
+        }
     }
 }
 

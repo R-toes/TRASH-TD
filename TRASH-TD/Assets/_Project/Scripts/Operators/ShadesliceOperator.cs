@@ -68,7 +68,10 @@ namespace TrashTD.Operators
 
         public void UpdateOutOfCombatRegen(float dt)
         {
+            bool wasOutOfCombat = timeSinceLastAttacked >= OutOfCombatDuration;
             timeSinceLastAttacked += dt;
+            if (!wasOutOfCombat && timeSinceLastAttacked >= OutOfCombatDuration && currentHP < maxHP)
+                PlayAbilitySound("Regen");
             if (timeSinceLastAttacked >= OutOfCombatDuration)
             {
                 regenTimer += dt;

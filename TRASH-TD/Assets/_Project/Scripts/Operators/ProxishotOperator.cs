@@ -86,6 +86,7 @@ namespace TrashTD.Operators
             if (!wasCamouflaged)
             {
                 FloatingCombatNumber.ShowText(transform.position + Vector3.up * 0.6f, "CAMOUFLAGE!", new Color(0.6f, 0.9f, 1f));
+                PlayAbilitySound();
             }
         }
 

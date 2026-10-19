@@ -50,6 +50,7 @@ namespace TrashTD.Operators
             {
                 hasDodgeAtkBuff = true;
                 FloatingCombatNumber.ShowText(transform.position, "DODGE!", new Color(0.2f, 0.85f, 1f));
+                PlayAbilitySound("Dodge");
                 return true;
             }
 
@@ -120,6 +121,7 @@ namespace TrashTD.Operators
             int attackAtk = hasDodgeAtkBuff
                 ? Mathf.RoundToInt(currentATK * 1.5f)
                 : currentATK;
+            if (hasDodgeAtkBuff) PlayAbilitySound("Empowered");
 
             // Ability: If any enemies are blocked, strike ALL blocked enemies simultaneously
             if (blockedTargets.Count > 0)

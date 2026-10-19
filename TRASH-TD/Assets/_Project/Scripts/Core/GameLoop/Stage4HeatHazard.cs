@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using TrashTD.Audio;
 using TrashTD.Combat;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
@@ -89,12 +90,7 @@ namespace TrashTD.Core.GameLoop
                 OperatorBase op = deployed[i];
                 if (op == null || !op.IsDeployed || op.CurrentHP <= 0) continue;
 
-                op.HeatStacks = Mathf.Min(MaxHeatStacks, op.HeatStacks + 1);
-                if (op.HeatStacks >= MaxHeatStacks)
-                {
-                    op.IsBurning = true;
-                }
-
+                AddHeatStack(op);
                 OperatorHeatBar.ShowFor(op);
             }
         }
@@ -106,21 +102,33 @@ namespace TrashTD.Core.GameLoop
             // If deployed mid-wave, it immediately participates in this wave's heat
             if (waveManager != null && waveManager.IsWaveInProgress)
             {
-                op.HeatStacks = Mathf.Min(MaxHeatStacks, op.HeatStacks + 1);
-                if (op.HeatStacks >= MaxHeatStacks)
-                {
-                    op.IsBurning = true;
-                }
+                AddHeatStack(op);
             }
 
             OperatorHeatBar.ShowFor(op);
+        }
+
+        private static void AddHeatStack(OperatorBase op)
+        {
+            int previousStacks = op.HeatStacks;
+            op.HeatStacks = Mathf.Min(MaxHeatStacks, op.HeatStacks + 1);
+            if (op.HeatStacks > previousStacks)
+                AudioManager.Instance?.PlaySfx(SfxId.Stage4HeatUp, 0.7f);
+
+            if (op.HeatStacks >= MaxHeatStacks && !op.IsBurning)
+            {
+                op.IsBurning = true;
+                AudioManager.Instance?.PlaySfx(SfxId.Stage4Ignite);
+            }
         }
 
         private void HandleOperatorRetreated(OperatorBase op)
         {
             if (op == null) return;
 
-            // Fire is extinguished when retreated
+            // Fire is extinguished when retreated (a death isn't an extinguish)
+            if (op.IsBurning && op.CurrentHP > 0)
+                AudioManager.Instance?.PlaySfx(SfxId.Stage4Extinguish);
             op.IsBurning = false;
         }
 
@@ -163,6 +171,8 @@ namespace TrashTD.Core.GameLoop
                 }
 
                 BurnDamageFlash.Flash(op.gameObject);
+                // Several burning operators tick together; the shared-sound throttle plays this once.
+                AudioManager.Instance?.PlaySfx(SfxId.Stage4BurnTick, 0.6f);
                 op.TakeDamage(BurnDamagePerTick, DamageType.Arts);
             }
         }

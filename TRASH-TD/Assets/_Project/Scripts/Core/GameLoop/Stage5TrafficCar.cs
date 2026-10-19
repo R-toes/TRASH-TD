@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using TrashTD.Audio;
 using TrashTD.Combat;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
@@ -204,6 +205,7 @@ namespace TrashTD.Core.GameLoop
 
                     if (damage > 0)
                     {
+                        AudioManager.Instance?.PlaySfx(SfxId.Stage5CarHit);
                         enemy.TakeTrueDamage(damage);
                     }
 
@@ -248,6 +250,7 @@ namespace TrashTD.Core.GameLoop
                     bool damageDealt = false;
                     if (damage > 0)
                     {
+                        AudioManager.Instance?.PlaySfx(SfxId.Stage5CarHit);
                         damageDealt = op.TakeTrueDamage(damage, ignoreShieldNegation: true);
                     }
 

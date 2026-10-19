@@ -45,6 +45,7 @@ namespace TrashTD.Combat
         {
             if (TryAttackHit()) return true;
             FloatingCombatNumber.ShowMiss(targetPosition);
+            Audio.AudioManager.Instance?.PlaySfx(Audio.SfxId.CombatMiss, 0.6f);
             return false;
         }
     }

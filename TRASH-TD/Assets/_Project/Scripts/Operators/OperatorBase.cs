@@ -277,6 +277,16 @@ namespace TrashTD.Operators
             if (fallback.HasValue) AudioManager.Instance?.PlaySfx(fallback.Value);
         }
 
+        /// <summary>
+        /// A named ability clip (abilityName "Dodge" -> Ability_Dodge) for operators with more than one trigger,
+        /// else the operator's plain Ability clip, else the given shared sound (if any).
+        /// </summary>
+        protected void PlayAbilitySound(string abilityName, SfxId? fallback = null)
+        {
+            if (data == null || UnitSfx.PlayAbility(data, abilityName)) return;
+            if (fallback.HasValue) AudioManager.Instance?.PlaySfx(fallback.Value);
+        }
+
         public Vector2Int[] GetRangePattern() => data.rangePattern;
         public virtual Vector2Int[] GetTalentRangePattern() => data != null ? data.GetTalentRangePattern() : null;
         public virtual float GetAttackInterval() => Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval);
@@ -333,6 +343,7 @@ namespace TrashTD.Operators
             {
                 isStunned = true;
                 TrashTD.Combat.FloatingCombatNumber.ShowText(transform.position, "STUNNED!", new Color(1f, 0.9f, 0.2f));
+                AudioManager.Instance?.PlaySfx(SfxId.CombatStun);
             }
 
             // Immediately release any currently blocked enemies
@@ -403,6 +414,7 @@ namespace TrashTD.Operators
                 {
                     trapDamageTimer -= TrapTileRules.DamageIntervalSeconds;
                     TrashTD.Combat.AcidDamageFlash.Flash(gameObject);
+                    AudioManager.Instance?.PlaySfx(SfxId.TileTrapTick, 0.6f);
                     TakeTrueDamage(TrapTileRules.DamagePerTick);
                 }
                 if (!isDeployed) return;
@@ -569,7 +581,8 @@ namespace TrashTD.Operators
         /// </summary>
         protected virtual void Die()
         {
-            UnitSfx.Play(data, UnitSfxEvent.Death);
+            if (!UnitSfx.Play(data, UnitSfxEvent.Death))
+                AudioManager.Instance?.PlaySfx(SfxId.GameplayOperatorDeath);
             Retreat();
             TrashTD.Systems.OperatorManager.Instance?.HandleOperatorDeath(this);
             OnDeath();
@@ -656,6 +669,8 @@ namespace TrashTD.Operators
                 Debug.LogError($"{data.operatorName} died, but no CardDraftSystem is active to resolve its death skill.");
                 return;
             }
+
+            PlayAbilitySound();
 
             if (currentRarity >= OperatorRarity.Star2)
             {

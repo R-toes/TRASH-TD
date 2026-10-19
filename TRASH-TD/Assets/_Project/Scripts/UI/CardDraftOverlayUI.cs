@@ -112,6 +112,9 @@ namespace TrashTD.UI
         [SerializeField] private AudioClip clickClip;
         [SerializeField] private AudioClip confirmClip;
         [SerializeField] private AudioClip rerollClip;
+        [SerializeField] private AudioClip shuffleClip;
+        [SerializeField] private AudioClip dealClip;
+        [SerializeField] private AudioClip flipClip;
         [SerializeField, Range(0f, 1f)] private float sfxVolume = 0.7f;
 
         [Header("Card Flip")]
@@ -263,7 +266,11 @@ namespace TrashTD.UI
             if (hoverClip == null) hoverClip = AudioManager.Instance?.GetClip(SfxId.UiHover);
             if (clickClip == null) clickClip = AudioManager.Instance?.GetClip(SfxId.UiClick);
             if (confirmClip == null) confirmClip = AudioManager.Instance?.GetClip(SfxId.UiConfirm);
-            if (rerollClip == null) rerollClip = AudioManager.Instance?.GetClip(SfxId.UiClick);
+            if (rerollClip == null) rerollClip = AudioManager.Instance?.GetClip(SfxId.UiReroll) ?? clickClip;
+            // Card animation sounds fall back to the hover blip the overlay used before they had their own files.
+            if (shuffleClip == null) shuffleClip = AudioManager.Instance?.GetClip(SfxId.UiCardShuffle) ?? hoverClip;
+            if (dealClip == null) dealClip = AudioManager.Instance?.GetClip(SfxId.UiCardDeal) ?? hoverClip;
+            if (flipClip == null) flipClip = AudioManager.Instance?.GetClip(SfxId.UiCardFlip) ?? hoverClip;
 
             if (draftSystem != null)
             {
@@ -846,7 +853,7 @@ namespace TrashTD.UI
                 {
                     int topCard = order[n - 1];
                     int bottomCard = order[0];
-                    PlaySfx(hoverClip, 0.85f + 0.12f * c);
+                    PlaySfx(shuffleClip, 0.85f + 0.12f * c);
 
                     float t = 0f;
                     while (t < RiffleOutTime)
@@ -908,7 +915,7 @@ namespace TrashTD.UI
                     if (!soundPlayed[a] && k > 0f)
                     {
                         soundPlayed[a] = true;
-                        PlaySfx(hoverClip, 1.05f + 0.05f * a);
+                        PlaySfx(dealClip, 1.05f + 0.05f * a);
                     }
                 }
 
@@ -959,7 +966,8 @@ namespace TrashTD.UI
         private IEnumerator FlipRoutine(int index)
         {
             MenuButtonFeedback feedback = cardFeedbacks[index];
-            PlaySfx(hoverClip, 1.3f);
+            // The 1.3 pitch turns the hover blip fallback into a flick; a real flip sound plays as recorded.
+            PlaySfx(flipClip, flipClip == hoverClip ? 1.3f : UnityEngine.Random.Range(0.97f, 1.03f));
 
             // Half 1: the back squeezes away
             float t = 0f;

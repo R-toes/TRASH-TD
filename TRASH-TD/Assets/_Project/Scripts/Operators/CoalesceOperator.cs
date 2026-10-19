@@ -24,6 +24,7 @@ namespace TrashTD.Operators
             {
                 int extraAmount = GetHealAmount();
                 target.Heal(extraAmount);
+                PlayAbilitySound();
                 FloatingCombatNumber.ShowText(target.transform.position + Vector3.up * 0.6f, "EXTRA HEAL!", new Color(0.25f, 1f, 0.38f));
             }
         }

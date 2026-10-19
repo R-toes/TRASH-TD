@@ -1487,6 +1487,7 @@ namespace TrashTD.UI
                 playerDeck.GetCard(pendingDiscardSlot) == pendingDiscardCard)
             {
                 playerDeck.RemoveCard(pendingDiscardSlot);
+                AudioManager.Instance?.PlaySfx(SfxId.UiCardDiscard, sfxVolume);
             }
 
             CancelDiscard();
@@ -1864,6 +1865,8 @@ namespace TrashTD.UI
         public void ShowCooldownWarning(string operatorName, int remainingRounds)
         {
             if (remainingRounds <= 0 || cooldownToastGroup == null) return;
+
+            AudioManager.Instance?.PlaySfx(SfxId.UiDenied, sfxVolume);
 
             string displayName = string.IsNullOrWhiteSpace(operatorName) ? "OPERATOR" : operatorName.ToUpperInvariant();
             string roundLabel = remainingRounds == 1 ? "ROUND" : "ROUNDS";
