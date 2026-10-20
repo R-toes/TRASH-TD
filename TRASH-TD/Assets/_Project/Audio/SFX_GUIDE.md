@@ -24,6 +24,7 @@ SFX/
 - **Ambience** files loop. Make them seamless loops, 10–30 s. They fade in and out.
 - **Attack sounds stop when the impact plays.** If a unit has an `Impact` file, its still-running `Attack` sound is cut (quick 0.04 s fade) the moment the impact plays, so a long launch or charge-up never overlaps its own explosion. Melee swings that hit instantly are left alone.
 - **Volume per file:** see "Adjusting volume" below.
+- **✓ synth** marks a procedurally generated placeholder (retro/chiptune style, 2026-10-21). Synth files also exist for operators: Bubblets `Ability`, Coalesce `Attack` and `Ability`, Progeny `Attack` and `Ability`, Mossmo `Ability`, Chillpath `Ability_Freeze`, Proxishot `Ability`, Stagger `Ability_Dodge`. To replace one, **delete its `.wav`** and drop in the new file. Two files with the same name (`Retreat.wav` + `Retreat.mp3`) would both play at random, like variations.
 - Folder names are the unit's in-game name with spaces and symbols removed ("Chi Paw" → `ChiPaw`, "Stag-ger" → `Stagger`). Renaming a unit means renaming its folder. Operators are grouped by their in-game class (Drawgoo is a Defender).
 
 ## Shared sounds
@@ -37,28 +38,28 @@ SFX/
 | `ButtonBack` | ✓ exists. Back / close buttons. |
 | `ButtonConfirm` | ✓ exists. Draft card picked. |
 | `ButtonDenied` | ✓ exists. Locked stage, card still on cooldown, squad full, can't deploy on that tile. |
-| `CardShuffle` | Draft cards riffle-shuffle (per swap). *Fallback: ButtonHover.* |
-| `CardDeal` | Each draft card slides into place. *Fallback: ButtonHover.* |
-| `CardFlip` | A draft card flips face-up. *Fallback: ButtonHover.* |
-| `Reroll` | Draft reroll button. *Fallback: ButtonClick.* |
-| `CardDiscard` | A deck card is discarded (after confirming). |
+| `CardShuffle` | ✓ synth. Draft cards riffle-shuffle (per swap). *Fallback: ButtonHover.* |
+| `CardDeal` | ✓ synth. Each draft card slides into place. *Fallback: ButtonHover.* |
+| `CardFlip` | ✓ synth. A draft card flips face-up. *Fallback: ButtonHover.* |
+| `Reroll` | ✓ synth. Draft reroll button. *Fallback: ButtonClick.* |
+| `CardDiscard` | ✓ synth. A deck card is discarded (after confirming). |
 
 ### `Gameplay/`
 
 | File | When it plays |
 |---|---|
 | `Deploy` | ✓ exists. Operator placed. Used when the operator has no own `Deploy`. |
-| `Retreat` | Operator recalled to the deck (not on death). |
-| `OperatorDeath` | Operator dies. Used when the operator has no own `Death`. |
+| `Retreat` | ✓ synth. Operator recalled to the deck (not on death). |
+| `OperatorDeath` | ✓ synth. Operator dies. Used when the operator has no own `Death`. |
 | `EnemyDeath` | ✓ exists. Enemy dies. Used when the enemy has no own `Death`. |
 | `WaveStart` | ✓ exists. A wave begins. |
-| `WaveCleared` | Every enemy of a wave is dead (not the last wave). |
+| `WaveCleared` | ✓ synth. Every enemy of a wave is dead (not the last wave). |
 | `LifeLost` | ✓ exists. An enemy reaches the exit. |
-| `Victory` | Stage cleared. |
-| `Defeat` | Out of lives. |
-| `Pause` | Pause menu opens. |
-| `Resume` | Pause menu closes. |
-| `CardUpgrade` | 3 copies merge into a higher-rarity card. |
+| `Victory` | ✓ synth. Stage cleared. |
+| `Defeat` | ✓ synth. Out of lives. |
+| `Pause` | ✓ synth. Pause menu opens. |
+| `Resume` | ✓ synth. Pause menu closes. |
+| `CardUpgrade` | ✓ synth. 3 copies merge into a higher-rarity card. |
 
 ### `Combat/`
 
@@ -67,33 +68,33 @@ SFX/
 | `MeleeAttack` | ✓ exists. Operator attack fallback: melee physical. |
 | `RangedPhysicalAttack` | ✓ exists. Operator attack fallback: ranged physical. |
 | `MagicAttack` | ✓ exists. Operator attack fallback: Arts. |
-| `Stun` | An operator gets stunned (falling tools, car hit). |
-| `Miss` | An attack misses: the sandstorm's miss chance, or Sand Plastic / Sand Poncho / Sand Hulk evading an operator. |
+| `Stun` | ✓ synth. An operator gets stunned (falling tools, car hit). |
+| `Miss` | ✓ synth. An attack misses: the sandstorm's miss chance, or Sand Plastic / Sand Poncho / Sand Hulk evading an operator. |
 
 ### `Tiles/`
 
 | File | When it plays |
 |---|---|
 | `TrapTick` | A trap tile damages a unit standing on it (each tick). |
-| `HoleEnter` | A ground enemy drops into a hole tile. |
-| `HoleExit` | It climbs out of the paired hole. |
+| `HoleEnter` | ✓ synth. A ground enemy drops into a hole tile. |
+| `HoleExit` | ✓ synth. It climbs out of the paired hole. |
 
 ### `Stages/`
 
 | Folder | File | When it plays |
 |---|---|---|
 | `Stage01` … `Stage06` | `Ambience` | That stage's background loop (see below). Any stage can have one. |
-| `Stage02` | `ItemFall` | An item starts falling (every 10 s). |
+| `Stage02` | `ItemFall` | ✓ synth. An item starts falling (every 10 s). |
 | `Stage02` | `ItemLandGlass` | Glass item lands (damage over time). *Fallback: Combat/MeleeAttack.* |
 | `Stage02` | `ItemLandMetal` | Metal item lands (burst damage). *Fallback: Combat/MeleeAttack.* |
 | `Stage02` | `ItemLandTools` | Tools item lands (damage + stun). *Fallback: Combat/MeleeAttack.* |
-| `Stage04` | `HeatUp` | An operator gains a heat stack. |
-| `Stage04` | `Ignite` | An operator reaches 5 stacks and catches fire. |
-| `Stage04` | `BurnTick` | Burning damage (once per second while anyone burns). |
-| `Stage04` | `Extinguish` | A burning operator is retreated. |
+| `Stage04` | `HeatUp` | ✓ synth. An operator gains a heat stack. |
+| `Stage04` | `Ignite` | ✓ synth. An operator reaches 5 stacks and catches fire. |
+| `Stage04` | `BurnTick` | ✓ synth (+ `BurnTick_2`). Burning damage (once per second while anyone burns). |
+| `Stage04` | `Extinguish` | ✓ synth. A burning operator is retreated. |
 | `Stage05` | `CarPass` | A car enters the boulevard (engine / horn / pass-by). |
 | `Stage05` | `CarHit` | A car runs into an enemy or operator. |
-| `Stage06` | `AcidTick` | Acid rain damage tick (every 2 s). |
+| `Stage06` | `AcidTick` | ✓ synth (+ `AcidTick_2`). Acid rain damage tick (every 2 s). |
 
 ## Operators — `Operators/{Class}/{Name}/`
 
