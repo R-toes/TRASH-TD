@@ -7,13 +7,17 @@ namespace TrashTD.UI
 {
     /// <summary>
     /// UI for non-linear Bloons-TD style map selection (GDD 1.4.7).
-    /// Displays stage cards, 3 difficulty selection buttons with corresponding Life Points,
-    /// and a Launch Stage button.
+    /// Shows the Pip-Boy stage map with one clickable dot per stage, the selected stage's info,
+    /// 3 difficulty selection buttons with corresponding Life Points, and a Launch Stage button.
     /// </summary>
     public class MapSelectUI : MonoBehaviour
     {
         [Header("Manager")]
         [SerializeField] private MapSelectManager mapSelectManager;
+
+        [Header("Stage Map (Pip-Boy)")]
+        [Tooltip("The 6 stage dots placed on the map art. Each node holds its own StageData.")]
+        [SerializeField] private StageMapNode[] stageNodes;
 
         [Header("UI Text Displays")]
         [SerializeField] private Text mapNameText;
@@ -37,6 +41,14 @@ namespace TrashTD.UI
             if (normalButton != null) normalButton.onClick.AddListener(() => SetDifficulty(StageDifficulty.Normal));
             if (hardButton != null) hardButton.onClick.AddListener(() => SetDifficulty(StageDifficulty.Hard));
             if (launchButton != null) launchButton.onClick.AddListener(OnLaunchClicked);
+
+            if (stageNodes != null)
+            {
+                foreach (var node in stageNodes)
+                {
+                    if (node != null) node.Clicked += OnStageNodeClicked;
+                }
+            }
         }
 
         private void Start()
@@ -52,6 +64,9 @@ namespace TrashTD.UI
                 }
                 UpdateDifficultyDisplay(mapSelectManager.SelectedDifficulty);
             }
+
+            RefreshStageNodes();
+            RefreshLaunchButton();
         }
 
         private void OnDestroy()
@@ -60,6 +75,14 @@ namespace TrashTD.UI
             {
                 mapSelectManager.OnStageSelected -= UpdateMapDisplay;
                 mapSelectManager.OnDifficultySelected -= UpdateDifficultyDisplay;
+            }
+
+            if (stageNodes != null)
+            {
+                foreach (var node in stageNodes)
+                {
+                    if (node != null) node.Clicked -= OnStageNodeClicked;
+                }
             }
         }
 
@@ -71,6 +94,55 @@ namespace TrashTD.UI
             }
         }
 
+        // ----- Stage map -----
+
+        private void OnStageNodeClicked(StageMapNode node)
+        {
+            if (node != null) SelectStage(node.Stage);
+        }
+
+        /// <summary>
+        /// Single hook into the manager for picking a stage from the map.
+        /// NOTE: assumes MapSelectManager exposes SelectStage(StageData). If yours is named differently, change only this line.
+        /// </summary>
+        public void SelectStage(StageData stage)
+        {
+            if (stage == null || mapSelectManager == null) return;
+            mapSelectManager.SelectStage(stage);
+        }
+
+        /// <summary>
+        /// Hook your progression / save system in here to lock stages (locked dots are dimmed and can't be clicked).
+        /// </summary>
+        protected virtual bool IsStageUnlocked(StageData stage)
+        {
+            return true;
+        }
+
+        private void RefreshStageNodes()
+        {
+            if (stageNodes == null) return;
+
+            StageData selected = mapSelectManager != null ? mapSelectManager.SelectedStage : null;
+            foreach (var node in stageNodes)
+            {
+                if (node == null) continue;
+                node.SetLocked(!IsStageUnlocked(node.Stage));
+                node.SetSelected(selected != null && node.Stage == selected);
+            }
+        }
+
+        private void RefreshLaunchButton()
+        {
+            // can't launch until a stage dot has been picked
+            if (launchButton != null)
+            {
+                launchButton.interactable = mapSelectManager != null && mapSelectManager.SelectedStage != null;
+            }
+        }
+
+        // ----- Info panel -----
+
         private void UpdateMapDisplay(StageData stage)
         {
             if (stage == null) return;
@@ -78,6 +150,8 @@ namespace TrashTD.UI
             if (mapNameText != null) mapNameText.text = stage.mapName;
             if (squadLimitText != null) squadLimitText.text = $"Squad Limit: {stage.squadSizeLimit}";
             RefreshLifePoints();
+            RefreshStageNodes();
+            RefreshLaunchButton();
         }
 
         private void UpdateDifficultyDisplay(StageDifficulty difficulty)

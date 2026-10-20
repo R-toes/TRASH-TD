@@ -66,6 +66,7 @@ namespace TrashTD.UI
 
         [Header("Stage Selector")]
         [SerializeField] private Button backButton;
+        [SerializeField] private Button sandboxButton;
         [SerializeField] private Transform stageListRoot;
         [SerializeField] private Button stageButtonPrefab;
         [SerializeField] private GameObject stageDetailsPanel;
@@ -73,6 +74,9 @@ namespace TrashTD.UI
         [SerializeField] private Text stageDetailsDescription;
         [SerializeField] private Button playStageButton;
         [SerializeField] private Button stageDetailsBackButton;
+
+        [Header("Pip-Boy Map (auto-created)")]
+        [SerializeField] private Sprite stageMapBackgroundSprite;
 
         [Header("UI Sounds (optional)")]
         [SerializeField] private AudioClip hoverClip;
@@ -89,6 +93,8 @@ namespace TrashTD.UI
 
         private readonly List<StageData> availableStages = new List<StageData>();
         private readonly List<MenuButtonFeedback> stageCards = new List<MenuButtonFeedback>();
+        private readonly List<StageMapNode> stageMapNodes = new List<StageMapNode>();
+        private StageMapLayout stageMapLayout;
         private readonly Dictionary<StageDifficulty, DifficultyCardView> difficultyCards = new Dictionary<StageDifficulty, DifficultyCardView>();
         private StageData selectedStage;
         private int selectedStageIndex = -1;
@@ -497,32 +503,89 @@ namespace TrashTD.UI
                 stageSelectionPanel.SetActive(false);
             }
 
+            // Ambient motes behind the map
             CreateAmbientLayer(stageSelectionPanel.transform, 22);
 
-            // Header — left-aligned title block
-            var headerTitle = MakeText(stageSelectionPanel.transform, "StageSelectorTitle", "SELECT STAGE", 52, TextAnchor.MiddleLeft,
+            // --- Pip-Boy Map Container (replaces old grid) ---
+            if (stageListRoot == null)
+            {
+                var mapContainerGo = new GameObject("StageMapContainer", typeof(RectTransform), typeof(Image));
+                mapContainerGo.transform.SetParent(stageSelectionPanel.transform, false);
+                stageListRoot = mapContainerGo.transform;
+
+                var mapContainerRect = mapContainerGo.GetComponent<RectTransform>();
+                // Fills the whole screen
+                StretchFill(mapContainerRect);
+
+                var mapBg = mapContainerGo.GetComponent<Image>();
+                if (stageMapBackgroundSprite == null)
+                {
+                    stageMapBackgroundSprite = LoadSpriteSafely("StageSelectorMap", "Assets/_Project/Art/Levels/Stage Selector Map.png");
+                }
+
+                if (stageMapBackgroundSprite != null)
+                {
+                    if (stageMapBackgroundSprite.texture != null)
+                    {
+                        stageMapBackgroundSprite.texture.filterMode = FilterMode.Point;
+                    }
+                    mapBg.sprite = stageMapBackgroundSprite;
+                    mapBg.type = Image.Type.Simple;
+                    mapBg.preserveAspect = false;
+                    mapBg.color = Color.white;
+                }
+                else
+                {
+                    // Dark placeholder with subtle CRT-green tint if no art assigned
+                    mapBg.color = new Color(0.02f, 0.05f, 0.03f, 1f);
+                }
+
+                // Add the layout driver so nodes scale with the map
+                stageMapLayout = mapContainerGo.AddComponent<StageMapLayout>();
+
+                // Add CRT scanline overlay
+                var scanGo = new GameObject("Scanlines", typeof(RectTransform), typeof(RawImage));
+                scanGo.transform.SetParent(mapContainerGo.transform, false);
+                StretchFill(scanGo.GetComponent<RectTransform>());
+                scanGo.AddComponent<StageMapScanlines>();
+            }
+
+            // Header overlay — left-aligned title block (over the map)
+            var headerTitle = MakeText(stageSelectionPanel.transform, "StageSelectorTitle", "SELECT STAGE", 42, TextAnchor.MiddleLeft,
                 AccentBright, FontStyle.Bold);
-            Place(headerTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(120f, -56f), new Vector2(900f, 70f));
+            Place(headerTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(60f, -30f), new Vector2(600f, 50f));
             stageHeaderTitle = headerTitle.rectTransform;
 
-            var headerSubtitle = MakeText(stageSelectionPanel.transform, "StageSelectorSubtitle", "CHOOSE YOUR DEPLOYMENT", 14, TextAnchor.MiddleLeft, TextDim);
-            Place(headerSubtitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(124f, -130f), new Vector2(700f, 26f));
+            var headerSubtitle = MakeText(stageSelectionPanel.transform, "StageSelectorSubtitle", "CHOOSE YOUR DEPLOYMENT", 13, TextAnchor.MiddleLeft, TextDim);
+            Place(headerSubtitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(64f, -82f), new Vector2(500f, 22f));
             stageHeaderSubtitle = headerSubtitle.rectTransform;
 
             var headerDivider = new GameObject("StageSelectorDivider", typeof(RectTransform), typeof(Image));
             headerDivider.transform.SetParent(stageSelectionPanel.transform, false);
             stageHeaderDivider = headerDivider.GetComponent<RectTransform>();
-            Place(stageHeaderDivider, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(124f, -166f), new Vector2(320f, 2f));
+            Place(stageHeaderDivider, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(64f, -110f), new Vector2(260f, 2f));
             var headerDividerImage = headerDivider.GetComponent<Image>();
             headerDividerImage.color = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.4f);
             headerDividerImage.raycastTarget = false;
 
-            stageProgressText = MakeText(stageSelectionPanel.transform, "StageProgressText", "", 16, TextAnchor.MiddleRight, TextDim);
-            Place(stageProgressText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-120f, -82f), new Vector2(400f, 30f));
+            stageProgressText = MakeText(stageSelectionPanel.transform, "StageProgressText", "", 14, TextAnchor.MiddleRight, TextDim);
+            Place(stageProgressText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-60f, -48f), new Vector2(300f, 26f));
+
+            if (sandboxButton == null)
+            {
+                sandboxButton = CreateButtonChild(stageSelectionPanel.transform, "SandboxButton", "⚙  QA SANDBOX");
+            }
+            sandboxButton.GetComponent<Image>().color = new Color(0.08f, 0.12f, 0.16f, 0.95f);
+            var sandboxBtnLabel = sandboxButton.GetComponentInChildren<Text>();
+            if (sandboxBtnLabel != null) { sandboxBtnLabel.fontSize = 15; sandboxBtnLabel.color = AccentBright; }
+            Place(sandboxButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-60f, 40f), new Vector2(200f, 48f));
+            sandboxButton.onClick.RemoveAllListeners();
+            sandboxButton.onClick.AddListener(() => { PlayClick(); SelectStage(6); });
+            AttachFeedback(sandboxButton, PlayClick, AccentBright, 1.05f);
 
             var hint = MakeText(stageSelectionPanel.transform, "StageHint", "ESC  BACK", 12, TextAnchor.MiddleRight,
                 new Color(0.30f, 0.34f, 0.40f, 1f));
-            Place(hint.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-120f, 70f), new Vector2(300f, 24f));
+            Place(hint.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-60f, 96f), new Vector2(200f, 22f));
             stageHint = hint.rectTransform;
 
             if (backButton == null)
@@ -532,36 +595,7 @@ namespace TrashTD.UI
             backButton.GetComponent<Image>().color = DarkButton;
             var backBtnLabel = backButton.GetComponentInChildren<Text>();
             if (backBtnLabel != null) { backBtnLabel.fontSize = 16; backBtnLabel.color = new Color(0.6f, 0.65f, 0.72f, 1f); }
-            Place(backButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(120f, 56f), new Vector2(200f, 48f));
-
-            if (stageListRoot == null)
-            {
-                var stageListGo = new GameObject("StageList", typeof(RectTransform), typeof(GridLayoutGroup));
-                stageListGo.transform.SetParent(stageSelectionPanel.transform, false);
-                stageListRoot = stageListGo.transform;
-
-                Place(stageListGo.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -30f), new Vector2(1180f, 470f));
-            }
-
-            var stageGrid = stageListRoot.GetComponent<GridLayoutGroup>();
-            if (stageGrid == null)
-            {
-                stageGrid = stageListRoot.gameObject.AddComponent<GridLayoutGroup>();
-            }
-
-            stageGrid.cellSize = new Vector2(340f, 200f);
-            stageGrid.spacing = new Vector2(28f, 28f);
-            stageGrid.padding = new RectOffset(15, 15, 15, 15);
-            stageGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            stageGrid.constraintCount = 3;
-            stageGrid.childAlignment = TextAnchor.MiddleCenter;
-
-            if (stageButtonPrefab == null)
-            {
-                stageButtonPrefab = CreateButtonChild(stageListRoot.transform, "StageButtonPrefab", "Stage");
-                stageButtonPrefab.gameObject.name = "StageButtonPrefab";
-                stageButtonPrefab.gameObject.SetActive(false);
-            }
+            Place(backButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(60f, 40f), new Vector2(200f, 48f));
 
             if (stageDetailsPanel == null)
             {
@@ -604,12 +638,18 @@ namespace TrashTD.UI
             SetPanelVisible(stageSelectionPanel, true, true);
             SetPanelVisible(stageDetailsPanel, false, true, stageDetailsModal);
 
+            // Deselect all nodes when returning to the map
+            foreach (var node in stageMapNodes)
+            {
+                if (node != null) node.SetSelected(false);
+            }
+
             PlayEntrance(stageEntrance, ref stageEntranceRoutine);
 
             int focusIndex = selectedStageIndex >= 0 ? selectedStageIndex : 0;
-            if (focusIndex < stageCards.Count && stageCards[focusIndex] != null)
+            if (focusIndex < stageMapNodes.Count && stageMapNodes[focusIndex] != null)
             {
-                FocusUi(stageCards[focusIndex].gameObject);
+                FocusUi(stageMapNodes[focusIndex].gameObject);
             }
         }
 
@@ -621,9 +661,9 @@ namespace TrashTD.UI
             SetBackgroundInteractable(true);
             SetPanelVisible(stageDetailsPanel, false, false, stageDetailsModal);
 
-            if (selectedStageIndex >= 0 && selectedStageIndex < stageCards.Count && stageCards[selectedStageIndex] != null)
+            if (selectedStageIndex >= 0 && selectedStageIndex < stageMapNodes.Count && stageMapNodes[selectedStageIndex] != null)
             {
-                FocusUi(stageCards[selectedStageIndex].gameObject);
+                FocusUi(stageMapNodes[selectedStageIndex].gameObject);
             }
         }
 
@@ -632,6 +672,7 @@ namespace TrashTD.UI
             // While the details modal is open, keep keyboard/gamepad navigation from drifting underneath it.
             if (stageListRoot != null) GetOrAddCanvasGroup(stageListRoot.gameObject).interactable = value;
             if (backButton != null) GetOrAddCanvasGroup(backButton.gameObject).interactable = value;
+            if (sandboxButton != null) GetOrAddCanvasGroup(sandboxButton.gameObject).interactable = value;
         }
 
         private static void FocusUi(GameObject target)
@@ -644,10 +685,23 @@ namespace TrashTD.UI
         //  Stage selector
         // ─────────────────────────────────────────────────────
 
+        // ── Normalized node positions for each of the 6 stages on the map art ──
+        // Origin is top-left (0,0), bottom-right is (1,1).
+        private static readonly Vector2[] StageNodePositions = new[]
+        {
+            new Vector2(0.245f, 0.740f),  // Stage 1
+            new Vector2(0.380f, 0.550f),  // Stage 2
+            new Vector2(0.470f, 0.740f),  // Stage 3
+            new Vector2(0.610f, 0.460f),  // Stage 4
+            new Vector2(0.820f, 0.670f),  // Stage 5 (placed where stage 6 previously was)
+            new Vector2(0.820f, 0.350f),  // Stage 6 (straight up above stage 5)
+        };
+
         private void BuildStageButtons()
         {
             availableStages.Clear();
             stageCards.Clear();
+            stageMapNodes.Clear();
             stageEntrance.Clear();
 
             string[] stageNames = new[]
@@ -687,102 +741,274 @@ namespace TrashTD.UI
                 return;
             }
 
+            // Clean up any old children (except the scanlines overlay and layout)
             for (int i = stageListRoot.childCount - 1; i >= 0; i--)
             {
                 var child = stageListRoot.GetChild(i);
-                if (child.name != "StageButtonPrefab")
-                {
-                    Destroy(child.gameObject);
-                }
+                if (child.GetComponent<StageMapScanlines>() != null) continue;
+                if (child.name.StartsWith("StageNode_")) Destroy(child.gameObject);
             }
 
+            // Ditch custom node sprites — generate consistent, crisp CRT circle badge sprites
+            Sprite circleIdle = CreateCircleBadgeSprite(
+                new Color(0.22f, 0.91f, 0.50f, 1f),        // Bright neon green phosphor ring
+                new Color(0.04f, 0.11f, 0.07f, 0.92f),     // Dark CRT screen glass interior
+                0.13f);
+
+            Sprite circleSelected = CreateCircleBadgeSprite(
+                new Color(0.98f, 1.0f, 0.65f, 1f),         // Glowing yellow/white outer ring
+                new Color(0.22f, 0.91f, 0.50f, 0.95f),      // Vibrant solid green fill
+                0.16f);
+
+            Sprite circleLocked = CreateCircleBadgeSprite(
+                new Color(0.30f, 0.35f, 0.42f, 0.85f),     // Dim slate/grey ring
+                new Color(0.08f, 0.10f, 0.13f, 0.90f),     // Dim muted background
+                0.13f);
+
             int unlocked = 0;
-            for (int i = 0; i < availableStages.Count; i++)
+            int mapStageCount = Mathf.Min(6, availableStages.Count);
+            for (int i = 0; i < mapStageCount; i++)
             {
                 var stage = availableStages[i];
-                var button = Instantiate(stageButtonPrefab, stageListRoot);
-                button.gameObject.SetActive(true);
-                button.name = "StageButton_" + (i + 1);
-
                 bool isPlayable = IsStagePlayable(stage.stageId);
                 if (isPlayable) unlocked++;
 
-                StyleStageCard(button, stage, i, isPlayable);
+                var node = CreateStageMapNode(stage, i + 1, isPlayable,
+                    StageNodePositions[i],
+                    circleIdle, circleSelected, circleLocked);
 
-                int stageIndex = i;
-                button.onClick.RemoveAllListeners();
-                button.onClick.AddListener(() => SelectStage(stageIndex));
+                stageMapNodes.Add(node);
+
+                // Register for entrance animation
+                var nodeFeedback = node.GetComponent<MenuButtonFeedback>();
+                if (nodeFeedback != null) stageCards.Add(nodeFeedback);
+                RegisterEntrance(stageEntrance, node, Vector2.zero, 0.14f + i * 0.06f, 0.88f);
             }
+
+            // Re-apply the layout to position everything
+            if (stageMapLayout != null) stageMapLayout.Apply();
 
             if (stageProgressText != null)
             {
-                stageProgressText.text = $"{unlocked} / {availableStages.Count} UNLOCKED";
+                stageProgressText.text = $"{unlocked} / 6 UNLOCKED";
             }
         }
 
-        private void StyleStageCard(Button button, StageData stage, int index, bool isPlayable)
+        /// <summary>
+        /// Creates a single circular StageMapNode with centered stage number as a child of the map container.
+        /// </summary>
+        private StageMapNode CreateStageMapNode(StageData stage, int stageNumber, bool isPlayable,
+            Vector2 normalizedPos, Sprite idle, Sprite selected, Sprite locked)
         {
-            // Locked cards stay clickable so they can give "denied" feedback.
-            button.interactable = true;
+            var go = new GameObject("StageNode_" + stageNumber, typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(stageListRoot, false);
 
-            var image = button.GetComponent<Image>();
-            image.color = isPlayable ? CardColor : CardLockedColor;
+            var img = go.GetComponent<Image>();
+            img.raycastTarget = true;
+            img.preserveAspect = true;
 
-            // Reuse the prefab label as the stage name
-            Text nameText = button.GetComponentInChildren<Text>();
-            if (nameText == null)
-            {
-                nameText = MakeText(button.transform, "Label", stage.mapName, 24, TextAnchor.MiddleLeft, Color.white);
-            }
-            nameText.text = stage.mapName;
-            nameText.fontSize = 24;
-            nameText.fontStyle = FontStyle.Bold;
-            nameText.alignment = TextAnchor.MiddleLeft;
-            nameText.color = isPlayable ? Color.white : new Color(0.45f, 0.49f, 0.55f, 1f);
-            nameText.raycastTarget = false;
-            StretchTop(nameText.rectTransform, 22f, 22f, 26f, 34f);
+            var btn = go.GetComponent<Button>();
+            btn.targetGraphic = img;
+            btn.transition = Selectable.Transition.None;
 
-            // Big faint stage number
-            var number = MakeText(button.transform, "StageNumber", (index + 1).ToString("00"), 96, TextAnchor.MiddleRight,
-                new Color(1f, 1f, 1f, isPlayable ? 0.07f : 0.04f), FontStyle.Bold);
-            number.horizontalOverflow = HorizontalWrapMode.Overflow;
-            number.verticalOverflow = VerticalWrapMode.Overflow;
-            Place(number.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-12f, -8f), new Vector2(220f, 130f));
+            // Center stage number text using game pixel font
+            var txt = MakeText(go.transform, "StageNumber", stageNumber.ToString(), 24, TextAnchor.MiddleCenter,
+                isPlayable ? AccentBright : new Color(0.38f, 0.44f, 0.50f, 0.85f), FontStyle.Bold);
+            StretchFill(txt.rectTransform);
 
-            // Short description
-            var description = MakeText(button.transform, "StageDescription", stage.shortDescription, 13, TextAnchor.UpperLeft,
-                isPlayable ? new Color(0.58f, 0.65f, 0.74f, 1f) : new Color(0.32f, 0.36f, 0.42f, 1f));
-            StretchTop(description.rectTransform, 22f, 22f, 70f, 60f);
+            var shadow = txt.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            shadow.effectDistance = new Vector2(1f, -1f);
 
-            // Status line
-            var status = MakeText(button.transform, "StageStatus", isPlayable ? "◆ AVAILABLE" : "✕ COMING SOON", 12, TextAnchor.MiddleLeft,
-                isPlayable ? AccentBright : new Color(0.38f, 0.42f, 0.48f, 1f), FontStyle.Bold);
-            StretchBottom(status.rectTransform, 22f, 22f, 18f, 22f);
+            // Header display pill right above the node (Level tag in small font + Stage name)
+            var headerGo = new GameObject("HeaderDisplay", typeof(RectTransform), typeof(Image), typeof(Outline));
+            headerGo.transform.SetParent(go.transform, false);
 
-            // Colored top accent stripe
-            var cardAccent = new GameObject("CardAccent", typeof(RectTransform), typeof(Image));
-            cardAccent.transform.SetParent(button.transform, false);
-            var cardAccentRect = cardAccent.GetComponent<RectTransform>();
-            cardAccentRect.anchorMin = new Vector2(0f, 1f);
-            cardAccentRect.anchorMax = new Vector2(1f, 1f);
-            cardAccentRect.pivot = new Vector2(0.5f, 1f);
-            cardAccentRect.sizeDelta = new Vector2(0f, 3f);
-            var accentImage = cardAccent.GetComponent<Image>();
-            accentImage.color = isPlayable ? AccentColor : new Color(0.25f, 0.28f, 0.32f, 0.5f);
-            accentImage.raycastTarget = false;
+            var headerRect = headerGo.GetComponent<RectTransform>();
+            headerRect.anchorMin = new Vector2(0.5f, 1f);
+            headerRect.anchorMax = new Vector2(0.5f, 1f);
+            headerRect.pivot = new Vector2(0.5f, 0f);
+            headerRect.anchoredPosition = new Vector2(0f, 6f);
+            headerRect.sizeDelta = new Vector2(170f, 36f);
 
-            // Feedback
+            var headerBg = headerGo.GetComponent<Image>();
+            headerBg.color = new Color(0.04f, 0.08f, 0.10f, 0.88f);
+            headerBg.raycastTarget = false;
+
+            var headerOutline = headerGo.GetComponent<Outline>();
+            headerOutline.effectColor = isPlayable
+                ? new Color(0.22f, 0.91f, 0.50f, 0.45f)
+                : new Color(0.25f, 0.30f, 0.36f, 0.40f);
+            headerOutline.effectDistance = new Vector2(1f, 1f);
+
+            // Small Level text on top
+            var lvlText = MakeText(headerGo.transform, "LevelText", "LEVEL " + stageNumber, 10,
+                TextAnchor.MiddleCenter, isPlayable ? AccentBright : new Color(0.38f, 0.44f, 0.50f, 0.70f), FontStyle.Bold);
+            var lvlRect = lvlText.rectTransform;
+            lvlRect.anchorMin = new Vector2(0f, 0.5f);
+            lvlRect.anchorMax = new Vector2(1f, 1f);
+            lvlRect.offsetMin = new Vector2(4f, 0f);
+            lvlRect.offsetMax = new Vector2(-4f, -2f);
+            var lvlShadow = lvlText.gameObject.AddComponent<Shadow>();
+            lvlShadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            lvlShadow.effectDistance = new Vector2(1f, -1f);
+
+            // Stage Name text on bottom
+            string mapTitle = !string.IsNullOrEmpty(stage.mapName) ? stage.mapName.ToUpper() : ("STAGE 0" + stageNumber);
+            var nameText = MakeText(headerGo.transform, "StageNameText", mapTitle, 12,
+                TextAnchor.MiddleCenter, isPlayable ? Color.white : new Color(0.50f, 0.55f, 0.62f, 0.70f), FontStyle.Bold);
+            var nameRect = nameText.rectTransform;
+            nameRect.anchorMin = new Vector2(0f, 0f);
+            nameRect.anchorMax = new Vector2(1f, 0.5f);
+            nameRect.offsetMin = new Vector2(4f, 2f);
+            nameRect.offsetMax = new Vector2(-4f, 0f);
+            var nameShadow = nameText.gameObject.AddComponent<Shadow>();
+            nameShadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            nameShadow.effectDistance = new Vector2(1f, -1f);
+
+            var node = go.AddComponent<StageMapNode>();
+            node.Initialize(stage, stageNumber, normalizedPos, idle, selected, locked, txt, headerGo, lvlText, nameText);
+
+            // Subscribe to node click
+            node.Clicked += OnStageMapNodeClicked;
+
+            // Set locked state
+            node.SetLocked(!isPlayable);
+
+            // Add hover feedback
             Color glow = isPlayable ? AccentBright : new Color(0.55f, 0.60f, 0.68f, 1f);
             System.Action clicked = isPlayable ? (System.Action)PlayClick : PlayDenied;
-            var feedback = AttachFeedback(button, clicked, glow, isPlayable ? 1.045f : 1.01f);
+            var feedback = AttachFeedback(btn, clicked, glow, isPlayable ? 1.08f : 1.02f);
             if (!isPlayable)
             {
                 feedback.hoverBrighten = 0.03f;
                 feedback.glowColor = new Color(glow.r, glow.g, glow.b, 0.35f);
             }
 
-            stageCards.Add(feedback);
-            RegisterEntrance(stageEntrance, button, Vector2.zero, 0.14f + index * 0.07f, 0.88f);
+            return node;
+        }
+
+        /// <summary>
+        /// Loads a sprite with multi-tier fallback: Resources single, Resources multiple/subassets, or direct disk loading.
+        /// </summary>
+        private static Sprite LoadSpriteSafely(string resourcePath, string projectRelativeFilePath)
+        {
+            // 1. Try single sprite load from Resources
+            var s = Resources.Load<Sprite>(resourcePath);
+            if (s != null)
+            {
+                if (s.texture != null) s.texture.filterMode = FilterMode.Point;
+                return s;
+            }
+
+            // 2. Try multiple subassets from Resources
+            var all = Resources.LoadAll<Sprite>(resourcePath);
+            if (all != null && all.Length > 0 && all[0] != null)
+            {
+                if (all[0].texture != null) all[0].texture.filterMode = FilterMode.Point;
+                return all[0];
+            }
+
+            // 3. Try reading directly from project folder on disk
+            try
+            {
+                string fullPath = projectRelativeFilePath;
+                if (!System.IO.Path.IsPathRooted(fullPath))
+                {
+                    fullPath = System.IO.Path.Combine(Application.dataPath, "..", projectRelativeFilePath);
+                }
+                if (System.IO.File.Exists(fullPath))
+                {
+                    byte[] bytes = System.IO.File.ReadAllBytes(fullPath);
+                    var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                    tex.filterMode = FilterMode.Point;
+                    if (tex.LoadImage(bytes))
+                    {
+                        tex.filterMode = FilterMode.Point;
+                        return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[MainMenuController] Failed disk sprite load from {projectRelativeFilePath}: {ex.Message}");
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Generates a crisp, procedural CRT circular badge sprite with an outer border ring and inner fill.
+        /// </summary>
+        private static Sprite CreateCircleBadgeSprite(Color ringColor, Color fillColor, float ringWidthRatio = 0.14f)
+        {
+            int size = 64;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+
+            float r = (size - 1) * 0.5f;
+            float rInner = r * (1f - ringWidthRatio);
+            Vector2 center = new Vector2(r, r);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dist = Vector2.Distance(new Vector2(x, y), center);
+                    if (dist > r)
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                    else if (dist >= rInner)
+                    {
+                        tex.SetPixel(x, y, ringColor);
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, fillColor);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private static Sprite CreateFallbackDotSprite(Color color)
+        {
+            int size = 33;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+            float r = (size - 1) * 0.5f;
+            Vector2 center = new Vector2(r, r);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dist = Vector2.Distance(new Vector2(x, y), center);
+                    if (dist <= r)
+                    {
+                        float alpha = Mathf.Clamp01(1f - (dist / r) * 0.3f);
+                        tex.SetPixel(x, y, new Color(color.r, color.g, color.b, color.a * alpha));
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        /// <summary>Called when a StageMapNode dot is clicked on the Pip-Boy map.</summary>
+        private void OnStageMapNodeClicked(StageMapNode node)
+        {
+            if (node == null || node.Stage == null) return;
+
+            int index = availableStages.IndexOf(node.Stage);
+            if (index < 0) return;
+
+            SelectStage(index);
         }
 
         private void SelectStage(int stageIndex)
@@ -794,9 +1020,11 @@ namespace TrashTD.UI
 
             if (!IsStagePlayable(availableStages[stageIndex].stageId))
             {
-                if (stageIndex < stageCards.Count && stageCards[stageIndex] != null)
+                // Wobble the node's feedback if it exists
+                if (stageIndex < stageMapNodes.Count && stageMapNodes[stageIndex] != null)
                 {
-                    stageCards[stageIndex].Wobble();
+                    var fb = stageMapNodes[stageIndex].GetComponent<MenuButtonFeedback>();
+                    if (fb != null) fb.Wobble();
                 }
                 return;
             }
@@ -808,6 +1036,12 @@ namespace TrashTD.UI
             if (stageDetailsTag != null) stageDetailsTag.text = "STAGE " + (stageIndex + 1).ToString("00");
             if (stageDetailsNumber != null) stageDetailsNumber.text = (stageIndex + 1).ToString("00");
             UpdateDifficultyDisplay();
+
+            // Highlight the selected node, dim others
+            for (int i = 0; i < stageMapNodes.Count; i++)
+            {
+                if (stageMapNodes[i] != null) stageMapNodes[i].SetSelected(i == stageIndex);
+            }
 
             detailsOpen = true;
             SetBackgroundInteractable(false);
