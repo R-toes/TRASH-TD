@@ -30,6 +30,24 @@ namespace TrashTD.UI
         private static readonly int HasUiId = Shader.PropertyToID("_HasUi");
 
         private CrtScreen.Settings settings = CrtScreen.Television;
+
+        /// <summary>
+        /// Full TV: the whole game through the Television CRT. Classic: a clean pass (the stage selection
+        /// screen has its own Classic TV). The player's brightness applies on top either way.
+        /// </summary>
+        private static CrtScreen.Settings GetActiveSettings()
+        {
+            CrtScreen.Settings baseSettings = GameGraphicsSettings.CrtStyle == CrtStyle.FullTv
+                ? CrtScreen.Television
+                : CrtScreen.Clean;
+            return baseSettings.WithBrightnessScale(GameGraphicsSettings.Brightness);
+        }
+
+        private void ApplyGraphicsSettings()
+        {
+            settings = GetActiveSettings();
+            CrtScreen.ApplySettings(material, settings);
+        }
         private Material material;
         private RenderTexture picture;   // the game world (scene cameras)
         private RenderTexture uiPicture; // the converted canvases, transparent where there is no UI
@@ -95,7 +113,8 @@ namespace TrashTD.UI
         private void Awake()
         {
             material = CrtScreen.CreateMaterial("CRT (Display)", this);
-            CrtScreen.ApplySettings(material, settings);
+            ApplyGraphicsSettings();
+            GameGraphicsSettings.Changed += ApplyGraphicsSettings;
 
             // Renders after every other camera, so the CRT shows this frame's game and UI textures
             screenCamera = CreateCamera("CrtScreenCamera", new Vector3(-30000f, 0f, 0f));
@@ -156,6 +175,7 @@ namespace TrashTD.UI
             ReleaseTexture(ref picture);
             ReleaseTexture(ref uiPicture);
             if (material != null) Destroy(material);
+            GameGraphicsSettings.Changed -= ApplyGraphicsSettings;
             if (instance == this) instance = null;
         }
 

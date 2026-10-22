@@ -6,6 +6,8 @@
 //     dims the others, which is what makes small palettes shimmer with colour up close
 //   - halation glow that fills the mask gaps, plus curvature, rounded corners and bezel, colour fringing,
 //     grain, a rolling hum bar, flicker, line jitter, vignette and a glass reflection.
+// _Legacy = 1 keeps the first, crisper version (sine scanlines, light stripe tint, small glow) for the
+// Classic graphics option; _Passthrough = 1 shows the picture with brightness only.
 // CrtScreen.Distort / IsOnScreen mirror Distort and ScreenMask here; keep them in sync.
 Shader "TrashTD/UI/CRT"
 {
@@ -14,6 +16,8 @@ Shader "TrashTD/UI/CRT"
         [PerRendererData] _MainTex ("Texture", 2D) = "black" {}
         _UiTex ("UI Layer (set by CrtDisplay)", 2D) = "black" {}
         _HasUi ("Composite UI Layer", Float) = 0
+        _Legacy ("Classic (first version) look", Float) = 0
+        _Passthrough ("Passthrough (brightness only)", Float) = 0
         _Color ("Tint", Color) = (1,1,1,1)
 
         _Curvature ("Curvature", Range(0, 0.5)) = 0.06
@@ -118,6 +122,8 @@ Shader "TrashTD/UI/CRT"
             sampler2D _MainTex;
             sampler2D _UiTex;
             float _HasUi;
+            float _Legacy;
+            float _Passthrough;
             fixed4 _Color;
             float4 _ClipRect;
 
@@ -195,7 +201,21 @@ Shader "TrashTD/UI/CRT"
                 float2 q = abs(uv - 0.5) * 2.0;
                 float2 d = max(q - (1.0 - r), 0.0);
                 float dist = length(d) / r;
-                return 1.0 - smoothstep(1.0 - softness / r, 1.0, dist);
+                // Clamp so a tiny corner radius can't stretch the edge fade across the whole screen
+                return 1.0 - smoothstep(1.0 - min(softness / r, 0.5), 1.0, dist);
+            }
+
+            fixed4 FinishUi(fixed4 color, v2f IN)
+            {
+                #ifdef UNITY_UI_CLIP_RECT
+                color.a *= UnityGet2DClipping(IN.worldPosition.xy, _ClipRect);
+                #endif
+
+                #ifdef UNITY_UI_ALPHACLIP
+                clip(color.a - 0.001);
+                #endif
+
+                return color;
             }
 
             // Analogue-style horizontal reconstruction: neighbours blend in as sharpness drops
@@ -229,6 +249,14 @@ Shader "TrashTD/UI/CRT"
 
             fixed4 frag(v2f IN) : SV_Target
             {
+                // Passthrough: the picture as-is, only brightness (CrtDisplay in Classic mode)
+                if (_Passthrough > 0.5)
+                {
+                    float4 plain = Pic(IN.texcoord);
+                    fixed4 plainColor = fixed4(saturate(plain.rgb * _Brightness), lerp(plain.a, 1.0, _Opaque)) * IN.color;
+                    return FinishUi(plainColor, IN);
+                }
+
                 float t = _CrtTime;
                 float2 res = max(_CrtResolution.xy, float2(1.0, 1.0));
                 float2 texel = 1.0 / res;
@@ -242,35 +270,64 @@ Shader "TrashTD/UI/CRT"
 
                 float inside = ScreenMask(uv, 0.003);
 
-                // Picture with colour fringing toward the edges
                 float2 fringe = (uv - 0.5) * _Chromatic * 2.0;
                 float3 col;
-                col.r = SampleSoft(uv + fringe, texel.x).r;
-                col.g = SampleSoft(uv, texel.x).g;
-                col.b = SampleSoft(uv - fringe, texel.x).b;
-                float alpha = Pic(uv).a;
+                float alpha;
 
-                // Scanline beam: a gaussian across each line, wider for brighter pixels,
-                // normalised so a line keeps roughly its average brightness
-                float luma = dot(col, float3(0.2126, 0.7152, 0.0722));
-                float f = frac(uv.y * res.y / period) - 0.5;
-                float beam = lerp(_BeamMin, _BeamMax, saturate(luma));
-                float scan = exp(-(f * f) / (2.0 * beam * beam));
-                scan *= 1.0 / clamp(beam * 2.5066, 0.4, 1.0);
-                col *= lerp(1.0, scan, _ScanlineStrength);
+                if (_Legacy > 0.5)
+                {
+                    // Classic: the first CRT version, kept exactly. Direct samples, a small glow,
+                    // sine scanlines that bright pixels wash out, and a light RGB stripe tint.
+                    float4 center = Pic(uv);
+                    col.r = Pic(uv + fringe).r;
+                    col.g = center.g;
+                    col.b = Pic(uv - fringe).b;
+                    alpha = center.a;
 
-                // RGB phosphors
-                col *= PhosphorMask(IN.vertex.xy);
+                    float2 o1 = float2(texel.x * 2.5, 0.0);
+                    float2 o2 = float2(0.0, texel.y * 2.5);
+                    float3 blur = (Pic(uv + o1).rgb + Pic(uv - o1).rgb + Pic(uv + o2).rgb + Pic(uv - o2).rgb) * 0.25;
+                    col += blur * blur * _Bloom * 0.6;
 
-                // Halation: light spreading in the glass, filling the mask and scanline gaps
-                float2 r1 = texel * 3.0;
-                float2 r2 = texel * 7.0;
-                float3 glow =
-                    Pic(uv + float2(r1.x, 0.0)).rgb + Pic(uv - float2(r1.x, 0.0)).rgb +
-                    Pic(uv + float2(0.0, r1.y)).rgb + Pic(uv - float2(0.0, r1.y)).rgb +
-                    Pic(uv + r2).rgb + Pic(uv - r2).rgb +
-                    Pic(uv + float2(r2.x, -r2.y)).rgb + Pic(uv + float2(-r2.x, r2.y)).rgb;
-                col += glow * (0.125 * _Bloom);
+                    float classicLuma = dot(col, float3(0.299, 0.587, 0.114));
+                    float classicScan = 0.5 + 0.5 * sin(uv.y * res.y * 6.2831853 / period);
+                    classicScan = lerp(classicScan, 1.0, saturate(classicLuma * 0.6));
+                    col *= lerp(1.0, classicScan, _ScanlineStrength);
+
+                    float column = fmod(floor(IN.vertex.x), 3.0);
+                    float3 grille = column < 0.5 ? float3(1.0, 0.0, 0.0) : (column < 1.5 ? float3(0.0, 1.0, 0.0) : float3(0.0, 0.0, 1.0));
+                    col *= lerp(float3(1.0, 1.0, 1.0), lerp(float3(0.55, 0.55, 0.55), float3(1.0, 1.0, 1.0), grille), _MaskStrength);
+                }
+                else
+                {
+                    // Picture with colour fringing toward the edges
+                    col.r = SampleSoft(uv + fringe, texel.x).r;
+                    col.g = SampleSoft(uv, texel.x).g;
+                    col.b = SampleSoft(uv - fringe, texel.x).b;
+                    alpha = Pic(uv).a;
+
+                    // Scanline beam: a gaussian across each line, wider for brighter pixels,
+                    // normalised so a line keeps roughly its average brightness
+                    float luma = dot(col, float3(0.2126, 0.7152, 0.0722));
+                    float f = frac(uv.y * res.y / period) - 0.5;
+                    float beam = lerp(_BeamMin, _BeamMax, saturate(luma));
+                    float scan = exp(-(f * f) / (2.0 * beam * beam));
+                    scan *= 1.0 / clamp(beam * 2.5066, 0.4, 1.0);
+                    col *= lerp(1.0, scan, _ScanlineStrength);
+
+                    // RGB phosphors
+                    col *= PhosphorMask(IN.vertex.xy);
+
+                    // Halation: light spreading in the glass, filling the mask and scanline gaps
+                    float2 r1 = texel * 3.0;
+                    float2 r2 = texel * 7.0;
+                    float3 glow =
+                        Pic(uv + float2(r1.x, 0.0)).rgb + Pic(uv - float2(r1.x, 0.0)).rgb +
+                        Pic(uv + float2(0.0, r1.y)).rgb + Pic(uv - float2(0.0, r1.y)).rgb +
+                        Pic(uv + r2).rgb + Pic(uv - r2).rgb +
+                        Pic(uv + float2(r2.x, -r2.y)).rgb + Pic(uv + float2(-r2.x, r2.y)).rgb;
+                    col += glow * (0.125 * _Bloom);
+                }
 
                 col *= _Brightness;
 
@@ -296,17 +353,7 @@ Shader "TrashTD/UI/CRT"
                 float pictureAlpha = lerp(alpha, 1.0, _Opaque);
                 float3 finalRgb = lerp(_BezelColor.rgb, saturate(col), inside);
                 float finalAlpha = lerp(_BezelColor.a, pictureAlpha, inside);
-                fixed4 color = fixed4(finalRgb, finalAlpha) * IN.color;
-
-                #ifdef UNITY_UI_CLIP_RECT
-                color.a *= UnityGet2DClipping(IN.worldPosition.xy, _ClipRect);
-                #endif
-
-                #ifdef UNITY_UI_ALPHACLIP
-                clip(color.a - 0.001);
-                #endif
-
-                return color;
+                return FinishUi(fixed4(finalRgb, finalAlpha) * IN.color, IN);
             }
             ENDCG
         }

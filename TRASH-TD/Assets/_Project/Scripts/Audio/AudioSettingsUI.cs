@@ -6,17 +6,30 @@ using TrashTD.UI;
 namespace TrashTD.Audio
 {
     /// <summary>
-    /// Runtime-built music and SFX settings panel shared by menu and gameplay.
+    /// Runtime-built settings panel shared by menu and gameplay: Audio (music, SFX) and Graphics
+    /// (CRT style, brightness; see GameGraphicsSettings). The class keeps its original name because
+    /// several screens create it.
     /// </summary>
     public sealed class AudioSettingsUI : MonoBehaviour
     {
         private static readonly Color PanelColor = new Color(0.035f, 0.045f, 0.065f, 0.98f);
         private static readonly Color ButtonColor = new Color(0.10f, 0.13f, 0.18f, 1f);
         private static readonly Color AccentColor = new Color(0.18f, 0.82f, 0.45f, 1f);
+        private static readonly Color LabelColor = new Color(0.65f, 0.72f, 0.82f, 1f);
+        private static readonly Color HintColor = new Color(0.50f, 0.58f, 0.68f, 1f);
+
+        private const float LabelX = -145f;
+        private const float SliderX = 65f;
+        private const float SliderWidth = 285f;
 
         private GameObject panel;
         private Slider musicSlider;
         private Slider sfxSlider;
+        private Slider brightnessSlider;
+        private Text brightnessValueText;
+        private Button fullTvButton;
+        private Button classicButton;
+        private Text crtStyleHint;
         public Button SettingsButton { get; private set; }
         public bool IsOpen => panel != null && panel.activeSelf;
         public void Close() => Hide();
@@ -50,7 +63,7 @@ namespace TrashTD.Audio
             panelRect.anchorMin = new Vector2(0.5f, 0.5f);
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.pivot = new Vector2(0.5f, 0.5f);
-            panelRect.sizeDelta = new Vector2(520f, 330f);
+            panelRect.sizeDelta = new Vector2(580f, 580f);
             var panelImg = panel.GetComponent<Image>();
             var panelSprite = Resources.Load<Sprite>("UI/panels/panel_dark");
             if (panelSprite == null)
@@ -72,14 +85,48 @@ namespace TrashTD.Audio
             panelOutline.effectColor = new Color(0.18f, 0.82f, 0.45f, 0.28f);
             panelOutline.effectDistance = new Vector2(2f, -2f);
 
-            Text title = CreateText(panel.transform, "AUDIO SETTINGS", 28, TextAnchor.MiddleCenter);
+            Text title = CreateText(panel.transform, "SETTINGS", 28, TextAnchor.MiddleCenter);
             title.color = AccentColor;
-            SetPosition(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -45f), new Vector2(460f, 42f));
+            SetPosition(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -42f), new Vector2(460f, 42f));
 
-            CreateTextAndSlider(panel.transform, "MUSIC", 0.45f, out musicSlider);
-            SetPosition(musicSlider.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(65f, 30f), new Vector2(285f, 24f));
-            CreateTextAndSlider(panel.transform, "SFX", 0.45f, out sfxSlider);
-            SetPosition(sfxSlider.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(65f, -40f), new Vector2(285f, 24f));
+            // ── Audio ──
+            CreateSectionHeader(panel.transform, "AUDIO", 195f);
+
+            float musicValue = AudioManager.Instance != null ? AudioManager.Instance.MusicVolume : 0.45f;
+            musicSlider = CreateTextAndSlider(panel.transform, "MUSIC", 150f, 0f, 1f, musicValue, SliderWidth);
+            float sfxValue = AudioManager.Instance != null ? AudioManager.Instance.SfxVolume : 0.45f;
+            sfxSlider = CreateTextAndSlider(panel.transform, "SFX", 100f, 0f, 1f, sfxValue, SliderWidth);
+
+            Image divider = CreateImage(panel.transform, "SectionDivider", new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.25f));
+            SetPosition(divider.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 60f), new Vector2(500f, 2f));
+
+            // ── Graphics ──
+            CreateSectionHeader(panel.transform, "GRAPHICS", 30f);
+
+            Text styleLabel = CreateText(panel.transform, "CRT STYLE", 18, TextAnchor.MiddleLeft);
+            styleLabel.color = LabelColor;
+            SetPosition(styleLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(LabelX - 30f, -15f), new Vector2(170f, 30f));
+
+            fullTvButton = CreateButton(panel.transform, "CrtFullTvButton", "FULL TV", new Vector2(140f, 42f));
+            SetPosition(fullTvButton.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(15f, -15f), new Vector2(140f, 42f));
+            fullTvButton.onClick.AddListener(() => SetCrtStyle(CrtStyle.FullTv));
+            AttachFeedback(fullTvButton, SfxId.UiClick);
+
+            classicButton = CreateButton(panel.transform, "CrtClassicButton", "CLASSIC", new Vector2(140f, 42f));
+            SetPosition(classicButton.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(165f, -15f), new Vector2(140f, 42f));
+            classicButton.onClick.AddListener(() => SetCrtStyle(CrtStyle.Classic));
+            AttachFeedback(classicButton, SfxId.UiClick);
+
+            crtStyleHint = CreateText(panel.transform, string.Empty, 12, TextAnchor.MiddleCenter);
+            crtStyleHint.fontStyle = FontStyle.Normal;
+            crtStyleHint.color = HintColor;
+            SetPosition(crtStyleHint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -58f), new Vector2(520f, 36f));
+
+            brightnessSlider = CreateTextAndSlider(panel.transform, "BRIGHTNESS", -110f,
+                GameGraphicsSettings.MinBrightness, GameGraphicsSettings.MaxBrightness, GameGraphicsSettings.Brightness, SliderWidth - 70f);
+            brightnessValueText = CreateText(panel.transform, string.Empty, 16, TextAnchor.MiddleRight);
+            brightnessValueText.color = LabelColor;
+            SetPosition(brightnessValueText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(SliderX + SliderWidth * 0.5f - 25f, -110f), new Vector2(70f, 30f));
 
             Button closeButton = CreateButton(panel.transform, "CloseButton", "CLOSE", new Vector2(170f, 46f));
             SetPosition(closeButton.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 25f), new Vector2(170f, 46f));
@@ -88,23 +135,78 @@ namespace TrashTD.Audio
 
             musicSlider.onValueChanged.AddListener(value => AudioManager.Instance?.SetMusicVolume(value));
             sfxSlider.onValueChanged.AddListener(value => AudioManager.Instance?.SetSfxVolume(value));
+            brightnessSlider.onValueChanged.AddListener(value =>
+            {
+                GameGraphicsSettings.Brightness = value;
+                RefreshGraphicsControls();
+            });
+            RefreshGraphicsControls();
             panel.SetActive(false);
         }
 
-        private void CreateTextAndSlider(Transform parent, string label, float defaultValue, out Slider slider)
+        private void SetCrtStyle(CrtStyle style)
+        {
+            GameGraphicsSettings.CrtStyle = style;
+            RefreshGraphicsControls();
+        }
+
+        private void RefreshGraphicsControls()
+        {
+            CrtStyle style = GameGraphicsSettings.CrtStyle;
+            SetToggleVisual(fullTvButton, style == CrtStyle.FullTv);
+            SetToggleVisual(classicButton, style == CrtStyle.Classic);
+
+            if (crtStyleHint != null)
+            {
+                crtStyleHint.text = style == CrtStyle.FullTv
+                    ? "The whole game on an old TV: scanlines, RGB phosphors, glow."
+                    : "Crisp game. A light CRT effect on the stage selection screen only.";
+            }
+
+            if (brightnessValueText != null)
+            {
+                brightnessValueText.text = Mathf.RoundToInt(GameGraphicsSettings.Brightness * 100f) + "%";
+            }
+        }
+
+        private static void SetToggleVisual(Button button, bool selected)
+        {
+            if (button == null) return;
+            MenuButtonFeedback feedback = button.GetComponent<MenuButtonFeedback>();
+            Color tint = selected ? AccentColor : Color.white;
+            if (feedback != null)
+            {
+                feedback.SetBaseColor(tint);
+                feedback.glowAlways = selected;
+            }
+            else
+            {
+                button.GetComponent<Image>().color = tint;
+            }
+
+            Text label = button.GetComponentInChildren<Text>();
+            if (label != null) label.color = selected ? new Color(0.02f, 0.08f, 0.04f, 1f) : LabelColor;
+        }
+
+        private static void CreateSectionHeader(Transform parent, string label, float y)
+        {
+            Text header = CreateText(parent, label, 14, TextAnchor.MiddleLeft);
+            header.color = AccentColor;
+            SetPosition(header.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-40f, y), new Vector2(420f, 24f));
+        }
+
+        private static Slider CreateTextAndSlider(Transform parent, string label, float y, float min, float max, float value, float width)
         {
             Text text = CreateText(parent, label, 18, TextAnchor.MiddleLeft);
-            SetPosition(text.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-145f, label == "MUSIC" ? 30f : -40f), new Vector2(110f, 30f));
-            text.color = new Color(0.65f, 0.72f, 0.82f, 1f);
+            SetPosition(text.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(LabelX - 30f, y), new Vector2(170f, 30f));
+            text.color = LabelColor;
 
             GameObject sliderObject = new GameObject(label + "Slider", typeof(RectTransform), typeof(Slider));
             sliderObject.transform.SetParent(parent, false);
-            slider = sliderObject.GetComponent<Slider>();
-            slider.minValue = 0f;
-            slider.maxValue = 1f;
-            slider.value = AudioManager.Instance != null
-                ? (label == "MUSIC" ? AudioManager.Instance.MusicVolume : AudioManager.Instance.SfxVolume)
-                : defaultValue;
+            Slider slider = sliderObject.GetComponent<Slider>();
+            slider.minValue = min;
+            slider.maxValue = max;
+            slider.value = value;
             slider.direction = Slider.Direction.LeftToRight;
             slider.transition = Selectable.Transition.None;
 
@@ -121,6 +223,12 @@ namespace TrashTD.Audio
             SetPosition(handle.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(22f, 32f));
             slider.handleRect = handle.GetComponent<RectTransform>();
             slider.targetGraphic = handleImage;
+
+            // All sliders share a left edge; narrower ones leave room for a value readout on the right
+            float left = SliderX - SliderWidth * 0.5f;
+            SetPosition(sliderObject.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(left + width * 0.5f, y), new Vector2(width, 24f));
+            return slider;
         }
 
         private void Show()
@@ -128,6 +236,8 @@ namespace TrashTD.Audio
             if (panel == null) return;
             musicSlider.value = AudioManager.Instance != null ? AudioManager.Instance.MusicVolume : musicSlider.value;
             sfxSlider.value = AudioManager.Instance != null ? AudioManager.Instance.SfxVolume : sfxSlider.value;
+            brightnessSlider.SetValueWithoutNotify(GameGraphicsSettings.Brightness);
+            RefreshGraphicsControls();
             panel.SetActive(true);
         }
 

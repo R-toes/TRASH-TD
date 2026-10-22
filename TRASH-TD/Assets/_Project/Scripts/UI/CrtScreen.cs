@@ -43,7 +43,93 @@ namespace TrashTD.UI
             public float brightness;
             /// <summary>1 = ignore the picture's alpha (full-screen presenter over an uncleared backbuffer).</summary>
             public float opaque;
+            /// <summary>1 = the first, crisper CRT version (Classic graphics option).</summary>
+            public float legacy;
+            /// <summary>1 = no CRT effects at all, brightness only.</summary>
+            public float passthrough;
+
+            public Settings WithBrightnessScale(float scale)
+            {
+                Settings scaled = this;
+                scaled.brightness *= scale;
+                return scaled;
+            }
         }
+
+        /// <summary>
+        /// Classic: the first working stage-selection TV, kept exactly (sine scanlines every 3 px, light RGB
+        /// stripe tint, small glow). Only the stage selection screen uses it; the game stays crisp.
+        /// </summary>
+        public static Settings ClassicTelevision => new Settings
+        {
+            curvature = 0.10f,
+            cornerRadius = 0.04f,
+            sharpness = 1f,
+            scanlineStrength = 0.38f,
+            scanlinePeriod = 3f,
+            beamMin = 0.3f,
+            beamMax = 0.45f,
+            maskType = 0f,
+            maskStrength = 0.22f,
+            maskDark = 1f,
+            maskLight = 1f,
+            chromatic = 0.0016f,
+            bloom = 0.55f,
+            vignette = 0.85f,
+            noise = 0.045f,
+            flicker = 0.025f,
+            rollStrength = 0.05f,
+            rollSpeed = 0.09f,
+            jitter = 0.0005f,
+            glare = 0.06f,
+            brightness = 1.18f,
+            opaque = 0f,
+            legacy = 1f
+        };
+
+        /// <summary>Classic stage preview monitor, as first shipped with the Classic TV.</summary>
+        public static Settings ClassicMonitor => new Settings
+        {
+            curvature = 0.18f,
+            cornerRadius = 0.08f,
+            sharpness = 1f,
+            scanlineStrength = 0f,
+            scanlinePeriod = 3f,
+            beamMin = 0.3f,
+            beamMax = 0.45f,
+            maskType = 0f,
+            maskStrength = 0f,
+            maskDark = 1f,
+            maskLight = 1f,
+            chromatic = 0.003f,
+            bloom = 0.6f,
+            vignette = 1.1f,
+            noise = 0.03f,
+            flicker = 0.02f,
+            rollStrength = 0.07f,
+            rollSpeed = 0.15f,
+            jitter = 0.0008f,
+            glare = 0.10f,
+            brightness = 1.15f,
+            opaque = 0f,
+            legacy = 1f
+        };
+
+        /// <summary>No CRT effects: the full-screen pass only applies brightness (Classic mode, outside stage select).</summary>
+        public static Settings Clean => new Settings
+        {
+            curvature = 0f,
+            cornerRadius = 0.001f,
+            sharpness = 1f,
+            scanlinePeriod = 3f,
+            beamMin = 0.3f,
+            beamMax = 0.45f,
+            maskDark = 1f,
+            maskLight = 1f,
+            brightness = 1f,
+            opaque = 1f,
+            passthrough = 1f
+        };
 
         /// <summary>
         /// The whole game as an old TV (CrtDisplay): slight curve, ~270 scanlines, a full-strength slot mask
@@ -132,6 +218,8 @@ namespace TrashTD.UI
         private static readonly int GlareId = Shader.PropertyToID("_Glare");
         private static readonly int BrightnessId = Shader.PropertyToID("_Brightness");
         private static readonly int OpaqueId = Shader.PropertyToID("_Opaque");
+        private static readonly int LegacyId = Shader.PropertyToID("_Legacy");
+        private static readonly int PassthroughId = Shader.PropertyToID("_Passthrough");
         private static readonly int TimeId = Shader.PropertyToID("_CrtTime");
         private static readonly int ResolutionId = Shader.PropertyToID("_CrtResolution");
 
@@ -173,6 +261,8 @@ namespace TrashTD.UI
             material.SetFloat(GlareId, settings.glare);
             material.SetFloat(BrightnessId, settings.brightness);
             material.SetFloat(OpaqueId, settings.opaque);
+            material.SetFloat(LegacyId, settings.legacy);
+            material.SetFloat(PassthroughId, settings.passthrough);
         }
 
         /// <summary>

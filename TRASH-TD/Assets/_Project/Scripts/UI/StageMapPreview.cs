@@ -57,6 +57,7 @@ namespace TrashTD.UI
         public static Color GetRouteColor(int routeIndex) => RouteColors[Mathf.Abs(routeIndex) % RouteColors.Length];
 
         private RectTransform display; // where the CRT picture is shown
+        private CrtScreen monitor;
         private RectTransform root;    // the CRT monitor's offscreen content root
         private RectTransform content;
         private RectTransform bootCover;
@@ -117,9 +118,25 @@ namespace TrashTD.UI
             // The preview is drawn on its own curved CRT monitor; this object shows the picture and the
             // preview UI is built on the monitor's offscreen canvas (which also clips it to the screen).
             display = (RectTransform)transform;
-            CrtScreen crt = GetComponent<CrtScreen>();
-            if (crt == null) crt = CrtScreen.Create(display, CrtScreen.Monitor, false);
-            root = crt.Content;
+            monitor = GetComponent<CrtScreen>();
+            if (monitor == null) monitor = CrtScreen.Create(display, GetMonitorSettings(), false);
+            root = monitor.Content;
+            GameGraphicsSettings.Changed += ApplyMonitorSettings;
+        }
+
+        private static CrtScreen.Settings GetMonitorSettings()
+        {
+            return GameGraphicsSettings.CrtStyle == CrtStyle.Classic ? CrtScreen.ClassicMonitor : CrtScreen.Monitor;
+        }
+
+        private void ApplyMonitorSettings()
+        {
+            if (monitor != null) monitor.SetSettings(GetMonitorSettings());
+        }
+
+        private void OnDestroy()
+        {
+            GameGraphicsSettings.Changed -= ApplyMonitorSettings;
         }
 
         /// <summary>Builds the preview for a stage and restarts its boot / route animation.</summary>
