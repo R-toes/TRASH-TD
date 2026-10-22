@@ -62,7 +62,7 @@ Any UI, system, or flow that involves "select your squad before the stage" is **
 - Drafted cards go into the player's **deck** (`PlayerDeck`); operators are deployed from the deck bar.
 - On the draft screen, **"View Map & Deck"** lets the player rearrange and discard deck cards during the pick (no deploying from there).
 - At most **8 operators** can be deployed at once (`StageData.squadSizeLimit`; unlimited in Sandbox).
-- **Deploying:** pick a deck card, click a tile, then hold and drag from the operator to set its facing. Release to confirm. Esc cancels. **Right-click** cancels placement or undeploys the selected operator.
+- **Deploying:** pick a deck card, click a tile, then hold and drag from the operator to set its facing. Release to confirm. Esc cancels. **Right-click** cancels placement or undeploys the selected operator. Keyboard shortcuts are listed in §7.6.
 - **Preparation refund:** an operator deployed and retreated within the same Preparation phase, before it has fought (`DeployedDuringCurrentPreparation && !HasFoughtInWave`), returns with **no recall cooldown**. Every other retreat uses the normal class cooldown. Always refunded in Sandbox.
 - The draft overlay has card flip and shuffle animations. Card frame sprites exist in `Resources/UI/cards/` but are **not wired up yet**.
 
@@ -134,7 +134,7 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 
 ---
 
-## 7. Current Implementation Notes (as of 2026-10-19)
+## 7. Current Implementation Notes (as of 2026-10-22)
 
 ### 7.1 Roster
 
@@ -213,3 +213,34 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - Keep UI textures on Point filtering (pixel art). Add new UI sprites under the matching `Resources/UI/<category>/` folder.
 - **Draft range preview:** the card-pick details panel draws each operator's `rangePattern` as a tile grid facing right (`CardDraftOverlayUI.UpdateRangePreview`). It uses the placement-preview colours: cyan for the operator's own tile, green for tiles it can hit. It reads the same data as combat, so never hand-draw or screenshot range previews. A kit that reaches beyond `rangePattern` (e.g. Basurocket's splash) belongs in the ability text.
 - `AudioSettingsUI` loads `panel_dark` / `btn_dark_normal` with its own copy of the loader. Prefer the `GameplayHUDUI` helpers for new UI.
+- **Top panel** (`Resources/UI/Top Panel BG`) sits behind the top HUD bar. `Resources/UI/panels/pause menu panel bg.png` exists but is **not wired up yet**; the pause panel (`GameplayHUDUI.pausePanel`) is still built in code.
+
+### 7.6 Controls & Keybinds
+
+The project uses the **New Input System only** (`activeInputHandler: 1`). Read keys from `Keyboard.current` / `Mouse.current`. Any `UnityEngine.Input` call must sit inside `#if ENABLE_LEGACY_INPUT_MANAGER`, or it throws at runtime.
+
+| Context | Key | Action |
+|---|---|---|
+| Card draft (`CardDraftOverlayUI`) | 1 / 2 / 3 | Select card |
+| | Enter | Confirm pick |
+| | R | Reroll |
+| | M | Minimize / restore (View Map & Deck) |
+| Preparation (and Sandbox) | 1–8 (or numpad) | Quick-deploy that deck slot onto the tile under the cursor (`StageBootstrapper.TryQuickDeployFromDeck`). Ignored over UI, while paused, during the environment briefing, at the squad limit, or if the card is on cooldown |
+| Placing an operator | WASD / arrow keys | Set facing |
+| | Enter | Confirm placement |
+| | Right-click | Cancel placement, or undeploy the selected operator |
+| Gameplay | Esc | First match wins: close the developer picker → cancel placement → deselect operator → close audio settings → toggle pause |
+| Main menu | Esc | Close stage details, or return from stage select to the main menu |
+
+- **Esc is handled once per frame.** Whatever handles it calls `GameplayHUDUI.ConsumeEscapeKey()`. Other handlers check `HasConsumedEscapeThisFrame` first. `GameplayHUDUI.HandleEscapeKey()` is the fallback that ends in pause/resume. Follow the same pattern for any new Esc-closable panel.
+- Gameplay input (deploy hotkeys, draft keys) must do nothing while `GameplayHUDUI.IsPaused`.
+
+### 7.7 Main Menu Stage Map
+
+- Stage select is a Pip-Boy style map, built in code by `MainMenuController.BuildStageButtons`. It replaced the old stage grid. The background is `Art/Levels/Stage Selector Map.png`. Clicking a dot opens the stage details modal (difficulty selector, then play). A locked dot wobbles and plays the denied sound.
+- Each stage is a `StageMapNode` placed at a **normalized position** (0–1 across the map art, origin top-left) from `MainMenuController.StageNodePositions`. Index *i* is Stage *i*+1, so add an entry there when adding a stage. `StageMapLayout` (on the map art) rescales and repositions the nodes whenever the art resizes, so they stay in place at any 16:9 resolution.
+- Node badges are currently procedural circle sprites (`CreateCircleBadgeSprite`). The pixel-art `Resources/StageNodes/Node_N_{Idle,Selected,Locked}.png` sprites are **not wired up yet**.
+- **Locking is not progression.** A node is locked only if `IsStagePlayable(stageId)` is false (a hard-coded list of stage IDs). "X / 6 UNLOCKED" counts that list, not cleared stages. Don't add unlock-on-clear progression without asking Raim (see "Persistence model", §4).
+- `StageMapScanlines` is the CRT overlay on the map: scanlines, a rolling refresh band, a vignette and a faint flicker, all tunable in the Inspector. It builds its layers at runtime and runs on unscaled time.
+- The map scripts' file names don't match their class names (`Stagemapnode.cs` → `StageMapNode`, `Stagemaplayout.cs` → `StageMapLayout`, `Stagemapscanlines.cs` → `StageMapScanlines`). That works because they are only added with `AddComponent`. Rename the files before attaching any of them in the Inspector.
+- `MapSelectUI` (an older stage-select component that also uses `StageMapNode`) isn't used in any scene. Its `IsStageUnlocked` always returns true.
