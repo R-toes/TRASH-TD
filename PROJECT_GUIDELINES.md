@@ -262,9 +262,11 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
   - **Input rule (important):** the glass is curved, so the picture is not at the raw mouse position. UI raycasts are bent automatically (`CrtGraphicRaycaster` replaces each canvas's `GraphicRaycaster`). **Any code that uses a mouse or `PointerEventData` position with a camera or canvas must convert it first with `CrtDisplay.ScreenToPicture(...)`** (see `StageBootstrapper`, `DeckSlotDragHandler`). For screen ↔ canvas conversions, pass the canvas camera (`canvas.worldCamera`), not `null`, because canvases are no longer overlays.
   - **Finding a canvas** to build UI on: use `CrtDisplay.FindGameCanvas()`, not `FindFirstObjectByType<Canvas>()`, which could return the CRT's own canvas.
   - **Graphics settings** (Settings panel → GRAPHICS; `GameGraphicsSettings`, saved in PlayerPrefs, `Changed` event):
-    - **CRT Style – Full TV** (default): the whole game through `CrtScreen.Television`.
-    - **CRT Style – Classic:** the first CRT version, kept exactly. `CrtDisplay` runs a clean passthrough (`CrtScreen.Clean`), and the stage selection panel gets its own TV (`CrtScreen.ClassicTelevision`, `MainMenuController.ApplyStageCrtStyle` / `SyncStageCrt`). The preview uses `ClassicMonitor`. Classic presets set `legacy = 1`, which selects the old shader maths (`_Legacy`).
-    - **Brightness** (50–150%) scales the `CrtDisplay` pass in both styles (`Settings.WithBrightnessScale`).
+    - **CRT Style** (all styles go through `CrtDisplay` for the whole game; `CrtDisplay.GetActiveSettings`):
+      - **Full TV** (default): `CrtScreen.Television`; the preview uses `Monitor`.
+      - **Classic:** the first CRT version, kept exactly (`CrtScreen.ClassicTelevision`, `legacy = 1` selects the old shader maths `_Legacy`); the preview uses `ClassicMonitor`.
+      - **Off:** no CRT anywhere (`CrtScreen.Clean`, passthrough). Identical to the pre-CRT game at 100% brightness.
+    - **Brightness** (50–150%) scales the `CrtDisplay` pass in every style (`Settings.WithBrightnessScale`).
     - The settings panel class is still named `AudioSettingsUI` (Audio + Graphics sections).
   - **Monitor preview:** the dossier's map preview is its own small `CrtScreen.Monitor` (offscreen canvas + camera + RenderTexture). It has stronger curve and no scanlines or mask, because the TV supplies those and two line patterns would moiré.
   - `CrtScreen.Distort` / `IsOnScreen` must stay in sync with `Distort` / `ScreenMask` in the shader.

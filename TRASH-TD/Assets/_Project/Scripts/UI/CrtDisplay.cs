@@ -32,14 +32,18 @@ namespace TrashTD.UI
         private CrtScreen.Settings settings = CrtScreen.Television;
 
         /// <summary>
-        /// Full TV: the whole game through the Television CRT. Classic: a clean pass (the stage selection
-        /// screen has its own Classic TV). The player's brightness applies on top either way.
+        /// The whole game through the chosen CRT style: Full TV (Television), Classic (the first, crisper
+        /// version) or Off (passthrough). The player's brightness applies on top in every style.
         /// </summary>
         private static CrtScreen.Settings GetActiveSettings()
         {
-            CrtScreen.Settings baseSettings = GameGraphicsSettings.CrtStyle == CrtStyle.FullTv
-                ? CrtScreen.Television
-                : CrtScreen.Clean;
+            CrtScreen.Settings baseSettings = GameGraphicsSettings.CrtStyle switch
+            {
+                CrtStyle.Classic => CrtScreen.ClassicTelevision,
+                CrtStyle.Off => CrtScreen.Clean,
+                _ => CrtScreen.Television
+            };
+            baseSettings.opaque = 1f; // full-screen presenter: never show the backbuffer through the picture
             return baseSettings.WithBrightnessScale(GameGraphicsSettings.Brightness);
         }
 

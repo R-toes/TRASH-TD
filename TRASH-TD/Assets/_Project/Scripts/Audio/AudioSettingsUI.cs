@@ -29,6 +29,7 @@ namespace TrashTD.Audio
         private Text brightnessValueText;
         private Button fullTvButton;
         private Button classicButton;
+        private Button offButton;
         private Text crtStyleHint;
         public Button SettingsButton { get; private set; }
         public bool IsOpen => panel != null && panel.activeSelf;
@@ -107,15 +108,9 @@ namespace TrashTD.Audio
             styleLabel.color = LabelColor;
             SetPosition(styleLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(LabelX - 30f, -15f), new Vector2(170f, 30f));
 
-            fullTvButton = CreateButton(panel.transform, "CrtFullTvButton", "FULL TV", new Vector2(140f, 42f));
-            SetPosition(fullTvButton.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(15f, -15f), new Vector2(140f, 42f));
-            fullTvButton.onClick.AddListener(() => SetCrtStyle(CrtStyle.FullTv));
-            AttachFeedback(fullTvButton, SfxId.UiClick);
-
-            classicButton = CreateButton(panel.transform, "CrtClassicButton", "CLASSIC", new Vector2(140f, 42f));
-            SetPosition(classicButton.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(165f, -15f), new Vector2(140f, 42f));
-            classicButton.onClick.AddListener(() => SetCrtStyle(CrtStyle.Classic));
-            AttachFeedback(classicButton, SfxId.UiClick);
+            fullTvButton = CreateStyleButton("CrtFullTvButton", "FULL TV", -25f, CrtStyle.FullTv);
+            classicButton = CreateStyleButton("CrtClassicButton", "CLASSIC", 95f, CrtStyle.Classic);
+            offButton = CreateStyleButton("CrtOffButton", "OFF", 215f, CrtStyle.Off);
 
             crtStyleHint = CreateText(panel.transform, string.Empty, 12, TextAnchor.MiddleCenter);
             crtStyleHint.fontStyle = FontStyle.Normal;
@@ -144,6 +139,16 @@ namespace TrashTD.Audio
             panel.SetActive(false);
         }
 
+        private Button CreateStyleButton(string objectName, string label, float x, CrtStyle style)
+        {
+            const float width = 108f;
+            Button button = CreateButton(panel.transform, objectName, label, new Vector2(width, 42f));
+            SetPosition(button.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(x, -15f), new Vector2(width, 42f));
+            button.onClick.AddListener(() => SetCrtStyle(style));
+            AttachFeedback(button, SfxId.UiClick);
+            return button;
+        }
+
         private void SetCrtStyle(CrtStyle style)
         {
             GameGraphicsSettings.CrtStyle = style;
@@ -155,12 +160,16 @@ namespace TrashTD.Audio
             CrtStyle style = GameGraphicsSettings.CrtStyle;
             SetToggleVisual(fullTvButton, style == CrtStyle.FullTv);
             SetToggleVisual(classicButton, style == CrtStyle.Classic);
+            SetToggleVisual(offButton, style == CrtStyle.Off);
 
             if (crtStyleHint != null)
             {
-                crtStyleHint.text = style == CrtStyle.FullTv
-                    ? "The whole game on an old TV: scanlines, RGB phosphors, glow."
-                    : "Crisp game. A light CRT effect on the stage selection screen only.";
+                crtStyleHint.text = style switch
+                {
+                    CrtStyle.Classic => "A lighter, crisper old TV: soft scanlines and a faint RGB tint.",
+                    CrtStyle.Off => "No CRT effect. Brightness still applies.",
+                    _ => "A full old TV: strong scanlines, RGB phosphors and glow."
+                };
             }
 
             if (brightnessValueText != null)

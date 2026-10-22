@@ -126,7 +126,17 @@ namespace TrashTD.UI
 
         private static CrtScreen.Settings GetMonitorSettings()
         {
-            return GameGraphicsSettings.CrtStyle == CrtStyle.Classic ? CrtScreen.ClassicMonitor : CrtScreen.Monitor;
+            switch (GameGraphicsSettings.CrtStyle)
+            {
+                case CrtStyle.Classic:
+                    return CrtScreen.ClassicMonitor;
+                case CrtStyle.Off:
+                    CrtScreen.Settings plain = CrtScreen.Clean;
+                    plain.opaque = 0f;
+                    return plain;
+                default:
+                    return CrtScreen.Monitor;
+            }
         }
 
         private void ApplyMonitorSettings()

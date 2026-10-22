@@ -7,8 +7,10 @@ namespace TrashTD.UI
     {
         /// <summary>The whole game on a CRT: scanline beams, RGB slot mask, halation (CrtScreen.Television).</summary>
         FullTv = 0,
-        /// <summary>The first CRT version: crisp game, light CRT on the stage selection screen only.</summary>
-        Classic = 1
+        /// <summary>The first, crisper CRT version (light scanlines and RGB tint) over the whole game.</summary>
+        Classic = 1,
+        /// <summary>No CRT at all; the picture is shown as-is (brightness still applies).</summary>
+        Off = 2
     }
 
     /// <summary>

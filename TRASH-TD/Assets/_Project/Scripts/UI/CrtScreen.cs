@@ -57,8 +57,8 @@ namespace TrashTD.UI
         }
 
         /// <summary>
-        /// Classic: the first working stage-selection TV, kept exactly (sine scanlines every 3 px, light RGB
-        /// stripe tint, small glow). Only the stage selection screen uses it; the game stays crisp.
+        /// Classic: the first working CRT (originally on the stage selection screen only), kept exactly: sine
+        /// scanlines every 3 px, light RGB stripe tint, small glow. CrtDisplay applies it to the whole game.
         /// </summary>
         public static Settings ClassicTelevision => new Settings
         {
@@ -115,7 +115,7 @@ namespace TrashTD.UI
             legacy = 1f
         };
 
-        /// <summary>No CRT effects: the full-screen pass only applies brightness (Classic mode, outside stage select).</summary>
+        /// <summary>No CRT effects: the pass only applies brightness (graphics option Off).</summary>
         public static Settings Clean => new Settings
         {
             curvature = 0f,

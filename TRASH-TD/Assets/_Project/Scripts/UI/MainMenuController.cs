@@ -131,8 +131,6 @@ namespace TrashTD.UI
         private RectTransform stageHeaderDivider;
         private RectTransform stageHint;
         private RectTransform stageTitlePlate;
-        private CrtScreen stageCrt;            // Classic graphics: the stage selection's own TV
-        private GameObject stageCrtDisplay;
         private Text stageHeaderSubtitleText;
         private RectTransform stageTickerPlate;
         private Text stageTickerText;
@@ -259,8 +257,6 @@ namespace TrashTD.UI
                 BuildStageDetailsUi();
             }
 
-            ApplyStageCrtStyle();
-            GameGraphicsSettings.Changed += ApplyStageCrtStyle;
             BuildStageButtons();
             BuildDifficultySelector();
             AttachMenuFeedback();
@@ -339,7 +335,6 @@ namespace TrashTD.UI
             float dt = Time.unscaledDeltaTime;
             float time = Time.unscaledTime;
 
-            SyncStageCrt();
             UpdateMotes(dt, time);
 
             // Slow breathing glow on the title
@@ -1086,63 +1081,6 @@ namespace TrashTD.UI
             SelectStage(index);
         }
 
-        /// <summary>
-        /// Classic graphics option: the stage selection panel (map, header, dossier) gets its own TV
-        /// (CrtScreen.ClassicTelevision), exactly like the first CRT version, while the game-wide CrtDisplay
-        /// runs clean. Full TV: the panel sits on the main canvas and CrtDisplay does the CRT for everything.
-        /// Switches live when the option changes; the TV only renders while the panel is active (SyncStageCrt).
-        /// </summary>
-        private void ApplyStageCrtStyle()
-        {
-            if (stageSelectionPanel == null) return;
-            bool classic = GameGraphicsSettings.CrtStyle == CrtStyle.Classic;
-
-            if (classic && stageCrt == null)
-            {
-                Canvas canvas = mainMenuPanel != null ? mainMenuPanel.GetComponentInParent<Canvas>() : null;
-                if (canvas == null) return;
-                Transform canvasRoot = canvas.rootCanvas.transform;
-
-                stageCrtDisplay = new GameObject("StageSelectionCrt", typeof(RectTransform));
-                stageCrtDisplay.transform.SetParent(canvasRoot, false);
-                StretchFill(stageCrtDisplay.GetComponent<RectTransform>());
-                if (stageSelectionPanel.transform.parent == canvasRoot)
-                {
-                    stageCrtDisplay.transform.SetSiblingIndex(stageSelectionPanel.transform.GetSiblingIndex());
-                }
-
-                stageCrt = CrtScreen.Create(stageCrtDisplay.GetComponent<RectTransform>(), CrtScreen.ClassicTelevision, true);
-                stageSelectionPanel.transform.SetParent(stageCrt.Content, false);
-                StretchFill(stageSelectionPanel.GetComponent<RectTransform>());
-                SyncStageCrt();
-            }
-            else if (!classic && stageCrt != null)
-            {
-                // Move the panel back before the TV (and its offscreen canvas) is destroyed
-                Transform canvasRoot = stageCrtDisplay.transform.parent;
-                int siblingIndex = stageCrtDisplay.transform.GetSiblingIndex();
-                stageSelectionPanel.transform.SetParent(canvasRoot, false);
-                stageSelectionPanel.transform.SetSiblingIndex(siblingIndex);
-                StretchFill(stageSelectionPanel.GetComponent<RectTransform>());
-
-                Destroy(stageCrtDisplay);
-                stageCrt = null;
-                stageCrtDisplay = null;
-            }
-        }
-
-        private void SyncStageCrt()
-        {
-            if (stageCrtDisplay == null || stageSelectionPanel == null) return;
-            bool visible = stageSelectionPanel.activeSelf;
-            if (stageCrtDisplay.activeSelf != visible) stageCrtDisplay.SetActive(visible);
-        }
-
-        private void OnDestroy()
-        {
-            GameGraphicsSettings.Changed -= ApplyStageCrtStyle;
-        }
-
         private void OnStageMapNodeHoverChanged(StageMapNode node, bool hovered)
         {
             if (node == null || node.Stage == null) return;
@@ -1778,7 +1716,6 @@ namespace TrashTD.UI
             if (instant || !isActiveAndEnabled)
             {
                 panel.SetActive(visible);
-                SyncStageCrt();
                 group.alpha = visible ? 1f : 0f;
                 group.interactable = visible;
                 group.blocksRaycasts = visible;
