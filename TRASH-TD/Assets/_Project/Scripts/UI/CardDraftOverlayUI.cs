@@ -224,6 +224,7 @@ namespace TrashTD.UI
         // --- Minimize (view the map while drafting) ---
         private bool minimized;
         private GameObject restoreBar;
+        private bool pickConfirmed; // one card per draft; reset when the next draft opens
 
         // --- Animation ---
         private RectTransform[] introRects;
@@ -305,6 +306,12 @@ namespace TrashTD.UI
         private void Update()
         {
             if (overlayRoot == null) return;
+
+            // This canvas sorts above the HUD's pause menu, so hide it (restore bar included) while paused.
+            // Otherwise the draft stays clickable during pause, and a confirm adds the card without leaving Card Pick.
+            bool paused = IsGamePaused();
+            if (canvas != null && canvas.enabled == paused) canvas.enabled = !paused;
+            if (paused) return;
 
             if (minimized)
             {
@@ -459,6 +466,7 @@ namespace TrashTD.UI
             }
 
             waitingForEnvironmentBriefing = false;
+            pickConfirmed = false;
             ResetMinimized();
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -489,6 +497,12 @@ namespace TrashTD.UI
             UpdateConfirmButton();
             UpdateDeckCount();
             UpdateWaveInfo();
+        }
+
+        private bool IsGamePaused()
+        {
+            return (gameplayHudUI != null && gameplayHudUI.IsPaused)
+                || (gameManager != null && gameManager.CurrentState == GamePlayState.Paused);
         }
 
         private bool IsActiveGameplayCardPick()
@@ -1257,6 +1271,11 @@ namespace TrashTD.UI
         {
             ClearUiSelection();
 
+            // Only one pick per draft, and only while the draft can actually end (not paused):
+            // EnterPreparationPhase does nothing outside Playing, which used to leave the offer up for another pick.
+            if (pickConfirmed || !IsActiveGameplayCardPick())
+                return;
+
             if (selectedCardIndex < 0 || draftSystem == null || playerDeck == null)
                 return;
 
@@ -1269,6 +1288,7 @@ namespace TrashTD.UI
             // Select the card from the draft
             if (draftSystem.SelectCard(selectedCardIndex, out DraftCard selectedCard))
             {
+                pickConfirmed = true;
                 // Add to player deck
                 playerDeck.AddCard(selectedCard);
 
@@ -1290,7 +1310,7 @@ namespace TrashTD.UI
         {
             ClearUiSelection();
 
-            if (draftSystem == null) return;
+            if (draftSystem == null || !IsActiveGameplayCardPick()) return;
 
             // Wait for the current shuffle to finish before shuffling again.
             if (isShuffling) return;
@@ -1311,6 +1331,7 @@ namespace TrashTD.UI
         private void OnSkipClicked()
         {
             ClearUiSelection();
+            if (!IsActiveGameplayCardPick()) return;
 
             // Skip card pick and go straight to preparation
             if (gameManager != null)
@@ -1416,6 +1437,7 @@ namespace TrashTD.UI
         {
             if (overlayRoot == null || minimized == value) return;
             if (value && !overlayVisible) return;
+            if (IsGamePaused()) return;
 
             ClearUiSelection();
             minimized = value;

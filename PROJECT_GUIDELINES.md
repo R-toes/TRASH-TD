@@ -213,7 +213,12 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - Keep UI textures on Point filtering (pixel art). Add new UI sprites under the matching `Resources/UI/<category>/` folder.
 - **Draft range preview:** the card-pick details panel draws each operator's `rangePattern` as a tile grid facing right (`CardDraftOverlayUI.UpdateRangePreview`). It uses the placement-preview colours: cyan for the operator's own tile, green for tiles it can hit. It reads the same data as combat, so never hand-draw or screenshot range previews. A kit that reaches beyond `rangePattern` (e.g. Basurocket's splash) belongs in the ability text.
 - `AudioSettingsUI` loads `panel_dark` / `btn_dark_normal` with its own copy of the loader. Prefer the `GameplayHUDUI` helpers for new UI.
-- **Top panel** (`Resources/UI/Top Panel BG`) sits behind the top HUD bar. `Resources/UI/panels/pause menu panel bg.png` exists but is **not wired up yet**; the pause panel (`GameplayHUDUI.pausePanel`) is still built in code.
+- **Top panel** (`Resources/UI/Top Panel BG`, 640×30 frames drawn at 3×) sits behind the top HUD bar. Its dark screens, in frame pixels: x 24–78 (phase), x 112–169 (wave counter + progress bar), x 299–335 (enemy count), x 590–637 (lives).
+  - **Wave progress:** `bar_frame` (9-sliced) with a tiled `bar_fill_*` at 2× under the wave counter. The fill sprite follows the phase: yellow = Card Pick, blue = Preparation, red = Wave Active (`SetWaveProgressFillSprite`).
+  - **Lives:** `tube_frame` + tiled `tube_liquid` + `tube_surface` at 2×, built upright and rotated −90° so it reads horizontally. Liquid = current/max lives and drains toward the left. The frame flashes red on a lost life. In Sandbox the tube is hidden and "LIVES LOCKED" text shows instead.
+  - Load whole UI textures with `GameplayHUDUI.LoadWholeTextureSprite(path, border)`: Point-filtered, ignores importer slicing, cached. Draw pixel art at whole-number scales (`pixelsPerUnitMultiplier = 1 / scale` for Sliced/Tiled images).
+- **Pause menu** (`GameplayHUDUI.CreatePausePanel`): `Resources/UI/panels/pause menu panel bg.png` (256×256) at 2×. The title sits in the header screen (art y 37–101) and four buttons in the body screen (y 104–217): Resume, Retry, Settings and Exit to Menu. Settings is added by `AudioSettingsUI.Create` from `Awake` into `PauseSettingsSlotPx`. Give every pause button its own slot: Settings used to sit on top of Retry and hid it.
+- **Operator inspect label** shows name, rarity, ATK/HP and SHOW MORE. The skill text appears only in the SHOW MORE details panel.
 
 ### 7.6 Controls & Keybinds
 
@@ -234,6 +239,7 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
 
 - **Esc is handled once per frame.** Whatever handles it calls `GameplayHUDUI.ConsumeEscapeKey()`. Other handlers check `HasConsumedEscapeThisFrame` first. `GameplayHUDUI.HandleEscapeKey()` is the fallback that ends in pause/resume. Follow the same pattern for any new Esc-closable panel.
 - Gameplay input (deploy hotkeys, draft keys) must do nothing while `GameplayHUDUI.IsPaused`.
+- **Overlays above the HUD must hide while paused.** The draft overlay's canvas (sort order 200) sits above the HUD canvas (100) that holds the pause menu, so `CardDraftOverlayUI` disables its canvas while paused. Otherwise it stayed clickable, and confirming during pause added a card without leaving Card Pick, which allowed several picks. Confirm also only runs during an active Card Pick, once per draft (`pickConfirmed`).
 
 ### 7.7 Main Menu Stage Map
 

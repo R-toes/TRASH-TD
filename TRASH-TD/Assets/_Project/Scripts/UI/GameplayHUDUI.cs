@@ -110,7 +110,6 @@ namespace TrashTD.UI
         private Image stage2ToolsIcon;
         private bool environmentBriefingDismissed;
         private Text selectedOperatorNameText;
-        private Text selectedOperatorSkillDescriptionText;
         private Text selectedOperatorHealthText;
         private Text selectedOperatorAtkText;
         private Text selectedOperatorRarityText;
@@ -192,6 +191,10 @@ namespace TrashTD.UI
         private RectTransform deckBarRect;
         private RectTransform waveProgressFillRect;
         private Image waveProgressFill;
+        private RectTransform livesTubeRect;
+        private Image livesTubeFrame;
+        private RectTransform livesLiquidRect;
+        private GameObject livesSurface;
         private Image dangerFlashImage;
         private Image topBarBgAnimImage;
         private Image deckBgAnimImage;
@@ -235,6 +238,8 @@ namespace TrashTD.UI
         private float waveProgressDisplayed;
         private int lastSquadCount = -1;
         private int lastLives = -1;
+        private float livesTarget = 1f;
+        private float livesDisplayed = -1f; // < 0 until the first lives update, which snaps instead of draining
         private float dangerFlashTime = -1f;
         private float lifeFlashTime = -1f;
         private bool selectedLabelShown;
@@ -293,7 +298,8 @@ namespace TrashTD.UI
                         canvas.transform,
                         pauseCard,
                         button => StyleButton(button, DarkButton, TextDim, 1.05f),
-                        rect => SetPosition(rect, new Vector2(0f, -326f), new Vector2(0.5f, 1f), new Vector2(340f, 60f), new Vector2(0.5f, 0.5f)));
+                        // Its own slot between Retry and Exit (it used to sit on top of Retry and hide it)
+                        rect => SetPosition(rect, PausePx(PauseSettingsSlotPx), new Vector2(0.5f, 1f), new Vector2(PauseButtonWidth, PauseButtonHeight), new Vector2(0.5f, 0.5f)));
                 }
             }
         }
@@ -424,7 +430,7 @@ namespace TrashTD.UI
             labelRect.anchorMin = new Vector2(0.5f, 0.5f);
             labelRect.anchorMax = new Vector2(0.5f, 0.5f);
             labelRect.pivot = new Vector2(0.5f, 0.5f);
-            labelRect.sizeDelta = new Vector2(250f, 104f);
+            labelRect.sizeDelta = new Vector2(300f, 170f);
 
             Image background = selectedOperatorLabelRoot.GetComponent<Image>();
             ApplyPanelContainer(selectedOperatorLabelRoot, PanelContainerType.Tooltip);
@@ -438,25 +444,6 @@ namespace TrashTD.UI
             SetPosition(selectedOperatorNameText.GetComponent<RectTransform>(), new Vector2(10f, -5f), new Vector2(0f, 1f), new Vector2(190f, 22f), new Vector2(0f, 1f));
             selectedOperatorNameText.raycastTarget = false;
 
-            selectedOperatorSkillDescriptionText = CreateText(
-                selectedOperatorLabelRoot.transform,
-                "SkillDescription",
-                string.Empty,
-                13,
-                TextAnchor.UpperLeft);
-            selectedOperatorSkillDescriptionText.fontStyle = FontStyle.Normal;
-            selectedOperatorSkillDescriptionText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            selectedOperatorSkillDescriptionText.verticalOverflow = VerticalWrapMode.Truncate;
-            selectedOperatorSkillDescriptionText.color = new Color(0.68f, 0.88f, 1f, 1f);
-            selectedOperatorSkillDescriptionText.raycastTarget = false;
-            SetPosition(
-                selectedOperatorSkillDescriptionText.GetComponent<RectTransform>(),
-                new Vector2(10f, -48f),
-                new Vector2(0f, 1f),
-                new Vector2(280f, 58f),
-                new Vector2(0f, 1f));
-            selectedOperatorSkillDescriptionText.gameObject.SetActive(false);
-
             selectedOperatorRarityText = CreateText(selectedOperatorLabelRoot.transform, "Rarity", string.Empty, 17, TextAnchor.MiddleRight);
             selectedOperatorRarityText.color = new Color(1f, 0.78f, 0.2f, 1f);
             SetPosition(selectedOperatorRarityText.GetComponent<RectTransform>(), new Vector2(-10f, -5f), new Vector2(1f, 1f), new Vector2(82f, 22f), new Vector2(1f, 1f));
@@ -466,7 +453,7 @@ namespace TrashTD.UI
             selectedOperatorUpgradeBadgeGraphic = selectedOperatorUpgradeBadge.GetComponentInChildren<UpgradeArrowGraphic>();
 
             selectedOperatorShowMoreButton = CreateButton(selectedOperatorLabelRoot.transform, "ShowOperatorDetailsButton", "SHOW MORE", new Vector2(102f, 24f), ButtonContainerType.Dark);
-            SetPosition(selectedOperatorShowMoreButton.GetComponent<RectTransform>(), new Vector2(0f, -112f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 1f));
+            SetPosition(selectedOperatorShowMoreButton.GetComponent<RectTransform>(), new Vector2(0f, -58f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 1f));
             Text showMoreLabel = selectedOperatorShowMoreButton.GetComponentInChildren<Text>();
             showMoreLabel.fontSize = 11;
             showMoreLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
@@ -881,24 +868,11 @@ namespace TrashTD.UI
             int currentATK,
             OperatorRarity rarity,
             OperatorRarity baseRarity,
-            string skillDescription,
             Vector3 worldPosition)
         {
+            // The skill text lives only in the SHOW MORE details panel (RefreshSelectedOperatorDetails).
             SetSelectedOperatorName(operatorName, worldPosition);
             if (string.IsNullOrEmpty(operatorName)) return;
-
-            bool hasSkillDescription = !string.IsNullOrWhiteSpace(skillDescription);
-            selectedOperatorLabelRoot.GetComponent<RectTransform>().sizeDelta = hasSkillDescription
-                ? new Vector2(300f, 220f)
-                : new Vector2(300f, 170f);
-            selectedOperatorSkillDescriptionText.text = skillDescription;
-            selectedOperatorSkillDescriptionText.gameObject.SetActive(hasSkillDescription);
-            SetPosition(
-                selectedOperatorShowMoreButton.GetComponent<RectTransform>(),
-                new Vector2(0f, hasSkillDescription ? -126f : -58f),
-                new Vector2(0.5f, 1f),
-                new Vector2(102f, 24f),
-                new Vector2(0.5f, 1f));
 
             int upgradeLevels = Mathf.Clamp((int)rarity - (int)baseRarity, 0, 2);
             selectedOperatorUpgradeBadgeGraphic.SetArrowCount(upgradeLevels);
@@ -932,10 +906,9 @@ namespace TrashTD.UI
             int maxHP,
             OperatorRarity rarity,
             OperatorRarity baseRarity,
-            string skillDescription,
             Vector3 worldPosition)
         {
-            SetSelectedOperatorName(operatorName, currentHP, maxHP, 0, rarity, baseRarity, skillDescription, worldPosition);
+            SetSelectedOperatorName(operatorName, currentHP, maxHP, 0, rarity, baseRarity, worldPosition);
         }
 
         private void ApplyHealthFill()
@@ -969,7 +942,6 @@ namespace TrashTD.UI
                 selectedOperator.CurrentATK,
                 selectedOperator.CurrentRarity,
                 selectedOperator.Data.baseRarity,
-                selectedOperator.GetSkillDescription(),
                 labelPosition);
         }
 
@@ -1092,30 +1064,6 @@ namespace TrashTD.UI
             }
             topBarRect = barRect;
 
-            // Wave progress strip along the bottom edge of the bar (color follows the phase)
-            var track = new GameObject("WaveProgressTrack", typeof(RectTransform), typeof(Image));
-            track.transform.SetParent(stageInfoPanel.transform, false);
-            var trackRect = track.GetComponent<RectTransform>();
-            trackRect.anchorMin = new Vector2(0f, 0f);
-            trackRect.anchorMax = new Vector2(1f, 0f);
-            trackRect.pivot = new Vector2(0.5f, 0f);
-            trackRect.sizeDelta = new Vector2(0f, 4f);
-            trackRect.anchoredPosition = Vector2.zero;
-            var trackImage = track.GetComponent<Image>();
-            trackImage.color = new Color(1f, 1f, 1f, 0.07f);
-            trackImage.raycastTarget = false;
-
-            var fill = new GameObject("WaveProgressFill", typeof(RectTransform), typeof(Image));
-            fill.transform.SetParent(track.transform, false);
-            waveProgressFillRect = fill.GetComponent<RectTransform>();
-            waveProgressFillRect.anchorMin = Vector2.zero;
-            waveProgressFillRect.anchorMax = new Vector2(0f, 1f);
-            waveProgressFillRect.offsetMin = Vector2.zero;
-            waveProgressFillRect.offsetMax = Vector2.zero;
-            waveProgressFill = fill.GetComponent<Image>();
-            waveProgressFill.color = PrepColor;
-            waveProgressFill.raycastTarget = false;
-
             // Pause button (top-left)
             var pauseButton = CreateButton(stageInfoPanel.transform, "PauseButton", string.Empty, new Vector2(50f, 50f), ButtonContainerType.IconDark);
             SetPosition(pauseButton.GetComponent<RectTransform>(), new Vector2(10f, -41f), new Vector2(0f, 1f), new Vector2(50f, 50f), new Vector2(0f, 0.5f));
@@ -1141,18 +1089,21 @@ namespace TrashTD.UI
             phaseText.color = PrepColor;
             SetPosition(phaseText.GetComponent<RectTransform>(), new Vector2(95f, -60f), new Vector2(0f, 1f), new Vector2(220f, 26f), new Vector2(0f, 0.5f));
 
-            // The wave counter replaces the squad count's former top-bar position.
-            waveIconImage = CreateIconImage(stageInfoPanel.transform, "WaveIcon", GetWaveMarkSprite(), WaveColor, new Vector2(350f, -45f), new Vector2(0f, 1f), new Vector2(44f, 42f), new Vector2(0f, 0.5f));
-            waveText = CreateText(stageInfoPanel.transform, "WaveText", "1/1", 26, TextAnchor.MiddleLeft);
-            SetPosition(waveText.GetComponent<RectTransform>(), new Vector2(398f, -45f), new Vector2(0f, 1f), new Vector2(150f, 40f), new Vector2(0f, 0.5f));
+            // The wave counter sits on the Top Panel BG's second screen (x 336..510, y -15..-75 at 3x),
+            // with the wave progress bar under it.
+            waveIconImage = CreateIconImage(stageInfoPanel.transform, "WaveIcon", GetWaveMarkSprite(), WaveColor, new Vector2(348f, -32f), new Vector2(0f, 1f), new Vector2(30f, 29f), new Vector2(0f, 0.5f));
+            waveText = CreateText(stageInfoPanel.transform, "WaveText", "1/1", 22, TextAnchor.MiddleLeft);
+            SetPosition(waveText.GetComponent<RectTransform>(), new Vector2(384f, -32f), new Vector2(0f, 1f), new Vector2(120f, 32f), new Vector2(0f, 0.5f));
+            CreateWaveProgressBar(stageInfoPanel.transform);
 
             // Enemy count (center) uses a skull icon and a numeric count.
             enemyIconImage = CreateIconImage(stageInfoPanel.transform, "EnemyIcon", GetEnemySkullSprite(), Color.white, new Vector2(-35f, -45f), new Vector2(0.5f, 1f), new Vector2(36f, 36f), new Vector2(0.5f, 0.5f));
             enemyText = CreateText(stageInfoPanel.transform, "EnemyText", "0", 24, TextAnchor.MiddleLeft);
             SetPosition(enemyText.GetComponent<RectTransform>(), new Vector2(8f, -45f), new Vector2(0.5f, 1f), new Vector2(100f, 40f), new Vector2(0f, 0.5f));
 
-            // Lives Counter (top-right, 3 lives)
-            lpText = CreateText(stageInfoPanel.transform, "LivesText", "♥ ♥ ♥", 24, TextAnchor.MiddleRight);
+            // Lives: a horizontal tube on the right-hand screen. The text only shows "LIVES LOCKED" in the sandbox.
+            CreateLivesTube(stageInfoPanel.transform);
+            lpText = CreateText(stageInfoPanel.transform, "LivesText", string.Empty, 24, TextAnchor.MiddleRight);
             lpText.color = LifeColor;
             SetPosition(lpText.GetComponent<RectTransform>(), new Vector2(-25f, -45f), new Vector2(1f, 1f), new Vector2(280f, 45f), new Vector2(1f, 0.5f));
 
@@ -1162,6 +1113,154 @@ namespace TrashTD.UI
             phaseText.raycastTarget = false;
             enemyText.raycastTarget = false;
             lpText.raycastTarget = false;
+        }
+
+        // UI/bars sprites are drawn at 2x. bar_frame is 24x10 with its inner channel at x 2..21, y 2..7;
+        // tube_frame is 22x64 (8 px end caps) with its inner channel at x 3..16, y 8..56 from the bottom.
+        private const float BarPixelScale = 2f;
+        private const float TubeInnerX = 3f;
+        private const float TubeInnerBottom = 8f;
+        private const float TubeInnerWidth = 14f;
+        private const float TubeInnerHeight = 49f;
+
+        private void CreateWaveProgressBar(Transform parent)
+        {
+            // Framed bar under the wave counter; the fill sprite follows the phase (see SetWaveProgressFillSprite)
+            var frame = new GameObject("WaveProgressBar", typeof(RectTransform), typeof(Image));
+            frame.transform.SetParent(parent, false);
+            SetPosition(frame.GetComponent<RectTransform>(), new Vector2(346f, -60f), new Vector2(0f, 1f), new Vector2(154f, 10f * BarPixelScale), new Vector2(0f, 0.5f));
+            Image frameImage = frame.GetComponent<Image>();
+            frameImage.raycastTarget = false;
+            Sprite frameSprite = LoadWholeTextureSprite("UI/bars/bar_frame", new Vector4(4f, 4f, 4f, 4f));
+            if (frameSprite != null)
+            {
+                frameImage.sprite = frameSprite;
+                frameImage.type = Image.Type.Sliced;
+                frameImage.pixelsPerUnitMultiplier = 1f / BarPixelScale;
+            }
+            else
+            {
+                frameImage.color = new Color(1f, 1f, 1f, 0.07f);
+            }
+
+            var fillArea = new GameObject("FillArea", typeof(RectTransform));
+            fillArea.transform.SetParent(frame.transform, false);
+            var fillAreaRect = fillArea.GetComponent<RectTransform>();
+            fillAreaRect.anchorMin = Vector2.zero;
+            fillAreaRect.anchorMax = Vector2.one;
+            fillAreaRect.offsetMin = new Vector2(2f, 2f) * BarPixelScale;
+            fillAreaRect.offsetMax = new Vector2(-2f, -2f) * BarPixelScale;
+
+            var fill = new GameObject("WaveProgressFill", typeof(RectTransform), typeof(Image));
+            fill.transform.SetParent(fillArea.transform, false);
+            waveProgressFillRect = fill.GetComponent<RectTransform>();
+            waveProgressFillRect.anchorMin = Vector2.zero;
+            waveProgressFillRect.anchorMax = new Vector2(0f, 1f);
+            waveProgressFillRect.offsetMin = Vector2.zero;
+            waveProgressFillRect.offsetMax = Vector2.zero;
+            waveProgressFill = fill.GetComponent<Image>();
+            waveProgressFill.raycastTarget = false;
+            waveProgressFill.type = Image.Type.Tiled;
+            waveProgressFill.pixelsPerUnitMultiplier = 1f / BarPixelScale;
+            SetWaveProgressFillSprite(StagePhase.Preparation);
+        }
+
+        private void SetWaveProgressFillSprite(StagePhase phase)
+        {
+            if (waveProgressFill == null) return;
+
+            string fillName = phase switch
+            {
+                StagePhase.CardPick => "bar_fill_yellow",
+                StagePhase.WaveActive => "bar_fill_red",
+                _ => "bar_fill_blue"
+            };
+
+            Sprite sprite = LoadWholeTextureSprite("UI/bars/" + fillName);
+            if (sprite != null)
+            {
+                waveProgressFill.sprite = sprite;
+                waveProgressFill.color = Color.white;
+            }
+            else
+            {
+                waveProgressFill.sprite = null;
+                waveProgressFill.color = phase switch
+                {
+                    StagePhase.CardPick => DraftColor,
+                    StagePhase.WaveActive => WaveColor,
+                    _ => PrepColor
+                };
+            }
+        }
+
+        private void CreateLivesTube(Transform parent)
+        {
+            // tube_frame is vertical; the root is built upright and turned -90 degrees, so the liquid
+            // fills from the left (the tube's bottom) and drains toward it as lives are lost.
+            var root = new GameObject("LivesTube", typeof(RectTransform), typeof(Image));
+            root.transform.SetParent(parent, false);
+            livesTubeRect = root.GetComponent<RectTransform>();
+            // Centred on the Top Panel BG's right-hand screen (frame x 590..637 at 3x)
+            SetPosition(livesTubeRect, new Vector2(-78f, -45f), new Vector2(1f, 1f), new Vector2(22f, 64f) * BarPixelScale, new Vector2(0.5f, 0.5f));
+            livesTubeRect.localRotation = Quaternion.Euler(0f, 0f, -90f);
+
+            livesTubeFrame = root.GetComponent<Image>();
+            livesTubeFrame.raycastTarget = false;
+            Sprite frameSprite = LoadWholeTextureSprite("UI/bars/tube_frame");
+            if (frameSprite != null) livesTubeFrame.sprite = frameSprite;
+            else livesTubeFrame.color = new Color(0.1f, 0.12f, 0.15f, 1f);
+
+            var liquid = new GameObject("Liquid", typeof(RectTransform), typeof(Image));
+            liquid.transform.SetParent(root.transform, false);
+            livesLiquidRect = liquid.GetComponent<RectTransform>();
+            SetPosition(livesLiquidRect, new Vector2(TubeInnerX, TubeInnerBottom) * BarPixelScale, Vector2.zero,
+                new Vector2(TubeInnerWidth, TubeInnerHeight) * BarPixelScale, Vector2.zero);
+            Image liquidImage = liquid.GetComponent<Image>();
+            liquidImage.raycastTarget = false;
+            Sprite liquidSprite = LoadWholeTextureSprite("UI/bars/tube_liquid");
+            if (liquidSprite != null)
+            {
+                liquidImage.sprite = liquidSprite;
+                liquidImage.type = Image.Type.Tiled;
+                liquidImage.pixelsPerUnitMultiplier = 1f / BarPixelScale;
+            }
+            else
+            {
+                liquidImage.color = LifeColor;
+            }
+
+            // Bright meniscus on the liquid's leading edge
+            livesSurface = new GameObject("Surface", typeof(RectTransform), typeof(Image));
+            livesSurface.transform.SetParent(liquid.transform, false);
+            var surfaceRect = livesSurface.GetComponent<RectTransform>();
+            surfaceRect.anchorMin = new Vector2(0f, 1f);
+            surfaceRect.anchorMax = new Vector2(1f, 1f);
+            surfaceRect.pivot = new Vector2(0.5f, 1f);
+            surfaceRect.sizeDelta = new Vector2(0f, 3f * BarPixelScale);
+            surfaceRect.anchoredPosition = Vector2.zero;
+            Image surfaceImage = livesSurface.GetComponent<Image>();
+            surfaceImage.raycastTarget = false;
+            Sprite surfaceSprite = LoadWholeTextureSprite("UI/bars/tube_surface");
+            if (surfaceSprite != null)
+            {
+                surfaceImage.sprite = surfaceSprite;
+            }
+            else
+            {
+                Destroy(livesSurface);
+                livesSurface = null;
+            }
+        }
+
+        private void ApplyLivesLiquid(float ratio)
+        {
+            if (livesLiquidRect == null) return;
+
+            float height = Mathf.Round(Mathf.Clamp01(ratio) * TubeInnerHeight) * BarPixelScale;
+            livesLiquidRect.sizeDelta = new Vector2(TubeInnerWidth * BarPixelScale, height);
+            livesLiquidRect.gameObject.SetActive(height > 0f);
+            if (livesSurface != null) livesSurface.SetActive(height >= 3f * BarPixelScale);
         }
 
         private void CreateDeckBar(Transform root)
@@ -2380,44 +2479,63 @@ namespace TrashTD.UI
             pauseGroup = pausePanel.GetComponent<CanvasGroup>();
             pauseGroup.alpha = 0f;
 
-            // Centered card
+            // Centered card: the 256x256 pause menu panel art drawn at 2x. Its header screen spans
+            // y 37..101 (title), a divider sits at y 103, and the body screen spans y 104..217 (buttons).
             var card = new GameObject("PauseCard", typeof(RectTransform), typeof(Image));
             card.transform.SetParent(pausePanel.transform, false);
             pauseCard = card.GetComponent<RectTransform>();
-            SetPosition(pauseCard, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(520f, 520f), new Vector2(0.5f, 0.5f));
-            ApplyModalCard(card);
-
-            var border = card.AddComponent<Outline>();
-            border.effectColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.5f);
-            border.effectDistance = new Vector2(2f, -2f);
+            SetPosition(pauseCard, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(PauseCardPixels, PauseCardPixels) * PauseCardScale, new Vector2(0.5f, 0.5f));
+            Sprite pauseCardSprite = LoadWholeTextureSprite(PauseCardSpritePath);
+            if (pauseCardSprite != null)
+            {
+                Image cardImage = card.GetComponent<Image>();
+                cardImage.sprite = pauseCardSprite;
+                cardImage.type = Image.Type.Simple;
+                cardImage.color = Color.white;
+            }
+            else
+            {
+                ApplyModalCard(card);
+            }
 
             var title = CreateText(card.transform, "PauseTitle", "PAUSED", 54, TextAnchor.MiddleCenter);
-            SetPosition(title.GetComponent<RectTransform>(), new Vector2(0f, -90f), new Vector2(0.5f, 1f), new Vector2(460f, 80f), new Vector2(0.5f, 0.5f));
+            SetPosition(title.GetComponent<RectTransform>(), PausePx(60f), new Vector2(0.5f, 1f), new Vector2(400f, 80f), new Vector2(0.5f, 0.5f));
             title.color = AccentColor;
             title.raycastTarget = false;
 
             var subtitle = CreateText(card.transform, "PauseSubtitle", "THE OPERATION WAITS", 14, TextAnchor.MiddleCenter);
-            SetPosition(subtitle.GetComponent<RectTransform>(), new Vector2(0f, -148f), new Vector2(0.5f, 1f), new Vector2(460f, 26f), new Vector2(0.5f, 0.5f));
+            SetPosition(subtitle.GetComponent<RectTransform>(), PausePx(88f), new Vector2(0.5f, 1f), new Vector2(400f, 26f), new Vector2(0.5f, 0.5f));
             subtitle.color = TextDim;
             subtitle.raycastTarget = false;
 
-            var resumeButton = CreateButton(card.transform, "ResumeButton", "RESUME", new Vector2(340f, 70f), ButtonContainerType.Primary);
-            SetPosition(resumeButton.GetComponent<RectTransform>(), new Vector2(0f, -250f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
+            // Four slots in the body screen: Resume, Retry, Settings (added by AudioSettingsUI in Awake), Exit
+            var resumeButton = CreateButton(card.transform, "ResumeButton", "RESUME", new Vector2(PauseButtonWidth, 52f), ButtonContainerType.Primary);
+            SetPosition(resumeButton.GetComponent<RectTransform>(), PausePx(120f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
             resumeButton.onClick.AddListener(ResumeGame);
             StyleButton(resumeButton, ButtonContainerType.Primary, new Color(0.4f, 1f, 0.65f, 1f), 1.05f);
 
-            var retryButton = CreateButton(card.transform, "RetryButton", "RETRY", new Vector2(340f, 60f), ButtonContainerType.Secondary);
-            SetPosition(retryButton.GetComponent<RectTransform>(), new Vector2(0f, -332f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
+            var retryButton = CreateButton(card.transform, "RetryButton", "RETRY", new Vector2(PauseButtonWidth, PauseButtonHeight), ButtonContainerType.Secondary);
+            SetPosition(retryButton.GetComponent<RectTransform>(), PausePx(148.5f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
             retryButton.onClick.AddListener(RetryStage);
             StyleButton(retryButton, ButtonContainerType.Secondary, new Color(0.55f, 0.75f, 1f, 1f), 1.05f);
 
-            var exitButton = CreateButton(card.transform, "ExitButton", "EXIT TO MENU", new Vector2(340f, 60f), ButtonContainerType.Danger);
-            SetPosition(exitButton.GetComponent<RectTransform>(), new Vector2(0f, -409f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
+            var exitButton = CreateButton(card.transform, "ExitButton", "EXIT TO MENU", new Vector2(PauseButtonWidth, PauseButtonHeight), ButtonContainerType.Danger);
+            SetPosition(exitButton.GetComponent<RectTransform>(), PausePx(202.5f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
             exitButton.onClick.AddListener(ExitToMenu);
             StyleButton(exitButton, ButtonContainerType.Danger, new Color(1f, 0.4f, 0.4f, 1f), 1.05f);
 
             pausePanel.SetActive(false);
         }
+
+        private const string PauseCardSpritePath = "UI/panels/pause menu panel bg";
+        private const float PauseCardPixels = 256f;
+        private const float PauseCardScale = 2f;
+        private const float PauseButtonWidth = 300f;
+        private const float PauseButtonHeight = 46f;
+        private const float PauseSettingsSlotPx = 175.5f;
+
+        /// <summary>Position on the pause card for a point at <paramref name="yFromTop"/> in pause-art pixels, centred horizontally.</summary>
+        private static Vector2 PausePx(float yFromTop) => new Vector2(0f, -yFromTop * PauseCardScale);
 
         // ============================
         // Phase Handling
@@ -2441,6 +2559,7 @@ namespace TrashTD.UI
             }
 
             StagePhase phase = gameManager.CurrentPhase;
+            SetWaveProgressFillSprite(phase);
 
             switch (phase)
             {
@@ -2957,23 +3076,25 @@ namespace TrashTD.UI
 
         private void UpdateLivesDisplay(int current, int max)
         {
-            if (lpText == null) return;
+            if (livesTubeRect == null) return;
 
             if (lastLives >= 0 && current < lastLives) OnLifeLost();
             lastLives = current;
 
             int total = max > 0 ? max : 3;
-            string hearts = "";
-            for (int i = 0; i < current; i++) hearts += "♥ ";
-            for (int i = current; i < total; i++) hearts += "♡ ";
-            lpText.text = hearts.Trim();
+            livesTarget = Mathf.Clamp01((float)current / total);
+            if (livesDisplayed < 0f)
+            {
+                livesDisplayed = livesTarget;
+                ApplyLivesLiquid(livesDisplayed);
+            }
         }
 
         private void OnLifeLost()
         {
             dangerFlashTime = 0f;
             lifeFlashTime = 0f;
-            Punch(lpText);
+            Punch(livesTubeRect);
             PlaySfx(lifeLostClip, 1f);
         }
 
@@ -2994,6 +3115,8 @@ namespace TrashTD.UI
                 }
                 if (lpText != null)
                     lpText.text = "LIVES LOCKED";
+                if (livesTubeRect != null)
+                    livesTubeRect.gameObject.SetActive(false);
                 if (squadCountText != null && operatorManager != null)
                 {
                     squadCountText.text = $"SQUAD {operatorManager.DeployedCount}";
@@ -3008,7 +3131,7 @@ namespace TrashTD.UI
                 waveText.text = $"{currentWave}/{waveManager.TotalWaves}";
             }
 
-            if (lpText != null && gameManager != null)
+            if (gameManager != null)
             {
                 UpdateLivesDisplay(gameManager.CurrentLifePoints, gameManager.MaxLifePoints);
             }
@@ -3104,9 +3227,8 @@ namespace TrashTD.UI
                 }
             }
 
-            // Phase color follows the current phase (text + wave progress strip)
+            // Phase color follows the current phase (the progress bar swaps its fill sprite instead)
             if (phaseText != null) phaseText.color = Color.Lerp(phaseText.color, phaseColorTarget, k);
-            if (waveProgressFill != null) waveProgressFill.color = Color.Lerp(waveProgressFill.color, phaseColorTarget, k);
 
             // Wave progress
             if (waveProgressFillRect != null)
@@ -3151,12 +3273,18 @@ namespace TrashTD.UI
                 p.target.localScale = new Vector3(s, s, 1f);
             }
 
-            // Lives text flashes white then settles back to red
-            if (lifeFlashTime >= 0f && lpText != null)
+            // Lives tube drains toward the new level; its frame flashes red then settles back
+            if (livesDisplayed >= 0f && !Mathf.Approximately(livesDisplayed, livesTarget))
+            {
+                livesDisplayed = Mathf.MoveTowards(livesDisplayed, livesTarget, dt * 1.5f);
+                ApplyLivesLiquid(livesDisplayed);
+            }
+
+            if (lifeFlashTime >= 0f && livesTubeFrame != null)
             {
                 lifeFlashTime += dt;
                 float lk = Mathf.Clamp01(lifeFlashTime / 0.6f);
-                lpText.color = Color.Lerp(Color.white, LifeColor, lk);
+                livesTubeFrame.color = Color.Lerp(LifeColor, Color.white, lk);
                 if (lk >= 1f) lifeFlashTime = -1f;
             }
 
@@ -3462,6 +3590,26 @@ namespace TrashTD.UI
                 sprite = Sprite.Create(sprite.texture, sprite.rect, sprite.pivot, 100f, 0, SpriteMeshType.FullRect, border);
             }
 
+            return sprite;
+        }
+
+        private static readonly Dictionary<string, Sprite> WholeTextureSprites = new Dictionary<string, Sprite>();
+
+        /// <summary>
+        /// Loads a UI texture from Resources as one Point-filtered sprite covering the whole image, ignoring any
+        /// slicing in its importer, with an optional 9-slice border in source pixels. Cached; null if missing.
+        /// </summary>
+        private static Sprite LoadWholeTextureSprite(string path, Vector4 border = default)
+        {
+            if (WholeTextureSprites.TryGetValue(path, out Sprite cached) && cached != null)
+                return cached;
+
+            var tex = Resources.Load<Texture2D>(path);
+            if (tex == null) return null;
+
+            tex.filterMode = FilterMode.Point;
+            Sprite sprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, border);
+            WholeTextureSprites[path] = sprite;
             return sprite;
         }
 

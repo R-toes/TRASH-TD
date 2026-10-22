@@ -1404,7 +1404,6 @@ namespace TrashTD.Core.GameLoop
                 op.MaxHP,
                 op.CurrentRarity,
                 op.Data.baseRarity,
-                op.GetSkillDescription(),
                 labelPosition);
         }
 
