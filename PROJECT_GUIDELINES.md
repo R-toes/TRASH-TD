@@ -254,10 +254,10 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
 - The dossier's texts use best-fit (`MainMenuController.FitText`) so they shrink instead of clipping. The selector's ticker plate is sized to the full message (`FitStageTicker`, 820–1360 px wide, font 15→10).
 - **CRT / old-TV look for the whole game** (`CrtDisplay`, `CrtScreen`, `Resources/Shaders/CrtScreen.shader` "TrashTD/UI/CRT"):
   - **`CrtDisplay`** is created before the first scene (`RuntimeInitializeOnLoadMethod`, DontDestroyOnLoad). Every frame it does three things:
-    1. Points the scene camera at a screen-sized picture texture.
-    2. Turns every Screen Space - Overlay canvas into Screen Space - Camera on a UI camera stacked on the scene camera (URP camera stack; sorting orders keep working).
-    3. Draws the picture full-screen through the CRT shader with `CrtScreen.Television`.
-    The runtime asmdef references URP for the camera stack.
+    1. Points the scene cameras at a screen-sized game texture.
+    2. Turns every Screen Space - Overlay canvas into Screen Space - Camera on its own UI camera, which renders into a separate transparent UI texture (sorting orders keep working).
+    3. Draws both through the CRT shader with `CrtScreen.Television` (the shader layers UI over game, `_UiTex` / `_HasUi`) on a screen camera that renders last (depth 1000), so the picture is never a frame behind.
+    - **Do not use a URP camera stack for this.** An earlier version stacked the UI camera on the scene camera; with the 2D Renderer the UI never drew (blue/frozen screen).
   - **Shader:** soft horizontal pixel blending; scanline beams that widen on bright pixels (~270 lines, `UpdateFrame` scales with resolution); a full-strength RGB slot mask (or aperture grille, `maskType`) that brightens each colour's own phosphor; halation glow; plus curvature, rounded bezel, fringing, grain, rolling bar, flicker, jitter, vignette and glare. Tune it in the `Television` / `Monitor` presets in `CrtScreen.cs`.
   - **Input rule (important):** the glass is curved, so the picture is not at the raw mouse position. UI raycasts are bent automatically (`CrtGraphicRaycaster` replaces each canvas's `GraphicRaycaster`). **Any code that uses a mouse or `PointerEventData` position with a camera or canvas must convert it first with `CrtDisplay.ScreenToPicture(...)`** (see `StageBootstrapper`, `DeckSlotDragHandler`). For screen ↔ canvas conversions, pass the canvas camera (`canvas.worldCamera`), not `null`, because canvases are no longer overlays.
   - **Finding a canvas** to build UI on: use `CrtDisplay.FindGameCanvas()`, not `FindFirstObjectByType<Canvas>()`, which could return the CRT's own canvas.

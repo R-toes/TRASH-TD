@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
 namespace TrashTD.UI
@@ -7,11 +6,13 @@ namespace TrashTD.UI
     /// <summary>
     /// Shows the whole game on an old CRT TV. Created automatically before the first scene and kept across
     /// scene loads. Every frame, before rendering:
-    ///   - the scene's cameras render into one screen-sized picture texture instead of the screen;
-    ///   - every Screen Space - Overlay canvas becomes Screen Space - Camera on a UI camera that is stacked on
-    ///     the scene camera (URP camera stack), so the HUD/menus land in the same picture above the world,
-    ///     keeping their sorting orders;
-    ///   - the picture is drawn full-screen through the CRT shader (CrtScreen.Television settings).
+    ///   - the scene's cameras render into a screen-sized game texture instead of the screen;
+    ///   - every Screen Space - Overlay canvas becomes Screen Space - Camera on a dedicated UI camera that
+    ///     renders into its own transparent UI texture (sorting orders keep working);
+    ///   - the CRT shader (CrtScreen.Television settings) layers the UI texture over the game texture and draws
+    ///     the result full-screen, on a screen camera that renders last so the frame is never a frame behind.
+    /// Separate textures instead of a URP camera stack: each camera is a plain base camera drawing to its own
+    /// target, which renders reliably with the 2D Renderer.
     /// Because the glass is curved, pointer positions are bent the same way: UI raycasts through
     /// CrtGraphicRaycaster, and gameplay code converts mouse positions with <see cref="ScreenToPicture"/>
     /// before using them with a camera.
@@ -25,12 +26,15 @@ namespace TrashTD.UI
         private static readonly Vector3 UiCameraPosition = new Vector3(20000f, 0f, 0f);
         private const float CanvasPlaneDistance = 10f;
 
+        private static readonly int UiTexId = Shader.PropertyToID("_UiTex");
+        private static readonly int HasUiId = Shader.PropertyToID("_HasUi");
+
         private CrtScreen.Settings settings = CrtScreen.Television;
         private Material material;
-        private RenderTexture picture;
-        private Camera screenCamera;   // only clears the real screen so the presenter has a frame to draw on
-        private Camera uiCamera;       // renders the converted canvases on top of the scene camera
-        private Camera stackedOn;
+        private RenderTexture picture;   // the game world (scene cameras)
+        private RenderTexture uiPicture; // the converted canvases, transparent where there is no UI
+        private Camera screenCamera;     // renders last to the real screen; the CRT canvas is drawn on it
+        private Camera uiCamera;         // renders the converted canvases into uiPicture
         private Canvas presentCanvas;
         private RawImage presentImage;
 
@@ -93,15 +97,18 @@ namespace TrashTD.UI
             material = CrtScreen.CreateMaterial("CRT (Display)", this);
             CrtScreen.ApplySettings(material, settings);
 
+            // Renders after every other camera, so the CRT shows this frame's game and UI textures
             screenCamera = CreateCamera("CrtScreenCamera", new Vector3(-30000f, 0f, 0f));
             screenCamera.cullingMask = 0;
             screenCamera.clearFlags = CameraClearFlags.SolidColor;
             screenCamera.backgroundColor = Color.black;
-            screenCamera.depth = -1000f;
+            screenCamera.depth = 1000f;
 
             uiCamera = CreateCamera("CrtUiCamera", UiCameraPosition);
-            uiCamera.clearFlags = CameraClearFlags.Depth;
+            uiCamera.clearFlags = CameraClearFlags.SolidColor;
+            uiCamera.backgroundColor = new Color(0f, 0f, 0f, 0f);
             uiCamera.cullingMask = ~0;
+            uiCamera.depth = 900f;
 
             var canvasObject = new GameObject("CrtDisplayCanvas", typeof(RectTransform), typeof(Canvas));
             canvasObject.transform.SetParent(transform, false);
@@ -146,92 +153,88 @@ namespace TrashTD.UI
 
         private void OnDestroy()
         {
-            if (picture != null)
-            {
-                picture.Release();
-                Destroy(picture);
-            }
+            ReleaseTexture(ref picture);
+            ReleaseTexture(ref uiPicture);
             if (material != null) Destroy(material);
             if (instance == this) instance = null;
         }
 
         private void LateUpdate()
         {
-            SyncPicture();
-            RedirectCameras();
+            SyncTextures();
+            bool hasSceneCamera = RedirectCameras();
             ConvertCanvases();
 
+            // No scene camera (e.g. mid scene change): show black rather than a stale frame
+            if (!hasSceneCamera)
+            {
+                RenderTexture previous = RenderTexture.active;
+                RenderTexture.active = picture;
+                GL.Clear(true, true, Color.black);
+                RenderTexture.active = previous;
+            }
+
             presentImage.texture = picture;
+            if (material != null)
+            {
+                material.SetTexture(UiTexId, uiPicture);
+                material.SetFloat(HasUiId, 1f);
+            }
             CrtScreen.UpdateFrame(material, settings, picture.width, picture.height);
         }
 
-        private void SyncPicture()
+        private void SyncTextures()
         {
             int width = Mathf.Max(16, Screen.width);
             int height = Mathf.Max(16, Screen.height);
             if (picture != null && picture.width == width && picture.height == height) return;
 
-            if (picture != null)
+            foreach (Camera cam in Camera.allCameras)
             {
-                foreach (Camera cam in Camera.allCameras)
-                {
-                    if (cam.targetTexture == picture) cam.targetTexture = null;
-                }
-                picture.Release();
-                Destroy(picture);
+                if (picture != null && cam.targetTexture == picture) cam.targetTexture = null;
+                if (uiPicture != null && cam.targetTexture == uiPicture) cam.targetTexture = null;
             }
+            ReleaseTexture(ref picture);
+            ReleaseTexture(ref uiPicture);
 
-            picture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32)
+            picture = CreateTexture("CRT_Game", width, height);
+            uiPicture = CreateTexture("CRT_UI", width, height);
+            uiCamera.targetTexture = uiPicture;
+        }
+
+        private static RenderTexture CreateTexture(string textureName, int width, int height)
+        {
+            var texture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32)
             {
-                name = "CRT_Picture",
+                name = textureName,
                 filterMode = FilterMode.Bilinear,
                 wrapMode = TextureWrapMode.Clamp
             };
-            picture.Create();
+            texture.Create();
+            return texture;
         }
 
-        /// <summary>
-        /// Points the scene cameras at the picture and stacks the UI camera on the scene's main camera.
-        /// With no scene camera, the UI camera renders the picture on its own.
-        /// </summary>
-        private void RedirectCameras()
+        private static void ReleaseTexture(ref RenderTexture texture)
         {
-            Camera baseCamera = null;
+            if (texture == null) return;
+            texture.Release();
+            Destroy(texture);
+            texture = null;
+        }
+
+        /// <summary>Points every scene camera that draws to the screen at the game texture.</summary>
+        private bool RedirectCameras()
+        {
+            bool found = false;
             foreach (Camera cam in Camera.allCameras)
             {
                 if (cam == screenCamera || cam == uiCamera) continue;
                 if (cam.targetTexture != null && cam.targetTexture != picture) continue; // e.g. a CrtScreen monitor
 
-                UniversalAdditionalCameraData data = cam.GetUniversalAdditionalCameraData();
-                if (data != null && data.renderType == CameraRenderType.Overlay) continue;
-
-                cam.targetTexture = picture;
-                if (baseCamera == null || cam == Camera.main) baseCamera = cam;
+                if (cam.targetTexture != picture) cam.targetTexture = picture;
+                found = true;
             }
-
-            UniversalAdditionalCameraData uiData = uiCamera.GetUniversalAdditionalCameraData();
-            if (baseCamera == null)
-            {
-                if (uiData.renderType != CameraRenderType.Base) uiData.renderType = CameraRenderType.Base;
-                uiCamera.clearFlags = CameraClearFlags.SolidColor;
-                uiCamera.backgroundColor = Color.black;
-                uiCamera.targetTexture = picture;
-                stackedOn = null;
-                return;
-            }
-
-            if (uiData.renderType != CameraRenderType.Overlay)
-            {
-                uiCamera.targetTexture = null;
-                uiData.renderType = CameraRenderType.Overlay;
-            }
-
-            if (stackedOn != baseCamera)
-            {
-                UniversalAdditionalCameraData baseData = baseCamera.GetUniversalAdditionalCameraData();
-                if (!baseData.cameraStack.Contains(uiCamera)) baseData.cameraStack.Add(uiCamera);
-                stackedOn = baseCamera;
-            }
+            return found;
         }
 
         /// <summary>

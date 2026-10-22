@@ -12,6 +12,8 @@ Shader "TrashTD/UI/CRT"
     Properties
     {
         [PerRendererData] _MainTex ("Texture", 2D) = "black" {}
+        _UiTex ("UI Layer (set by CrtDisplay)", 2D) = "black" {}
+        _HasUi ("Composite UI Layer", Float) = 0
         _Color ("Tint", Color) = (1,1,1,1)
 
         _Curvature ("Curvature", Range(0, 0.5)) = 0.06
@@ -114,6 +116,8 @@ Shader "TrashTD/UI/CRT"
             };
 
             sampler2D _MainTex;
+            sampler2D _UiTex;
+            float _HasUi;
             fixed4 _Color;
             float4 _ClipRect;
 
@@ -156,6 +160,22 @@ Shader "TrashTD/UI/CRT"
                 return OUT;
             }
 
+            // The picture at uv: the game layer, with the UI layer on top when CrtDisplay supplies one.
+            // The UI texture is rendered with normal alpha blending onto transparent black, so its colour is
+            // already multiplied by coverage and its alpha is coverage squared (single layer).
+            float4 Pic(float2 uv)
+            {
+                float4 picture = tex2D(_MainTex, uv);
+                if (_HasUi > 0.5)
+                {
+                    float4 ui = tex2D(_UiTex, uv);
+                    float coverage = sqrt(saturate(ui.a));
+                    picture.rgb = ui.rgb + picture.rgb * (1.0 - coverage);
+                    picture.a = max(picture.a, coverage);
+                }
+                return picture;
+            }
+
             float Hash(float2 p)
             {
                 return frac(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453);
@@ -182,9 +202,9 @@ Shader "TrashTD/UI/CRT"
             float3 SampleSoft(float2 uv, float texelX)
             {
                 float side = 0.5 * (1.0 - _Sharpness);
-                float3 c = tex2D(_MainTex, uv).rgb;
-                float3 l = tex2D(_MainTex, uv - float2(texelX, 0.0)).rgb;
-                float3 r = tex2D(_MainTex, uv + float2(texelX, 0.0)).rgb;
+                float3 c = Pic(uv).rgb;
+                float3 l = Pic(uv - float2(texelX, 0.0)).rgb;
+                float3 r = Pic(uv + float2(texelX, 0.0)).rgb;
                 return (c + (l + r) * side) / (1.0 + 2.0 * side);
             }
 
@@ -228,7 +248,7 @@ Shader "TrashTD/UI/CRT"
                 col.r = SampleSoft(uv + fringe, texel.x).r;
                 col.g = SampleSoft(uv, texel.x).g;
                 col.b = SampleSoft(uv - fringe, texel.x).b;
-                float alpha = tex2D(_MainTex, uv).a;
+                float alpha = Pic(uv).a;
 
                 // Scanline beam: a gaussian across each line, wider for brighter pixels,
                 // normalised so a line keeps roughly its average brightness
@@ -246,10 +266,10 @@ Shader "TrashTD/UI/CRT"
                 float2 r1 = texel * 3.0;
                 float2 r2 = texel * 7.0;
                 float3 glow =
-                    tex2D(_MainTex, uv + float2(r1.x, 0.0)).rgb + tex2D(_MainTex, uv - float2(r1.x, 0.0)).rgb +
-                    tex2D(_MainTex, uv + float2(0.0, r1.y)).rgb + tex2D(_MainTex, uv - float2(0.0, r1.y)).rgb +
-                    tex2D(_MainTex, uv + r2).rgb + tex2D(_MainTex, uv - r2).rgb +
-                    tex2D(_MainTex, uv + float2(r2.x, -r2.y)).rgb + tex2D(_MainTex, uv + float2(-r2.x, r2.y)).rgb;
+                    Pic(uv + float2(r1.x, 0.0)).rgb + Pic(uv - float2(r1.x, 0.0)).rgb +
+                    Pic(uv + float2(0.0, r1.y)).rgb + Pic(uv - float2(0.0, r1.y)).rgb +
+                    Pic(uv + r2).rgb + Pic(uv - r2).rgb +
+                    Pic(uv + float2(r2.x, -r2.y)).rgb + Pic(uv + float2(-r2.x, r2.y)).rgb;
                 col += glow * (0.125 * _Bloom);
 
                 col *= _Brightness;
