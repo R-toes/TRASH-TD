@@ -128,6 +128,16 @@ namespace TrashTD.Core.GameLoop
         public bool IsSandbox => stageData != null && stageData.stageId == "SANDBOX";
 
         /// <summary>
+        /// Operators can be placed in the sandbox, in Preparation, and during Card Pick while the draft is
+        /// minimized (the map & deck view), so deploying a deck card frees a slot for the card being picked.
+        /// </summary>
+        private bool IsDeploymentAllowed =>
+            IsSandbox ||
+            (gameManager != null &&
+             (gameManager.CurrentPhase == StagePhase.Preparation ||
+              (gameManager.CurrentPhase == StagePhase.CardPick && gameplayHudUI != null && gameplayHudUI.IsDraftMinimized)));
+
+        /// <summary>
         /// Stage whose environment (combat modifiers, weather visuals and damage, animated background) is active.
         /// The sandbox uses the environment of the map it is running on.
         /// </summary>
@@ -555,7 +565,7 @@ namespace TrashTD.Core.GameLoop
         public void BeginOperatorPlacement(DraftCard card, Vector2Int gridPosition)
         {
             if (card == null || card.operatorData == null || gridManager == null ||
-                gameManager == null || (!IsSandbox && gameManager.CurrentPhase != StagePhase.Preparation) ||
+                gameManager == null || !IsDeploymentAllowed ||
                 !gridManager.IsInBounds(gridPosition)) return;
 
             GridCell targetCell = gridManager.GetCell(gridPosition);
@@ -587,7 +597,7 @@ namespace TrashTD.Core.GameLoop
         public void UpdateOperatorPlacementDrag(DraftCard card, Vector2Int gridPosition, Vector3 worldPosition)
         {
             if (card == null || card.operatorData == null || gridManager == null ||
-                gameManager == null || (!IsSandbox && gameManager.CurrentPhase != StagePhase.Preparation) ||
+                gameManager == null || !IsDeploymentAllowed ||
                 !gridManager.IsInBounds(gridPosition)) return;
 
             GridCell targetCell = gridManager.GetCell(gridPosition);
@@ -722,7 +732,7 @@ namespace TrashTD.Core.GameLoop
                 return;
             }
 
-            bool isPreparing = IsSandbox || gameManager.CurrentPhase == StagePhase.Preparation;
+            bool isPreparing = IsDeploymentAllowed;
             if (!isPreparing && (isPlacementPreviewActive || isDraggingToDeploy))
             {
                 pendingDeployCard = null;

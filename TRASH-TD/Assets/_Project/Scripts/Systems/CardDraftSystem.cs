@@ -15,13 +15,29 @@ namespace TrashTD.Systems
         public OperatorRarity rarity;
         public int cooldownRoundsRemaining;
         public int heatStacks;
+        /// <summary>
+        /// HP the operator had when it was retreated, restored exactly on redeploy. -1 = full HP
+        /// (a fresh card). Nothing heals a benched card.
+        /// </summary>
+        public int savedHP;
 
-        public DraftCard(OperatorData data, OperatorRarity rarity, int cooldownRoundsRemaining = 0, int heatStacks = 0)
+        public DraftCard(OperatorData data, OperatorRarity rarity, int cooldownRoundsRemaining = 0, int heatStacks = 0, int savedHP = -1)
         {
             this.operatorData = data;
             this.rarity = rarity;
             this.cooldownRoundsRemaining = cooldownRoundsRemaining;
             this.heatStacks = heatStacks;
+            this.savedHP = savedHP;
+        }
+
+        public bool HasSavedHP => savedHP >= 0;
+
+        /// <summary>Saved HP as a fraction of this card's max HP (1 for a fresh card).</summary>
+        public float GetHealthRatio()
+        {
+            if (!HasSavedHP || operatorData == null) return 1f;
+            int maxHP = operatorData.GetScaledHP(rarity);
+            return maxHP > 0 ? Mathf.Clamp01((float)savedHP / maxHP) : 1f;
         }
     }
 

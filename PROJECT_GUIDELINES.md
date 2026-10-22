@@ -60,10 +60,11 @@ This game does **NOT** use a pre-built squad/roster selection screen. Instead:
 Any UI, system, or flow that involves "select your squad before the stage" is **wrong** unless Raim explicitly changes this rule.
 
 - Drafted cards go into the player's **deck** (`PlayerDeck`); operators are deployed from the deck bar.
-- On the draft screen, **"View Map & Deck"** lets the player rearrange and discard deck cards during the pick (no deploying from there).
+- On the draft screen, **"View Map & Deck"** (minimize, M) lets the player rearrange, discard **and deploy** deck cards during the pick, the same as in Preparation. Deploying frees a deck slot for the card being picked. Restore (M / RESUME) to pick. The rule lives in `StageBootstrapper.IsDeploymentAllowed` (Sandbox, Preparation, or Card Pick while `CardDraftOverlayUI.IsMinimized`) and `GameplayHUDUI.IsDeckDeployPhase`.
+- **HP persists through retreat.** A retreated operator's exact HP is saved on its returned card (`DraftCard.savedHP`, −1 = full) and restored on redeploy (`OperatorBase.RestoreSavedHP`, called after `Initialize`). Nothing heals a benched card. Merging copies never heals: the upgraded card keeps the lowest HP fraction among them.
 - At most **8 operators** can be deployed at once (`StageData.squadSizeLimit`; unlimited in Sandbox).
 - **Deploying:** pick a deck card, click a tile, then hold and drag from the operator to set its facing. Release to confirm. Esc cancels. **Right-click** cancels placement or undeploys the selected operator. Keyboard shortcuts are listed in §7.6.
-- **Preparation refund:** an operator deployed and retreated within the same Preparation phase, before it has fought (`DeployedDuringCurrentPreparation && !HasFoughtInWave`), returns with **no recall cooldown**. Every other retreat uses the normal class cooldown. Always refunded in Sandbox.
+- **Preparation refund:** an operator deployed and retreated between waves (Card Pick or Preparation), before it has fought (`DeployedDuringCurrentPreparation && !HasFoughtInWave`), returns with **no recall cooldown**. Every other retreat uses the normal class cooldown. Always refunded in Sandbox.
 - The draft overlay has card flip and shuffle animations. Card frame sprites exist in `Resources/UI/cards/` but are **not wired up yet**.
 
 ---
@@ -230,7 +231,7 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
 | | Enter | Confirm pick |
 | | R | Reroll |
 | | M | Minimize / restore (View Map & Deck) |
-| Preparation (and Sandbox) | 1–8 (or numpad) | Quick-deploy that deck slot onto the tile under the cursor (`StageBootstrapper.TryQuickDeployFromDeck`). Ignored over UI, while paused, during the environment briefing, at the squad limit, or if the card is on cooldown |
+| Preparation, Sandbox, or Card Pick with the draft minimized | 1–8 (or numpad) | Quick-deploy that deck slot onto the tile under the cursor (`StageBootstrapper.TryQuickDeployFromDeck`). Ignored over UI, while paused, during the environment briefing, at the squad limit, or if the card is on cooldown |
 | Placing an operator | WASD / arrow keys | Set facing |
 | | Enter | Confirm placement |
 | | Right-click | Cancel placement, or undeploy the selected operator |

@@ -149,6 +149,19 @@ namespace TrashTD.Operators
             }
         }
 
+        /// <summary>
+        /// Sets HP to the value saved on the deck card when this operator last retreated (call after Initialize).
+        /// This is not a heal: it bypasses IsCombatPaused and raises no heal effects.
+        /// </summary>
+        public void RestoreSavedHP(int hp)
+        {
+            currentHP = Mathf.Clamp(hp, 1, maxHP);
+            if (currentHP < maxHP)
+            {
+                TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
+            }
+        }
+
         public void SetFacing(OperatorFacing newFacing)
         {
             facing = newFacing;

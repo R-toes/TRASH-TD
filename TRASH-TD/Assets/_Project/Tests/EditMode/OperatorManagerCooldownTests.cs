@@ -159,6 +159,75 @@ namespace TrashTD.Tests
         }
 
         [Test]
+        public void RetreatedOperator_RedeploysWithItsSavedHP()
+        {
+            var card = new DraftCard(operatorData, OperatorRarity.Star1);
+            playerDeck.AddCard(card);
+            Assert.IsTrue(operatorManager.TryDeployOperator(
+                card, new Vector2Int(0, 0), OperatorFacing.Right, out retreatedOperator));
+            playerDeck.RemoveCard(card);
+
+            retreatedOperator.TakeTrueDamage(37);
+            int woundedHP = retreatedOperator.CurrentHP;
+            Assert.Less(woundedHP, retreatedOperator.MaxHP);
+
+            TestUtility.ExpectEditModeDestroy();
+            operatorManager.RetreatOperator(retreatedOperator);
+
+            DraftCard returnedCard = FindFirstDeckCard();
+            Assert.IsNotNull(returnedCard);
+            Assert.AreEqual(woundedHP, returnedCard.savedHP);
+
+            returnedCard.cooldownRoundsRemaining = 0;
+            Assert.IsTrue(operatorManager.TryDeployOperator(
+                returnedCard, new Vector2Int(1, 0), OperatorFacing.Right, out deployedOperator));
+            Assert.AreEqual(woundedHP, deployedOperator.CurrentHP);
+        }
+
+        [Test]
+        public void FreshCard_DeploysAtFullHP()
+        {
+            var card = new DraftCard(operatorData, OperatorRarity.Star1);
+            Assert.IsFalse(card.HasSavedHP);
+
+            Assert.IsTrue(operatorManager.TryDeployOperator(
+                card, new Vector2Int(0, 0), OperatorFacing.Right, out deployedOperator));
+            Assert.AreEqual(deployedOperator.MaxHP, deployedOperator.CurrentHP);
+        }
+
+        [Test]
+        public void MergingWoundedCopies_KeepsTheLowestHPFraction()
+        {
+            var upgradeObject = new GameObject("TestUpgradeSystem");
+            TestUtility.AddAwakened<RarityUpgradeSystem>(upgradeObject);
+            try
+            {
+                int star1MaxHP = operatorData.GetScaledHP(OperatorRarity.Star1);
+                playerDeck.AddCard(new DraftCard(operatorData, OperatorRarity.Star1, 0, 0, star1MaxHP / 4));
+                playerDeck.AddCard(new DraftCard(operatorData, OperatorRarity.Star1));
+                playerDeck.AddCard(new DraftCard(operatorData, OperatorRarity.Star1));
+
+                Assert.AreEqual(1, playerDeck.CardCount);
+                DraftCard merged = FindFirstDeckCard();
+                Assert.AreEqual(OperatorRarity.Star2, merged.rarity);
+                Assert.AreEqual(0.25f, merged.GetHealthRatio(), 0.01f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(upgradeObject);
+            }
+        }
+
+        private DraftCard FindFirstDeckCard()
+        {
+            foreach (DraftCard card in playerDeck.DeckSlots)
+            {
+                if (card != null) return card;
+            }
+            return null;
+        }
+
+        [Test]
         public void TryDeployOperator_RejectsTheCopyThatIsOnCooldown()
         {
             var coolingCopy = new DraftCard(operatorData, OperatorRarity.Star1, 1);

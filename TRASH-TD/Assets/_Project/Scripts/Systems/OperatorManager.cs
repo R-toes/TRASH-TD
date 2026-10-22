@@ -173,6 +173,9 @@ namespace TrashTD.Systems
             opComp.HasFoughtInWave = isWaveActive;
             opComp.DeployedDuringCurrentPreparation = !isWaveActive;
 
+            // A recalled operator comes back with the HP it left with, not full HP
+            if (card.HasSavedHP) opComp.RestoreSavedHP(card.savedHP);
+
             opComp.HeatStacks = card != null ? card.heatStacks : 0;
             opComp.IsBurning = opComp.HeatStacks >= 5;
             deployedOperators.Add(opComp);
@@ -294,15 +297,19 @@ namespace TrashTD.Systems
             if (SelectedOperator == op) SelectOperator(null);
 
             bool isSandbox = TrashTD.Core.GameLoop.GameManager.Instance != null && TrashTD.Core.GameLoop.GameManager.Instance.IsSandbox;
-            bool isPreparing = isSandbox || TrashTD.Core.GameLoop.GameManager.Instance == null || TrashTD.Core.GameLoop.GameManager.Instance.CurrentPhase == TrashTD.Core.GameLoop.StagePhase.Preparation;
+            // Card Pick counts too: operators can be deployed there from the minimized draft, and no combat happens.
+            bool isPreparing = isSandbox || TrashTD.Core.GameLoop.GameManager.Instance == null ||
+                TrashTD.Core.GameLoop.GameManager.Instance.CurrentPhase == TrashTD.Core.GameLoop.StagePhase.Preparation ||
+                TrashTD.Core.GameLoop.GameManager.Instance.CurrentPhase == TrashTD.Core.GameLoop.StagePhase.CardPick;
             bool isPreparationRefund = isSandbox || (isPreparing && op.DeployedDuringCurrentPreparation && !op.HasFoughtInWave);
 
             int cooldownRounds = (!isPreparationRefund && op.Data != null)
                 ? GetRetreatCooldownRounds(op.OperatorClass)
                 : 0;
 
+            // The card keeps the operator's exact HP so a redeploy doesn't heal it
             DraftCard returnedCard = op.Data != null
-                ? new DraftCard(op.Data, op.CurrentRarity, cooldownRounds, op.HeatStacks)
+                ? new DraftCard(op.Data, op.CurrentRarity, cooldownRounds, op.HeatStacks, op.CurrentHP)
                 : null;
             deployedOperators.Remove(op);
             OnOperatorRetreated?.Invoke(op);

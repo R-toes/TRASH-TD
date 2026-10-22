@@ -2114,13 +2114,21 @@ namespace TrashTD.UI
             cooldownToastRoutine = null;
         }
 
-        // During card pick (the draft's map & deck view) the deck can be rearranged and discarded from, but not deployed.
-        private bool IsDeckEditOnly => gameManager != null && gameManager.CurrentPhase == StagePhase.CardPick;
+        public bool IsDraftMinimized => draftOverlayUI != null && draftOverlayUI.IsMinimized;
+
+        // Deck cards can be deployed in Preparation, and during Card Pick while the draft is minimized
+        // (the map & deck view), so a deploy can free a deck slot for the card about to be picked.
+        private bool IsDeckDeployPhase => gameManager != null &&
+            (gameManager.CurrentPhase == StagePhase.Preparation ||
+             (gameManager.CurrentPhase == StagePhase.CardPick && IsDraftMinimized));
+
+        // During Card Pick with the full draft screen up, the deck can only be rearranged and discarded from.
+        private bool IsDeckEditOnly => gameManager != null && gameManager.CurrentPhase == StagePhase.CardPick && !IsDraftMinimized;
 
         private bool CanDragDeckCard(int slotIndex)
         {
             if (gameManager == null || playerDeck == null) return false;
-            if (gameManager.CurrentPhase != StagePhase.Preparation && !IsDeckEditOnly) return false;
+            if (!IsDeckDeployPhase && !IsDeckEditOnly) return false;
 
             DraftCard card = playerDeck.GetCard(slotIndex);
             if (card == null) return false;
@@ -2729,7 +2737,7 @@ namespace TrashTD.UI
         private void FinishDeckCardDrag(int slotIndex, Vector2 screenPosition)
         {
             if (gameManager == null || playerDeck == null) return;
-            if (gameManager.CurrentPhase != StagePhase.Preparation && !IsDeckEditOnly) return;
+            if (!IsDeckDeployPhase && !IsDeckEditOnly) return;
 
             DraftCard card = playerDeck.GetCard(slotIndex);
             if (card == null) return;

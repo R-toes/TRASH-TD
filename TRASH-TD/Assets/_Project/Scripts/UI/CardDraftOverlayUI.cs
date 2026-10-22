@@ -226,6 +226,9 @@ namespace TrashTD.UI
         private GameObject restoreBar;
         private bool pickConfirmed; // one card per draft; reset when the next draft opens
 
+        /// <summary>True while the draft is minimized to the map & deck view, where operators can be deployed.</summary>
+        public bool IsMinimized => minimized;
+
         // --- Animation ---
         private RectTransform[] introRects;
         private Vector2[] introTargets;
@@ -1872,7 +1875,8 @@ namespace TrashTD.UI
 
         /// <summary>
         /// Minimize and restore controls for viewing the map and editing the deck while drafting.
-        /// While minimized, the gameplay HUD's deck bar is used to rearrange and discard cards.
+        /// While minimized, the gameplay HUD's deck bar works as in Preparation: cards can be rearranged, discarded
+        /// and deployed (StageBootstrapper.IsDeploymentAllowed), freeing deck slots for the card being picked.
         /// </summary>
         private void BuildMinimizeControls(Transform canvasRoot, Transform buttonsContainer)
         {
