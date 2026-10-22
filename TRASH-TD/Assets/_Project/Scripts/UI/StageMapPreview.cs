@@ -13,8 +13,9 @@ namespace TrashTD.UI
     /// shifted by visualTileOffset), then draws the enemy routes WaveManager would use (explicit
     /// StageData.enemyPaths, otherwise A* from each spawn) as coloured dashed lines flowing from spawn to
     /// exit, and pulses the spawn and exit tiles. Each route has its own colour and lane, so routes that share
-    /// tiles run side by side instead of on top of each other. Put it on a RectTransform and call Show(stage).
-    /// Runs on unscaled time.
+    /// tiles run side by side instead of on top of each other. Put it on a RectTransform with no Graphic and call
+    /// Show(stage): it adds a CrtScreen (Monitor settings) there and builds the preview on that screen's
+    /// offscreen canvas. Runs on unscaled time.
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
     public sealed class StageMapPreview : MonoBehaviour
@@ -55,7 +56,8 @@ namespace TrashTD.UI
 
         public static Color GetRouteColor(int routeIndex) => RouteColors[Mathf.Abs(routeIndex) % RouteColors.Length];
 
-        private RectTransform root;
+        private RectTransform display; // where the CRT picture is shown
+        private RectTransform root;    // the CRT monitor's offscreen content root
         private RectTransform content;
         private RectTransform bootCover;
         private RectTransform bootScanLine;
@@ -112,13 +114,12 @@ namespace TrashTD.UI
         {
             if (root != null) return;
 
-            root = (RectTransform)transform;
-            if (GetComponent<RectMask2D>() == null) gameObject.AddComponent<RectMask2D>();
-
-            Image background = GetComponent<Image>();
-            if (background == null) background = gameObject.AddComponent<Image>();
-            background.color = ScreenColor;
-            background.raycastTarget = false;
+            // The preview is drawn on its own curved CRT monitor; this object shows the picture and the
+            // preview UI is built on the monitor's offscreen canvas (which also clips it to the screen).
+            display = (RectTransform)transform;
+            CrtScreen crt = GetComponent<CrtScreen>();
+            if (crt == null) crt = CrtScreen.Create(display, CrtScreen.Monitor, false);
+            root = crt.Content;
         }
 
         /// <summary>Builds the preview for a stage and restarts its boot / route animation.</summary>
@@ -136,7 +137,7 @@ namespace TrashTD.UI
             if (stage == null || root == null) return;
 
             // Rebuild if the frame was resized (first layout pass, resolution change)
-            Vector2 size = root.rect.size;
+            Vector2 size = display.rect.size;
             if ((size - builtForSize).sqrMagnitude > 1f)
             {
                 Build();
@@ -160,8 +161,12 @@ namespace TrashTD.UI
             markers.Clear();
             sheets.Clear();
             content = null;
-            builtForSize = root.rect.size;
+            // Size from the display: the offscreen canvas follows it a frame later
+            builtForSize = display.rect.size;
             if (stage == null || builtForSize.x < 1f || builtForSize.y < 1f) return;
+
+            Image background = CreateImage(root, "ScreenBackground", null, ScreenColor);
+            Stretch(background.rectTransform);
 
             float pixelsPerTile = stage.visualTilePixelSize > 0 ? stage.visualTilePixelSize : 32f;
             Vector2 mapOrigin = stage.visualTileOffset;
@@ -263,13 +268,6 @@ namespace TrashTD.UI
             }
 
             BuildBootOverlay();
-
-            // CRT scanlines over everything
-            var scanGo = new GameObject("PreviewScanlines", typeof(RectTransform), typeof(RawImage));
-            scanGo.transform.SetParent(root, false);
-            Stretch(scanGo.GetComponent<RectTransform>());
-            var scan = scanGo.AddComponent<StageMapScanlines>();
-            scan.SourceRows = Mathf.RoundToInt(builtForSize.y / 4f);
         }
 
         private static void AddLayer(
