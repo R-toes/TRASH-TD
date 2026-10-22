@@ -50,7 +50,11 @@ namespace TrashTD.UI
         /// <summary>Raised when the dot is clicked (never while locked).</summary>
         public event Action<StageMapNode> Clicked;
 
+        /// <summary>Raised when the pointer enters (true) or leaves (false) the dot, locked or not.</summary>
+        public event Action<StageMapNode, bool> HoverChanged;
+
         public StageData Stage => stage;
+        public bool IsLocked => isLocked;
         public int StageNumber => stageNumber;
 
         /// <summary>
@@ -140,12 +144,14 @@ namespace TrashTD.UI
         {
             isHovered = true;
             RefreshVisual();
+            HoverChanged?.Invoke(this, true);
         }
 
         public void OnPointerExit(PointerEventData eventData)
         {
             isHovered = false;
             RefreshVisual();
+            HoverChanged?.Invoke(this, false);
         }
 
         private void RefreshVisual()

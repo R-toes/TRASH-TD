@@ -48,7 +48,18 @@ namespace TrashTD.UI
         private static readonly Color DarkButton = new Color(0.12f, 0.14f, 0.18f, 1f);
         private static readonly Color CardColor = new Color(0.06f, 0.07f, 0.10f, 1f);
         private static readonly Color CardLockedColor = new Color(0.045f, 0.05f, 0.065f, 1f);
-        private static readonly Color DifficultyCardColor = new Color(0.07f, 0.08f, 0.11f, 1f);
+        private static readonly Color DifficultyCardColor = new Color(0.030f, 0.075f, 0.050f, 1f);
+
+        // Terminal (Pip-Boy) styling shared by the stage selector and the stage dossier
+        private static readonly Color TerminalPanel = new Color(0.016f, 0.042f, 0.028f, 0.97f);
+        private static readonly Color TerminalHeader = new Color(0.030f, 0.090f, 0.055f, 1f);
+        private static readonly Color TerminalPlate = new Color(0.010f, 0.030f, 0.020f, 0.82f);
+        private static readonly Color TerminalButton = new Color(0.035f, 0.090f, 0.060f, 0.95f);
+        private static readonly Color TerminalText = new Color(0.45f, 0.78f, 0.56f, 1f);
+        private static readonly Color TerminalLine = new Color(0.22f, 0.91f, 0.50f, 0.45f);
+        private const string StageSubtitleText = "CHOOSE YOUR DEPLOYMENT";
+        private const string StageTickerIdle = "> AWAITING STAGE SELECTION";
+        private const float TickerCharsPerSecond = 70f;
 
         private static readonly StageDifficulty[] DifficultyOrder =
         {
@@ -101,6 +112,9 @@ namespace TrashTD.UI
         private StageDifficulty selectedDifficulty = StageDifficulty.Normal;
         private Text difficultyHeading;
         private Text difficultyLabel;
+        private Text difficultyStats;
+        private Text difficultyBlurb;
+        private RectTransform difficultyBriefing;
 
         // Extra UI references created by the default layout
         private RectTransform stageDetailsModal;
@@ -116,6 +130,19 @@ namespace TrashTD.UI
         private RectTransform stageHeaderSubtitle;
         private RectTransform stageHeaderDivider;
         private RectTransform stageHint;
+        private RectTransform stageTitlePlate;
+        private Text stageHeaderSubtitleText;
+        private RectTransform stageTickerPlate;
+        private Text stageTickerText;
+        private string stageTickerTarget = StageTickerIdle;
+        private float stageTickerTime;
+
+        // Stage dossier (details modal)
+        private RectTransform stageDetailsColumn;
+        private RectTransform stagePreviewFrame;
+        private StageMapPreview stagePreview;
+        private Text stagePreviewInfo;
+        private Text stageDetailsStats;
 
         // State
         private bool menuInitialized;
@@ -315,6 +342,24 @@ namespace TrashTD.UI
             {
                 float pulse = 0.5f + 0.5f * Mathf.Sin(time * 1.4f);
                 titleText.color = Color.Lerp(TitleDim, TitleBright, pulse);
+            }
+
+            // Stage selector terminal: blinking cursor on the subtitle, typed-out status ticker
+            if (stageSelectionPanel != null && stageSelectionPanel.activeInHierarchy)
+            {
+                bool cursorOn = Mathf.Repeat(time, 1f) < 0.5f;
+                if (stageHeaderSubtitleText != null)
+                {
+                    stageHeaderSubtitleText.text = StageSubtitleText + (cursorOn ? "_" : " ");
+                }
+
+                if (stageTickerText != null)
+                {
+                    stageTickerTime += dt;
+                    int visible = Mathf.Min(stageTickerTarget.Length, Mathf.FloorToInt(stageTickerTime * TickerCharsPerSecond));
+                    bool typing = visible < stageTickerTarget.Length;
+                    stageTickerText.text = stageTickerTarget.Substring(0, visible) + (typing || cursorOn ? "_" : " ");
+                }
             }
 
             // Difficulty tint on the details modal stripe
@@ -550,15 +595,45 @@ namespace TrashTD.UI
                 scanGo.AddComponent<StageMapScanlines>();
             }
 
+            // Terminal frame around the whole map screen
+            AddCornerBrackets(stageSelectionPanel.GetComponent<RectTransform>(), 46f, 4f, TerminalLine, 18f);
+
+            // Backing plate so the title block reads over busy map art
+            var titlePlate = new GameObject("StageSelectorTitlePlate", typeof(RectTransform), typeof(Image));
+            titlePlate.transform.SetParent(stageSelectionPanel.transform, false);
+            stageTitlePlate = titlePlate.GetComponent<RectTransform>();
+            Place(stageTitlePlate, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, -18f), new Vector2(470f, 112f));
+            var titlePlateImage = titlePlate.GetComponent<Image>();
+            titlePlateImage.color = TerminalPlate;
+            titlePlateImage.raycastTarget = false;
+            AddCornerBrackets(stageTitlePlate, 16f, 2f, AccentBright);
+
             // Header overlay — left-aligned title block (over the map)
             var headerTitle = MakeText(stageSelectionPanel.transform, "StageSelectorTitle", "SELECT STAGE", 42, TextAnchor.MiddleLeft,
                 AccentBright, FontStyle.Bold);
             Place(headerTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(60f, -30f), new Vector2(600f, 50f));
             stageHeaderTitle = headerTitle.rectTransform;
+            var headerTitleShadow = headerTitle.gameObject.AddComponent<Shadow>();
+            headerTitleShadow.effectColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.30f);
+            headerTitleShadow.effectDistance = new Vector2(0f, -3f);
 
-            var headerSubtitle = MakeText(stageSelectionPanel.transform, "StageSelectorSubtitle", "CHOOSE YOUR DEPLOYMENT", 13, TextAnchor.MiddleLeft, TextDim);
-            Place(headerSubtitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(64f, -82f), new Vector2(500f, 22f));
-            stageHeaderSubtitle = headerSubtitle.rectTransform;
+            stageHeaderSubtitleText = MakeText(stageSelectionPanel.transform, "StageSelectorSubtitle", StageSubtitleText, 13, TextAnchor.MiddleLeft, TerminalText);
+            Place(stageHeaderSubtitleText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(64f, -82f), new Vector2(500f, 22f));
+            stageHeaderSubtitle = stageHeaderSubtitleText.rectTransform;
+
+            // Status ticker: types out the stage under the pointer
+            var tickerPlate = new GameObject("StageTicker", typeof(RectTransform), typeof(Image));
+            tickerPlate.transform.SetParent(stageSelectionPanel.transform, false);
+            stageTickerPlate = tickerPlate.GetComponent<RectTransform>();
+            Place(stageTickerPlate, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(820f, 48f));
+            var tickerImage = tickerPlate.GetComponent<Image>();
+            tickerImage.color = TerminalPlate;
+            tickerImage.raycastTarget = false;
+            AddCornerBrackets(stageTickerPlate, 12f, 2f, TerminalLine);
+            stageTickerText = MakeText(tickerPlate.transform, "StageTickerText", StageTickerIdle, 15, TextAnchor.MiddleLeft, AccentBright, FontStyle.Bold);
+            stageTickerText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            stageTickerText.rectTransform.offsetMin = new Vector2(20f, 0f);
+            stageTickerText.rectTransform.offsetMax = new Vector2(-20f, 0f);
 
             var headerDivider = new GameObject("StageSelectorDivider", typeof(RectTransform), typeof(Image));
             headerDivider.transform.SetParent(stageSelectionPanel.transform, false);
@@ -568,23 +643,21 @@ namespace TrashTD.UI
             headerDividerImage.color = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.4f);
             headerDividerImage.raycastTarget = false;
 
-            stageProgressText = MakeText(stageSelectionPanel.transform, "StageProgressText", "", 14, TextAnchor.MiddleRight, TextDim);
+            stageProgressText = MakeText(stageSelectionPanel.transform, "StageProgressText", "", 14, TextAnchor.MiddleRight, TerminalText, FontStyle.Bold);
             Place(stageProgressText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-60f, -48f), new Vector2(300f, 26f));
 
             if (sandboxButton == null)
             {
                 sandboxButton = CreateButtonChild(stageSelectionPanel.transform, "SandboxButton", "⚙  QA SANDBOX");
             }
-            sandboxButton.GetComponent<Image>().color = new Color(0.08f, 0.12f, 0.16f, 0.95f);
-            var sandboxBtnLabel = sandboxButton.GetComponentInChildren<Text>();
-            if (sandboxBtnLabel != null) { sandboxBtnLabel.fontSize = 15; sandboxBtnLabel.color = AccentBright; }
+            StyleTerminalButton(sandboxButton, AccentBright, 15);
             Place(sandboxButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-60f, 40f), new Vector2(200f, 48f));
             sandboxButton.onClick.RemoveAllListeners();
             sandboxButton.onClick.AddListener(() => { PlayClick(); SelectStage(6); });
             AttachFeedback(sandboxButton, PlayClick, AccentBright, 1.05f);
 
             var hint = MakeText(stageSelectionPanel.transform, "StageHint", "ESC  BACK", 12, TextAnchor.MiddleRight,
-                new Color(0.30f, 0.34f, 0.40f, 1f));
+                new Color(TerminalText.r, TerminalText.g, TerminalText.b, 0.6f));
             Place(hint.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-60f, 96f), new Vector2(200f, 22f));
             stageHint = hint.rectTransform;
 
@@ -592,9 +665,7 @@ namespace TrashTD.UI
             {
                 backButton = CreateButtonChild(stageSelectionPanel.transform, "BackButton", "◀  BACK");
             }
-            backButton.GetComponent<Image>().color = DarkButton;
-            var backBtnLabel = backButton.GetComponentInChildren<Text>();
-            if (backBtnLabel != null) { backBtnLabel.fontSize = 16; backBtnLabel.color = new Color(0.6f, 0.65f, 0.72f, 1f); }
+            StyleTerminalButton(backButton, TerminalText, 16);
             Place(backButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(60f, 40f), new Vector2(200f, 48f));
 
             if (stageDetailsPanel == null)
@@ -632,6 +703,8 @@ namespace TrashTD.UI
             CardDraftOverlayUI.HideAllForMenuTransition();
             stageSelectionOpen = true;
             detailsOpen = false;
+            stageTickerTarget = string.Empty;
+            SetStageTicker(StageTickerIdle);
             SetBackgroundInteractable(true);
 
             SetPanelVisible(mainMenuPanel, false, true);
@@ -869,8 +942,9 @@ namespace TrashTD.UI
             var node = go.AddComponent<StageMapNode>();
             node.Initialize(stage, stageNumber, normalizedPos, idle, selected, locked, txt, headerGo, lvlText, nameText);
 
-            // Subscribe to node click
+            // Subscribe to node click and hover (status ticker)
             node.Clicked += OnStageMapNodeClicked;
+            node.HoverChanged += OnStageMapNodeHoverChanged;
 
             // Set locked state
             node.SetLocked(!isPlayable);
@@ -1011,6 +1085,62 @@ namespace TrashTD.UI
             SelectStage(index);
         }
 
+        private void OnStageMapNodeHoverChanged(StageMapNode node, bool hovered)
+        {
+            if (node == null || node.Stage == null) return;
+
+            string message;
+            if (!hovered)
+            {
+                message = StageTickerIdle;
+            }
+            else
+            {
+                string stageName = string.IsNullOrEmpty(node.Stage.mapName) ? "UNKNOWN" : node.Stage.mapName.ToUpperInvariant();
+                message = node.IsLocked
+                    ? $"> STAGE {node.StageNumber:00} // {stageName}  -  SIGNAL LOCKED"
+                    : $"> STAGE {node.StageNumber:00} // {stageName}  -  CLICK TO OPEN DOSSIER";
+            }
+
+            SetStageTicker(message);
+        }
+
+        private void SetStageTicker(string message)
+        {
+            if (message == stageTickerTarget) return;
+            stageTickerTarget = message;
+            stageTickerTime = 0f;
+            FitStageTicker(message);
+        }
+
+        private const float TickerMinWidth = 820f;
+        private const float TickerMaxWidth = 1360f; // stays clear of the Back / Sandbox buttons in the bottom corners
+        private const float TickerPadding = 56f;
+        private const int TickerFontSize = 15;
+
+        /// <summary>
+        /// Sizes the ticker plate to the whole message (measured before it is typed out), shrinking the font
+        /// if the widest plate is still too narrow, so the text never runs past the box.
+        /// </summary>
+        private void FitStageTicker(string message)
+        {
+            if (stageTickerText == null || stageTickerPlate == null) return;
+
+            string measured = message + "_";
+            float width = 0f;
+            for (int fontSize = TickerFontSize; fontSize >= 10; fontSize--)
+            {
+                stageTickerText.fontSize = fontSize;
+                TextGenerationSettings settings = stageTickerText.GetGenerationSettings(Vector2.zero);
+                width = stageTickerText.cachedTextGeneratorForLayout.GetPreferredWidth(measured, settings) / stageTickerText.pixelsPerUnit;
+                if (width + TickerPadding <= TickerMaxWidth) break;
+            }
+
+            stageTickerPlate.sizeDelta = new Vector2(
+                Mathf.Clamp(width + TickerPadding, TickerMinWidth, TickerMaxWidth),
+                stageTickerPlate.sizeDelta.y);
+        }
+
         private void SelectStage(int stageIndex)
         {
             if (stageIndex < 0 || stageIndex >= availableStages.Count)
@@ -1035,6 +1165,10 @@ namespace TrashTD.UI
             stageDetailsDescription.text = selectedStage.shortDescription;
             if (stageDetailsTag != null) stageDetailsTag.text = "STAGE " + (stageIndex + 1).ToString("00");
             if (stageDetailsNumber != null) stageDetailsNumber.text = (stageIndex + 1).ToString("00");
+            if (stageDetailsStats != null)
+            {
+                stageDetailsStats.text = $"GRID {selectedStage.gridWidth}x{selectedStage.gridHeight}   //   SQUAD {selectedStage.squadSizeLimit}";
+            }
             UpdateDifficultyDisplay();
 
             // Highlight the selected node, dim others
@@ -1047,6 +1181,24 @@ namespace TrashTD.UI
             SetBackgroundInteractable(false);
             SetPanelVisible(stageDetailsPanel, true, false, stageDetailsModal);
             PlayEntrance(detailsEntrance, ref detailsEntranceRoutine);
+
+            // Boot the tactical map once the panel is active, so the preview lays out against its real size
+            if (stagePreview != null)
+            {
+                stagePreview.Show(selectedStage);
+                if (stagePreviewInfo != null)
+                {
+                    // One coloured entry per route; spawn markers share their route's colour
+                    var legend = new System.Text.StringBuilder("ROUTES ");
+                    for (int i = 0; i < stagePreview.RouteCount; i++)
+                    {
+                        string hex = ColorUtility.ToHtmlStringRGB(StageMapPreview.GetRouteColor(i));
+                        legend.Append($" <color=#{hex}>▶{i + 1}</color>");
+                    }
+                    legend.Append("     ◆ SPAWN (ROUTE COLOUR)     <color=#52FF99>◆</color> EXIT");
+                    stagePreviewInfo.text = legend.ToString();
+                }
+            }
             FocusUi(playStageButton != null ? playStageButton.gameObject : null);
         }
 
@@ -1059,7 +1211,7 @@ namespace TrashTD.UI
             stageDetailsPanel = new GameObject("StageDetailsPanel", typeof(RectTransform), typeof(Image));
             stageDetailsPanel.transform.SetParent(stageSelectionPanel.transform, false);
             StretchFill(stageDetailsPanel.GetComponent<RectTransform>());
-            stageDetailsPanel.GetComponent<Image>().color = new Color(0.01f, 0.012f, 0.02f, 0.88f);
+            stageDetailsPanel.GetComponent<Image>().color = new Color(0.004f, 0.012f, 0.008f, 0.90f);
 
             // Click outside the card to close
             var backdrop = new GameObject("Backdrop", typeof(RectTransform), typeof(Image), typeof(Button));
@@ -1071,84 +1223,190 @@ namespace TrashTD.UI
             backdropButton.navigation = new Navigation { mode = Navigation.Mode.None };
             backdropButton.onClick.AddListener(() => { PlayBack(); CloseStageDetails(); });
 
-            // Centered modal card
+            // Centered terminal window: stage preview on the left, dossier + difficulty on the right
             var modal = new GameObject("StageDetailsModal", typeof(RectTransform), typeof(Image));
             modal.transform.SetParent(stageDetailsPanel.transform, false);
             stageDetailsModal = modal.GetComponent<RectTransform>();
-            Place(stageDetailsModal, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(760f, 520f));
-            modal.GetComponent<Image>().color = new Color(0.045f, 0.055f, 0.075f, 0.98f);
+            Place(stageDetailsModal, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(DossierWidth, DossierHeight));
+            modal.GetComponent<Image>().color = TerminalPanel;
 
             var modalBorder = modal.AddComponent<Outline>();
-            modalBorder.effectColor = new Color(1f, 1f, 1f, 0.06f);
+            modalBorder.effectColor = TerminalLine;
             modalBorder.effectDistance = new Vector2(2f, -2f);
+            AddCornerBrackets(stageDetailsModal, 30f, 3f, AccentBright, -6f);
 
-            // Faint stage number watermark
-            stageDetailsNumber = MakeText(modal.transform, "StageDetailsNumber", "01", 150, TextAnchor.MiddleRight,
-                new Color(1f, 1f, 1f, 0.05f), FontStyle.Bold);
-            stageDetailsNumber.horizontalOverflow = HorizontalWrapMode.Overflow;
-            stageDetailsNumber.verticalOverflow = VerticalWrapMode.Overflow;
-            Place(stageDetailsNumber.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-36f, -24f), new Vector2(320f, 180f));
+            // Title bar
+            var header = new GameObject("DossierHeader", typeof(RectTransform), typeof(Image));
+            header.transform.SetParent(modal.transform, false);
+            StretchTop(header.GetComponent<RectTransform>(), 0f, 0f, 0f, DossierHeaderHeight);
+            var headerImage = header.GetComponent<Image>();
+            headerImage.color = TerminalHeader;
+            headerImage.raycastTarget = false;
 
-            // Accent stripe — tinted by difficulty
+            var headerLabel = MakeText(header.transform, "DossierHeaderLabel", "◆ STAGE DOSSIER", 15, TextAnchor.MiddleLeft, AccentBright, FontStyle.Bold);
+            headerLabel.rectTransform.offsetMin = new Vector2(24f, 0f);
+            var headerStatus = MakeText(header.transform, "DossierHeaderStatus", "UPLINK STABLE  //  ROUTE SCAN ACTIVE", 12, TextAnchor.MiddleRight, TerminalText);
+            headerStatus.rectTransform.offsetMax = new Vector2(-24f, 0f);
+
+            // Accent stripe under the title bar, tinted by difficulty
             var modalAccent = new GameObject("ModalAccent", typeof(RectTransform), typeof(Image));
             modalAccent.transform.SetParent(modal.transform, false);
-            var maRect = modalAccent.GetComponent<RectTransform>();
-            maRect.anchorMin = new Vector2(0f, 1f);
-            maRect.anchorMax = new Vector2(1f, 1f);
-            maRect.pivot = new Vector2(0.5f, 1f);
-            maRect.sizeDelta = new Vector2(0f, 4f);
+            StretchTop(modalAccent.GetComponent<RectTransform>(), 0f, 0f, DossierHeaderHeight, 3f);
             modalAccentImage = modalAccent.GetComponent<Image>();
             modalAccentImage.color = AccentColor;
             modalAccentImage.raycastTarget = false;
 
-            // Header block (left-aligned)
-            stageDetailsTag = MakeText(modal.transform, "StageDetailsTag", "STAGE 01", 13, TextAnchor.MiddleLeft, AccentBright, FontStyle.Bold);
-            StretchTop(stageDetailsTag.rectTransform, 44f, 44f, 30f, 22f);
+            // Stage preview (left)
+            var previewFrame = new GameObject("StagePreviewFrame", typeof(RectTransform), typeof(Image));
+            previewFrame.transform.SetParent(modal.transform, false);
+            stagePreviewFrame = previewFrame.GetComponent<RectTransform>();
+            Place(stagePreviewFrame, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(DossierPadding, -(DossierHeaderHeight + 24f)), new Vector2(PreviewFrameWidth, DossierHeight - DossierHeaderHeight - 24f - DossierPadding));
+            var previewFrameImage = previewFrame.GetComponent<Image>();
+            previewFrameImage.color = new Color(0.008f, 0.022f, 0.015f, 1f);
+            previewFrameImage.raycastTarget = false;
+            var previewOutline = previewFrame.AddComponent<Outline>();
+            previewOutline.effectColor = new Color(TerminalLine.r, TerminalLine.g, TerminalLine.b, 0.30f);
+            previewOutline.effectDistance = new Vector2(1f, -1f);
+            AddCornerBrackets(stagePreviewFrame, 18f, 2f, AccentBright);
 
-            stageDetailsTitle = MakeText(modal.transform, "StageDetailsTitle", "Select a stage", 40, TextAnchor.MiddleLeft, Color.white, FontStyle.Bold);
-            StretchTop(stageDetailsTitle.rectTransform, 44f, 44f, 56f, 56f);
+            var previewTitle = MakeText(previewFrame.transform, "PreviewTitle", "TACTICAL MAP  //  ENEMY ROUTES", 12, TextAnchor.MiddleLeft, TerminalText, FontStyle.Bold);
+            StretchTop(previewTitle.rectTransform, 16f, 16f, 8f, 20f);
 
-            stageDetailsDescription = MakeText(modal.transform, "StageDetailsDescription", "", 16, TextAnchor.UpperLeft, new Color(0.58f, 0.65f, 0.74f, 1f));
-            StretchTop(stageDetailsDescription.rectTransform, 44f, 120f, 118f, 48f);
+            var screen = new GameObject("StagePreviewScreen", typeof(RectTransform), typeof(Image));
+            screen.transform.SetParent(previewFrame.transform, false);
+            var screenRect = screen.GetComponent<RectTransform>();
+            screenRect.anchorMin = Vector2.zero;
+            screenRect.anchorMax = Vector2.one;
+            screenRect.offsetMin = new Vector2(12f, 40f);
+            screenRect.offsetMax = new Vector2(-12f, -34f);
+            stagePreview = screen.AddComponent<StageMapPreview>();
+
+            stagePreviewInfo = MakeText(previewFrame.transform, "PreviewLegend",
+                "<color=#FF5C42>▶▶</color> ENEMY ROUTE    <color=#FF5C42>◆</color> SPAWN    <color=#52FF99>◆</color> EXIT", 12,
+                TextAnchor.MiddleLeft, TerminalText);
+            StretchBottom(stagePreviewInfo.rectTransform, 16f, 16f, 10f, 22f);
+
+            // Dossier column (right)
+            var column = new GameObject("DossierColumn", typeof(RectTransform));
+            column.transform.SetParent(modal.transform, false);
+            stageDetailsColumn = column.GetComponent<RectTransform>();
+            stageDetailsColumn.anchorMin = Vector2.zero;
+            stageDetailsColumn.anchorMax = Vector2.one;
+            stageDetailsColumn.offsetMin = new Vector2(DossierPadding + PreviewFrameWidth + 32f, DossierPadding);
+            stageDetailsColumn.offsetMax = new Vector2(-DossierPadding, -(DossierHeaderHeight + 24f));
+
+            // Faint stage number watermark
+            stageDetailsNumber = MakeText(column.transform, "StageDetailsNumber", "01", 130, TextAnchor.UpperRight,
+                new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.07f), FontStyle.Bold);
+            stageDetailsNumber.horizontalOverflow = HorizontalWrapMode.Overflow;
+            stageDetailsNumber.verticalOverflow = VerticalWrapMode.Overflow;
+            Place(stageDetailsNumber.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, 10f), new Vector2(260f, 150f));
+
+            stageDetailsTag = MakeText(column.transform, "StageDetailsTag", "STAGE 01", 13, TextAnchor.MiddleLeft, AccentBright, FontStyle.Bold);
+            StretchTop(stageDetailsTag.rectTransform, 0f, 0f, 0f, 22f);
+
+            stageDetailsTitle = MakeText(column.transform, "StageDetailsTitle", "Select a stage", 34, TextAnchor.MiddleLeft, Color.white, FontStyle.Bold);
+            stageDetailsTitle.resizeTextForBestFit = true;
+            stageDetailsTitle.resizeTextMinSize = 20;
+            stageDetailsTitle.resizeTextMaxSize = 34;
+            StretchTop(stageDetailsTitle.rectTransform, 0f, 0f, 24f, 52f);
+
+            stageDetailsDescription = MakeText(column.transform, "StageDetailsDescription", "", 15, TextAnchor.UpperLeft, new Color(0.62f, 0.76f, 0.68f, 1f));
+            FitText(stageDetailsDescription, 11, 15);
+            StretchTop(stageDetailsDescription.rectTransform, 0f, 0f, 84f, 64f);
+
+            stageDetailsStats = MakeText(column.transform, "StageDetailsStats", "", 12, TextAnchor.MiddleLeft, TerminalText, FontStyle.Bold);
+            FitText(stageDetailsStats, 10, 12);
+            StretchTop(stageDetailsStats.rectTransform, 0f, 0f, 154f, 22f);
 
             var divider = new GameObject("DetailsDivider", typeof(RectTransform), typeof(Image));
-            divider.transform.SetParent(modal.transform, false);
-            StretchTop(divider.GetComponent<RectTransform>(), 44f, 44f, 176f, 2f);
+            divider.transform.SetParent(column.transform, false);
+            StretchTop(divider.GetComponent<RectTransform>(), 0f, 0f, 182f, 2f);
             var dividerImage = divider.GetComponent<Image>();
-            dividerImage.color = new Color(1f, 1f, 1f, 0.08f);
+            dividerImage.color = new Color(TerminalLine.r, TerminalLine.g, TerminalLine.b, 0.25f);
             dividerImage.raycastTarget = false;
 
             // Footer buttons
-            stageDetailsBackButton = CreateButtonChild(modal.transform, "StageDetailsBackButton", "◀  BACK");
-            stageDetailsBackButton.GetComponent<Image>().color = DarkButton;
-            var detailsBackLabel = stageDetailsBackButton.GetComponentInChildren<Text>();
-            if (detailsBackLabel != null) { detailsBackLabel.fontSize = 14; detailsBackLabel.color = new Color(0.55f, 0.6f, 0.68f, 1f); }
-            Place(stageDetailsBackButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(44f, 36f), new Vector2(180f, 50f));
+            stageDetailsBackButton = CreateButtonChild(column.transform, "StageDetailsBackButton", "◀  BACK");
+            StyleTerminalButton(stageDetailsBackButton, TerminalText, 15);
+            Place(stageDetailsBackButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(0f, 0f), Vector2.zero, new Vector2(140f, 56f));
 
-            playStageButton = CreateButtonChild(modal.transform, "PlayStageButton", "▶  PLAY");
+            playStageButton = CreateButtonChild(column.transform, "PlayStageButton", "▶  PLAY");
             playStageButton.GetComponent<Image>().color = AccentColor;
             var playBtnLabel = playStageButton.GetComponentInChildren<Text>();
-            if (playBtnLabel != null) { playBtnLabel.fontSize = 22; playBtnLabel.fontStyle = FontStyle.Bold; }
-            Place(playStageButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-44f, 36f), new Vector2(300f, 62f));
+            if (playBtnLabel != null) { playBtnLabel.fontSize = 22; playBtnLabel.fontStyle = FontStyle.Bold; playBtnLabel.color = new Color(0.02f, 0.08f, 0.04f, 1f); }
+            Place(playStageButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(1f, 0f), Vector2.zero, new Vector2(250f, 62f));
+            AddCornerBrackets(playStageButton.GetComponent<RectTransform>(), 12f, 2f, new Color(0.85f, 1f, 0.90f, 0.9f), -5f);
 
             stageDetailsPanel.SetActive(false);
+        }
+
+        private const float DossierWidth = 1300f;
+        private const float DossierHeight = 720f;
+        private const float DossierHeaderHeight = 46f;
+        private const float DossierPadding = 28f;
+        private const float PreviewFrameWidth = 800f;
+
+        /// <summary>Four L-shaped terminal corner brackets; a negative inset pushes them outside the rect.</summary>
+        private static void AddCornerBrackets(RectTransform target, float length, float thickness, Color color, float inset = 0f)
+        {
+            if (target == null) return;
+
+            for (int i = 0; i < 4; i++)
+            {
+                var corner = new Vector2(i % 2, i / 2);
+                var inward = new Vector2(corner.x < 0.5f ? 1f : -1f, corner.y < 0.5f ? 1f : -1f);
+                CreateBracketBar(target, corner, inward * inset, new Vector2(length, thickness), color);
+                CreateBracketBar(target, corner, inward * inset, new Vector2(thickness, length), color);
+            }
+        }
+
+        private static void CreateBracketBar(RectTransform parent, Vector2 corner, Vector2 offset, Vector2 size, Color color)
+        {
+            var go = new GameObject("CornerBracket", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            Place(go.GetComponent<RectTransform>(), corner, corner, offset, size);
+            var image = go.GetComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
+        }
+
+        /// <summary>Dark green terminal button with bracket corners (MenuButtonFeedback still owns hover/glow).</summary>
+        private static void StyleTerminalButton(Button button, Color labelColor, int fontSize)
+        {
+            if (button == null) return;
+
+            button.GetComponent<Image>().color = TerminalButton;
+            Text label = button.GetComponentInChildren<Text>();
+            if (label != null)
+            {
+                label.fontSize = fontSize;
+                label.color = labelColor;
+            }
+
+            if (button.transform.Find("CornerBracket") == null)
+            {
+                AddCornerBrackets(button.GetComponent<RectTransform>(), 10f, 2f, TerminalLine);
+            }
         }
 
         private void BuildDifficultySelector()
         {
             if (stageDetailsPanel == null || difficultyCards.Count > 0) return;
 
-            Transform parent = stageDetailsModal != null ? (Transform)stageDetailsModal : stageDetailsPanel.transform;
+            Transform parent = stageDetailsColumn != null ? (Transform)stageDetailsColumn
+                : stageDetailsModal != null ? (Transform)stageDetailsModal : stageDetailsPanel.transform;
 
-            difficultyLabel = MakeText(parent, "DifficultyLabel", "DIFFICULTY", 12, TextAnchor.MiddleLeft, TextDim, FontStyle.Bold);
-            StretchTop(difficultyLabel.rectTransform, 44f, 44f, 194f, 20f);
+            difficultyLabel = MakeText(parent, "DifficultyLabel", "> SELECT DIFFICULTY", 12, TextAnchor.MiddleLeft, TerminalText, FontStyle.Bold);
+            StretchTop(difficultyLabel.rectTransform, 0f, 0f, 198f, 20f);
 
-            // Three equal cards in a row
+            // Three equal cards in a row (inset a little so the selected card's 1.05 scale stays inside the column)
             var row = new GameObject("DifficultyRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             row.transform.SetParent(parent, false);
-            StretchTop(row.GetComponent<RectTransform>(), 44f, 44f, 222f, 130f);
+            StretchTop(row.GetComponent<RectTransform>(), 4f, 4f, 226f, 146f);
             var layout = row.GetComponent<HorizontalLayoutGroup>();
-            layout.spacing = 18f;
+            layout.spacing = 12f;
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.childControlWidth = true;
             layout.childControlHeight = true;
@@ -1160,9 +1418,38 @@ namespace TrashTD.UI
                 difficultyCards[difficulty] = CreateDifficultyCard(row.transform, difficulty);
             }
 
-            // Description line under the cards
-            difficultyHeading = MakeText(parent, "DifficultyHeading", "◆ NORMAL", 14, TextAnchor.MiddleCenter, TextDim, FontStyle.Bold);
-            StretchTop(difficultyHeading.rectTransform, 44f, 44f, 372f, 30f);
+            // Briefing plate under the cards: name, blurb and waves/lives for the chosen difficulty
+            var briefing = new GameObject("DifficultyBriefing", typeof(RectTransform), typeof(Image));
+            briefing.transform.SetParent(parent, false);
+            difficultyBriefing = briefing.GetComponent<RectTransform>();
+            StretchTop(difficultyBriefing, 0f, 0f, 386f, 160f);
+            var briefingImage = briefing.GetComponent<Image>();
+            briefingImage.color = TerminalPlate;
+            briefingImage.raycastTarget = false;
+            AddCornerBrackets(difficultyBriefing, 12f, 2f, TerminalLine);
+
+            difficultyHeading = MakeText(briefing.transform, "DifficultyHeading", "◆ NORMAL", 16, TextAnchor.MiddleLeft, TextDim, FontStyle.Bold);
+            FitText(difficultyHeading, 12, 16);
+            StretchTop(difficultyHeading.rectTransform, 18f, 18f, 14f, 26f);
+
+            difficultyBlurb = MakeText(briefing.transform, "DifficultyBlurb", "", 14, TextAnchor.UpperLeft, new Color(0.62f, 0.76f, 0.68f, 1f));
+            FitText(difficultyBlurb, 10, 14);
+            StretchTop(difficultyBlurb.rectTransform, 18f, 18f, 46f, 64f);
+
+            difficultyStats = MakeText(briefing.transform, "DifficultyStats", "", 13, TextAnchor.MiddleLeft, TerminalText, FontStyle.Bold);
+            FitText(difficultyStats, 10, 13);
+            StretchBottom(difficultyStats.rectTransform, 18f, 18f, 14f, 26f);
+        }
+
+        /// <summary>Lets a Text shrink (down to minSize) instead of being cut off by its rect.</summary>
+        private static void FitText(Text text, int minSize, int maxSize)
+        {
+            if (text == null) return;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = minSize;
+            text.resizeTextMaxSize = maxSize;
         }
 
         private DifficultyCardView CreateDifficultyCard(Transform parent, StageDifficulty difficulty)
@@ -1173,13 +1460,15 @@ namespace TrashTD.UI
 
             view.button = CreateButtonChild(parent, difficulty + "DifficultyButton", difficulty.ToString().ToUpperInvariant());
             view.button.GetComponent<Image>().color = DifficultyCardColor;
+            AddCornerBrackets(view.button.GetComponent<RectTransform>(), 10f, 2f, new Color(tint.r, tint.g, tint.b, 0.55f));
 
             // Name (reuses the button label)
             view.nameText = view.button.GetComponentInChildren<Text>();
             view.nameText.fontSize = 20;
             view.nameText.fontStyle = FontStyle.Bold;
             view.nameText.raycastTarget = false;
-            StretchTop(view.nameText.rectTransform, 8f, 8f, 26f, 30f);
+            FitText(view.nameText, 12, 20);
+            StretchTop(view.nameText.rectTransform, 6f, 6f, 22f, 32f);
 
             // Tier bar across the top
             var bar = new GameObject("TierBar", typeof(RectTransform), typeof(Image));
@@ -1190,7 +1479,8 @@ namespace TrashTD.UI
 
             // Wave count
             view.waveText = MakeText(view.button.transform, "WaveText", "", 13, TextAnchor.MiddleCenter, TextDim);
-            StretchTop(view.waveText.rectTransform, 8f, 8f, 62f, 22f);
+            FitText(view.waveText, 10, 13);
+            StretchTop(view.waveText.rectTransform, 6f, 6f, 64f, 26f);
 
             // Threat pips (1–3)
             view.pips = new Image[3];
@@ -1198,7 +1488,7 @@ namespace TrashTD.UI
             {
                 var pip = new GameObject("Pip" + (i + 1), typeof(RectTransform), typeof(Image));
                 pip.transform.SetParent(view.button.transform, false);
-                Place(pip.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2((i - 1) * 22f, 20f), new Vector2(16f, 8f));
+                Place(pip.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2((i - 1) * 22f, 22f), new Vector2(16f, 8f));
                 view.pips[i] = pip.GetComponent<Image>();
                 view.pips[i].raycastTarget = false;
             }
@@ -1255,8 +1545,22 @@ namespace TrashTD.UI
 
             if (difficultyHeading != null)
             {
-                difficultyHeading.text = $"◆ {selectedDifficulty.ToString().ToUpperInvariant()}  -  {GetDifficultyBlurb(selectedDifficulty)}";
+                difficultyHeading.text = $"◆ {selectedDifficulty.ToString().ToUpperInvariant()}";
                 difficultyHeading.color = selectedTint;
+            }
+
+            if (difficultyBlurb != null)
+            {
+                difficultyBlurb.text = GetDifficultyBlurb(selectedDifficulty);
+            }
+
+            if (difficultyStats != null)
+            {
+                int waves = GetSelectedStageWaveCount(selectedDifficulty);
+                int lives = selectedStage != null ? selectedStage.GetLifePoints(selectedDifficulty) : 0;
+                difficultyStats.text = selectedStage != null
+                    ? $"WAVES {(waves > 0 ? waves.ToString() : "?")}   //   LIVES {lives}"
+                    : string.Empty;
             }
         }
 
@@ -1479,6 +1783,8 @@ namespace TrashTD.UI
             RegisterEntrance(mainEntrance, mainVersion, Vector2.zero, 0.45f);
 
             // Stage selector header (cards were registered in BuildStageButtons)
+            RegisterEntrance(stageEntrance, stageTitlePlate, new Vector2(-60f, 0f), 0.00f);
+            RegisterEntrance(stageEntrance, stageTickerPlate, new Vector2(0f, -30f), 0.20f);
             RegisterEntrance(stageEntrance, stageHeaderTitle, new Vector2(-60f, 0f), 0.00f);
             RegisterEntrance(stageEntrance, stageHeaderSubtitle, new Vector2(-40f, 0f), 0.06f);
             RegisterEntrance(stageEntrance, stageHeaderDivider, new Vector2(-40f, 0f), 0.10f);
@@ -1491,6 +1797,8 @@ namespace TrashTD.UI
             RegisterEntrance(detailsEntrance, stageDetailsTag, new Vector2(0f, 12f), 0.05f);
             RegisterEntrance(detailsEntrance, stageDetailsTitle, new Vector2(0f, 12f), 0.08f);
             RegisterEntrance(detailsEntrance, stageDetailsDescription, new Vector2(0f, 12f), 0.12f);
+            RegisterEntrance(detailsEntrance, stageDetailsStats, new Vector2(0f, 12f), 0.14f);
+            RegisterEntrance(detailsEntrance, stagePreviewFrame, new Vector2(-24f, 0f), 0.02f);
             RegisterEntrance(detailsEntrance, difficultyLabel, new Vector2(0f, 12f), 0.16f);
 
             int n = 0;
@@ -1503,7 +1811,7 @@ namespace TrashTD.UI
                 }
             }
 
-            RegisterEntrance(detailsEntrance, difficultyHeading, new Vector2(0f, 12f), 0.36f);
+            RegisterEntrance(detailsEntrance, difficultyBriefing, new Vector2(0f, 12f), 0.36f);
             RegisterEntrance(detailsEntrance, stageDetailsBackButton, new Vector2(0f, -12f), 0.38f);
             RegisterEntrance(detailsEntrance, playStageButton, new Vector2(0f, -12f), 0.42f);
         }

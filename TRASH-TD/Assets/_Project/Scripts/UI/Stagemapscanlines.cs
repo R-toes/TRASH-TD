@@ -42,6 +42,16 @@ namespace TrashTD.UI
         [SerializeField, Range(0f, 0.2f)] private float brightnessFlicker = 0.035f;
         [SerializeField] private float flickerSpeed = 9f;
 
+        /// <summary>
+        /// Source-art pixel rows the scanlines cover (4 screen rows each). The default suits a full-screen map;
+        /// smaller overlays should use about their height / 4 to avoid moire.
+        /// </summary>
+        public int SourceRows
+        {
+            get => sourceRows;
+            set => sourceRows = Mathf.Max(1, value);
+        }
+
         private RawImage scanlines;
         private RawImage flickerLayer;
         private RawImage vignetteLayer;
