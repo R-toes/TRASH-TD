@@ -131,7 +131,6 @@ namespace TrashTD.UI
         private RectTransform stageHeaderDivider;
         private RectTransform stageHint;
         private RectTransform stageTitlePlate;
-        private GameObject stageCrtDisplay;
         private Text stageHeaderSubtitleText;
         private RectTransform stageTickerPlate;
         private Text stageTickerText;
@@ -258,7 +257,6 @@ namespace TrashTD.UI
                 BuildStageDetailsUi();
             }
 
-            SetUpStageSelectionCrt();
             BuildStageButtons();
             BuildDifficultySelector();
             AttachMenuFeedback();
@@ -337,7 +335,6 @@ namespace TrashTD.UI
             float dt = Time.unscaledDeltaTime;
             float time = Time.unscaledTime;
 
-            SyncStageCrt();
             UpdateMotes(dt, time);
 
             // Slow breathing glow on the title
@@ -591,7 +588,7 @@ namespace TrashTD.UI
                 // Add the layout driver so nodes scale with the map
                 stageMapLayout = mapContainerGo.AddComponent<StageMapLayout>();
 
-                // The CRT look comes from the stage selection's CrtScreen (SetUpStageSelectionCrt)
+                // The CRT look comes from the game-wide CrtDisplay
             }
 
             // Terminal frame around the whole map screen
@@ -1082,41 +1079,6 @@ namespace TrashTD.UI
             if (index < 0) return;
 
             SelectStage(index);
-        }
-
-        /// <summary>
-        /// Moves the stage selection panel (map, header, dossier) onto a full-screen CRT so it looks like an
-        /// old TV. Everything keeps working as before: clicks are bent through the curved glass by the
-        /// CrtScreen's raycaster. The CRT only renders while the panel is active (SyncStageCrt).
-        /// </summary>
-        private void SetUpStageSelectionCrt()
-        {
-            if (stageSelectionPanel == null || stageCrtDisplay != null) return;
-
-            Canvas canvas = stageSelectionPanel.GetComponentInParent<Canvas>();
-            if (canvas == null) return;
-
-            var displayGo = new GameObject("StageSelectionCrt", typeof(RectTransform));
-            displayGo.transform.SetParent(canvas.rootCanvas.transform, false);
-            StretchFill(displayGo.GetComponent<RectTransform>());
-            if (stageSelectionPanel.transform.parent == canvas.rootCanvas.transform)
-            {
-                displayGo.transform.SetSiblingIndex(stageSelectionPanel.transform.GetSiblingIndex());
-            }
-
-            CrtScreen crt = CrtScreen.Create(displayGo.GetComponent<RectTransform>(), CrtScreen.Television, true);
-            stageSelectionPanel.transform.SetParent(crt.Content, false);
-            StretchFill(stageSelectionPanel.GetComponent<RectTransform>());
-
-            stageCrtDisplay = displayGo;
-            SyncStageCrt();
-        }
-
-        private void SyncStageCrt()
-        {
-            if (stageCrtDisplay == null || stageSelectionPanel == null) return;
-            bool visible = stageSelectionPanel.activeSelf;
-            if (stageCrtDisplay.activeSelf != visible) stageCrtDisplay.SetActive(visible);
         }
 
         private void OnStageMapNodeHoverChanged(StageMapNode node, bool hovered)
@@ -1754,7 +1716,6 @@ namespace TrashTD.UI
             if (instant || !isActiveAndEnabled)
             {
                 panel.SetActive(visible);
-                SyncStageCrt();
                 group.alpha = visible ? 1f : 0f;
                 group.interactable = visible;
                 group.blocksRaycasts = visible;
@@ -2051,7 +2012,7 @@ namespace TrashTD.UI
 
         private GameObject GetOrCreateCanvas()
         {
-            var existingCanvas = FindFirstObjectByType<Canvas>();
+            var existingCanvas = CrtDisplay.FindGameCanvas();
             if (existingCanvas != null)
             {
                 EnsureEventSystem();

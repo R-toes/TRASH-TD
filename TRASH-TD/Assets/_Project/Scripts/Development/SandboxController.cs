@@ -318,7 +318,7 @@ namespace TrashTD.Development
             }
             else
             {
-                Canvas canvas = FindFirstObjectByType<Canvas>();
+                Canvas canvas = TrashTD.UI.CrtDisplay.FindGameCanvas();
                 if (canvas == null) return;
                 rect.SetParent(canvas.transform, false);
             }

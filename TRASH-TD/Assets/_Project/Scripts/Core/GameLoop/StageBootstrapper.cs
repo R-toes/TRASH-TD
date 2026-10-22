@@ -805,7 +805,7 @@ namespace TrashTD.Core.GameLoop
             if (isPreparing && isDraggingToDeploy)
             {
                 Camera gameCamera = Camera.main;
-                Vector2 mouseScreen = mouse != null ? mouse.position.ReadValue() : Vector2.zero;
+                Vector2 mouseScreen = mouse != null ? CrtDisplay.ScreenToPicture(mouse.position.ReadValue()) : Vector2.zero;
                 Vector3 mouseWorld = (gameCamera != null && mouse != null)
                     ? gameCamera.ScreenToWorldPoint(new Vector3(mouseScreen.x, mouseScreen.y, -gameCamera.transform.position.z))
                     : sweepAnchorWorldPosition;
@@ -867,7 +867,7 @@ namespace TrashTD.Core.GameLoop
             {
                 bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
                 if (!pointerOverUI && mouse != null && mouse.leftButton.wasPressedThisFrame &&
-                    TryGetGridPosition(mouse.position.ReadValue(), out Vector2Int clickedTile) &&
+                    TryGetGridPosition(CrtDisplay.ScreenToPicture(mouse.position.ReadValue()), out Vector2Int clickedTile) &&
                     gridManager != null && gridManager.IsInBounds(clickedTile))
                 {
                     GridCell cell = gridManager.GetCell(clickedTile);
@@ -1349,7 +1349,7 @@ namespace TrashTD.Core.GameLoop
             gridPosition = default;
             return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame &&
                 (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()) &&
-                TryGetGridPosition(Mouse.current.position.ReadValue(), out gridPosition) &&
+                TryGetGridPosition(CrtDisplay.ScreenToPicture(Mouse.current.position.ReadValue()), out gridPosition) &&
                 gridManager != null && gridManager.IsInBounds(gridPosition);
         }
 
@@ -1468,7 +1468,7 @@ namespace TrashTD.Core.GameLoop
             // Cursor must not be over UI (e.g. HUD, buttons)
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
-            Vector2 mouseScreen = mouse != null ? mouse.position.ReadValue() : Vector2.zero;
+            Vector2 mouseScreen = mouse != null ? CrtDisplay.ScreenToPicture(mouse.position.ReadValue()) : Vector2.zero;
             if (!TryGetGridPosition(mouseScreen, out Vector2Int cursorGridPos)) return;
             if (!gridManager.IsInBounds(cursorGridPos)) return;
 

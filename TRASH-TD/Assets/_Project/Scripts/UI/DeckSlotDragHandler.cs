@@ -33,24 +33,27 @@ namespace TrashTD.UI
             slotColor = color;
         }
 
+        // Positions handed to the drag callbacks are in the game picture (see CrtDisplay.ScreenToPicture),
+        // so they work directly with Camera.ScreenToWorldPoint and the canvas camera.
         public void OnBeginDrag(PointerEventData eventData)
         {
             if (canDrag == null || !canDrag()) return;
 
             isDragging = true;
-            CreateDragVisual(eventData.position);
+            CreateDragVisual(CrtDisplay.ScreenToPicture(eventData.position));
         }
 
         public void OnDrag(PointerEventData eventData)
         {
+            Vector2 picturePosition = CrtDisplay.ScreenToPicture(eventData.position);
             if (isDragging)
             {
-                updateDrag?.Invoke(slotIndex, eventData.position);
+                updateDrag?.Invoke(slotIndex, picturePosition);
             }
 
             if (dragVisualRect != null)
             {
-                dragVisualRect.position = eventData.position;
+                PlaceDragVisual(picturePosition);
             }
         }
 
@@ -58,13 +61,27 @@ namespace TrashTD.UI
         {
             if (isDragging)
             {
-                finishDrag?.Invoke(slotIndex, eventData.position);
+                finishDrag?.Invoke(slotIndex, CrtDisplay.ScreenToPicture(eventData.position));
             }
 
             isDragging = false;
             if (dragVisual != null)
             {
                 Destroy(dragVisual);
+            }
+        }
+
+        /// <summary>Centres the drag visual on a picture position, for overlay and camera canvases alike.</summary>
+        private void PlaceDragVisual(Vector2 picturePosition)
+        {
+            Canvas canvas = dragVisualRect.GetComponentInParent<Canvas>();
+            if (canvas == null) return;
+
+            Camera canvasCamera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            if (RectTransformUtility.ScreenPointToWorldPointInRectangle(
+                    (RectTransform)canvas.transform, picturePosition, canvasCamera, out Vector3 worldPosition))
+            {
+                dragVisualRect.position = worldPosition;
             }
         }
 
@@ -77,7 +94,7 @@ namespace TrashTD.UI
             dragVisual.transform.SetParent(canvas.transform, false);
             dragVisualRect = dragVisual.GetComponent<RectTransform>();
             dragVisualRect.sizeDelta = GetComponent<RectTransform>().rect.size;
-            dragVisualRect.position = screenPosition;
+            PlaceDragVisual(screenPosition);
 
             Image image = dragVisual.GetComponent<Image>();
             bool hasPortrait = card != null && card.operatorData != null && card.operatorData.portrait != null;

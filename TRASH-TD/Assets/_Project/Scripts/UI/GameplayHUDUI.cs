@@ -817,7 +817,7 @@ namespace TrashTD.UI
 
             Vector2 screenPosition = RectTransformUtility.WorldToScreenPoint(gameCamera, worldPosition);
             RectTransform canvasRect = canvas.GetComponent<RectTransform>();
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPosition, null, out Vector2 localPosition))
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPosition, GetCanvasCamera(), out Vector2 localPosition))
             {
                 placementControlsRoot.GetComponent<RectTransform>().anchoredPosition = localPosition;
             }
@@ -842,7 +842,7 @@ namespace TrashTD.UI
             selectedOperatorNameText.text = operatorName;
             Vector2 screenPosition = RectTransformUtility.WorldToScreenPoint(gameCamera, worldPosition);
             RectTransform canvasRect = canvas.GetComponent<RectTransform>();
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPosition, null, out Vector2 localPosition))
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPosition, GetCanvasCamera(), out Vector2 localPosition))
             {
                 selectedOperatorLabelRoot.GetComponent<RectTransform>().anchoredPosition = localPosition;
                 selectedOperatorLabelRoot.SetActive(true);
@@ -2115,6 +2115,12 @@ namespace TrashTD.UI
         }
 
         public bool IsDraftMinimized => draftOverlayUI != null && draftOverlayUI.IsMinimized;
+
+        /// <summary>Camera for screen-point conversions on the HUD canvas (null while it is an overlay canvas).</summary>
+        private Camera GetCanvasCamera()
+        {
+            return canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+        }
 
         // Deck cards can be deployed in Preparation, and during Card Pick while the draft is minimized
         // (the map & deck view), so a deploy can free a deck slot for the card about to be picked.
