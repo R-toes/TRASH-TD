@@ -218,7 +218,13 @@ Each asset's `skillDescription` is the authoritative description of that operato
   - **Wave progress:** `bar_frame` (9-sliced) with a tiled `bar_fill_*` at 2× under the wave counter. The fill sprite follows the phase: yellow = Card Pick, blue = Preparation, red = Wave Active (`SetWaveProgressFillSprite`).
   - **Lives:** `tube_frame` + tiled `tube_liquid` + `tube_surface` at 2×, built upright and rotated −90° so it reads horizontally. Liquid = current/max lives and drains toward the left. The frame flashes red on a lost life. In Sandbox the tube is hidden and "LIVES LOCKED" text shows instead.
   - Load whole UI textures with `GameplayHUDUI.LoadWholeTextureSprite(path, border)`: Point-filtered, ignores importer slicing, cached. Draw pixel art at whole-number scales (`pixelsPerUnitMultiplier = 1 / scale` for Sliced/Tiled images).
-- **Pause menu** (`GameplayHUDUI.CreatePausePanel`): `Resources/UI/panels/pause menu panel bg.png` (256×256) at 2×. The title sits in the header screen (art y 37–101) and four buttons in the body screen (y 104–217): Resume, Retry, Settings and Exit to Menu. Settings is added by `AudioSettingsUI.Create` from `Awake` into `PauseSettingsSlotPx`. Give every pause button its own slot: Settings used to sit on top of Retry and hid it.
+- **Pause menu** (`GameplayHUDUI.CreatePausePanel`): `Resources/UI/panels/pause menu panel bg.png` (256×256) at 2×.
+  - **Header** (art y 37–101): "PAUSED" (48, shadowed) and the subtitle between two short rules, centred as one block (`PauseTitleRowPx` / `PauseSubtitleRowPx`).
+  - **Body:** three button rows sit on the art's indicator lights (green / amber / red LEDs at x 38, slots at x 216, rows y 129 / 163 / 197). Row 1 is RESUME (primary), row 2 is RETRY (secondary) plus a square gear SETTINGS button, and row 3 is EXIT TO MENU (danger).
+  - **Sizing:** every row is `PauseRowWidth` (324) wide on the card's centre line and `PauseButtonHeight` (48) tall.
+  - **Button look** (`CreatePauseButton` / `ApplyPauseButtonLook`): the frame is drawn at 2× (`pixelsPerUnitMultiplier = 0.5`) to match the panel's pixels. A 2× icon and a 16 px label are centred together as one group.
+  - **Settings button:** added by `AudioSettingsUI.Create` from `Awake`, styled icon-only at `PauseSettingsX` on row 2. Give every pause button its own slot: Settings once sat on top of Retry and hid it.
+  - Positions use `PausePx(x, yFromTopInArtPx)`.
 - **Operator inspect label** shows name, rarity, ATK/HP and SHOW MORE. The skill text appears only in the SHOW MORE details panel.
 
 ### 7.6 Controls & Keybinds

@@ -297,9 +297,13 @@ namespace TrashTD.UI
                     audioSettingsUI = AudioSettingsUI.Create(
                         canvas.transform,
                         pauseCard,
-                        button => StyleButton(button, DarkButton, TextDim, 1.05f),
-                        // Its own slot between Retry and Exit (it used to sit on top of Retry and hide it)
-                        rect => SetPosition(rect, PausePx(PauseSettingsSlotPx), new Vector2(0.5f, 1f), new Vector2(PauseButtonWidth, PauseButtonHeight), new Vector2(0.5f, 0.5f)));
+                        button =>
+                        {
+                            StyleButton(button, ButtonContainerType.Secondary, new Color(0.55f, 0.75f, 1f, 1f), 1.04f);
+                            ApplyPauseButtonLook(button, null, "icon_settings");
+                        },
+                        // Square gear at the right end of row 2, next to Retry
+                        rect => SetPosition(rect, PausePx(PauseSettingsX, PauseRow2Px), new Vector2(0.5f, 1f), new Vector2(PauseButtonHeight, PauseButtonHeight), new Vector2(0.5f, 0.5f)));
                 }
             }
         }
@@ -2494,7 +2498,8 @@ namespace TrashTD.UI
             pauseGroup.alpha = 0f;
 
             // Centered card: the 256x256 pause menu panel art drawn at 2x. Its header screen spans
-            // y 37..101 (title), a divider sits at y 103, and the body screen spans y 104..217 (buttons).
+            // y 37..101 (title), a divider sits at y 103, and the body screen spans y 104..217 (buttons),
+            // with three indicator rows (green / amber / red LED on the left, a slot on the right).
             var card = new GameObject("PauseCard", typeof(RectTransform), typeof(Image));
             card.transform.SetParent(pausePanel.transform, false);
             pauseCard = card.GetComponent<RectTransform>();
@@ -2512,44 +2517,130 @@ namespace TrashTD.UI
                 ApplyModalCard(card);
             }
 
-            var title = CreateText(card.transform, "PauseTitle", "PAUSED", 54, TextAnchor.MiddleCenter);
-            SetPosition(title.GetComponent<RectTransform>(), PausePx(60f), new Vector2(0.5f, 1f), new Vector2(400f, 80f), new Vector2(0.5f, 0.5f));
+            // Header screen: title and subtitle centred as one block, the subtitle between two short rules
+            var title = CreateText(card.transform, "PauseTitle", "PAUSED", 48, TextAnchor.MiddleCenter);
+            title.fontStyle = FontStyle.Normal;
+            SetPosition(title.GetComponent<RectTransform>(), PausePx(0f, PauseTitleRowPx), new Vector2(0.5f, 1f), new Vector2(400f, 60f), new Vector2(0.5f, 0.5f));
             title.color = AccentColor;
             title.raycastTarget = false;
+            var titleShadow = title.gameObject.AddComponent<Shadow>();
+            titleShadow.effectColor = new Color(0.02f, 0.14f, 0.07f, 1f);
+            titleShadow.effectDistance = new Vector2(0f, -4f);
 
-            var subtitle = CreateText(card.transform, "PauseSubtitle", "THE OPERATION WAITS", 14, TextAnchor.MiddleCenter);
-            SetPosition(subtitle.GetComponent<RectTransform>(), PausePx(88f), new Vector2(0.5f, 1f), new Vector2(400f, 26f), new Vector2(0.5f, 0.5f));
+            var subtitle = CreateText(card.transform, "PauseSubtitle", "THE OPERATION WAITS", 12, TextAnchor.MiddleCenter);
+            subtitle.fontStyle = FontStyle.Normal;
+            SetPosition(subtitle.GetComponent<RectTransform>(), PausePx(0f, PauseSubtitleRowPx), new Vector2(0.5f, 1f), new Vector2(400f, 20f), new Vector2(0.5f, 0.5f));
             subtitle.color = TextDim;
             subtitle.raycastTarget = false;
 
-            // Four slots in the body screen: Resume, Retry, Settings (added by AudioSettingsUI in Awake), Exit
-            var resumeButton = CreateButton(card.transform, "ResumeButton", "RESUME", new Vector2(PauseButtonWidth, 52f), ButtonContainerType.Primary);
-            SetPosition(resumeButton.GetComponent<RectTransform>(), PausePx(120f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
+            float ruleInner = subtitle.preferredWidth * 0.5f + 14f;
+            Color ruleColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.45f);
+            foreach (float side in new[] { -1f, 1f })
+            {
+                CreateIconImage(card.transform, "PauseSubtitleRule", null, ruleColor,
+                    PausePx(side * (ruleInner + 18f), PauseSubtitleRowPx), new Vector2(0.5f, 1f), new Vector2(36f, 2f), new Vector2(0.5f, 0.5f));
+            }
+
+            // Body screen: one row per indicator light, all the same width on the card's centre line.
+            // Row 2 is Retry plus the square Settings button (added by AudioSettingsUI in Awake, see PauseSettingsX).
+            var resumeButton = CreatePauseButton(card.transform, "ResumeButton", "RESUME", "icon_play",
+                ButtonContainerType.Primary, new Color(0.4f, 1f, 0.65f, 1f), 0f, PauseRow1Px, PauseRowWidth);
             resumeButton.onClick.AddListener(ResumeGame);
-            StyleButton(resumeButton, ButtonContainerType.Primary, new Color(0.4f, 1f, 0.65f, 1f), 1.05f);
 
-            var retryButton = CreateButton(card.transform, "RetryButton", "RETRY", new Vector2(PauseButtonWidth, PauseButtonHeight), ButtonContainerType.Secondary);
-            SetPosition(retryButton.GetComponent<RectTransform>(), PausePx(148.5f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
+            var retryButton = CreatePauseButton(card.transform, "RetryButton", "RETRY", "icon_reroll",
+                ButtonContainerType.Secondary, new Color(0.55f, 0.75f, 1f, 1f),
+                -(PauseButtonHeight + PauseRowGap) * 0.5f, PauseRow2Px, PauseRowWidth - PauseButtonHeight - PauseRowGap);
             retryButton.onClick.AddListener(RetryStage);
-            StyleButton(retryButton, ButtonContainerType.Secondary, new Color(0.55f, 0.75f, 1f, 1f), 1.05f);
 
-            var exitButton = CreateButton(card.transform, "ExitButton", "EXIT TO MENU", new Vector2(PauseButtonWidth, PauseButtonHeight), ButtonContainerType.Danger);
-            SetPosition(exitButton.GetComponent<RectTransform>(), PausePx(202.5f), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
+            var exitButton = CreatePauseButton(card.transform, "ExitButton", "EXIT TO MENU", "icon_exit",
+                ButtonContainerType.Danger, new Color(1f, 0.4f, 0.4f, 1f), 0f, PauseRow3Px, PauseRowWidth);
             exitButton.onClick.AddListener(ExitToMenu);
-            StyleButton(exitButton, ButtonContainerType.Danger, new Color(1f, 0.4f, 0.4f, 1f), 1.05f);
 
             pausePanel.SetActive(false);
+        }
+
+        private Button CreatePauseButton(Transform parent, string objectName, string label, string iconName,
+            ButtonContainerType containerType, Color glow, float x, float rowPx, float width)
+        {
+            Button button = CreateButton(parent, objectName, label, new Vector2(width, PauseButtonHeight), containerType);
+            SetPosition(button.GetComponent<RectTransform>(), PausePx(x, rowPx), new Vector2(0.5f, 1f), null, new Vector2(0.5f, 0.5f));
+            StyleButton(button, containerType, glow, 1.04f);
+            ApplyPauseButtonLook(button, label, iconName);
+            return button;
+        }
+
+        /// <summary>
+        /// Pause-card button look: the frame drawn at the card's 2x pixel scale, and a 2x icon plus label centred
+        /// together as one group. A null/empty label gives an icon-only button.
+        /// </summary>
+        private static void ApplyPauseButtonLook(Button button, string label, string iconName)
+        {
+            Image frame = button.GetComponent<Image>();
+            if (frame != null) frame.pixelsPerUnitMultiplier = 1f / PauseCardScale;
+
+            Text text = button.GetComponentInChildren<Text>();
+            bool hasLabel = text != null && !string.IsNullOrEmpty(label);
+            if (text != null)
+            {
+                text.text = hasLabel ? label : string.Empty;
+                text.fontSize = 16;
+                text.fontStyle = FontStyle.Normal;
+                text.horizontalOverflow = HorizontalWrapMode.Overflow;
+                text.alignment = TextAnchor.MiddleLeft;
+                if (text.GetComponent<Shadow>() == null)
+                {
+                    var shadow = text.gameObject.AddComponent<Shadow>();
+                    shadow.effectColor = new Color(0f, 0f, 0f, 0.5f);
+                    shadow.effectDistance = new Vector2(0f, -2f);
+                }
+            }
+
+            Sprite icon = LoadIconSprite(iconName);
+            if (icon != null && icon.texture != null) icon.texture.filterMode = FilterMode.Point;
+            float iconSize = 16f * PauseCardScale;
+            float labelWidth = hasLabel ? text.preferredWidth : 0f;
+            float gap = icon != null && hasLabel ? 10f : 0f;
+            float left = -((icon != null ? iconSize : 0f) + gap + labelWidth) * 0.5f;
+
+            if (icon != null)
+            {
+                Image iconImage = CreateIconImage(button.transform, "Icon", icon, Color.white,
+                    new Vector2(left + iconSize * 0.5f, 0f), new Vector2(0.5f, 0.5f), new Vector2(iconSize, iconSize), new Vector2(0.5f, 0.5f));
+                iconImage.raycastTarget = false;
+                left += iconSize + gap;
+            }
+
+            if (text != null)
+            {
+                RectTransform textRect = text.rectTransform;
+                textRect.anchorMin = textRect.anchorMax = new Vector2(0.5f, 0.5f);
+                textRect.pivot = new Vector2(0f, 0.5f);
+                textRect.anchoredPosition = new Vector2(left, 0f);
+                textRect.sizeDelta = new Vector2(labelWidth + 4f, PauseButtonHeight);
+            }
         }
 
         private const string PauseCardSpritePath = "UI/panels/pause menu panel bg";
         private const float PauseCardPixels = 256f;
         private const float PauseCardScale = 2f;
-        private const float PauseButtonWidth = 300f;
-        private const float PauseButtonHeight = 46f;
-        private const float PauseSettingsSlotPx = 175.5f;
 
-        /// <summary>Position on the pause card for a point at <paramref name="yFromTop"/> in pause-art pixels, centred horizontally.</summary>
-        private static Vector2 PausePx(float yFromTop) => new Vector2(0f, -yFromTop * PauseCardScale);
+        // Pause card layout. Rows are in art pixels from the top: the header block is centred in the header
+        // screen (y 37..101); the button rows sit on the body's indicator lights (y 129 / 163 / 197).
+        private const float PauseTitleRowPx = 58f;
+        private const float PauseSubtitleRowPx = 86f;
+        private const float PauseRow1Px = 129f;
+        private const float PauseRow2Px = 163f;
+        private const float PauseRow3Px = 197f;
+        private const float PauseRowWidth = 324f;     // canvas units: clears the LEDs (x 40) and slots (x 214) evenly
+        private const float PauseButtonHeight = 48f;  // 24 art px
+        private const float PauseRowGap = 12f;
+        private const float PauseSettingsX = (PauseRowWidth - PauseButtonHeight) * 0.5f; // square, right end of row 2
+
+        /// <summary>
+        /// Position on the pause card: <paramref name="x"/> in canvas units from the centre line,
+        /// <paramref name="yFromTop"/> in pause-art pixels.
+        /// </summary>
+        private static Vector2 PausePx(float x, float yFromTop) => new Vector2(x, -yFromTop * PauseCardScale);
 
         // ============================
         // Phase Handling
