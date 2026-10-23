@@ -56,6 +56,13 @@ namespace TrashTD.Enemies
         // --- Pathfinding ---
         protected List<Vector3> path;
         protected int currentPathIndex;
+        protected int difficultyLevel;
+
+        public IReadOnlyList<Vector3> Path => path;
+        public int CurrentPathIndex => currentPathIndex;
+        public int DifficultyLevel => difficultyLevel;
+        public virtual bool IsImmuneToAcidRain => data != null && data.isAcidRainImmune;
+        public virtual bool IsImmuneToAcidTiles => data != null && data.isAcidTileImmune;
 
         // --- State ---
         protected bool isBlocked;
@@ -154,6 +161,7 @@ namespace TrashTD.Enemies
         public virtual void Initialize(EnemyData enemyData, int difficultyLevel)
         {
             data = enemyData;
+            this.difficultyLevel = difficultyLevel;
             animationRenderers = GetComponentsInChildren<SpriteRenderer>(true);
             animationFrameIndex = 0;
             animationFrameTimer = 0f;
@@ -636,7 +644,7 @@ namespace TrashTD.Enemies
 
         private void UpdateTrapDamage(float deltaTime)
         {
-            if (isDead || isInsideHole || gridManager == null) return;
+            if (isDead || isInsideHole || gridManager == null || IsImmuneToAcidTiles) return;
 
             Vector2Int gridPosition = gridManager.WorldToGridPosition(transform.position);
             GridCell cell = gridManager.GetCell(gridPosition);

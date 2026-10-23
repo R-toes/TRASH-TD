@@ -67,6 +67,13 @@ namespace TrashTD.Data
         [Tooltip("Weight — how many 'block slots' this enemy occupies (usually 1)")]
         public int blockWeight = 1;
 
+        [Header("Immunities")]
+        [Tooltip("If true, this enemy is immune to Stage 6 acid rain damage")]
+        public bool isAcidRainImmune = false;
+
+        [Tooltip("If true, this enemy is immune to acid / trap tile damage")]
+        public bool isAcidTileImmune = false;
+
         [Header("Rewards")]
         [Tooltip("Life points lost when this enemy reaches the exit")]
         public int lifePointCost = 1;

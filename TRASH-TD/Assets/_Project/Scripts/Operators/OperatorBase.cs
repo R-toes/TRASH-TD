@@ -354,7 +354,8 @@ namespace TrashTD.Operators
         {
             if (enemy == null || !isDeployed || isStunned) return false;
             if (blockedEnemies.Count >= GetBlockCount()) return false;
-            if (enemy.Data.isUnblockable) return false;
+            if (enemy.Data != null && enemy.Data.isUnblockable) return false;
+            if (enemy is Enemies.OculoidCarrierEnemy carrier && (GetBlockCount() - blockedEnemies.Count) <= carrier.BlockCountReduction) return false;
 
             blockedEnemies.Add(enemy);
             enemy.OnBlocked(this);
@@ -369,7 +370,19 @@ namespace TrashTD.Operators
             }
         }
 
-        public int GetBlockCount() => (isStunned || data == null) ? 0 : data.blockCount;
+        private int blockCountModifier = 0;
+        public int BlockCountModifier => blockCountModifier;
+
+        public void ModifyBlockCount(int delta)
+        {
+            blockCountModifier += delta;
+            while (blockedEnemies.Count > GetBlockCount() && blockedEnemies.Count > 0)
+            {
+                ReleaseBlock(blockedEnemies[blockedEnemies.Count - 1]);
+            }
+        }
+
+        public int GetBlockCount() => (isStunned || data == null) ? 0 : Mathf.Max(0, data.blockCount + blockCountModifier);
         public int GetCurrentBlockCount() => blockedEnemies.Count;
 
         // ========================

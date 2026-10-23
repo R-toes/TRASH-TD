@@ -33,6 +33,11 @@ namespace TrashTD.Combat
             int availableSlots = blocker.GetBlockCount() - blocker.GetCurrentBlockCount();
             int requiredWeight = enemy.Data != null ? enemy.Data.blockWeight : 1;
 
+            if (enemy is OculoidCarrierEnemy carrier)
+            {
+                requiredWeight += carrier.BlockCountReduction;
+            }
+
             return availableSlots >= requiredWeight;
         }
 

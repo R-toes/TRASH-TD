@@ -1312,7 +1312,7 @@ namespace TrashTD.Core.GameLoop
                 for (int i = enemyManager.ActiveEnemies.Count - 1; i >= 0; i--)
                 {
                     EnemyBase enemy = enemyManager.ActiveEnemies[i];
-                    if (enemy == null || enemy.IsDead) continue;
+                    if (enemy == null || enemy.IsDead || enemy.IsImmuneToAcidRain) continue;
 
                     TrashTD.Combat.AcidDamageFlash.Flash(enemy.gameObject);
                     enemy.TakeTrueDamage(AcidRainDamagePerTick);
