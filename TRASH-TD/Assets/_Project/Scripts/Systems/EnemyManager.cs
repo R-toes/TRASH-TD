@@ -174,7 +174,10 @@ namespace TrashTD.Systems
             EnemyBase enemyComp = enemyObj.GetComponent<EnemyBase>();
             if (enemyComp == null)
             {
-                enemyComp = AddArchetypeComponent(enemyObj, enemyData.archetype);
+                if (enemyData != null && (enemyData.enemyName == "Askalaser" || enemyData.enemyName == "Askalazer"))
+                    enemyComp = enemyObj.AddComponent<Enemies.AskalaserEnemy>();
+                else
+                    enemyComp = AddArchetypeComponent(enemyObj, enemyData.archetype);
             }
 
             enemyComp.Initialize(enemyData, difficultyLevel);
