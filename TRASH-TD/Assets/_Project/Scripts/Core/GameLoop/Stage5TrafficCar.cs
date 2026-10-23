@@ -12,14 +12,19 @@ namespace TrashTD.Core.GameLoop
 {
     /// <summary>
     /// Controls a vehicle driving along the boulevard in Stage 5.
-    /// Deals true damage (10% of target Max HP per tile travelled) to ground enemies and deployed operators.
+    /// Deals true damage based on distance travelled to ground enemies and deployed operators.
     /// Damage counter resets per target type (enemy vs ally counters are separate).
+    /// When hitting an operator, the vehicle decelerates on impact (squash + slowdown) then recovers speed.
+    /// When damage ramps back up to 80+ again after hitting and stunning an operator, it can stun again.
     /// </summary>
     public class Stage5TrafficCar : MonoBehaviour
     {
         public const float DefaultSpeed = 5.0f;
         public const int BaseTrueDamage = 40;
         public const int DamageRampPerTwoTiles = 20;
+        public const int StunRampDamageThreshold = 80;
+        public const float ImpactSlowdownRatio = 0.3f;
+        public const float ImpactSlowdownDuration = 0.7f;
 
         /// <summary>
         /// Calculates true damage based on distance travelled:
@@ -34,7 +39,27 @@ namespace TrashTD.Core.GameLoop
 
         [Header("Car Properties")]
         public int LaneY { get; private set; }
-        public float Speed { get; set; } = DefaultSpeed;
+        public float OriginalSpeed { get; private set; } = DefaultSpeed;
+        private float currentSpeed = DefaultSpeed;
+        public float Speed
+        {
+            get => currentSpeed;
+            set
+            {
+                currentSpeed = value;
+                if (hitSlowdownTimer <= 0f)
+                {
+                    OriginalSpeed = value;
+                }
+            }
+        }
+
+        private float hitSlowdownTimer = 0f;
+        public float HitSlowdownTimer => hitSlowdownTimer;
+        public bool IsSlowedDown => hitSlowdownTimer > 0f;
+
+        private Vector3 baseScale = Vector3.one;
+        private SpriteRenderer spriteRenderer;
 
         public float StartX { get; private set; }
         public float LastEnemyHitX { get; private set; }
@@ -71,20 +96,25 @@ namespace TrashTD.Core.GameLoop
             int sortingOrder = 9)
         {
             LaneY = laneY;
-            Speed = speed;
+            OriginalSpeed = speed;
+            currentSpeed = speed;
+            hitSlowdownTimer = 0f;
+            baseScale = transform.localScale;
+
             gridManager = grid;
             enemyManager = enemies;
             operatorManager = operators;
             cellSize = gridManager != null ? gridManager.CellSize : 1.0f;
 
             // Configure SpriteRenderer
-            var sr = GetComponent<SpriteRenderer>();
-            if (sr == null)
+            spriteRenderer = GetComponent<SpriteRenderer>();
+            if (spriteRenderer == null)
             {
-                sr = gameObject.AddComponent<SpriteRenderer>();
+                spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
             }
-            sr.sprite = sprite;
-            sr.sortingOrder = sortingOrder;
+            spriteRenderer.sprite = sprite;
+            spriteRenderer.sortingOrder = sortingOrder;
+            spriteRenderer.color = Color.white;
 
             // Lane center Y
             float laneCenterY = gridManager != null 
@@ -134,11 +164,60 @@ namespace TrashTD.Core.GameLoop
             Move(Time.deltaTime);
         }
 
+        public void UpdateSpeedAndVisuals(float dt)
+        {
+            if (hitSlowdownTimer > 0f)
+            {
+                hitSlowdownTimer -= dt;
+                if (hitSlowdownTimer <= 0f)
+                {
+                    hitSlowdownTimer = 0f;
+                    currentSpeed = OriginalSpeed;
+                }
+                else
+                {
+                    float progress = 1f - (hitSlowdownTimer / ImpactSlowdownDuration);
+                    float easeIn = progress * progress;
+                    currentSpeed = Mathf.Lerp(OriginalSpeed * ImpactSlowdownRatio, OriginalSpeed, easeIn);
+                }
+            }
+            else
+            {
+                currentSpeed = OriginalSpeed;
+            }
+
+            if (transform.localScale != baseScale)
+            {
+                transform.localScale = Vector3.MoveTowards(transform.localScale, baseScale, dt * 1.0f);
+            }
+
+            if (spriteRenderer != null && spriteRenderer.color != Color.white)
+            {
+                spriteRenderer.color = Color.Lerp(spriteRenderer.color, Color.white, dt * 8.0f);
+            }
+        }
+
+        public void TriggerHitSlowdown()
+        {
+            hitSlowdownTimer = ImpactSlowdownDuration;
+            currentSpeed = OriginalSpeed * ImpactSlowdownRatio;
+
+            // Impact squash: compresses along X and expands along Y to visually register hitting a solid obstacle
+            transform.localScale = new Vector3(baseScale.x * 0.88f, baseScale.y * 1.12f, baseScale.z);
+
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color = new Color(1f, 0.75f, 0.75f);
+            }
+        }
+
         public void Move(float dt)
         {
             if (dt <= 0f) return;
 
-            float moveDist = Speed * dt;
+            UpdateSpeedAndVisuals(dt);
+
+            float moveDist = currentSpeed * dt;
             transform.position += new Vector3(moveDist, 0f, 0f);
 
             float frontX = transform.position.x + FrontBumperOffsetX;
@@ -258,8 +337,12 @@ namespace TrashTD.Core.GameLoop
                     {
                         LastAllyHitX = targetX;
 
-                        // First operator hit gets stunned if not killed
-                        if (!hasHitFirstOperator)
+                        TriggerHitSlowdown();
+
+                        // First operator hit gets stunned if not killed, and when damage ramps
+                        // back up to 80+ again after hitting and stunning an operator, it stuns again!
+                        bool canStun = !hasHitFirstOperator || damage >= StunRampDamageThreshold;
+                        if (canStun)
                         {
                             hasHitFirstOperator = true;
                             if (op != null && op.IsDeployed && op.CurrentHP > 0)
@@ -273,4 +356,3 @@ namespace TrashTD.Core.GameLoop
         }
     }
 }
-
