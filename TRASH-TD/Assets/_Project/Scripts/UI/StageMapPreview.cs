@@ -27,7 +27,7 @@ namespace TrashTD.UI
         private static readonly Color ExitColor = new Color(0.32f, 1f, 0.60f, 1f);
 
         /// <summary>Route colours in spawn order; exits keep the green ExitColor.</summary>
-        private static readonly Color[] RouteColors =
+        public static readonly Color[] RouteColors =
         {
             new Color(1.00f, 0.38f, 0.26f, 1f), // red-orange
             new Color(0.30f, 0.82f, 1.00f, 1f), // cyan
@@ -595,7 +595,7 @@ namespace TrashTD.UI
         /// (waypoints, or A* to its exit), otherwise A* from the spawn to the best exit. Later entries for
         /// the same spawn replace earlier ones, as in WaveManager's path cache.
         /// </summary>
-        private static List<(int spawn, List<Vector2Int> cells)> ComputeRoutes(StageData stage)
+        public static List<(int spawn, List<Vector2Int> cells)> ComputeRoutes(StageData stage)
         {
             var bySpawn = new SortedDictionary<int, List<Vector2Int>>();
             var result = new List<(int spawn, List<Vector2Int> cells)>();
@@ -715,20 +715,20 @@ namespace TrashTD.UI
             return 1f - u * u * u;
         }
 
-        private static Sprite GetRingSprite()
+        internal static Sprite GetRingSprite()
         {
             if (ringSprite == null) ringSprite = CreateCircleSprite(64, 0.80f, 1f);
             return ringSprite;
         }
 
-        private static Sprite GetDotSprite()
+        internal static Sprite GetDotSprite()
         {
             if (dotSprite == null) dotSprite = CreateCircleSprite(32, 0f, 1f);
             return dotSprite;
         }
 
         /// <summary>One dash period along U (60% dash, 40% gap), repeated by the RawImage's uvRect.</summary>
-        private static Texture2D GetDashTexture()
+        internal static Texture2D GetDashTexture()
         {
             if (dashTexture != null) return dashTexture;
 

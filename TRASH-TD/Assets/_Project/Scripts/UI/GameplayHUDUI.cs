@@ -227,6 +227,10 @@ namespace TrashTD.UI
         private AudioSettingsUI audioSettingsUI;
         private CardDraftOverlayUI draftOverlayUI;
         private int lastEscapeHandledFrame = -1;
+        private Button previewPathButton;
+        private Text previewPathButtonText;
+        private MenuButtonFeedback previewPathFeedback;
+        private GameplayPathPreviewOverlay pathPreviewOverlay;
 
         // Animation state
         private AudioSource sfxSource;
@@ -397,6 +401,7 @@ namespace TrashTD.UI
 
             var root = canvasObject.transform;
             CreateDangerFlash(root);
+            CreatePathPreviewOverlay(root);
             CreateTopBar(root);
             CreateDeckBar(root);
             // Trash drop zone is created and parented inside CreateDeckBar to align with the deck background
@@ -1387,6 +1392,7 @@ namespace TrashTD.UI
             }
 
             CreateTrashDropZone(bar.transform);
+            CreatePreviewPathButton(bar.transform);
             CreateBottomRightPanel(bar.transform, bgScale);
         }
 
@@ -1623,6 +1629,89 @@ namespace TrashTD.UI
             var button = zone.GetComponent<Button>();
             button.interactable = false;
             AttachFeedback(button, new Color(1f, 0.3f, 0.35f, 1f), 1.04f);
+        }
+
+        private void CreatePathPreviewOverlay(Transform root)
+        {
+            pathPreviewOverlay = GameplayPathPreviewOverlay.Create(
+                root,
+                canvas,
+                gridManager,
+                stageBootstrapper != null ? stageBootstrapper.stageData : null);
+        }
+
+        private void CreatePreviewPathButton(Transform parent)
+        {
+            previewPathButton = CreateButton(parent, "PreviewPathButton", "PREVIEW\nPATH", new Vector2(110f, 52f), ButtonContainerType.Dark);
+            SetPosition(
+                previewPathButton.GetComponent<RectTransform>(),
+                new Vector2(1125f, 89f),
+                new Vector2(0f, 0f),
+                new Vector2(110f, 52f),
+                new Vector2(0f, 0.5f));
+
+            previewPathButtonText = previewPathButton.GetComponentInChildren<Text>();
+            if (previewPathButtonText != null)
+            {
+                previewPathButtonText.fontSize = 14;
+                previewPathButtonText.lineSpacing = 0.9f;
+                previewPathButtonText.color = TextDim;
+            }
+
+            previewPathFeedback = AttachFeedback(previewPathButton, AccentColor, 1.05f, () => PlaySfx(clickClip, 1.1f));
+            previewPathButton.onClick.AddListener(TogglePathPreview);
+        }
+
+        private void EnsurePathPreviewOverlay()
+        {
+            if (stageBootstrapper == null) stageBootstrapper = FindFirstObjectByType<StageBootstrapper>();
+            if (gridManager == null) gridManager = FindFirstObjectByType<GridManager>();
+
+            StageData currentStage = stageBootstrapper != null && stageBootstrapper.stageData != null
+                ? stageBootstrapper.stageData
+                : (gameManager != null ? gameManager.CurrentStage : null);
+
+            if (pathPreviewOverlay != null)
+            {
+                if (currentStage != null)
+                {
+                    pathPreviewOverlay.SetStage(currentStage, gridManager);
+                }
+                return;
+            }
+            if (canvas == null) return;
+
+            pathPreviewOverlay = GameplayPathPreviewOverlay.Create(canvas.transform, canvas, gridManager, currentStage);
+            if (topBarRect != null)
+            {
+                int topBarIndex = topBarRect.GetSiblingIndex();
+                pathPreviewOverlay.transform.SetSiblingIndex(Mathf.Max(0, topBarIndex));
+            }
+        }
+
+        public void TogglePathPreview()
+        {
+            EnsurePathPreviewOverlay();
+            if (pathPreviewOverlay == null) return;
+
+            pathPreviewOverlay.Toggle();
+            UpdatePathPreviewButtonVisuals(pathPreviewOverlay.IsVisible);
+        }
+
+        private void UpdatePathPreviewButtonVisuals(bool active)
+        {
+            if (previewPathButton == null) return;
+
+            ApplyButtonContainer(previewPathButton, active ? ButtonContainerType.Primary : ButtonContainerType.Dark);
+            if (previewPathFeedback != null)
+            {
+                previewPathFeedback.glowAlways = active;
+                previewPathFeedback.glowColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 1f);
+            }
+            if (previewPathButtonText != null)
+            {
+                previewPathButtonText.color = active ? Color.white : TextDim;
+            }
         }
 
         private void CreateDiscardConfirmationPanel(Transform root)
@@ -2963,6 +3052,12 @@ namespace TrashTD.UI
                 return;
             }
 
+            if (pathPreviewOverlay != null && pathPreviewOverlay.IsVisible)
+            {
+                TogglePathPreview();
+                return;
+            }
+
             if (stageBootstrapper != null && stageBootstrapper.IsPlacementOrSelectionActive())
             {
                 stageBootstrapper.CancelPlacementOrSelection();
@@ -2985,6 +3080,15 @@ namespace TrashTD.UI
             if (escapePressed)
             {
                 HandleEscapeKey();
+            }
+
+            bool pPressed = keyboard != null && keyboard.pKey.wasPressedThisFrame;
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (!pPressed && Input.GetKeyDown(KeyCode.P)) pPressed = true;
+#endif
+            if (pPressed && previewPathButton != null && previewPathButton.gameObject.activeInHierarchy)
+            {
+                TogglePathPreview();
             }
         }
 
