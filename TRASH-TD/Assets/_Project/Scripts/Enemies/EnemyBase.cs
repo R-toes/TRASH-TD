@@ -70,6 +70,7 @@ namespace TrashTD.Enemies
         protected Vector3 blockedPosition;
         protected Vector2Int blockedAdjacentGridPos;
         protected bool isDead;
+        protected bool isFacingLeft;
         protected float attackTimer;
         private float rangedAttackStopTimer;
 
@@ -106,6 +107,7 @@ namespace TrashTD.Enemies
         public Vector2Int BlockedAdjacentGridPos => blockedAdjacentGridPos;
         public bool IsPushingBack => isPushingBack;
         public bool IsDead => isDead;
+        public bool IsFacingLeft => isFacingLeft;
         public bool IsFrozen => isFrozen;
         public bool IsStunned => isStunned;
         public bool IsInsideHole => isInsideHole;
@@ -188,6 +190,8 @@ namespace TrashTD.Enemies
             isPushingBack = false;
             pushbackElapsed = 0f;
             isDead = false;
+            isFacingLeft = false;
+            ApplyFacingVisuals();
             // Ground melee enemies are ready to strike on first contact with a blocker
             // (casters keep their wind-up before the first ranged shot).
             attackTimer = data != null && data.movementType == EnemyMovementType.Ground &&
@@ -218,6 +222,10 @@ namespace TrashTD.Enemies
             if (path != null && path.Count > 0)
             {
                 transform.position = path[0];
+                if (path.Count > 1)
+                {
+                    UpdateFacing(path[1].x - path[0].x);
+                }
             }
         }
 
@@ -246,6 +254,7 @@ namespace TrashTD.Enemies
             {
                 if (Vector3.Distance(transform.position, blockedPosition) > 0.02f)
                 {
+                    UpdateFacing(blockedPosition.x - transform.position.x);
                     transform.position = Vector3.MoveTowards(transform.position, blockedPosition, currentMoveSpeed * Time.deltaTime);
                 }
                 else
@@ -396,6 +405,7 @@ namespace TrashTD.Enemies
             {
                 if (Vector3.Distance(transform.position, blockedPosition) > 0.02f)
                 {
+                    UpdateFacing(blockedPosition.x - transform.position.x);
                     transform.position = Vector3.MoveTowards(transform.position, blockedPosition, currentMoveSpeed * deltaTime);
                 }
                 else
@@ -516,6 +526,10 @@ namespace TrashTD.Enemies
             {
                 if (animationRenderers[i] != null)
                     animationRenderers[i].sprite = data.animationFrames[animationFrameIndex];
+                    if (animationRenderers[i].gameObject.name != "AirShadow")
+                    {
+                        animationRenderers[i].flipX = isFacingLeft;
+                    }
             }
         }
 
@@ -677,6 +691,7 @@ namespace TrashTD.Enemies
                 return;
 
             Vector3 targetPos = path[currentPathIndex];
+            UpdateFacing(targetPos.x - transform.position.x);
             float step = currentMoveSpeed * Time.deltaTime;
 
             transform.position = Vector3.MoveTowards(transform.position, targetPos, step);
@@ -714,6 +729,10 @@ namespace TrashTD.Enemies
                         if (destWorldPos != transform.position)
                         {
                             currentPathIndex++;
+                if (currentPathIndex < path.Count)
+                {
+                    UpdateFacing(path[currentPathIndex].x - transform.position.x);
+                }
                             EnterHole(destWorldPos, DefaultHoleStayDuration);
                             return;
                         }
@@ -721,11 +740,63 @@ namespace TrashTD.Enemies
                 }
 
                 currentPathIndex++;
+                if (currentPathIndex < path.Count)
+                {
+                    UpdateFacing(path[currentPathIndex].x - transform.position.x);
+                }
 
                 if (currentPathIndex >= path.Count)
                 {
                     ReachExit();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Updates the facing direction based on horizontal movement.
+        /// Walking left mirrors the sprite (flipX = true).
+        /// Walking right unmirrors the sprite (flipX = false).
+        /// Moving purely up or down maintains the previous mirrored state.
+        /// </summary>
+        public void UpdateFacing(float deltaX)
+        {
+            const float threshold = 0.001f;
+            if (deltaX < -threshold)
+            {
+                SetFacingLeft(true);
+            }
+            else if (deltaX > threshold)
+            {
+                SetFacingLeft(false);
+            }
+        }
+
+        public void SetFacingLeft(bool facingLeft)
+        {
+            isFacingLeft = facingLeft;
+            ApplyFacingVisuals();
+        }
+
+        public virtual void ApplyFacingVisuals()
+        {
+            SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                SpriteRenderer sr = renderers[i];
+                if (sr != null)
+                {
+                    if (sr.gameObject.name == "AirShadow") continue;
+                    sr.flipX = isFacingLeft;
+                }
+            }
+
+            Transform visualObj = transform.Find("EnemyVisual");
+            if (visualObj != null && data != null && data.visualOffset.x != 0f)
+            {
+                visualObj.localPosition = new Vector3(
+                    isFacingLeft ? -data.visualOffset.x : data.visualOffset.x,
+                    data.visualOffset.y,
+                    data.visualOffset.z);
             }
         }
 
@@ -767,6 +838,10 @@ namespace TrashTD.Enemies
                 if (Vector3.Distance(transform.position, path[currentPathIndex]) < 0.1f)
                 {
                     currentPathIndex++;
+                if (currentPathIndex < path.Count)
+                {
+                    UpdateFacing(path[currentPathIndex].x - transform.position.x);
+                }
                 }
             }
 
