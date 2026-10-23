@@ -24,6 +24,11 @@ namespace TrashTD.UI
         private const float MaxLaneSpacingTiles = 0.22f;
         private const float LaneSpreadTiles = 0.8f;
         private const float PingPeriod = 1.4f;
+        private const float LineThinning = 0.8f; // route lines (and their casing) drawn 20% thinner
+
+        // URP's 2D sprite shader ignores texture offset/scale, so the dashes need their own shader to flow
+        private const string DashShaderPath = "Shaders/AnimatedPathDash"; // "TrashTD/PathDash"
+        private static Shader dashShader;
 
         private sealed class RouteVisual
         {
@@ -158,7 +163,11 @@ namespace TrashTD.UI
 
         private Material CreateDashMaterial(Color color)
         {
-            Shader shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default") ?? Shader.Find("Sprites/Default");
+            // Without the dash shader the dashes still draw, just standing still
+            if (dashShader == null) dashShader = Resources.Load<Shader>(DashShaderPath);
+            Shader shader = dashShader != null && dashShader.isSupported
+                ? dashShader
+                : Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default") ?? Shader.Find("Sprites/Default");
             var mat = new Material(shader)
             {
                 name = "PathPreviewDashMat",
@@ -173,11 +182,11 @@ namespace TrashTD.UI
         {
             ClearVisuals();
 
-            if (gridManager == null) gridManager = FindFirstObjectByType<GridManager>();
+            if (gridManager == null) gridManager = FindAnyObjectByType<GridManager>();
 
             if (stageData == null)
             {
-                var bootstrapper = FindFirstObjectByType<TrashTD.Core.GameLoop.StageBootstrapper>();
+                var bootstrapper = FindAnyObjectByType<TrashTD.Core.GameLoop.StageBootstrapper>();
                 if (bootstrapper != null && bootstrapper.stageData != null) stageData = bootstrapper.stageData;
                 if (stageData == null && TrashTD.Core.GameLoop.GameManager.Instance != null)
                 {
@@ -208,7 +217,7 @@ namespace TrashTD.UI
             }
 
             float laneSpacing = Mathf.Min(MaxLaneSpacingTiles, LaneSpreadTiles / Mathf.Max(1, routeCount)) * cellSize;
-            float thickness = Mathf.Max(0.09f * cellSize, laneSpacing * 0.7f);
+            float thickness = Mathf.Max(0.09f * cellSize, laneSpacing * 0.7f) * LineThinning;
             var spawnColors = new Dictionary<int, Color>();
 
             for (int r = 0; r < routeCount; r++)
@@ -415,7 +424,7 @@ namespace TrashTD.UI
 
             float routeT = Mathf.Clamp01(t / RouteDrawDuration);
             float drawn = EaseOutCubic(routeT);
-            float flow = t * DashSpeed;
+            float flow = Mathf.Repeat(t * DashSpeed, 1f); // dash periods; the texture repeats every 1
 
             // 1. Draw-in sweep & flow animation
             foreach (RouteVisual route in routes)
@@ -425,7 +434,9 @@ namespace TrashTD.UI
 
                 if (route.dashMat != null)
                 {
-                    route.dashMat.mainTextureScale = new Vector2(Mathf.Max(0.01f, currentLength / route.dashPeriod), 1f);
+                    // Tile mode gives u = distance along the line in world units, so one dash period per
+                    // dashPeriod units. Dashes stay put while the line draws in, then flow spawn -> exit.
+                    route.dashMat.mainTextureScale = new Vector2(1f / route.dashPeriod, 1f);
                     route.dashMat.mainTextureOffset = new Vector2(-flow, 0f);
                 }
             }

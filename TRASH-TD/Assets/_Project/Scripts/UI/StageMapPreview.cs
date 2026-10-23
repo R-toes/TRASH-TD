@@ -44,6 +44,7 @@ namespace TrashTD.UI
         private const float DashSpeedTilesPerSecond = 1.4f;  // dashes flow spawn -> exit
         private const float MaxLaneSpacingTiles = 0.22f;
         private const float LaneSpreadTiles = 0.8f;          // all lanes together stay within this width
+        private const float LineThinning = 0.8f;             // route lines (and their casing) drawn 20% thinner
         private const float MarkerSizeTiles = 0.9f;
         private const float PingPeriod = 1.4f;
         // Matches StageBootstrapper.Stage3BackgroundAnimationFrameDuration
@@ -257,7 +258,7 @@ namespace TrashTD.UI
             List<(int spawn, List<Vector2Int> cells)> cellRoutes = ComputeRoutes(stage);
             int routeCount = cellRoutes.Count;
             float laneSpacing = Mathf.Min(MaxLaneSpacingTiles, LaneSpreadTiles / Mathf.Max(1, routeCount)) * tileScale;
-            float thickness = Mathf.Max(3f, laneSpacing * 0.6f);
+            float thickness = Mathf.Max(3f, laneSpacing * 0.6f) * LineThinning;
             var spawnColors = new Dictionary<int, Color>();
             for (int i = 0; i < routeCount; i++)
             {
