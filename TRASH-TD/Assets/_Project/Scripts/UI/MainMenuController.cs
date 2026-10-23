@@ -113,6 +113,7 @@ namespace TrashTD.UI
         private readonly List<MenuButtonFeedback> stageCards = new List<MenuButtonFeedback>();
         private readonly List<StageMapNode> stageMapNodes = new List<StageMapNode>();
         private StageMapLayout stageMapLayout;
+        private StageMapNavigator mapNavigator;
         private readonly Dictionary<StageDifficulty, DifficultyCardView> difficultyCards = new Dictionary<StageDifficulty, DifficultyCardView>();
         private StageData selectedStage;
         private int selectedStageIndex = -1;
@@ -294,6 +295,7 @@ namespace TrashTD.UI
             }
 
             BuildStageButtons();
+            SetUpMapNavigator();
             InitializeMenuBackdrop();
             BuildDifficultySelector();
             AttachMenuFeedback();
@@ -1003,7 +1005,9 @@ namespace TrashTD.UI
                 if (node != null) node.SetSelected(false);
             }
 
+            if (mapNavigator != null) mapNavigator.ResetView(true);
             PlayEntrance(stageEntrance, ref stageEntranceRoutine);
+            PlayStageNodeIntros();
 
             int focusIndex = selectedStageIndex >= 0 ? selectedStageIndex : 0;
             if (focusIndex < stageMapNodes.Count && stageMapNodes[focusIndex] != null)
@@ -1108,22 +1112,6 @@ namespace TrashTD.UI
                 if (child.name.StartsWith("StageNode_")) Destroy(child.gameObject);
             }
 
-            // Ditch custom node sprites — generate consistent, crisp CRT circle badge sprites
-            Sprite circleIdle = CreateCircleBadgeSprite(
-                new Color(0.22f, 0.91f, 0.50f, 1f),        // Bright neon green phosphor ring
-                new Color(0.04f, 0.11f, 0.07f, 0.92f),     // Dark CRT screen glass interior
-                0.13f);
-
-            Sprite circleSelected = CreateCircleBadgeSprite(
-                new Color(0.98f, 1.0f, 0.65f, 1f),         // Glowing yellow/white outer ring
-                new Color(0.22f, 0.91f, 0.50f, 0.95f),      // Vibrant solid green fill
-                0.16f);
-
-            Sprite circleLocked = CreateCircleBadgeSprite(
-                new Color(0.30f, 0.35f, 0.42f, 0.85f),     // Dim slate/grey ring
-                new Color(0.08f, 0.10f, 0.13f, 0.90f),     // Dim muted background
-                0.13f);
-
             int unlocked = 0;
             int mapStageCount = Mathf.Min(6, availableStages.Count);
             for (int i = 0; i < mapStageCount; i++)
@@ -1132,16 +1120,12 @@ namespace TrashTD.UI
                 bool isPlayable = IsStagePlayable(stage.stageId);
                 if (isPlayable) unlocked++;
 
-                var node = CreateStageMapNode(stage, i + 1, isPlayable,
-                    StageNodePositions[i],
-                    circleIdle, circleSelected, circleLocked);
-
+                var node = CreateStageMapNode(stage, i + 1, isPlayable, StageNodePositions[i]);
                 stageMapNodes.Add(node);
 
-                // Register for entrance animation
+                // Nodes run their own boot-in (PlayStageNodeIntros), not the generic entrance
                 var nodeFeedback = node.GetComponent<MenuButtonFeedback>();
                 if (nodeFeedback != null) stageCards.Add(nodeFeedback);
-                RegisterEntrance(stageEntrance, node, Vector2.zero, 0.14f + i * 0.06f, 0.88f);
             }
 
             // Re-apply the layout to position everything
@@ -1154,98 +1138,73 @@ namespace TrashTD.UI
         }
 
         /// <summary>
-        /// Creates a single circular StageMapNode with centered stage number as a child of the map container.
+        /// Creates one stage marker (StageMapNode builds its own target + callout card) under the map container.
+        /// The callout goes left of markers near the right edge so it stays on screen.
         /// </summary>
-        private StageMapNode CreateStageMapNode(StageData stage, int stageNumber, bool isPlayable,
-            Vector2 normalizedPos, Sprite idle, Sprite selected, Sprite locked)
+        private StageMapNode CreateStageMapNode(StageData stage, int stageNumber, bool isPlayable, Vector2 normalizedPos)
         {
             var go = new GameObject("StageNode_" + stageNumber, typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(stageListRoot, false);
 
-            var img = go.GetComponent<Image>();
-            img.raycastTarget = true;
-            img.preserveAspect = true;
+            // Invisible hit area; the visuals are children built by the node
+            var hitArea = go.GetComponent<Image>();
+            hitArea.color = new Color(1f, 1f, 1f, 0f);
+            hitArea.raycastTarget = true;
 
             var btn = go.GetComponent<Button>();
-            btn.targetGraphic = img;
+            btn.targetGraphic = hitArea;
             btn.transition = Selectable.Transition.None;
 
-            // Center stage number text using game pixel font
-            var txt = MakeText(go.transform, "StageNumber", stageNumber.ToString(), 24, TextAnchor.MiddleCenter,
-                isPlayable ? AccentBright : new Color(0.38f, 0.44f, 0.50f, 0.85f), FontStyle.Bold);
-            StretchFill(txt.rectTransform);
-
-            var shadow = txt.gameObject.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
-            shadow.effectDistance = new Vector2(1f, -1f);
-
-            // Header display pill right above the node (Level tag in small font + Stage name)
-            var headerGo = new GameObject("HeaderDisplay", typeof(RectTransform), typeof(Image), typeof(Outline));
-            headerGo.transform.SetParent(go.transform, false);
-
-            var headerRect = headerGo.GetComponent<RectTransform>();
-            headerRect.anchorMin = new Vector2(0.5f, 1f);
-            headerRect.anchorMax = new Vector2(0.5f, 1f);
-            headerRect.pivot = new Vector2(0.5f, 0f);
-            headerRect.anchoredPosition = new Vector2(0f, 6f);
-            headerRect.sizeDelta = new Vector2(170f, 36f);
-
-            var headerBg = headerGo.GetComponent<Image>();
-            headerBg.color = new Color(0.04f, 0.08f, 0.10f, 0.88f);
-            headerBg.raycastTarget = false;
-
-            var headerOutline = headerGo.GetComponent<Outline>();
-            headerOutline.effectColor = isPlayable
-                ? new Color(0.22f, 0.91f, 0.50f, 0.45f)
-                : new Color(0.25f, 0.30f, 0.36f, 0.40f);
-            headerOutline.effectDistance = new Vector2(1f, 1f);
-
-            // Small Level text on top
-            var lvlText = MakeText(headerGo.transform, "LevelText", "LEVEL " + stageNumber, 10,
-                TextAnchor.MiddleCenter, isPlayable ? AccentBright : new Color(0.38f, 0.44f, 0.50f, 0.70f), FontStyle.Bold);
-            var lvlRect = lvlText.rectTransform;
-            lvlRect.anchorMin = new Vector2(0f, 0.5f);
-            lvlRect.anchorMax = new Vector2(1f, 1f);
-            lvlRect.offsetMin = new Vector2(4f, 0f);
-            lvlRect.offsetMax = new Vector2(-4f, -2f);
-            var lvlShadow = lvlText.gameObject.AddComponent<Shadow>();
-            lvlShadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
-            lvlShadow.effectDistance = new Vector2(1f, -1f);
-
-            // Stage Name text on bottom
-            string mapTitle = !string.IsNullOrEmpty(stage.mapName) ? stage.mapName.ToUpper() : ("STAGE 0" + stageNumber);
-            var nameText = MakeText(headerGo.transform, "StageNameText", mapTitle, 12,
-                TextAnchor.MiddleCenter, isPlayable ? Color.white : new Color(0.50f, 0.55f, 0.62f, 0.70f), FontStyle.Bold);
-            var nameRect = nameText.rectTransform;
-            nameRect.anchorMin = new Vector2(0f, 0f);
-            nameRect.anchorMax = new Vector2(1f, 0.5f);
-            nameRect.offsetMin = new Vector2(4f, 2f);
-            nameRect.offsetMax = new Vector2(-4f, 0f);
-            var nameShadow = nameText.gameObject.AddComponent<Shadow>();
-            nameShadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
-            nameShadow.effectDistance = new Vector2(1f, -1f);
-
             var node = go.AddComponent<StageMapNode>();
-            node.Initialize(stage, stageNumber, normalizedPos, idle, selected, locked, txt, headerGo, lvlText, nameText);
-
-            // Subscribe to node click and hover (status ticker)
+            node.Build(stage, stageNumber, normalizedPos, !isPlayable, normalizedPos.x > 0.7f);
             node.Clicked += OnStageMapNodeClicked;
             node.HoverChanged += OnStageMapNodeHoverChanged;
 
-            // Set locked state
-            node.SetLocked(!isPlayable);
-
-            // Add hover feedback
-            Color glow = isPlayable ? AccentBright : new Color(0.55f, 0.60f, 0.68f, 1f);
-            System.Action clicked = isPlayable ? (System.Action)PlayClick : PlayDenied;
-            var feedback = AttachFeedback(btn, clicked, glow, isPlayable ? 1.08f : 1.02f);
-            if (!isPlayable)
-            {
-                feedback.hoverBrighten = 0.03f;
-                feedback.glowColor = new Color(glow.r, glow.g, glow.b, 0.35f);
-            }
+            // Press / wobble / sounds only: the node draws its own hover and glow, so no scale-up or outline here
+            var feedback = go.AddComponent<MenuButtonFeedback>();
+            feedback.hoverScale = 1f;
+            feedback.pressScale = 0.96f;
+            feedback.hoverBrighten = 0f;
+            feedback.pressDarken = 0f;
+            feedback.Hovered = PlayHover;
+            feedback.Clicked = isPlayable ? (System.Action)PlayClick : PlayDenied;
 
             return node;
+        }
+
+        /// <summary>Scroll / drag / zoom navigation for the stage map, with its minimap and zoom bar (StageMapNavigator).</summary>
+        private void SetUpMapNavigator()
+        {
+            if (stageListRoot == null || stageSelectionPanel == null || mapNavigator != null) return;
+
+            mapNavigator = stageListRoot.gameObject.AddComponent<StageMapNavigator>();
+            mapNavigator.InputBlocked = () => detailsOpen || isLoadingStage || (audioSettingsUI != null && audioSettingsUI.IsOpen);
+            mapNavigator.Initialize(
+                stageSelectionPanel.GetComponent<RectTransform>(),
+                stageMapLayout,
+                stageMapBackgroundSprite,
+                stageSelectionPanel.transform,
+                stageMapNodes,
+                button =>
+                {
+                    StyleTerminalButton(button, AccentBright, 14);
+                    AttachFeedback(button, PlayClick, AccentBright, 1.05f);
+                });
+
+            // Under the stage dossier, which shares the panel
+            if (stageDetailsPanel != null && stageDetailsPanel.transform.parent == mapNavigator.HudRoot.parent)
+            {
+                mapNavigator.HudRoot.SetSiblingIndex(stageDetailsPanel.transform.GetSiblingIndex());
+            }
+        }
+
+        /// <summary>Staggered boot-in for the map markers, left to right in stage order.</summary>
+        private void PlayStageNodeIntros()
+        {
+            for (int i = 0; i < stageMapNodes.Count; i++)
+            {
+                if (stageMapNodes[i] != null) stageMapNodes[i].PlayIntro(0.25f + i * 0.12f);
+            }
         }
 
         /// <summary>
@@ -1297,69 +1256,6 @@ namespace TrashTD.UI
             return null;
         }
 
-        /// <summary>
-        /// Generates a crisp, procedural CRT circular badge sprite with an outer border ring and inner fill.
-        /// </summary>
-        private static Sprite CreateCircleBadgeSprite(Color ringColor, Color fillColor, float ringWidthRatio = 0.14f)
-        {
-            int size = 64;
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            tex.filterMode = FilterMode.Point;
-
-            float r = (size - 1) * 0.5f;
-            float rInner = r * (1f - ringWidthRatio);
-            Vector2 center = new Vector2(r, r);
-
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    float dist = Vector2.Distance(new Vector2(x, y), center);
-                    if (dist > r)
-                    {
-                        tex.SetPixel(x, y, Color.clear);
-                    }
-                    else if (dist >= rInner)
-                    {
-                        tex.SetPixel(x, y, ringColor);
-                    }
-                    else
-                    {
-                        tex.SetPixel(x, y, fillColor);
-                    }
-                }
-            }
-            tex.Apply();
-            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
-        }
-
-        private static Sprite CreateFallbackDotSprite(Color color)
-        {
-            int size = 33;
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            tex.filterMode = FilterMode.Point;
-            float r = (size - 1) * 0.5f;
-            Vector2 center = new Vector2(r, r);
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    float dist = Vector2.Distance(new Vector2(x, y), center);
-                    if (dist <= r)
-                    {
-                        float alpha = Mathf.Clamp01(1f - (dist / r) * 0.3f);
-                        tex.SetPixel(x, y, new Color(color.r, color.g, color.b, color.a * alpha));
-                    }
-                    else
-                    {
-                        tex.SetPixel(x, y, Color.clear);
-                    }
-                }
-            }
-            tex.Apply();
-            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
-        }
-
         /// <summary>Called when a StageMapNode dot is clicked on the Pip-Boy map.</summary>
         private void OnStageMapNodeClicked(StageMapNode node)
         {
@@ -1389,6 +1285,9 @@ namespace TrashTD.UI
             }
 
             SetStageTicker(message);
+
+            // Keyboard focus can move to a marker that is off screen while zoomed in
+            if (hovered && mapNavigator != null) mapNavigator.EnsureVisible(node);
         }
 
         private void SetStageTicker(string message)
@@ -2128,6 +2027,7 @@ namespace TrashTD.UI
             RegisterEntrance(stageEntrance, stageProgressText, new Vector2(40f, 0f), 0.12f);
             RegisterEntrance(stageEntrance, backButton, new Vector2(-40f, 0f), 0.16f);
             RegisterEntrance(stageEntrance, stageHint, Vector2.zero, 0.30f);
+            RegisterEntrance(stageEntrance, mapNavigator != null ? mapNavigator.HudRoot : null, new Vector2(40f, 0f), 0.18f);
 
             // Stage details modal
             RegisterEntrance(detailsEntrance, stageDetailsNumber, Vector2.zero, 0.08f);

@@ -236,7 +236,11 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
 | | Enter | Confirm placement |
 | | Right-click | Cancel placement, or undeploy the selected operator |
 | Gameplay | Esc | First match wins: close the developer picker → cancel placement → deselect operator → close audio settings → toggle pause |
-| Main menu | Esc | Close stage details, or return from stage select to the main menu |
+| Main menu | Esc | Close settings or stage details, or return from stage select to the main menu |
+| Stage select map | Scroll / double-click | Zoom toward the cursor (double-click at max zoom resets) |
+| | Drag (from the map or a marker) | Pan, with inertia |
+| | + / − (also numpad) | Zoom about the screen centre (hold) |
+| | R / Home | Reset the view |
 
 - **Esc is handled once per frame.** Whatever handles it calls `GameplayHUDUI.ConsumeEscapeKey()`. Other handlers check `HasConsumedEscapeThisFrame` first. `GameplayHUDUI.HandleEscapeKey()` is the fallback that ends in pause/resume. Follow the same pattern for any new Esc-closable panel.
 - Gameplay input (deploy hotkeys, draft keys) must do nothing while `GameplayHUDUI.IsPaused`.
@@ -254,7 +258,21 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
   - Menu rows PLAY / SETTINGS / EXIT are styled by `StyleMainMenuButton`: a caret and bracket frame show while a row is selected (`MenuButtonFeedback.IsHot`). **Hovering selects the row**, so mouse and keyboard share one highlight. SETTINGS is still created by `AudioSettingsUI.Create`.
 - Stage select is a Pip-Boy style map, built in code by `MainMenuController.BuildStageButtons`. It replaced the old stage grid. The background is `Art/Levels/Stage Selector Map.png`. Clicking a dot opens the stage details modal (difficulty selector, then play). A locked dot wobbles and plays the denied sound.
 - Each stage is a `StageMapNode` placed at a **normalized position** (0–1 across the map art, origin top-left) from `MainMenuController.StageNodePositions`. Index *i* is Stage *i*+1, so add an entry there when adding a stage. `StageMapLayout` (on the map art) rescales and repositions the nodes whenever the art resizes, so they stay in place at any 16:9 resolution.
-- Node badges are currently procedural circle sprites (`CreateCircleBadgeSprite`). The pixel-art `Resources/StageNodes/Node_N_{Idle,Selected,Locked}.png` sprites are **not wired up yet**.
+- **Stage markers** (`StageMapNode.Build`, called from `MainMenuController.CreateStageMapNode`) are built entirely by the node.
+  - **Marker:** a chunky pixel target made of procedural sprites drawn small and point-scaled: core badge with the number, a rotating dashed ring, two staggered radar pings, and 4 lock-on ticks.
+  - **Callout card:** joined by an elbow leader line; shows `STAGE NN`, the map name and a status (ONLINE / SELECTED / LOCKED). It sits right of the marker, or left when the normalized x > 0.7. Card width comes from its longest line. Clicking the card opens the stage too.
+  - **Animation** (unscaled time): `PlayIntro(delay)` runs on every map open (`PlayStageNodeIntros`, staggered by stage). The core pops in with a burst ring, the leader line draws, the card unfolds and the name types out. Idle: slow spin and pings. Lock-on (hover/focus): ticks close in, the spin speeds up, the core swells and the card brightens and nudges outward. Selected: yellow, faster pings and a breathing core. Locked: grey, static, with a padlock badge; a click wobbles and plays the denied sound.
+  - **Hovering selects the marker** (EventSystem), so mouse and keyboard share one lock-on. `HoverChanged` follows that selection and drives the status ticker.
+  - The node's `MenuButtonFeedback` only handles press, wobble and sounds (no hover scale or outline). The marker's visuals sit under a `Visual` root that `ApplyLayout` scales.
+  - The pixel-art `Resources/StageNodes/Node_N_*.png` sprites are still unused.
+- **Map navigation** (`StageMapNavigator` on the map container `StageMapContainer`; set up by `MainMenuController.SetUpMapNavigator`):
+  - **Zoom and pan:** zoom runs 1–3×. The container is no longer stretched: it is centred and sized to viewport × zoom, offset by the pan. The pan is clamped so the map always covers the screen.
+  - **Input:** scroll zooms toward the cursor; dragging pans with inertia. Drags that start on a marker bubble up to the navigator and cancel the click. See §7.6 for the keys. Arrows and WASD stay UI navigation between markers, and keyboard focus moving to an off-screen marker pans to it (`EnsureVisible`, from `OnStageMapNodeHoverChanged`).
+  - **Reset and blocking:** the view resets each time stage select opens. Input is ignored while the dossier, settings or loading are open (`InputBlocked`).
+  - **Marker size:** markers grow only as zoom^0.35. `StageMapLayout.ZoomCompensation` divides the marker scale.
+  - **HUD** (top right, below `stageProgressText`, kept under the dossier in sibling order): a MAP OVERVIEW minimap (map art, stage dots, visible-area frame, cursor grid reference; click or drag to jump), a zoom bar ([−] 1.0X [+] [RESET]) and a controls hint.
+  - Pointer positions go through `CrtDisplay.ScreenToPicture` and the canvas camera, like all pointer code.
+  - `StageMapMinimapInput` (same file) forwards minimap presses.
 - **Locking is not progression.** A node is locked only if `IsStagePlayable(stageId)` is false (a hard-coded list of stage IDs). "X / 6 UNLOCKED" counts that list, not cleared stages. Don't add unlock-on-clear progression without asking Raim (see "Persistence model", §4).
 - **Terminal styling** (stage selector and dossier): the `Terminal*` colours in `MainMenuController`, `AddCornerBrackets` for L-shaped corner frames, and `StyleTerminalButton`. `MenuButtonFeedback` owns each button's `Outline` as its hover glow, so resting borders are brackets, not outlines. The selector has a title plate, a blinking cursor, and a status ticker that types out the hovered stage (`StageMapNode.HoverChanged`).
 - **Stage dossier** (the details modal, 1300×720): an animated `StageMapPreview` on the left, and stage info, stats, difficulty cards, a waves/lives briefing, Back and Play on the right.
