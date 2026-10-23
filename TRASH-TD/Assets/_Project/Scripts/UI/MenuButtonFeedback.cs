@@ -94,6 +94,9 @@ namespace TrashTD.UI
             return selectable == null || selectable.IsInteractable();
         }
 
+        /// <summary>True while hovered or focused (and interactable): the state that drives the hover look.</summary>
+        public bool IsHot => hoverEnabled && IsInteractable() && (hovered || focused);
+
         private void Update()
         {
             float dt = Time.unscaledDeltaTime;

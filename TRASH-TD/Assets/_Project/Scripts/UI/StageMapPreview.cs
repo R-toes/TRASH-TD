@@ -319,7 +319,7 @@ namespace TrashTD.UI
         /// A layer several map-widths wide (Stage 3's background) is a horizontal animation sheet:
         /// split it into frames the size of the map art, as StageBootstrapper.CreateSpriteSheetAnimation does.
         /// </summary>
-        private static Sprite[] GetSheetFrames(Sprite sprite, Sprite mapSprite)
+        internal static Sprite[] GetSheetFrames(Sprite sprite, Sprite mapSprite)
         {
             if (mapSprite == null || sprite == mapSprite) return null;
 

@@ -45,7 +45,6 @@ namespace TrashTD.UI
         private static readonly Color TitleBright = new Color(0.32f, 1.00f, 0.64f, 1f);
         private static readonly Color BackgroundColor = new Color(0.025f, 0.03f, 0.045f, 1f);
         private static readonly Color TextDim = new Color(0.50f, 0.58f, 0.68f, 1f);
-        private static readonly Color DarkButton = new Color(0.12f, 0.14f, 0.18f, 1f);
         private static readonly Color CardColor = new Color(0.06f, 0.07f, 0.10f, 1f);
         private static readonly Color CardLockedColor = new Color(0.045f, 0.05f, 0.065f, 1f);
         private static readonly Color DifficultyCardColor = new Color(0.030f, 0.075f, 0.050f, 1f);
@@ -57,6 +56,14 @@ namespace TrashTD.UI
         private static readonly Color TerminalButton = new Color(0.035f, 0.090f, 0.060f, 0.95f);
         private static readonly Color TerminalText = new Color(0.45f, 0.78f, 0.56f, 1f);
         private static readonly Color TerminalLine = new Color(0.22f, 0.91f, 0.50f, 0.45f);
+
+        // Title screen
+        private static readonly Color HazardYellow = new Color(0.98f, 0.80f, 0.18f, 1f);
+        private static readonly Color HazardInk = new Color(0.07f, 0.06f, 0.03f, 1f);
+        private static readonly Color PrimaryLabel = new Color(0.02f, 0.10f, 0.05f, 1f);
+        private static readonly Color RecRed = new Color(1f, 0.27f, 0.22f, 1f);
+        private const float MenuColumnX = 144f;
+        private const float MenuButtonLabelInset = 56f;
         private const string StageSubtitleText = "CHOOSE YOUR DEPLOYMENT";
         private const string StageTickerIdle = "> AWAITING STAGE SELECTION";
         private const float TickerCharsPerSecond = 70f;
@@ -123,9 +130,24 @@ namespace TrashTD.UI
         private Text stageDetailsTag;
         private Text stageDetailsNumber;
         private Text stageProgressText;
-        private RectTransform mainWatermark;
         private RectTransform mainDivider;
         private RectTransform mainVersion;
+
+        // Title screen
+        private MainMenuBackdrop menuBackdrop;
+        private Text menuFeedCaption;
+        private RectTransform menuFeedStatus;
+        private Image menuRecDot;
+        private RectTransform titleBlock;
+        private Text titleGlitchA;
+        private Text titleGlitchB;
+        private float titleGlitchTimer = 2.5f;
+        private float titleGlitchRemaining;
+        private Text bootLineText;
+        private string bootLineTarget = string.Empty;
+        private float bootLineTime;
+        private Text menuHintText;
+        private readonly List<MainMenuButtonView> mainMenuButtons = new List<MainMenuButtonView>();
         private RectTransform stageHeaderTitle;
         private RectTransform stageHeaderSubtitle;
         private RectTransform stageHeaderDivider;
@@ -136,6 +158,11 @@ namespace TrashTD.UI
         private Text stageTickerText;
         private string stageTickerTarget = StageTickerIdle;
         private float stageTickerTime;
+        private bool stageTickerScrolls;
+        private string stageTickerLoopText;
+        private float stageTickerLoopPeriod;
+        private float stageTickerScrollOffset;
+        private float stageTickerHoldTime;
 
         // Stage dossier (details modal)
         private RectTransform stageDetailsColumn;
@@ -186,6 +213,15 @@ namespace TrashTD.UI
             public float sway;
             public float phase;
             public float alpha;
+        }
+
+        private sealed class MainMenuButtonView
+        {
+            public MenuButtonFeedback feedback;
+            public CanvasGroup selectFrame;
+            public Text caret;
+            public RectTransform label;
+            public float hot;
         }
 
         private sealed class DifficultyCardView
@@ -258,6 +294,7 @@ namespace TrashTD.UI
             }
 
             BuildStageButtons();
+            InitializeMenuBackdrop();
             BuildDifficultySelector();
             AttachMenuFeedback();
             Canvas menuCanvas = mainMenuPanel != null ? mainMenuPanel.GetComponentInParent<Canvas>() : null;
@@ -266,18 +303,8 @@ namespace TrashTD.UI
                 audioSettingsUI = AudioSettingsUI.Create(
                     menuCanvas.transform,
                     mainMenuPanel.transform,
-                    button =>
-                    {
-                        button.GetComponent<Image>().color = DarkButton;
-                        Text label = button.GetComponentInChildren<Text>();
-                        if (label != null)
-                        {
-                            label.fontSize = 16;
-                            label.color = new Color(0.6f, 0.65f, 0.72f, 1f);
-                        }
-                        AttachFeedback(button, PlayClick, TextDim, 1.04f);
-                    },
-                    rect => Place(rect, new Vector2(0f, 0.55f), new Vector2(0f, 0.5f), new Vector2(124f, -168f), new Vector2(200f, 48f)));
+                    button => StyleMainMenuButton(button, "SETTINGS", "02", false),
+                    rect => Place(rect, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(MenuColumnX, -144f), new Vector2(440f, 56f)));
             }
             RegisterEntranceItems();
             UpdateDifficultyDisplay();
@@ -337,11 +364,16 @@ namespace TrashTD.UI
 
             UpdateMotes(dt, time);
 
-            // Slow breathing glow on the title
-            if (titleText != null && mainMenuPanel != null && mainMenuPanel.activeInHierarchy)
+            // Title screen: breathing title glow, glitches, boot line, REC light, menu selection
+            if (mainMenuPanel != null && mainMenuPanel.activeInHierarchy)
             {
-                float pulse = 0.5f + 0.5f * Mathf.Sin(time * 1.4f);
-                titleText.color = Color.Lerp(TitleDim, TitleBright, pulse);
+                if (titleText != null)
+                {
+                    float pulse = 0.5f + 0.5f * Mathf.Sin(time * 1.4f);
+                    titleText.color = Color.Lerp(TitleDim, TitleBright, pulse);
+                }
+
+                UpdateTitleScreen(dt, time);
             }
 
             // Stage selector terminal: blinking cursor on the subtitle, typed-out status ticker
@@ -355,10 +387,7 @@ namespace TrashTD.UI
 
                 if (stageTickerText != null)
                 {
-                    stageTickerTime += dt;
-                    int visible = Mathf.Min(stageTickerTarget.Length, Mathf.FloorToInt(stageTickerTime * TickerCharsPerSecond));
-                    bool typing = visible < stageTickerTarget.Length;
-                    stageTickerText.text = stageTickerTarget.Substring(0, visible) + (typing || cursorOn ? "_" : " ");
+                    UpdateStageTicker(dt, cursorOn);
                 }
             }
 
@@ -378,7 +407,12 @@ namespace TrashTD.UI
 
         private void HandleBack()
         {
-            if (detailsOpen)
+            if (audioSettingsUI != null && audioSettingsUI.IsOpen)
+            {
+                PlayBack();
+                audioSettingsUI.Close();
+            }
+            else if (detailsOpen)
             {
                 PlayBack();
                 CloseStageDetails();
@@ -447,96 +481,7 @@ namespace TrashTD.UI
                 mainMenuPanel.GetComponent<Image>().color = BackgroundColor;
             }
 
-            // Drifting ambient motes behind everything
-            CreateAmbientLayer(mainMenuPanel.transform, 30);
-
-            // Giant faint watermark on the right
-            var watermark = MakeText(mainMenuPanel.transform, "Watermark", "TD", 360, TextAnchor.MiddleRight,
-                new Color(1f, 1f, 1f, 0.035f), FontStyle.Bold);
-            watermark.horizontalOverflow = HorizontalWrapMode.Overflow;
-            watermark.verticalOverflow = VerticalWrapMode.Overflow;
-            Place(watermark.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-90f, 0f), new Vector2(900f, 640f));
-            watermark.transform.SetSiblingIndex(1);
-            mainWatermark = watermark.rectTransform;
-
-            // Decorative top accent stripe
-            var accentStripe = new GameObject("AccentStripe", typeof(RectTransform), typeof(Image));
-            accentStripe.transform.SetParent(mainMenuPanel.transform, false);
-            var stripeRect = accentStripe.GetComponent<RectTransform>();
-            stripeRect.anchorMin = new Vector2(0f, 1f);
-            stripeRect.anchorMax = new Vector2(1f, 1f);
-            stripeRect.pivot = new Vector2(0.5f, 1f);
-            stripeRect.sizeDelta = new Vector2(0f, 4f);
-            var stripeImage = accentStripe.GetComponent<Image>();
-            stripeImage.color = AccentColor;
-            stripeImage.raycastTarget = false;
-
-            // Subtle vignette overlay — darker edges
-            var vignette = new GameObject("Vignette", typeof(RectTransform), typeof(Image));
-            vignette.transform.SetParent(mainMenuPanel.transform, false);
-            StretchFill(vignette.GetComponent<RectTransform>());
-            var vignetteImg = vignette.GetComponent<Image>();
-            vignetteImg.color = new Color(0.01f, 0.015f, 0.025f, 0.35f);
-            vignetteImg.raycastTarget = false;
-
-            // ── Title — massive, left-aligned hero text ─────
-            if (titleText == null)
-            {
-                titleText = MakeText(mainMenuPanel.transform, "TitleText", "TRASH TD", 88, TextAnchor.MiddleLeft,
-                    AccentBright, FontStyle.Bold);
-            }
-
-            Place(titleText.rectTransform, new Vector2(0f, 0.55f), new Vector2(0f, 0.5f), new Vector2(120f, 70f), new Vector2(1000f, 120f));
-
-            if (titleText.GetComponent<Shadow>() == null)
-            {
-                var titleShadow = titleText.gameObject.AddComponent<Shadow>();
-                titleShadow.effectColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.35f);
-                titleShadow.effectDistance = new Vector2(0f, -6f);
-            }
-
-            // ── Subtitle — underneath title, left-aligned ───
-            if (subtitleText == null)
-            {
-                subtitleText = MakeText(mainMenuPanel.transform, "SubtitleText", "Tiny Reclaimers Against Spreading Hazard", 15,
-                    TextAnchor.MiddleLeft, new Color(0.50f, 0.58f, 0.68f, 1f));
-            }
-
-            Place(subtitleText.rectTransform, new Vector2(0f, 0.55f), new Vector2(0f, 0.5f), new Vector2(124f, -10f), new Vector2(760f, 36f));
-
-            // Decorative divider line below subtitle
-            var divider = new GameObject("Divider", typeof(RectTransform), typeof(Image));
-            divider.transform.SetParent(mainMenuPanel.transform, false);
-            mainDivider = divider.GetComponent<RectTransform>();
-            Place(mainDivider, new Vector2(0f, 0.55f), new Vector2(0f, 0.5f), new Vector2(124f, -42f), new Vector2(320f, 2f));
-            var dividerImage = divider.GetComponent<Image>();
-            dividerImage.color = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.4f);
-            dividerImage.raycastTarget = false;
-
-            // ── Buttons — left-aligned, stacked below title ─
-            if (startButton == null)
-            {
-                startButton = CreateButtonChild(mainMenuPanel.transform, "StartButton", "▶  PLAY");
-            }
-            startButton.GetComponent<Image>().color = AccentColor;
-            var startBtnLabel = startButton.GetComponentInChildren<Text>();
-            if (startBtnLabel != null) startBtnLabel.fontSize = 22;
-            Place(startButton.GetComponent<RectTransform>(), new Vector2(0f, 0.55f), new Vector2(0f, 0.5f), new Vector2(124f, -92f), new Vector2(300f, 64f));
-
-            if (exitButton == null)
-            {
-                exitButton = CreateButtonChild(mainMenuPanel.transform, "ExitButton", "✕  EXIT");
-            }
-            exitButton.GetComponent<Image>().color = DarkButton;
-            var exitBtnLabel = exitButton.GetComponentInChildren<Text>();
-            if (exitBtnLabel != null) { exitBtnLabel.fontSize = 16; exitBtnLabel.color = new Color(0.6f, 0.65f, 0.72f, 1f); }
-            Place(exitButton.GetComponent<RectTransform>(), new Vector2(0f, 0.55f), new Vector2(0f, 0.5f), new Vector2(124f, -224f), new Vector2(200f, 48f));
-
-            // Version/footer text
-            var versionText = MakeText(mainMenuPanel.transform, "VersionText", "v0.1  •  EARLY ACCESS", 11, TextAnchor.MiddleLeft,
-                new Color(0.30f, 0.34f, 0.40f, 1f));
-            Place(versionText.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(28f, 18f), new Vector2(300f, 28f));
-            mainVersion = versionText.rectTransform;
+            BuildTitleScreen();
 
             // ── Stage Selection Panel ────────────────────────
             if (stageSelectionPanel == null)
@@ -621,15 +566,29 @@ namespace TrashTD.UI
             var tickerPlate = new GameObject("StageTicker", typeof(RectTransform), typeof(Image));
             tickerPlate.transform.SetParent(stageSelectionPanel.transform, false);
             stageTickerPlate = tickerPlate.GetComponent<RectTransform>();
-            Place(stageTickerPlate, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(820f, 48f));
+            Place(stageTickerPlate, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(TickerWidth, 48f));
             var tickerImage = tickerPlate.GetComponent<Image>();
             tickerImage.color = TerminalPlate;
             tickerImage.raycastTarget = false;
             AddCornerBrackets(stageTickerPlate, 12f, 2f, TerminalLine);
-            stageTickerText = MakeText(tickerPlate.transform, "StageTickerText", StageTickerIdle, 15, TextAnchor.MiddleLeft, AccentBright, FontStyle.Bold);
+
+            // Fixed-size window; long messages scroll inside it instead of widening the plate
+            var tickerViewport = new GameObject("StageTickerViewport", typeof(RectTransform), typeof(RectMask2D));
+            tickerViewport.transform.SetParent(tickerPlate.transform, false);
+            var tickerViewportRect = tickerViewport.GetComponent<RectTransform>();
+            tickerViewportRect.anchorMin = Vector2.zero;
+            tickerViewportRect.anchorMax = Vector2.one;
+            tickerViewportRect.offsetMin = new Vector2(TickerTextInset, 0f);
+            tickerViewportRect.offsetMax = new Vector2(-TickerTextInset, 0f);
+
+            stageTickerText = MakeText(tickerViewport.transform, "StageTickerText", StageTickerIdle, TickerFontSize, TextAnchor.MiddleLeft, AccentBright, FontStyle.Bold);
             stageTickerText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            stageTickerText.rectTransform.offsetMin = new Vector2(20f, 0f);
-            stageTickerText.rectTransform.offsetMax = new Vector2(-20f, 0f);
+            var tickerTextRect = stageTickerText.rectTransform;
+            tickerTextRect.anchorMin = new Vector2(0f, 0f);
+            tickerTextRect.anchorMax = new Vector2(0f, 1f);
+            tickerTextRect.pivot = new Vector2(0f, 0.5f);
+            tickerTextRect.anchoredPosition = Vector2.zero;
+            tickerTextRect.sizeDelta = new Vector2(TickerViewportWidth, 0f);
 
             var headerDivider = new GameObject("StageSelectorDivider", typeof(RectTransform), typeof(Image));
             headerDivider.transform.SetParent(stageSelectionPanel.transform, false);
@@ -671,6 +630,336 @@ namespace TrashTD.UI
         }
 
         // ─────────────────────────────────────────────────────
+        //  Title screen
+        // ─────────────────────────────────────────────────────
+
+        /// <summary>
+        /// The start screen: a live stage-art backdrop with an enemy parade (MainMenuBackdrop) inside a camera
+        /// viewfinder, the glitching TINY RECLAIMERS title with a hazard "TD" sticker, and a terminal-style menu column.
+        /// </summary>
+        private void BuildTitleScreen()
+        {
+            Transform panel = mainMenuPanel.transform;
+            var left = new Vector2(0f, 0.5f);
+
+            // Live backdrop (filled in by InitializeMenuBackdrop once the stages are loaded), toxic motes over it
+            var backdropGo = new GameObject("MenuBackdrop", typeof(RectTransform));
+            backdropGo.transform.SetParent(panel, false);
+            StretchFill(backdropGo.GetComponent<RectTransform>());
+            menuBackdrop = backdropGo.AddComponent<MainMenuBackdrop>();
+            CreateAmbientLayer(panel, 30);
+            backdropGo.transform.SetAsFirstSibling();
+
+            // Camera viewfinder: corner brackets, version top-left, REC light + feed caption top-right
+            var viewfinder = new GameObject("Viewfinder", typeof(RectTransform));
+            viewfinder.transform.SetParent(panel, false);
+            var viewfinderRect = viewfinder.GetComponent<RectTransform>();
+            viewfinderRect.anchorMin = Vector2.zero;
+            viewfinderRect.anchorMax = Vector2.one;
+            viewfinderRect.offsetMin = new Vector2(28f, 44f);
+            viewfinderRect.offsetMax = new Vector2(-28f, -28f);
+            AddCornerBrackets(viewfinderRect, 54f, 3f, TerminalLine);
+
+            var versionText = MakeText(panel, "VersionText", "TINY RECLAIMERS TD  //  v0.1 EARLY ACCESS", 12, TextAnchor.UpperLeft, TerminalText);
+            Place(versionText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(56f, -50f), new Vector2(600f, 20f));
+            mainVersion = versionText.rectTransform;
+
+            var feedStatus = new GameObject("FeedStatus", typeof(RectTransform));
+            feedStatus.transform.SetParent(panel, false);
+            menuFeedStatus = feedStatus.GetComponent<RectTransform>();
+            Place(menuFeedStatus, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-56f, -50f), new Vector2(720f, 52f));
+
+            var recLabel = MakeText(menuFeedStatus, "RecLabel", "REC", 14, TextAnchor.UpperRight, RecRed);
+            Place(recLabel.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), Vector2.zero, new Vector2(80f, 20f));
+
+            var recDot = new GameObject("RecDot", typeof(RectTransform), typeof(Image));
+            recDot.transform.SetParent(menuFeedStatus, false);
+            Place(recDot.GetComponent<RectTransform>(), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-54f, 0f), new Vector2(14f, 14f));
+            menuRecDot = recDot.GetComponent<Image>();
+            menuRecDot.color = RecRed;
+            menuRecDot.raycastTarget = false;
+
+            menuFeedCaption = MakeText(menuFeedStatus, "FeedCaption", string.Empty, 12, TextAnchor.UpperRight, TerminalText);
+            menuFeedCaption.horizontalOverflow = HorizontalWrapMode.Overflow;
+            Place(menuFeedCaption.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -30f), new Vector2(720f, 20f));
+
+            // Boot line typed above the title (text set by InitializeMenuBackdrop)
+            bootLineText = MakeText(panel, "BootLine", string.Empty, 14, TextAnchor.MiddleLeft, TerminalText);
+            Place(bootLineText.rectTransform, left, left, new Vector2(MenuColumnX, 284f), new Vector2(900f, 24f));
+
+            // ── Title: "TINY" over the extruded "RECLAIMERS" (RGB-split glitch copies behind it), "TD" sticker ──
+            var titleBlockGo = new GameObject("TitleBlock", typeof(RectTransform));
+            titleBlockGo.transform.SetParent(panel, false);
+            titleBlock = titleBlockGo.GetComponent<RectTransform>();
+            Place(titleBlock, left, left, new Vector2(MenuColumnX - 8f, 150f), new Vector2(1300f, 220f));
+
+            var tinyText = MakeText(titleBlock, "TitleTiny", "TINY", 48, TextAnchor.MiddleLeft, HazardYellow);
+            tinyText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            Place(tinyText.rectTransform, left, left, new Vector2(6f, 72f), new Vector2(600f, 60f));
+            var tinyShadow = tinyText.gameObject.AddComponent<Shadow>();
+            tinyShadow.effectColor = new Color(0.25f, 0.17f, 0.02f, 1f);
+            tinyShadow.effectDistance = new Vector2(0f, -5f);
+
+            // The word sits in its own rect so the glitch can jitter its layers around zero
+            var titleWordGo = new GameObject("TitleWord", typeof(RectTransform));
+            titleWordGo.transform.SetParent(titleBlock, false);
+            var titleWord = titleWordGo.GetComponent<RectTransform>();
+            Place(titleWord, left, left, new Vector2(0f, -16f), new Vector2(1200f, 130f));
+
+            Text MakeTitleLayer(string name, Color color)
+            {
+                Text layer = MakeText(titleWord, name, "RECLAIMERS", 100, TextAnchor.MiddleLeft, color);
+                layer.horizontalOverflow = HorizontalWrapMode.Overflow;
+                layer.verticalOverflow = VerticalWrapMode.Overflow;
+                Place(layer.rectTransform, left, left, Vector2.zero, new Vector2(1200f, 130f));
+                return layer;
+            }
+
+            titleGlitchA = MakeTitleLayer("TitleGlitchA", new Color(1f, 0.15f, 0.40f, 0f));
+            titleGlitchB = MakeTitleLayer("TitleGlitchB", new Color(0.20f, 0.90f, 1f, 0f));
+
+            if (titleText == null)
+            {
+                titleText = MakeTitleLayer("TitleText", AccentBright);
+            }
+            else
+            {
+                titleText.transform.SetParent(titleWord, false);
+                Place(titleText.rectTransform, left, left, Vector2.zero, new Vector2(1200f, 130f));
+            }
+
+            if (titleText.GetComponent<Shadow>() == null)
+            {
+                // Chunky extrusion: the second shadow copies the first, giving two dark steps under the face
+                var extrude = titleText.gameObject.AddComponent<Shadow>();
+                extrude.effectColor = new Color(0.03f, 0.22f, 0.11f, 1f);
+                extrude.effectDistance = new Vector2(0f, -7f);
+                var extrudeDeep = titleText.gameObject.AddComponent<Shadow>();
+                extrudeDeep.effectColor = new Color(0.01f, 0.07f, 0.04f, 1f);
+                extrudeDeep.effectDistance = new Vector2(0f, -7f);
+            }
+
+            float titleWidth = titleText.preferredWidth > 1f ? titleText.preferredWidth : 1000f;
+            Sprite hazardStripe = MainMenuBackdrop.LoadWholeTextureSprite("UI/decor/hazard_strip");
+
+            var badge = new GameObject("TitleBadge", typeof(RectTransform), typeof(Image));
+            badge.transform.SetParent(titleBlock, false);
+            var badgeRect = badge.GetComponent<RectTransform>();
+            Place(badgeRect, left, left, new Vector2(titleWidth + 30f, -10f), new Vector2(176f, 108f));
+            badgeRect.localRotation = Quaternion.Euler(0f, 0f, -6f);
+            var badgeImage = badge.GetComponent<Image>();
+            badgeImage.color = HazardYellow;
+            badgeImage.raycastTarget = false;
+            var badgeShadow = badge.AddComponent<Shadow>();
+            badgeShadow.effectColor = new Color(0f, 0f, 0f, 0.55f);
+            badgeShadow.effectDistance = new Vector2(8f, -8f);
+
+            if (hazardStripe != null)
+            {
+                var badgeStripe = new GameObject("Stripe", typeof(RectTransform), typeof(Image));
+                badgeStripe.transform.SetParent(badgeRect, false);
+                StretchBottom(badgeStripe.GetComponent<RectTransform>(), 0f, 0f, 0f, 16f);
+                var badgeStripeImage = badgeStripe.GetComponent<Image>();
+                badgeStripeImage.sprite = hazardStripe;
+                badgeStripeImage.type = Image.Type.Tiled;
+                badgeStripeImage.raycastTarget = false;
+            }
+
+            var badgeText = MakeText(badgeRect, "BadgeText", "TD", 64, TextAnchor.MiddleCenter, HazardInk);
+            badgeText.rectTransform.offsetMin = new Vector2(4f, 16f);
+
+            var divider = new GameObject("HazardDivider", typeof(RectTransform), typeof(Image));
+            divider.transform.SetParent(panel, false);
+            mainDivider = divider.GetComponent<RectTransform>();
+            Place(mainDivider, left, left, new Vector2(MenuColumnX, 24f), new Vector2(576f, 16f));
+            var dividerImage = divider.GetComponent<Image>();
+            dividerImage.raycastTarget = false;
+            if (hazardStripe != null)
+            {
+                dividerImage.sprite = hazardStripe;
+                dividerImage.type = Image.Type.Tiled;
+            }
+            else
+            {
+                dividerImage.color = HazardYellow;
+            }
+
+            // ── Menu column (SETTINGS is row 02, added by AudioSettingsUI in Awake) ──
+            if (startButton == null)
+            {
+                startButton = CreateButtonChild(panel, "StartButton", "PLAY");
+            }
+            Place(startButton.GetComponent<RectTransform>(), left, left, new Vector2(MenuColumnX, -64f), new Vector2(440f, 72f));
+            StyleMainMenuButton(startButton, "PLAY", "01", true);
+
+            if (exitButton == null)
+            {
+                exitButton = CreateButtonChild(panel, "ExitButton", "EXIT");
+            }
+            Place(exitButton.GetComponent<RectTransform>(), left, left, new Vector2(MenuColumnX, -216f), new Vector2(440f, 56f));
+            StyleMainMenuButton(exitButton, "EXIT", "03", false);
+
+            menuHintText = MakeText(panel, "MenuHint", "[ARROWS] SELECT    [ENTER] CONFIRM", 11, TextAnchor.MiddleLeft,
+                new Color(TerminalText.r, TerminalText.g, TerminalText.b, 0.6f));
+            Place(menuHintText.rectTransform, left, left, new Vector2(MenuColumnX, -280f), new Vector2(600f, 20f));
+        }
+
+        /// <summary>
+        /// Terminal menu row: label on the left, index on the right, and a caret plus bracket frame while the row
+        /// is selected. Hovering selects the row, so mouse and keyboard share a single highlight.
+        /// </summary>
+        private void StyleMainMenuButton(Button button, string label, string index, bool primary)
+        {
+            if (button == null) return;
+
+            var image = button.GetComponent<Image>();
+            image.sprite = null;
+            image.type = Image.Type.Simple;
+            image.color = primary ? AccentColor : TerminalButton;
+
+            Text labelText = button.GetComponentInChildren<Text>();
+            if (labelText != null)
+            {
+                labelText.text = label;
+                labelText.font = UIFontHelper.GetPixelFont();
+                labelText.fontSize = primary ? 26 : 18;
+                labelText.fontStyle = FontStyle.Normal;
+                labelText.alignment = TextAnchor.MiddleLeft;
+                labelText.color = primary ? PrimaryLabel : TerminalText;
+                RectTransform labelRect = labelText.rectTransform;
+                labelRect.anchorMin = Vector2.zero;
+                labelRect.anchorMax = Vector2.one;
+                labelRect.offsetMin = new Vector2(MenuButtonLabelInset, 0f);
+                labelRect.offsetMax = new Vector2(-64f, 0f);
+            }
+
+            if (!primary)
+            {
+                var bar = new GameObject("AccentBar", typeof(RectTransform), typeof(Image));
+                bar.transform.SetParent(button.transform, false);
+                var barRect = bar.GetComponent<RectTransform>();
+                barRect.anchorMin = Vector2.zero;
+                barRect.anchorMax = new Vector2(0f, 1f);
+                barRect.pivot = new Vector2(0f, 0.5f);
+                barRect.offsetMin = Vector2.zero;
+                barRect.offsetMax = new Vector2(4f, 0f);
+                var barImage = bar.GetComponent<Image>();
+                barImage.color = TerminalLine;
+                barImage.raycastTarget = false;
+            }
+
+            Text indexText = MakeText(button.transform, "Index", index, 11, TextAnchor.MiddleRight,
+                primary ? new Color(PrimaryLabel.r, PrimaryLabel.g, PrimaryLabel.b, 0.55f) : TerminalLine);
+            indexText.rectTransform.offsetMax = new Vector2(-20f, 0f);
+
+            Text caret = MakeText(button.transform, "Caret", ">", primary ? 26 : 18, TextAnchor.MiddleLeft,
+                new Color(primary ? PrimaryLabel.r : AccentBright.r, primary ? PrimaryLabel.g : AccentBright.g, primary ? PrimaryLabel.b : AccentBright.b, 0f));
+            caret.rectTransform.offsetMin = new Vector2(22f, 0f);
+
+            var frame = new GameObject("SelectFrame", typeof(RectTransform), typeof(CanvasGroup));
+            frame.transform.SetParent(button.transform, false);
+            var frameRect = frame.GetComponent<RectTransform>();
+            StretchFill(frameRect);
+            AddCornerBrackets(frameRect, 14f, 3f, AccentBright, -8f);
+            var frameGroup = frame.GetComponent<CanvasGroup>();
+            frameGroup.alpha = 0f;
+            frameGroup.blocksRaycasts = false;
+            frameGroup.interactable = false;
+
+            MenuButtonFeedback feedback = AttachFeedback(button, null, primary ? AccentBright : AccentColor, 1.03f);
+            feedback.Hovered = () =>
+            {
+                PlayHover();
+                FocusUi(button.gameObject);
+            };
+
+            mainMenuButtons.Add(new MainMenuButtonView
+            {
+                feedback = feedback,
+                selectFrame = frameGroup,
+                caret = caret,
+                label = labelText != null ? labelText.rectTransform : null
+            });
+        }
+
+        /// <summary>Starts the backdrop on the playable stages and writes the boot line. Runs after BuildStageButtons.</summary>
+        private void InitializeMenuBackdrop()
+        {
+            var showcase = new List<StageData>();
+            int online = 0;
+            foreach (StageData stage in availableStages)
+            {
+                bool playableStage = stage != null && stage.stageId != SandboxStageId && IsStagePlayable(stage.stageId);
+                showcase.Add(playableStage ? stage : null); // keep index i = Stage i+1 for the caption
+                if (playableStage) online++;
+            }
+
+            bootLineTarget = $"> TERMINAL READY  //  {online} STAGES ONLINE";
+            if (menuBackdrop != null) menuBackdrop.Initialize(showcase, menuFeedCaption);
+        }
+
+        private void UpdateTitleScreen(float dt, float time)
+        {
+            bool cursorOn = Mathf.Repeat(time, 1f) < 0.5f;
+
+            if (bootLineText != null)
+            {
+                bootLineTime += dt;
+                int visible = Mathf.Clamp(Mathf.FloorToInt(bootLineTime * TickerCharsPerSecond * 0.6f), 0, bootLineTarget.Length);
+                bool typing = visible < bootLineTarget.Length;
+                bootLineText.text = bootLineTarget.Substring(0, visible) + (typing || cursorOn ? "_" : " ");
+            }
+
+            if (menuRecDot != null) menuRecDot.enabled = Mathf.Repeat(time, 1.4f) < 0.9f;
+
+            UpdateTitleGlitch(dt);
+
+            float k = 1f - Mathf.Exp(-14f * dt);
+            foreach (MainMenuButtonView view in mainMenuButtons)
+            {
+                if (view.feedback == null) continue;
+
+                view.hot = Mathf.Lerp(view.hot, view.feedback.IsHot ? 1f : 0f, k);
+                view.selectFrame.alpha = view.hot;
+
+                Color caretColor = view.caret.color;
+                caretColor.a = view.hot * (cursorOn ? 1f : 0.35f);
+                view.caret.color = caretColor;
+
+                if (view.label != null) view.label.offsetMin = new Vector2(MenuButtonLabelInset + 10f * view.hot, 0f);
+            }
+        }
+
+        /// <summary>Every few seconds the title tears for a moment: RGB-split copies and a sideways jitter.</summary>
+        private void UpdateTitleGlitch(float dt)
+        {
+            if (titleText == null || titleGlitchA == null || titleGlitchB == null) return;
+
+            if (titleGlitchRemaining <= 0f)
+            {
+                titleGlitchTimer -= dt;
+                if (titleGlitchTimer > 0f) return;
+                titleGlitchRemaining = Random.Range(0.12f, 0.3f);
+            }
+
+            titleGlitchRemaining -= dt;
+            bool on = titleGlitchRemaining > 0f;
+            if (!on) titleGlitchTimer = Random.Range(3.5f, 7.5f);
+
+            SetGlitchLayer(titleGlitchA, on, new Vector2(Random.Range(-10f, -4f), Random.Range(-3f, 3f)));
+            SetGlitchLayer(titleGlitchB, on, new Vector2(Random.Range(4f, 10f), Random.Range(-3f, 3f)));
+            titleText.rectTransform.anchoredPosition = on ? new Vector2(Random.Range(-4f, 4f), 0f) : Vector2.zero;
+        }
+
+        private static void SetGlitchLayer(Text layer, bool on, Vector2 offset)
+        {
+            Color c = layer.color;
+            c.a = on ? 0.8f : 0f;
+            layer.color = c;
+            layer.rectTransform.anchoredPosition = on ? offset : Vector2.zero;
+        }
+
+        // ─────────────────────────────────────────────────────
         //  Panel navigation
         // ─────────────────────────────────────────────────────
 
@@ -685,6 +974,7 @@ namespace TrashTD.UI
             SetPanelVisible(stageSelectionPanel, false, instant);
             SetPanelVisible(stageDetailsPanel, false, true, stageDetailsModal);
 
+            bootLineTime = -0.35f; // let the entrance start before typing
             PlayEntrance(mainEntrance, ref mainEntranceRoutine);
             FocusUi(startButton != null ? startButton.gameObject : null);
         }
@@ -1106,35 +1396,84 @@ namespace TrashTD.UI
             if (message == stageTickerTarget) return;
             stageTickerTarget = message;
             stageTickerTime = 0f;
-            FitStageTicker(message);
+            stageTickerScrollOffset = 0f;
+            stageTickerHoldTime = 0f;
+            PrepareStageTickerScroll(message);
         }
 
-        private const float TickerMinWidth = 820f;
-        private const float TickerMaxWidth = 1360f; // stays clear of the Back / Sandbox buttons in the bottom corners
-        private const float TickerPadding = 56f;
+        private const float TickerWidth = 820f;
+        private const float TickerTextInset = 20f;
+        private const float TickerViewportWidth = TickerWidth - 2f * TickerTextInset;
         private const int TickerFontSize = 15;
+        private const string TickerLoopGap = "          ";
+        private const float TickerScrollSpeed = 70f;  // canvas units per second
+        private const float TickerScrollHold = 1.2f;  // pause after typing before the marquee starts
 
         /// <summary>
-        /// Sizes the ticker plate to the whole message (measured before it is typed out), shrinking the font
-        /// if the widest plate is still too narrow, so the text never runs past the box.
+        /// Decides whether the message fits the fixed ticker window. If it doesn't, builds the looping
+        /// marquee text (message + gap + message) and measures one loop period, so the scroll can wrap seamlessly.
         /// </summary>
-        private void FitStageTicker(string message)
+        private void PrepareStageTickerScroll(string message)
         {
-            if (stageTickerText == null || stageTickerPlate == null) return;
+            if (stageTickerText == null) return;
 
-            string measured = message + "_";
-            float width = 0f;
-            for (int fontSize = TickerFontSize; fontSize >= 10; fontSize--)
+            float messageWidth = MeasureStageTicker(message + "_");
+            stageTickerScrolls = messageWidth > TickerViewportWidth;
+            if (!stageTickerScrolls)
             {
-                stageTickerText.fontSize = fontSize;
-                TextGenerationSettings settings = stageTickerText.GetGenerationSettings(Vector2.zero);
-                width = stageTickerText.cachedTextGeneratorForLayout.GetPreferredWidth(measured, settings) / stageTickerText.pixelsPerUnit;
-                if (width + TickerPadding <= TickerMaxWidth) break;
+                stageTickerText.rectTransform.sizeDelta = new Vector2(TickerViewportWidth, 0f);
+                return;
             }
 
-            stageTickerPlate.sizeDelta = new Vector2(
-                Mathf.Clamp(width + TickerPadding, TickerMinWidth, TickerMaxWidth),
-                stageTickerPlate.sizeDelta.y);
+            // Period = distance from the first copy's start to the second's; measured as a difference so
+            // it doesn't depend on whether trailing spaces count toward preferred width.
+            stageTickerLoopText = message + TickerLoopGap + message;
+            float loopWidth = MeasureStageTicker(stageTickerLoopText);
+            stageTickerLoopPeriod = loopWidth - MeasureStageTicker(message);
+
+            // RectMask2D culls by the text's rect, so it must cover the whole overflowing line
+            stageTickerText.rectTransform.sizeDelta = new Vector2(Mathf.Max(loopWidth, messageWidth), 0f);
+        }
+
+        private float MeasureStageTicker(string text)
+        {
+            TextGenerationSettings settings = stageTickerText.GetGenerationSettings(Vector2.zero);
+            return stageTickerText.cachedTextGeneratorForLayout.GetPreferredWidth(text, settings) / stageTickerText.pixelsPerUnit;
+        }
+
+        /// <summary>
+        /// Types the message out; if it's too long for the window, the line slides left to keep the cursor in view,
+        /// holds briefly, then loops as a marquee from wherever typing left it.
+        /// </summary>
+        private void UpdateStageTicker(float dt, bool cursorOn)
+        {
+            stageTickerTime += dt;
+            int visible = Mathf.Min(stageTickerTarget.Length, Mathf.FloorToInt(stageTickerTime * TickerCharsPerSecond));
+            bool typing = visible < stageTickerTarget.Length;
+
+            if (typing)
+            {
+                stageTickerText.text = stageTickerTarget.Substring(0, visible) + "_";
+                stageTickerScrollOffset = stageTickerScrolls
+                    ? Mathf.Max(0f, MeasureStageTicker(stageTickerText.text) - TickerViewportWidth)
+                    : 0f;
+            }
+            else if (stageTickerScrolls)
+            {
+                stageTickerText.text = stageTickerLoopText;
+                stageTickerHoldTime += dt;
+                if (stageTickerHoldTime >= TickerScrollHold && stageTickerLoopPeriod > 0f)
+                {
+                    stageTickerScrollOffset = Mathf.Repeat(stageTickerScrollOffset + TickerScrollSpeed * dt, stageTickerLoopPeriod);
+                }
+            }
+            else
+            {
+                stageTickerText.text = stageTickerTarget + (cursorOn ? "_" : " ");
+                stageTickerScrollOffset = 0f;
+            }
+
+            stageTickerText.rectTransform.anchoredPosition = new Vector2(-Mathf.Round(stageTickerScrollOffset), 0f);
         }
 
         private void SelectStage(int stageIndex)
@@ -1647,8 +1986,7 @@ namespace TrashTD.UI
 
         private void AttachMenuFeedback()
         {
-            AttachFeedback(startButton, null, AccentBright, 1.05f);
-            AttachFeedback(exitButton, null, TextDim, 1.04f);
+            // PLAY / EXIT get theirs from StyleMainMenuButton
             MenuButtonFeedback backFeedback = AttachFeedback(backButton, null, TextDim, 1.04f);
             if (backFeedback != null) backFeedback.Clicked = null;
             MenuButtonFeedback detailsBackFeedback = AttachFeedback(stageDetailsBackButton, null, TextDim, 1.04f);
@@ -1770,14 +2108,16 @@ namespace TrashTD.UI
             detailsEntrance.Clear();
 
             // Main menu
-            RegisterEntrance(mainEntrance, mainWatermark, new Vector2(80f, 0f), 0.10f);
-            RegisterEntrance(mainEntrance, titleText, new Vector2(-70f, 0f), 0.05f);
+            RegisterEntrance(mainEntrance, bootLineText, Vector2.zero, 0.00f);
+            RegisterEntrance(mainEntrance, titleBlock != null ? (Component)titleBlock : titleText, new Vector2(-70f, 0f), 0.05f);
             RegisterEntrance(mainEntrance, subtitleText, new Vector2(-50f, 0f), 0.12f);
-            RegisterEntrance(mainEntrance, mainDivider, new Vector2(-50f, 0f), 0.18f);
-            RegisterEntrance(mainEntrance, startButton, new Vector2(-70f, 0f), 0.24f);
-            RegisterEntrance(mainEntrance, audioSettingsUI != null ? audioSettingsUI.SettingsButton : null, new Vector2(-70f, 0f), 0.32f);
-            RegisterEntrance(mainEntrance, exitButton, new Vector2(-70f, 0f), 0.40f);
-            RegisterEntrance(mainEntrance, mainVersion, Vector2.zero, 0.45f);
+            RegisterEntrance(mainEntrance, mainDivider, new Vector2(-50f, 0f), 0.16f);
+            RegisterEntrance(mainEntrance, startButton, new Vector2(-70f, 0f), 0.22f);
+            RegisterEntrance(mainEntrance, audioSettingsUI != null ? audioSettingsUI.SettingsButton : null, new Vector2(-70f, 0f), 0.28f);
+            RegisterEntrance(mainEntrance, exitButton, new Vector2(-70f, 0f), 0.34f);
+            RegisterEntrance(mainEntrance, menuHintText, Vector2.zero, 0.42f);
+            RegisterEntrance(mainEntrance, mainVersion, new Vector2(0f, 20f), 0.30f);
+            RegisterEntrance(mainEntrance, menuFeedStatus, new Vector2(0f, 20f), 0.30f);
 
             // Stage selector header (cards were registered in BuildStageButtons)
             RegisterEntrance(stageEntrance, stageTitlePlate, new Vector2(-60f, 0f), 0.00f);

@@ -3,7 +3,7 @@ using UnityEngine;
 namespace TrashTD.Enemies
 {
     [RequireComponent(typeof(SpriteRenderer))]
-    public sealed class GruntSpriteAnimation : MonoBehaviour
+    public sealed class GruntSpriteAnimation : MonoBehaviour, IEnemySpriteFrames
     {
         [SerializeField] private Sprite[] frames;
         [SerializeField] private float frameDuration = 0.3f;
@@ -11,6 +11,9 @@ namespace TrashTD.Enemies
         private SpriteRenderer spriteRenderer;
         private float frameTimer;
         private int currentFrame;
+
+        public Sprite[] Frames => frames;
+        public float FrameDuration => frameDuration;
 
         private void Awake()
         {
