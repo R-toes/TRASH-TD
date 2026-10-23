@@ -24,7 +24,7 @@ namespace TrashTD.Operators
         {
             if (gridManager == null)
             {
-                gridManager = FindFirstObjectByType<GridManager>();
+                gridManager = FindAnyObjectByType<GridManager>();
             }
             return gridManager;
         }

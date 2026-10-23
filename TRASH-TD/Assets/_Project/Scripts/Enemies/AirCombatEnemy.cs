@@ -180,7 +180,7 @@ namespace TrashTD.Enemies
         {
             get
             {
-                if (cachedGrid == null) cachedGrid = FindFirstObjectByType<GridManager>();
+                if (cachedGrid == null) cachedGrid = FindAnyObjectByType<GridManager>();
                 return cachedGrid;
             }
         }

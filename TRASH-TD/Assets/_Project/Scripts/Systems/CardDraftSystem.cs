@@ -90,7 +90,7 @@ namespace TrashTD.Systems
         public IReadOnlyList<DraftCard> CurrentOfferedCards => currentOfferedCards;
         public int CurrentRound => currentRound;
         public int RerollsRemaining => rerollsRemaining;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
         public IReadOnlyList<OperatorData> AvailableOperatorPool => availableOperatorPool;
 #endif
 
@@ -148,7 +148,7 @@ namespace TrashTD.Systems
             }
         }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
         public bool SetDeveloperOffer(OperatorData operatorData)
         {
             if (operatorData == null || availableOperatorPool == null ||

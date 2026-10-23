@@ -133,6 +133,12 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 | Pathfinding | Custom A* implementation |
 | 2D packages | Tilemap, Tilemap Extras, 2D Animation, SpriteShape, Aseprite |
 
+**Keep the Console clean** (deprecated Unity 6.6 APIs warn on every compile):
+- Use `FindAnyObjectByType<T>()`, not `FindFirstObjectByType<T>()` (deprecated).
+- Use the `FindObjectsByType<T>()` / `FindObjectsByType<T>(FindObjectsInactive)` overloads without a `FindObjectsSortMode`.
+- Use `#if UNITY_EDITOR || DEBUG`, not `DEVELOPMENT_BUILD` (deprecated); `Debug.isDebugBuild` at runtime.
+- A camera's target RenderTexture needs a depth buffer (e.g. `new RenderTexture(w, h, 24, ...)`). Without one, URP's render graph logs a warning every frame (`CrtScreen` used to flood the Console this way).
+
 ---
 
 ## 7. Current Implementation Notes (as of 2026-10-22)

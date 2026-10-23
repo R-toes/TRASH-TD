@@ -73,9 +73,9 @@ namespace TrashTD.Core.GameLoop
             StageData stage,
             Sprite[] customSprites = null)
         {
-            gridManager = grid != null ? grid : FindFirstObjectByType<GridManager>();
-            waveManager = wave != null ? wave : FindFirstObjectByType<WaveManager>();
-            operatorManager = operators != null ? operators : FindFirstObjectByType<OperatorManager>();
+            gridManager = grid != null ? grid : FindAnyObjectByType<GridManager>();
+            waveManager = wave != null ? wave : FindAnyObjectByType<WaveManager>();
+            operatorManager = operators != null ? operators : FindAnyObjectByType<OperatorManager>();
             stageData = stage;
 
             if (customSprites != null && customSprites.Length > 0)

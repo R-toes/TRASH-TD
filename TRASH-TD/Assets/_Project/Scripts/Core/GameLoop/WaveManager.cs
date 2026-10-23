@@ -51,8 +51,8 @@ namespace TrashTD.Core.GameLoop
 
         private void Awake()
         {
-            if (gridManager == null) gridManager = FindFirstObjectByType<GridManager>();
-            if (enemyManager == null) enemyManager = FindFirstObjectByType<EnemyManager>();
+            if (gridManager == null) gridManager = FindAnyObjectByType<GridManager>();
+            if (enemyManager == null) enemyManager = FindAnyObjectByType<EnemyManager>();
         }
 
         /// <summary>
@@ -60,8 +60,8 @@ namespace TrashTD.Core.GameLoop
         /// </summary>
         public void Initialize(StageData stageData, StageDifficulty difficulty)
         {
-            if (gridManager == null) gridManager = FindFirstObjectByType<GridManager>();
-            if (enemyManager == null) enemyManager = FindFirstObjectByType<EnemyManager>();
+            if (gridManager == null) gridManager = FindAnyObjectByType<GridManager>();
+            if (enemyManager == null) enemyManager = FindAnyObjectByType<EnemyManager>();
             if (gridManager == null || enemyManager == null)
             {
                 Debug.LogError("WaveManager: Cannot initialize without GridManager and EnemyManager.");
@@ -208,7 +208,7 @@ namespace TrashTD.Core.GameLoop
 
             IsWaveInProgress = false;
             if (enemyManager == null)
-                enemyManager = EnemyManager.Instance ?? FindFirstObjectByType<EnemyManager>();
+                enemyManager = EnemyManager.Instance ?? FindAnyObjectByType<EnemyManager>();
             if (enemyManager != null)
                 enemyManager.ClearAllForSandbox();
         }
@@ -230,7 +230,7 @@ namespace TrashTD.Core.GameLoop
         private bool TrySpawnSandboxEnemy(EnemyData enemyData)
         {
             if (enemyManager == null)
-                enemyManager = FindFirstObjectByType<EnemyManager>();
+                enemyManager = FindAnyObjectByType<EnemyManager>();
             if (enemyManager == null)
             {
                 Debug.LogError("WaveManager: Cannot spawn sandbox enemy without an EnemyManager.");

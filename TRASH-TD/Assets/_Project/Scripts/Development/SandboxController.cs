@@ -58,7 +58,7 @@ namespace TrashTD.Development
             waveManager = stage.waveManager;
             gameManager = stage.gameManager;
             playerDeck = stage.playerDeck;
-            gameplayHud = FindFirstObjectByType<GameplayHUDUI>();
+            gameplayHud = FindAnyObjectByType<GameplayHUDUI>();
             gameplayHud?.RegisterSandboxController(this);
             LoadEnemyData();
             LoadOperatorData();

@@ -268,16 +268,16 @@ namespace TrashTD.UI
 
         private void Awake()
         {
-            draftSystem = FindFirstObjectByType<CardDraftSystem>();
-            draftOverlayUI = FindFirstObjectByType<CardDraftOverlayUI>();
-            waveManager = FindFirstObjectByType<WaveManager>();
-            enemyManager = FindFirstObjectByType<EnemyManager>();
-            gameManager = FindFirstObjectByType<GameManager>();
-            playerDeck = FindFirstObjectByType<PlayerDeck>();
-            gridManager = FindFirstObjectByType<GridManager>();
-            operatorManager = FindFirstObjectByType<OperatorManager>();
-            stageBootstrapper = FindFirstObjectByType<StageBootstrapper>();
-            sandboxController = FindFirstObjectByType<TrashTD.Development.SandboxController>();
+            draftSystem = FindAnyObjectByType<CardDraftSystem>();
+            draftOverlayUI = FindAnyObjectByType<CardDraftOverlayUI>();
+            waveManager = FindAnyObjectByType<WaveManager>();
+            enemyManager = FindAnyObjectByType<EnemyManager>();
+            gameManager = FindAnyObjectByType<GameManager>();
+            playerDeck = FindAnyObjectByType<PlayerDeck>();
+            gridManager = FindAnyObjectByType<GridManager>();
+            operatorManager = FindAnyObjectByType<OperatorManager>();
+            stageBootstrapper = FindAnyObjectByType<StageBootstrapper>();
+            sandboxController = FindAnyObjectByType<TrashTD.Development.SandboxController>();
 
             sfxSource = gameObject.AddComponent<AudioSource>();
             sfxSource.playOnAwake = false;
@@ -1669,8 +1669,8 @@ namespace TrashTD.UI
 
         private void EnsurePathPreviewOverlay()
         {
-            if (stageBootstrapper == null) stageBootstrapper = FindFirstObjectByType<StageBootstrapper>();
-            if (gridManager == null) gridManager = FindFirstObjectByType<GridManager>();
+            if (stageBootstrapper == null) stageBootstrapper = FindAnyObjectByType<StageBootstrapper>();
+            if (gridManager == null) gridManager = FindAnyObjectByType<GridManager>();
 
             StageData currentStage = stageBootstrapper != null && stageBootstrapper.stageData != null
                 ? stageBootstrapper.stageData
@@ -2516,7 +2516,7 @@ namespace TrashTD.UI
                 Sprite[] itemSprites = stage.fallingItemSprites;
                 if (itemSprites == null || itemSprites.Length == 0)
                 {
-                    var hazard = FindFirstObjectByType<TrashTD.Core.GameLoop.Stage2FallingItemsHazard>();
+                    var hazard = FindAnyObjectByType<TrashTD.Core.GameLoop.Stage2FallingItemsHazard>();
                     if (hazard != null) itemSprites = hazard.ItemSprites;
                 }
                 if (itemSprites == null || itemSprites.Length == 0)
@@ -2592,7 +2592,7 @@ namespace TrashTD.UI
                 Sprite[] vehicleSprites = stage.trafficVehicleSprites;
                 if (vehicleSprites == null || vehicleSprites.Length == 0)
                 {
-                    var encounter = FindFirstObjectByType<TrashTD.Core.GameLoop.Stage5CarEncounter>();
+                    var encounter = FindAnyObjectByType<TrashTD.Core.GameLoop.Stage5CarEncounter>();
                     if (encounter != null) vehicleSprites = encounter.VehicleSprites;
                 }
                 if (vehicleSprites == null || vehicleSprites.Length == 0)
@@ -3168,7 +3168,7 @@ namespace TrashTD.UI
             if (Time.frameCount == lastEscapeHandledFrame) return;
             lastEscapeHandledFrame = Time.frameCount;
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
             if (draftOverlayUI != null && draftOverlayUI.IsDeveloperPickerOpen)
             {
                 draftOverlayUI.CloseDeveloperPicker();
@@ -4275,7 +4275,7 @@ namespace TrashTD.UI
 
         private static void EnsureEventSystem()
         {
-            var eventSystem = FindFirstObjectByType<EventSystem>();
+            var eventSystem = FindAnyObjectByType<EventSystem>();
             if (eventSystem == null)
             {
                 var eventSystemObject = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));

@@ -70,7 +70,7 @@ namespace TrashTD.Operators
                 return null;
             }
 
-            GridManager gridManager = FindFirstObjectByType<GridManager>();
+            GridManager gridManager = FindAnyObjectByType<GridManager>();
             if (gridManager == null)
             {
                 return null;

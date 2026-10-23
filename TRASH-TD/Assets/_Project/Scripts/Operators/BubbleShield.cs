@@ -168,7 +168,7 @@ namespace TrashTD.Operators
         {
             if (recipient == null) return;
 
-            GridManager gridManager = FindFirstObjectByType<GridManager>();
+            GridManager gridManager = FindAnyObjectByType<GridManager>();
             GridCell currentCell = recipient.DeployedCell;
             GridCell frontCell = null;
 

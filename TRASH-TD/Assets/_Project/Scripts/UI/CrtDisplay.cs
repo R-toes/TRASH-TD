@@ -91,7 +91,7 @@ namespace TrashTD.UI
         /// <summary>First root canvas that game UI can be parented to (never the CRT's own canvas).</summary>
         public static Canvas FindGameCanvas()
         {
-            foreach (Canvas canvas in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+            foreach (Canvas canvas in FindObjectsByType<Canvas>())
             {
                 if (canvas.isRootCanvas && !IsDisplayCanvas(canvas) && canvas.renderMode != RenderMode.WorldSpace)
                     return canvas;
@@ -267,7 +267,7 @@ namespace TrashTD.UI
         /// </summary>
         private void ConvertCanvases()
         {
-            Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+            Canvas[] canvases = FindObjectsByType<Canvas>();
             foreach (Canvas canvas in canvases)
             {
                 if (canvas == presentCanvas || !canvas.isRootCanvas) continue;

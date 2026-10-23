@@ -79,7 +79,7 @@ namespace TrashTD.Operators
 
             if (grid == null)
             {
-                grid = FindFirstObjectByType<GridManager>();
+                grid = FindAnyObjectByType<GridManager>();
             }
 
             if (grid != null)
@@ -731,7 +731,7 @@ namespace TrashTD.Operators
             TrashTD.Systems.CardDraftSystem draftSystem =
                 TrashTD.Systems.CardDraftSystem.Instance != null
                     ? TrashTD.Systems.CardDraftSystem.Instance
-                    : FindFirstObjectByType<TrashTD.Systems.CardDraftSystem>();
+                    : FindAnyObjectByType<TrashTD.Systems.CardDraftSystem>();
             if (draftSystem == null)
             {
                 Debug.LogError($"{data.operatorName} died, but no CardDraftSystem is active to resolve its death skill.");

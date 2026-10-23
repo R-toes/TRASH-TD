@@ -105,7 +105,7 @@ namespace TrashTD.Operators
             if (OperatorManager.Instance == null || deployedCell == null || data == null || data.rangePattern == null)
                 return null;
 
-            GridManager gridManager = FindFirstObjectByType<GridManager>();
+            GridManager gridManager = FindAnyObjectByType<GridManager>();
             if (gridManager == null) return null;
 
             GridCell[] rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);

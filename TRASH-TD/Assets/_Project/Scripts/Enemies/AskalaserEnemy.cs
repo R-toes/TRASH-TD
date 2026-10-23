@@ -75,7 +75,7 @@ namespace TrashTD.Enemies
             get
             {
                 if (cachedGridManager == null)
-                    cachedGridManager = FindFirstObjectByType<GridManager>();
+                    cachedGridManager = FindAnyObjectByType<GridManager>();
                 return cachedGridManager;
             }
             set => cachedGridManager = value;
@@ -184,7 +184,7 @@ namespace TrashTD.Enemies
             if (OperatorManager.Instance != null)
                 return OperatorManager.Instance.DeployedOperators;
 
-            return FindObjectsByType<OperatorBase>(FindObjectsSortMode.None);
+            return FindObjectsByType<OperatorBase>();
         }
 
         public OperatorBase FindState2Target()

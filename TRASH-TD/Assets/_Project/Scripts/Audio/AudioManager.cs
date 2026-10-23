@@ -471,11 +471,11 @@ namespace TrashTD.Audio
 
         private void SubscribeToGameplayEvents()
         {
-            enemyManager = FindFirstObjectByType<EnemyManager>();
-            operatorManager = FindFirstObjectByType<OperatorManager>();
-            gameManager = FindFirstObjectByType<GameManager>();
-            waveManager = FindFirstObjectByType<WaveManager>();
-            upgradeSystem = FindFirstObjectByType<RarityUpgradeSystem>();
+            enemyManager = FindAnyObjectByType<EnemyManager>();
+            operatorManager = FindAnyObjectByType<OperatorManager>();
+            gameManager = FindAnyObjectByType<GameManager>();
+            waveManager = FindAnyObjectByType<WaveManager>();
+            upgradeSystem = FindAnyObjectByType<RarityUpgradeSystem>();
 
             if (enemyManager != null) enemyManager.OnEnemyDied += HandleEnemyDied;
             if (operatorManager != null)

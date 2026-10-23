@@ -24,7 +24,7 @@ namespace TrashTD.Operators
             if (target == null || !isDeployed || EnemyManager.Instance == null)
                 return;
 
-            GridManager gridManager = FindFirstObjectByType<GridManager>();
+            GridManager gridManager = FindAnyObjectByType<GridManager>();
             if (gridManager == null)
                 return;
 

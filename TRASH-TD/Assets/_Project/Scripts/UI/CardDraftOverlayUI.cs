@@ -207,7 +207,7 @@ namespace TrashTD.UI
         private MenuButtonFeedback rerollFeedback;
         private Button skipButton;
         private MenuButtonFeedback skipFeedback;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
         private Button developerPickButton;
         private GameObject developerPickerRoot;
         private Transform developerPickerList;
@@ -242,8 +242,7 @@ namespace TrashTD.UI
         public static void HideAllForMenuTransition()
         {
             CardDraftOverlayUI[] overlays = FindObjectsByType<CardDraftOverlayUI>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None);
+                FindObjectsInactive.Include);
 
             foreach (CardDraftOverlayUI overlay in overlays)
             {
@@ -257,10 +256,10 @@ namespace TrashTD.UI
 
         private void Awake()
         {
-            draftSystem = FindFirstObjectByType<CardDraftSystem>();
-            playerDeck = FindFirstObjectByType<PlayerDeck>();
-            gameManager = FindFirstObjectByType<GameManager>();
-            gameplayHudUI = FindFirstObjectByType<GameplayHUDUI>();
+            draftSystem = FindAnyObjectByType<CardDraftSystem>();
+            playerDeck = FindAnyObjectByType<PlayerDeck>();
+            gameManager = FindAnyObjectByType<GameManager>();
+            gameplayHudUI = FindAnyObjectByType<GameplayHUDUI>();
             if (gameplayHudUI != null)
                 gameplayHudUI.EnvironmentBriefingDismissed += HandleEnvironmentBriefingDismissed;
 
@@ -359,7 +358,7 @@ namespace TrashTD.UI
             SceneManager.activeSceneChanged -= HandleActiveSceneChanged;
         }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
         public bool IsDeveloperPickerOpen => developerPickerRoot != null && developerPickerRoot.activeSelf;
         public void CloseDeveloperPicker()
         {
@@ -374,7 +373,7 @@ namespace TrashTD.UI
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             if (keyboard == null) return;
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
             if (developerPickerRoot != null && developerPickerRoot.activeSelf)
             {
                 if (keyboard.escapeKey.wasPressedThisFrame)
@@ -472,7 +471,7 @@ namespace TrashTD.UI
             pickConfirmed = false;
             ResetMinimized();
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
             if (developerPickerRoot != null) developerPickerRoot.SetActive(false);
 #endif
             selectedCardIndex = -1;
@@ -1419,7 +1418,7 @@ namespace TrashTD.UI
         {
             if (waveInfoText != null && gameManager != null)
             {
-                var waveManager = FindFirstObjectByType<WaveManager>();
+                var waveManager = FindAnyObjectByType<WaveManager>();
                 if (waveManager != null)
                 {
                     int nextWave = gameManager.GetCurrentWaveIndex() + 1;
@@ -1795,7 +1794,7 @@ namespace TrashTD.UI
             var buttonsRect = buttonsContainer.GetComponent<RectTransform>();
             buttonsRect.anchorMin = new Vector2(0.5f, 0f);
             buttonsRect.anchorMax = new Vector2(0.5f, 0f);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
             buttonsRect.sizeDelta = new Vector2(640f, 64f);
 #else
             buttonsRect.sizeDelta = new Vector2(420f, 64f);
@@ -1823,7 +1822,7 @@ namespace TrashTD.UI
             skipButton.onClick.AddListener(OnSkipClicked);
             skipFeedback = AttachFeedback(skipButton, Color.white, 1.05f);
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
             developerPickButton = MakeButton(overlayRoot.transform, "DeveloperPickButton", "D",
                 new Vector2(48f, 48f), GameplayHUDUI.ButtonContainerType.Secondary);
             PositionRT(developerPickButton, new Vector2(28f, -32f), new Vector2(0f, 1f), new Vector2(48f, 48f));
@@ -1881,7 +1880,7 @@ namespace TrashTD.UI
         private void BuildMinimizeControls(Transform canvasRoot, Transform buttonsContainer)
         {
             Button minimize;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
             minimize = MakeButton(buttonsContainer, "MinimizeDraftButton", "MINIMIZE",
                 new Vector2(200f, 60f), GameplayHUDUI.ButtonContainerType.Dark, "icon_minus");
 #else
@@ -1910,7 +1909,7 @@ namespace TrashTD.UI
             SetMinimized(true);
         }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
         private void BuildDeveloperPicker()
         {
             developerPickerRoot = new GameObject(
@@ -2060,7 +2059,7 @@ namespace TrashTD.UI
             developerPickerRoot.SetActive(true);
         }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
         public void OpenDeveloperOperatorPicker()
         {
             ShowDeveloperPicker();

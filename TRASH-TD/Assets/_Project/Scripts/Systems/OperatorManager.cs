@@ -51,7 +51,7 @@ namespace TrashTD.Systems
 
             if (gridManager == null)
             {
-                gridManager = FindFirstObjectByType<GridManager>();
+                gridManager = FindAnyObjectByType<GridManager>();
             }
 
             SubscribeToGameManager();

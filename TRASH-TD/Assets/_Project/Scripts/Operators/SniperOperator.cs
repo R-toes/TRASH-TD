@@ -42,7 +42,7 @@ namespace TrashTD.Operators
             if (EnemyManager.Instance == null || deployedCell == null || data == null || data.rangePattern == null)
                 return null;
 
-            var gridManager = FindFirstObjectByType<GridManager>();
+            var gridManager = FindAnyObjectByType<GridManager>();
             if (gridManager == null) return null;
 
             var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);

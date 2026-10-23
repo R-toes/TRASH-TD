@@ -188,7 +188,7 @@ namespace TrashTD.Operators
             // 2. Check Stag-ger's own tile and forward range pattern tiles
             if (deployedCell != null)
             {
-                GridManager gridManager = FindFirstObjectByType<GridManager>();
+                GridManager gridManager = FindAnyObjectByType<GridManager>();
                 if (gridManager != null)
                 {
                     List<GridCell> reachCells = new List<GridCell>();
@@ -273,7 +273,7 @@ namespace TrashTD.Operators
                 return null;
             }
 
-            GridManager gridManager = FindFirstObjectByType<GridManager>();
+            GridManager gridManager = FindAnyObjectByType<GridManager>();
             if (gridManager == null) return null;
 
             GridCell[] rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);

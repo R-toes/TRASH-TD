@@ -107,7 +107,7 @@ namespace TrashTD.Tests
             Assert.AreEqual(operatorData.baseRarity, offer[0].rarity);
         }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
         [Test]
         public void SetDeveloperOffer_ReplacesOfferWithChosenOperator()
         {

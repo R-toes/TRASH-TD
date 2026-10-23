@@ -39,7 +39,7 @@ namespace TrashTD.UI
 
         private void Awake()
         {
-            if (draftSystem == null) draftSystem = FindFirstObjectByType<CardDraftSystem>();
+            if (draftSystem == null) draftSystem = FindAnyObjectByType<CardDraftSystem>();
 
             sfxSource = gameObject.AddComponent<AudioSource>();
             sfxSource.playOnAwake = false;

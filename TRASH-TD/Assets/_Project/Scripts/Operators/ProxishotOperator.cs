@@ -20,7 +20,6 @@ namespace TrashTD.Operators
         private const int PelletCount = 9;
 
         private float camouflageTimer;
-        private SpriteRenderer spriteRenderer;
 
         public override bool IgnoresMissMechanic => true;
 
@@ -128,7 +127,7 @@ namespace TrashTD.Operators
                 deployedCell == null || data == null || data.rangePattern == null)
                 return;
 
-            var gridManager = FindFirstObjectByType<GridManager>();
+            var gridManager = FindAnyObjectByType<GridManager>();
             if (gridManager == null) return;
 
             var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);

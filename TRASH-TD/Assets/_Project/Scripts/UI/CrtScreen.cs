@@ -435,7 +435,9 @@ namespace TrashTD.UI
                 Destroy(renderTexture);
             }
 
-            renderTexture = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32)
+            // URP's render graph needs a depth buffer on a camera's target texture; without one it logs a warning
+            // every frame. 24 bits, like CrtDisplay.
+            renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32)
             {
                 name = "CRT_" + name,
                 filterMode = FilterMode.Bilinear,

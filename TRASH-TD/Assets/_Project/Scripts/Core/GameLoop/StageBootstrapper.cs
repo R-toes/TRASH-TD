@@ -145,22 +145,22 @@ namespace TrashTD.Core.GameLoop
 
         private void Awake()
         {
-            if (gridManager == null) gridManager = FindFirstObjectByType<GridManager>() ?? gameObject.AddComponent<GridManager>();
-            if (enemyManager == null) enemyManager = FindFirstObjectByType<EnemyManager>() ?? gameObject.AddComponent<EnemyManager>();
-            if (gameManager == null) gameManager = FindFirstObjectByType<GameManager>() ?? gameObject.AddComponent<GameManager>();
-            if (waveManager == null) waveManager = FindFirstObjectByType<WaveManager>() ?? gameObject.AddComponent<WaveManager>();
-            if (operatorManager == null) operatorManager = FindFirstObjectByType<OperatorManager>() ?? gameObject.AddComponent<OperatorManager>();
-            if (cardDraftSystem == null) cardDraftSystem = FindFirstObjectByType<CardDraftSystem>() ?? gameObject.AddComponent<CardDraftSystem>();
-            if (playerDeck == null) playerDeck = FindFirstObjectByType<PlayerDeck>() ?? gameObject.AddComponent<PlayerDeck>();
-            if (FindFirstObjectByType<RarityUpgradeSystem>() == null) gameObject.AddComponent<RarityUpgradeSystem>();
-            if (FindFirstObjectByType<GameplayHUDUI>() == null) gameObject.AddComponent<GameplayHUDUI>();
-            if (FindFirstObjectByType<CardDraftOverlayUI>() == null) gameObject.AddComponent<CardDraftOverlayUI>();
-            if (FindFirstObjectByType<StageResultsUI>() == null) gameObject.AddComponent<StageResultsUI>();
+            if (gridManager == null) gridManager = FindAnyObjectByType<GridManager>() ?? gameObject.AddComponent<GridManager>();
+            if (enemyManager == null) enemyManager = FindAnyObjectByType<EnemyManager>() ?? gameObject.AddComponent<EnemyManager>();
+            if (gameManager == null) gameManager = FindAnyObjectByType<GameManager>() ?? gameObject.AddComponent<GameManager>();
+            if (waveManager == null) waveManager = FindAnyObjectByType<WaveManager>() ?? gameObject.AddComponent<WaveManager>();
+            if (operatorManager == null) operatorManager = FindAnyObjectByType<OperatorManager>() ?? gameObject.AddComponent<OperatorManager>();
+            if (cardDraftSystem == null) cardDraftSystem = FindAnyObjectByType<CardDraftSystem>() ?? gameObject.AddComponent<CardDraftSystem>();
+            if (playerDeck == null) playerDeck = FindAnyObjectByType<PlayerDeck>() ?? gameObject.AddComponent<PlayerDeck>();
+            if (FindAnyObjectByType<RarityUpgradeSystem>() == null) gameObject.AddComponent<RarityUpgradeSystem>();
+            if (FindAnyObjectByType<GameplayHUDUI>() == null) gameObject.AddComponent<GameplayHUDUI>();
+            if (FindAnyObjectByType<CardDraftOverlayUI>() == null) gameObject.AddComponent<CardDraftOverlayUI>();
+            if (FindAnyObjectByType<StageResultsUI>() == null) gameObject.AddComponent<StageResultsUI>();
         }
 
         private void Start()
         {
-            gameplayHudUI = FindFirstObjectByType<GameplayHUDUI>();
+            gameplayHudUI = FindAnyObjectByType<GameplayHUDUI>();
             difficulty = MainMenuController.ConsumePendingStageDifficulty(difficulty);
             stageData = MainMenuController.ConsumePendingStage(stageData);
             if (stageData != null && stageData.stageId == "SANDBOX")
@@ -279,7 +279,7 @@ namespace TrashTD.Core.GameLoop
             if (stageData.stageId == "SANDBOX")
             {
                 operatorManager.SquadLimit = int.MaxValue;
-                FindFirstObjectByType<CardDraftOverlayUI>()?.HideForSandbox();
+                FindAnyObjectByType<CardDraftOverlayUI>()?.HideForSandbox();
                 gameObject.AddComponent<SandboxController>().Initialize(this);
             }
         }

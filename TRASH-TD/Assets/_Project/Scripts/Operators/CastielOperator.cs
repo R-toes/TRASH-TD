@@ -61,7 +61,7 @@ namespace TrashTD.Operators
             if (EnemyManager.Instance == null || deployedCell == null || data == null || data.rangePattern == null)
                 return null;
 
-            GridManager gridManager = FindFirstObjectByType<GridManager>();
+            GridManager gridManager = FindAnyObjectByType<GridManager>();
             if (gridManager == null) return null;
 
             var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);

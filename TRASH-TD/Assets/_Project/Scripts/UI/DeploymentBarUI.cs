@@ -59,7 +59,7 @@ namespace TrashTD.UI
 
         private void OnRequestDraftClicked()
         {
-            var draftSystem = FindFirstObjectByType<CardDraftSystem>();
+            var draftSystem = FindAnyObjectByType<CardDraftSystem>();
             if (draftSystem != null)
             {
                 draftSystem.GenerateDraftOffer();

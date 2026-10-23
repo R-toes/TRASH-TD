@@ -2287,7 +2287,7 @@ namespace TrashTD.UI
 
         private static void EnsureEventSystem()
         {
-            var eventSystem = FindFirstObjectByType<EventSystem>();
+            var eventSystem = FindAnyObjectByType<EventSystem>();
             if (eventSystem == null)
             {
                 var eventSystemObject = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));

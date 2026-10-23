@@ -35,7 +35,7 @@ namespace TrashTD.UI
 
         private void Awake()
         {
-            if (mapSelectManager == null) mapSelectManager = FindFirstObjectByType<MapSelectManager>();
+            if (mapSelectManager == null) mapSelectManager = FindAnyObjectByType<MapSelectManager>();
 
             if (easyButton != null) easyButton.onClick.AddListener(() => SetDifficulty(StageDifficulty.Easy));
             if (normalButton != null) normalButton.onClick.AddListener(() => SetDifficulty(StageDifficulty.Normal));

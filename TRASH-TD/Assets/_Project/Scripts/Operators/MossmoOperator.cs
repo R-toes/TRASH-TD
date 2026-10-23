@@ -83,7 +83,7 @@ namespace TrashTD.Operators
         {
             if (deployedCell != null) return deployedCell;
 
-            GridManager grid = FindFirstObjectByType<GridManager>();
+            GridManager grid = FindAnyObjectByType<GridManager>();
             if (grid != null)
             {
                 return grid.GetCell(grid.WorldToGridPosition(transform.position));
@@ -106,7 +106,7 @@ namespace TrashTD.Operators
         {
             if (data == null) return;
 
-            GridManager gridManager = FindFirstObjectByType<GridManager>();
+            GridManager gridManager = FindAnyObjectByType<GridManager>();
             List<OperatorBase> candidates = null;
             if (OperatorManager.Instance != null && gridManager != null && originCell != null)
             {
