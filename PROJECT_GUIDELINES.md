@@ -239,6 +239,7 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
 | Main menu | Esc | Close settings or stage details, or return from stage select to the main menu |
 | Stage select map | Scroll / double-click | Zoom toward the cursor (double-click at max zoom resets) |
 | | Drag (from the map or a marker) | Pan, with inertia |
+| | Hold and push the joystick (left panel) | Pan that way, faster the further it's pushed (zooms to 1.8× first if at 1×) |
 | | + / − (also numpad) | Zoom about the screen centre (hold) |
 | | R / Home | Reset the view |
 
@@ -273,6 +274,19 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
   - **HUD** (top right, below `stageProgressText`, kept under the dossier in sibling order): a MAP OVERVIEW minimap (map art, stage dots, visible-area frame, cursor grid reference; click or drag to jump), a zoom bar ([−] 1.0X [+] [RESET]) and a controls hint.
   - Pointer positions go through `CrtDisplay.ScreenToPicture` and the canvas camera, like all pointer code.
   - `StageMapMinimapInput` (same file) forwards minimap presses.
+- **Side panel** (`StageMapSidePanel`, created in `BuildDefaultUi`, wired to the navigator in `SetUpMapNavigator`):
+  - Machine-panel art (`Resources/UI/panels/Stage Selector Map Panel.png`, 183×810 slice of a 1440×810 sheet laid out like the map art) is drawn down the left edge at full screen height. Its width follows the art's aspect (about 244 px at 1080). Children are placed in art pixels under a root scaled to the panel's height.
+  - The joystick knob (`... Map Panel joystick.png`, rect 86,331 51×49 on the same sheet) sits in the green dial at art (111.5, 355.5). Moves snap to whole art pixels, and a dark copy left at the dial centre shows as the socket while the knob is tilted.
+  - **It is a working stick.** An invisible grab area covers the dial (radius 40 art px, `StageMapStickInput` in the same file). Press there and push:
+    - The knob follows the pointer (32 art px of pointer travel = full push, shown as 11 px of tilt).
+    - The view travels that way through `StageMapNavigator.StickPan`, at up to 1200 canvas units/s. Speed is push^1.5 past a 0.12 dead zone.
+    - Release stops the view (it eases to a stop) and the knob springs back.
+    - `BeginStick` refuses while navigation input is blocked. At 1× it first zooms to 1.8×, because the map can't pan at 1×.
+    - Grabbing plays the UI click (`Grabbed`). Hover lifts the knob 1 px, and a held knob is tinted darker.
+  - **Not held:** the knob shows the navigation, driven by the navigator's `ViewCentre` and `Zoom`. It tilts up to 11 art px toward where the view is moving (drag, throw, minimap jump, zoom toward the cursor), and shrinks and darkens slightly while zooming in. It springs back with a small overshoot.
+  - **Scroll wheel** (the ridged strip above the joystick, art x 72–96, rows 218–324 from the top): a 4-row ridge repeat taken from the art (`WheelPattern`). It is redrawn over the art as a 1×4 Repeat texture on a RawImage, and its uvRect rolls by whole art pixels: about 24 px per unit of ln(zoom), so one ridge per mouse-wheel notch. The ridges move up when zooming in and down when zooming out. It follows the smoothed zoom, so it eases to a stop. It is display only. If the art's wheel colours or position change, update `WheelRidges` / `WheelPattern`.
+  - The panel slides in with the stage-select entrance. Apart from the dial, it doesn't catch the pointer, so dragging over it still pans the map.
+  - Left-side stage-select UI clears the panel: the title block starts at `StageLeftEdge` (280) and the Back button at `StageBackButtonX` (150, clear of the slanted bottom). Keep new left-side elements right of the panel.
 - **Locking is not progression.** A node is locked only if `IsStagePlayable(stageId)` is false (a hard-coded list of stage IDs). "X / 6 UNLOCKED" counts that list, not cleared stages. Don't add unlock-on-clear progression without asking Raim (see "Persistence model", §4).
 - **Terminal styling** (stage selector and dossier): the `Terminal*` colours in `MainMenuController`, `AddCornerBrackets` for L-shaped corner frames, and `StyleTerminalButton`. `MenuButtonFeedback` owns each button's `Outline` as its hover glow, so resting borders are brackets, not outlines. The selector has a title plate, a blinking cursor, and a status ticker that types out the hovered stage (`StageMapNode.HoverChanged`).
 - **Stage dossier** (the details modal, 1300×720): an animated `StageMapPreview` on the left, and stage info, stats, difficulty cards, a waves/lives briefing, Back and Play on the right.

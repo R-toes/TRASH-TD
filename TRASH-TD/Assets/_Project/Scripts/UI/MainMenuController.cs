@@ -66,6 +66,8 @@ namespace TrashTD.UI
         private const float MenuButtonLabelInset = 56f;
         private const string StageSubtitleText = "CHOOSE YOUR DEPLOYMENT";
         private const string StageTickerIdle = "> AWAITING STAGE SELECTION";
+        private const float StageLeftEdge = 280f;      // stage select title block x: clear of StageMapSidePanel (~244 wide at 1080 high)
+        private const float StageBackButtonX = 150f;   // clear of the side panel's slanted bottom
         private const float TickerCharsPerSecond = 70f;
 
         private static readonly StageDifficulty[] DifficultyOrder =
@@ -114,6 +116,7 @@ namespace TrashTD.UI
         private readonly List<StageMapNode> stageMapNodes = new List<StageMapNode>();
         private StageMapLayout stageMapLayout;
         private StageMapNavigator mapNavigator;
+        private StageMapSidePanel stageSidePanel;
         private readonly Dictionary<StageDifficulty, DifficultyCardView> difficultyCards = new Dictionary<StageDifficulty, DifficultyCardView>();
         private StageData selectedStage;
         private int selectedStageIndex = -1;
@@ -541,11 +544,14 @@ namespace TrashTD.UI
             // Terminal frame around the whole map screen
             AddCornerBrackets(stageSelectionPanel.GetComponent<RectTransform>(), 46f, 4f, TerminalLine, 18f);
 
+            // Machine panel down the left edge; its joystick follows the map navigation
+            stageSidePanel = StageMapSidePanel.Create(stageSelectionPanel.transform);
+
             // Backing plate so the title block reads over busy map art
             var titlePlate = new GameObject("StageSelectorTitlePlate", typeof(RectTransform), typeof(Image));
             titlePlate.transform.SetParent(stageSelectionPanel.transform, false);
             stageTitlePlate = titlePlate.GetComponent<RectTransform>();
-            Place(stageTitlePlate, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, -18f), new Vector2(470f, 112f));
+            Place(stageTitlePlate, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(StageLeftEdge - 20f, -18f), new Vector2(470f, 112f));
             var titlePlateImage = titlePlate.GetComponent<Image>();
             titlePlateImage.color = TerminalPlate;
             titlePlateImage.raycastTarget = false;
@@ -554,14 +560,14 @@ namespace TrashTD.UI
             // Header overlay — left-aligned title block (over the map)
             var headerTitle = MakeText(stageSelectionPanel.transform, "StageSelectorTitle", "SELECT STAGE", 42, TextAnchor.MiddleLeft,
                 AccentBright, FontStyle.Bold);
-            Place(headerTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(60f, -30f), new Vector2(600f, 50f));
+            Place(headerTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(StageLeftEdge, -30f), new Vector2(600f, 50f));
             stageHeaderTitle = headerTitle.rectTransform;
             var headerTitleShadow = headerTitle.gameObject.AddComponent<Shadow>();
             headerTitleShadow.effectColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.30f);
             headerTitleShadow.effectDistance = new Vector2(0f, -3f);
 
             stageHeaderSubtitleText = MakeText(stageSelectionPanel.transform, "StageSelectorSubtitle", StageSubtitleText, 13, TextAnchor.MiddleLeft, TerminalText);
-            Place(stageHeaderSubtitleText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(64f, -82f), new Vector2(500f, 22f));
+            Place(stageHeaderSubtitleText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(StageLeftEdge + 4f, -82f), new Vector2(500f, 22f));
             stageHeaderSubtitle = stageHeaderSubtitleText.rectTransform;
 
             // Status ticker: types out the stage under the pointer
@@ -595,7 +601,7 @@ namespace TrashTD.UI
             var headerDivider = new GameObject("StageSelectorDivider", typeof(RectTransform), typeof(Image));
             headerDivider.transform.SetParent(stageSelectionPanel.transform, false);
             stageHeaderDivider = headerDivider.GetComponent<RectTransform>();
-            Place(stageHeaderDivider, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(64f, -110f), new Vector2(260f, 2f));
+            Place(stageHeaderDivider, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(StageLeftEdge + 4f, -110f), new Vector2(260f, 2f));
             var headerDividerImage = headerDivider.GetComponent<Image>();
             headerDividerImage.color = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.4f);
             headerDividerImage.raycastTarget = false;
@@ -623,7 +629,7 @@ namespace TrashTD.UI
                 backButton = CreateButtonChild(stageSelectionPanel.transform, "BackButton", "◀  BACK");
             }
             StyleTerminalButton(backButton, TerminalText, 16);
-            Place(backButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(60f, 40f), new Vector2(200f, 48f));
+            Place(backButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(StageBackButtonX, 40f), new Vector2(200f, 48f));
 
             if (stageDetailsPanel == null)
             {
@@ -1190,6 +1196,12 @@ namespace TrashTD.UI
                     StyleTerminalButton(button, AccentBright, 14);
                     AttachFeedback(button, PlayClick, AccentBright, 1.05f);
                 });
+
+            if (stageSidePanel != null)
+            {
+                stageSidePanel.Navigator = mapNavigator;
+                stageSidePanel.Grabbed = PlayClick;
+            }
 
             // Under the stage dossier, which shares the panel
             if (stageDetailsPanel != null && stageDetailsPanel.transform.parent == mapNavigator.HudRoot.parent)
@@ -2019,6 +2031,7 @@ namespace TrashTD.UI
             RegisterEntrance(mainEntrance, menuFeedStatus, new Vector2(0f, 20f), 0.30f);
 
             // Stage selector header (cards were registered in BuildStageButtons)
+            RegisterEntrance(stageEntrance, stageSidePanel, new Vector2(-90f, 0f), 0.00f);
             RegisterEntrance(stageEntrance, stageTitlePlate, new Vector2(-60f, 0f), 0.00f);
             RegisterEntrance(stageEntrance, stageTickerPlate, new Vector2(0f, -30f), 0.20f);
             RegisterEntrance(stageEntrance, stageHeaderTitle, new Vector2(-60f, 0f), 0.00f);

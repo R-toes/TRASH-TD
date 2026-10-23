@@ -21,6 +21,7 @@ namespace TrashTD.UI
         private const float MaxZoom = 3f;
         private const float ScrollStep = 1.2f;       // zoom factor per wheel notch
         private const float DoubleClickZoom = 1.8f;
+        private const float StickZoom = 1.8f;         // zoom the joystick jumps to when grabbed at 1×
         private const float KeyZoomPerSecond = 1.8f;  // zoom factor per second while +/- is held
         private const float Smoothing = 12f;
         private const float InertiaDamping = 5f;
@@ -40,6 +41,32 @@ namespace TrashTD.UI
 
         /// <summary>The minimap + zoom bar, for entrance animations.</summary>
         public RectTransform HudRoot { get; private set; }
+
+        /// <summary>Current (smoothed) zoom, 1–3.</summary>
+        public float Zoom => zoom;
+
+        /// <summary>Map point at the centre of the screen, map-normalised with the origin at the bottom-left.</summary>
+        public Vector2 ViewCentre => -pan / (ViewSize() * zoom) + new Vector2(0.5f, 0.5f);
+
+        /// <summary>
+        /// Joystick grab (StageMapSidePanel). Returns false while input is blocked. At 1× it zooms in first,
+        /// since the map can only pan when zoomed.
+        /// </summary>
+        public bool BeginStick()
+        {
+            if (IsBlocked()) return false;
+            if (targetZoom <= MinZoom + 0.01f) ZoomAbout(Vector2.zero, StickZoom);
+            velocity = Vector2.zero;
+            return true;
+        }
+
+        /// <summary>Joystick: moves the view at <paramref name="viewVelocity"/> (canvas units / s, the way the view travels).</summary>
+        public void StickPan(Vector2 viewVelocity, float dt)
+        {
+            if (IsBlocked()) return;
+            velocity = Vector2.zero;
+            targetPan = ClampPan(targetPan - viewVelocity * dt, targetZoom);
+        }
 
         private RectTransform content;
         private RectTransform viewport;
