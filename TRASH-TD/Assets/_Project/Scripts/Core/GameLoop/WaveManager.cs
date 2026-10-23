@@ -207,6 +207,8 @@ namespace TrashTD.Core.GameLoop
             }
 
             IsWaveInProgress = false;
+            if (enemyManager == null)
+                enemyManager = EnemyManager.Instance ?? FindFirstObjectByType<EnemyManager>();
             if (enemyManager != null)
                 enemyManager.ClearAllForSandbox();
         }

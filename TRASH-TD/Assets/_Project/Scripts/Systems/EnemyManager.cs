@@ -30,12 +30,41 @@ namespace TrashTD.Systems
         /// </summary>
         public void ClearAllForSandbox()
         {
-            var active = new List<EnemyBase>(activeEnemies);
-            for (int i = 0; i < active.Count; i++)
+            int safetyLimit = 1000;
+            while (activeEnemies.Count > 0 && safetyLimit-- > 0)
             {
-                if (active[i] != null) active[i].ForceKill();
+                EnemyBase enemy = activeEnemies[activeEnemies.Count - 1];
+                activeEnemies.RemoveAt(activeEnemies.Count - 1);
+                if (enemy != null)
+                {
+                    enemy.ForceKill();
+                    if (enemy != null && enemy.gameObject != null)
+                    {
+                        if (Application.isPlaying)
+                            Destroy(enemy.gameObject);
+                        else
+                            DestroyImmediate(enemy.gameObject);
+                    }
+                }
             }
-            activeEnemies.RemoveAll(enemy => enemy == null);
+            activeEnemies.Clear();
+
+            EnemyBase[] lingering = FindObjectsByType<EnemyBase>();
+            for (int i = 0; i < lingering.Length; i++)
+            {
+                EnemyBase enemy = lingering[i];
+                if (enemy != null && enemy.gameObject != null)
+                {
+                    enemy.ForceKill();
+                    if (enemy != null && enemy.gameObject != null)
+                    {
+                        if (Application.isPlaying)
+                            Destroy(enemy.gameObject);
+                        else
+                            DestroyImmediate(enemy.gameObject);
+                    }
+                }
+            }
         }
 
         public event Action<EnemyBase> OnEnemySpawned;

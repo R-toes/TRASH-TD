@@ -51,6 +51,12 @@ namespace TrashTD.Enemies
             base.OnUnblocked();
         }
 
+        public override void ForceKill()
+        {
+            hasSpawnedChildren = true;
+            base.ForceKill();
+        }
+
         protected override void Die()
         {
             RemoveBlockDebuff();
