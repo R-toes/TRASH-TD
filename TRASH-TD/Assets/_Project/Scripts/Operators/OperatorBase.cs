@@ -217,6 +217,16 @@ namespace TrashTD.Operators
                 ReleaseBlock(blockedEnemies[i]);
             }
 
+            var slipperyEffects = GetComponents<Combat.SlipperyEffect>();
+            for (int i = 0; i < slipperyEffects.Length; i++)
+            {
+                if (slipperyEffects[i] != null)
+                {
+                    slipperyEffects[i].ClearWithoutRestoring();
+                }
+            }
+            blockCountModifier = 0;
+
             deployedCell?.Vacate();
             deployedCell = null;
             isDeployed = false;

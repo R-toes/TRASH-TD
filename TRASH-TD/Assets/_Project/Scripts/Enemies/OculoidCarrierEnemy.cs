@@ -26,7 +26,10 @@ namespace TrashTD.Enemies
         public override bool IsImmuneToAcidTiles => true;
 
         private OperatorBase debuffedBlocker;
+        private SlipperyEffect activeSlipperyEffect;
         private bool hasSpawnedChildren;
+
+        public SlipperyEffect ActiveSlipperyEffect => activeSlipperyEffect;
 
         public void SetOculiteSpawnData(EnemyData data)
         {
@@ -37,45 +40,46 @@ namespace TrashTD.Enemies
         {
             base.OnBlocked(blocker);
 
-            if (blocker != null && debuffedBlocker == null)
+            if (blocker != null && activeSlipperyEffect == null)
             {
                 debuffedBlocker = blocker;
-                debuffedBlocker.ModifyBlockCount(-blockCountReduction);
-                FloatingCombatNumber.ShowText(blocker.transform.position, $"-{blockCountReduction} BLOCK", new Color(1f, 0.35f, 0.35f));
+                activeSlipperyEffect = SlipperyEffect.Apply(blocker, blockCountReduction);
             }
         }
 
         public override void OnUnblocked()
         {
-            RemoveBlockDebuff();
+            TriggerSlipperyFading();
             base.OnUnblocked();
         }
 
         public override void ForceKill()
         {
             hasSpawnedChildren = true;
+            TriggerSlipperyFading();
             base.ForceKill();
         }
 
         protected override void Die()
         {
-            RemoveBlockDebuff();
+            TriggerSlipperyFading();
             SpawnOculiteChildren();
             base.Die();
         }
 
         private void OnDisable()
         {
-            RemoveBlockDebuff();
+            TriggerSlipperyFading();
         }
 
-        private void RemoveBlockDebuff()
+        private void TriggerSlipperyFading()
         {
-            if (debuffedBlocker != null)
+            if (activeSlipperyEffect != null)
             {
-                debuffedBlocker.ModifyBlockCount(blockCountReduction);
-                debuffedBlocker = null;
+                activeSlipperyEffect.StartFading(10f);
+                activeSlipperyEffect = null;
             }
+            debuffedBlocker = null;
         }
 
         private void SpawnOculiteChildren()
