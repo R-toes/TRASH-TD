@@ -108,6 +108,11 @@ namespace TrashTD.UI
         private Image stage2GlassIcon;
         private Image stage2MetalIcon;
         private Image stage2ToolsIcon;
+        private GameObject stage5TrafficRoot;
+        private Image stage5VehicleLeftIcon;
+        private Image stage5VehicleCenterIcon;
+        private Image stage5VehicleRightIcon;
+        private Text stage5TrafficBodyText;
         private bool environmentBriefingDismissed;
         private Text selectedOperatorNameText;
         private Text selectedOperatorHealthText;
@@ -2354,6 +2359,7 @@ namespace TrashTD.UI
             environmentBriefingDescription.raycastTarget = false;
 
             CreateStage2BriefingItemsDisplay(card.transform);
+            CreateStage5BriefingTrafficDisplay(card.transform);
 
             Button dismissButton = CreateButton(card.transform, "DismissButton", "UNDERSTOOD", new Vector2(250f, 58f), ButtonContainerType.Primary);
             SetPosition(dismissButton.GetComponent<RectTransform>(), new Vector2(0f, 32f), new Vector2(0.5f, 0f), null, new Vector2(0.5f, 0f));
@@ -2376,6 +2382,49 @@ namespace TrashTD.UI
             stage2ToolsIcon = CreateBriefingItemCard(stage2ThrownItemsRoot.transform, 260f, "Tools", "TOOLS", new Color(1f, 0.45f, 0.45f, 1f), "<b>True Damage + Stun</b>\nDeals direct damage and stuns operators for 2s.");
 
             stage2ThrownItemsRoot.SetActive(false);
+        }
+
+        private void CreateStage5BriefingTrafficDisplay(Transform parent)
+        {
+            stage5TrafficRoot = new GameObject("Stage5TrafficRoot", typeof(RectTransform));
+            stage5TrafficRoot.transform.SetParent(parent, false);
+            RectTransform rootRect = stage5TrafficRoot.GetComponent<RectTransform>();
+            SetPosition(rootRect, new Vector2(0f, -112f), new Vector2(0.5f, 1f), new Vector2(780f, 350f), new Vector2(0.5f, 1f));
+
+            // Single card container
+            GameObject box = new GameObject("Stage5TrafficCard", typeof(RectTransform), typeof(Image), typeof(Outline));
+            box.transform.SetParent(stage5TrafficRoot.transform, false);
+            RectTransform boxRect = box.GetComponent<RectTransform>();
+            SetPosition(boxRect, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(780f, 350f), new Vector2(0.5f, 0.5f));
+
+            Image boxImg = box.GetComponent<Image>();
+            boxImg.color = new Color(0.04f, 0.06f, 0.09f, 0.94f);
+
+            Outline boxOutline = box.GetComponent<Outline>();
+            boxOutline.effectColor = new Color(1f, 0.8f, 0.25f, 0.6f);
+            boxOutline.effectDistance = new Vector2(1.5f, -1.5f);
+
+            // 3-Vehicle lineup: Left, Center (Red Car), Right
+            stage5VehicleLeftIcon = CreateIconImage(box.transform, "VehicleLeft", null, Color.white, new Vector2(-175f, 114f), new Vector2(0.5f, 0.5f), new Vector2(130f, 65f), new Vector2(0.5f, 0.5f));
+            stage5VehicleLeftIcon.preserveAspect = true;
+
+            stage5VehicleCenterIcon = CreateIconImage(box.transform, "VehicleCenter", null, Color.white, new Vector2(0f, 114f), new Vector2(0.5f, 0.5f), new Vector2(130f, 65f), new Vector2(0.5f, 0.5f));
+            stage5VehicleCenterIcon.preserveAspect = true;
+
+            stage5VehicleRightIcon = CreateIconImage(box.transform, "VehicleRight", null, Color.white, new Vector2(175f, 114f), new Vector2(0.5f, 0.5f), new Vector2(130f, 65f), new Vector2(0.5f, 0.5f));
+            stage5VehicleRightIcon.preserveAspect = true;
+
+            // Content text (clean single-line alignment across 720px width)
+            stage5TrafficBodyText = CreateText(box.transform, "BodyText", "", 13, TextAnchor.MiddleCenter);
+            stage5TrafficBodyText.fontStyle = FontStyle.Normal;
+            stage5TrafficBodyText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            stage5TrafficBodyText.verticalOverflow = VerticalWrapMode.Overflow;
+            stage5TrafficBodyText.lineSpacing = 1.28f;
+            stage5TrafficBodyText.color = new Color(0.88f, 0.91f, 0.95f, 1f);
+            SetPosition(stage5TrafficBodyText.rectTransform, new Vector2(0f, -42f), new Vector2(0.5f, 0.5f), new Vector2(760f, 220f), new Vector2(0.5f, 0.5f));
+            stage5TrafficBodyText.raycastTarget = false;
+
+            stage5TrafficRoot.SetActive(false);
         }
 
         private Image CreateBriefingItemCard(Transform parent, float xPos, string cardName, string title, Color titleColor, string description)
@@ -2447,6 +2496,10 @@ namespace TrashTD.UI
                 {
                     environmentBriefingCardRect.sizeDelta = new Vector2(840f, 570f);
                 }
+                if (stage5TrafficRoot != null)
+                {
+                    stage5TrafficRoot.SetActive(false);
+                }
 
                 environmentBriefingTitle.text = "HAZARD ALERT";
                 SetPosition(environmentBriefingTitle.rectTransform, new Vector2(0f, -36f), new Vector2(0.5f, 1f), new Vector2(700f, 40f), new Vector2(0.5f, 1f));
@@ -2516,6 +2569,102 @@ namespace TrashTD.UI
                     }
                 }
             }
+            else if (environmentStageId == "STAGE_05")
+            {
+                if (environmentBriefingCardRect != null)
+                {
+                    environmentBriefingCardRect.sizeDelta = new Vector2(840f, 570f);
+                }
+                if (stage2ThrownItemsRoot != null)
+                {
+                    stage2ThrownItemsRoot.SetActive(false);
+                }
+
+                environmentBriefingTitle.text = "HAZARD ALERT";
+                SetPosition(environmentBriefingTitle.rectTransform, new Vector2(0f, -36f), new Vector2(0.5f, 1f), new Vector2(700f, 40f), new Vector2(0.5f, 1f));
+
+                environmentBriefingDescription.text = $"<color=#FFD040>{environmentName}</color>";
+                SetPosition(environmentBriefingDescription.rectTransform, new Vector2(0f, -76f), new Vector2(0.5f, 1f), new Vector2(700f, 32f), new Vector2(0.5f, 1f));
+                environmentBriefingDescription.fontSize = 17;
+                environmentBriefingDescription.lineSpacing = 1f;
+
+                // Load vehicle sprites
+                Sprite[] vehicleSprites = stage.trafficVehicleSprites;
+                if (vehicleSprites == null || vehicleSprites.Length == 0)
+                {
+                    var encounter = FindFirstObjectByType<TrashTD.Core.GameLoop.Stage5CarEncounter>();
+                    if (encounter != null) vehicleSprites = encounter.VehicleSprites;
+                }
+                if (vehicleSprites == null || vehicleSprites.Length == 0)
+                {
+                    vehicleSprites = Resources.LoadAll<Sprite>("Levels/Level 5 vehicles");
+                }
+#if UNITY_EDITOR
+                if (vehicleSprites == null || vehicleSprites.Length == 0)
+                {
+                    var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5 vehicles.png");
+                    if (assets == null || assets.Length == 0)
+                    {
+                        assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 5 vehicles.png");
+                    }
+                    if (assets != null)
+                    {
+                        var list = new List<Sprite>();
+                        foreach (var obj in assets)
+                        {
+                            if (obj is Sprite s) list.Add(s);
+                        }
+                        if (list.Count > 0)
+                        {
+                            list.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+                            vehicleSprites = list.ToArray();
+                        }
+                    }
+                }
+#endif
+
+                if (stage5TrafficRoot != null)
+                {
+                    stage5TrafficRoot.SetActive(true);
+
+                    if (vehicleSprites != null && vehicleSprites.Length > 0)
+                    {
+                        // Center is the red car (index 1)
+                        if (stage5VehicleCenterIcon != null)
+                        {
+                            stage5VehicleCenterIcon.sprite = vehicleSprites.Length > 1 ? vehicleSprites[1] : vehicleSprites[0];
+                            stage5VehicleCenterIcon.color = Color.white;
+                        }
+
+                        // Left is index 0
+                        if (stage5VehicleLeftIcon != null)
+                        {
+                            stage5VehicleLeftIcon.sprite = vehicleSprites[0];
+                            stage5VehicleLeftIcon.color = Color.white;
+                        }
+
+                        // Right is index 2 (or index 0 if not enough)
+                        if (stage5VehicleRightIcon != null)
+                        {
+                            int rightIdx = vehicleSprites.Length > 2 ? 2 : 0;
+                            stage5VehicleRightIcon.sprite = vehicleSprites[rightIdx];
+                            stage5VehicleRightIcon.color = Color.white;
+                        }
+                    }
+
+                    if (stage5TrafficBodyText != null)
+                    {
+                        stage5TrafficBodyText.text =
+                            "Fast Vehicles drive across the 2 middle highway road lanes starting at wave 6.\n" +
+                            "They crash into both enemies and operators in their way.\n\n" +
+                            "Starts at 40 true damage (+20 every 2 tiles):\n" +
+                            "<color=#FFD040>40 → 60 → 80 → 100 → 120 → 140 → 160</color>\n" +
+                            "Longer distance = heavier hit when unblocked by an operator.\n\n" +
+                            "Hitting an operator slows the car down, then it recovers.\n" +
+                            "Stuns the operator for 5 seconds and resets damage to 40.";
+                    }
+                }
+            }
             else
             {
                 if (environmentBriefingCardRect != null)
@@ -2525,6 +2674,10 @@ namespace TrashTD.UI
                 if (stage2ThrownItemsRoot != null)
                 {
                     stage2ThrownItemsRoot.SetActive(false);
+                }
+                if (stage5TrafficRoot != null)
+                {
+                    stage5TrafficRoot.SetActive(false);
                 }
                 environmentBriefingTitle.text = "ENVIRONMENTAL EFFECT";
                 SetPosition(environmentBriefingTitle.rectTransform, new Vector2(0f, -40f), new Vector2(0.5f, 1f), new Vector2(660f, 52f), new Vector2(0.5f, 1f));
@@ -2544,11 +2697,6 @@ namespace TrashTD.UI
                         effectDescription =
                             "Extreme heat builds up on deployed operators each round. " +
                             "Overheated operators ignite and suffer continuous burn damage until retreated to the bench to cool down.";
-                        break;
-                    case "STAGE_05":
-                        effectDescription =
-                            "Starting from Wave 6, vehicles periodically speed down the boulevard lanes. " +
-                            "Collisions deal ramping true damage to enemies and operators, and stun the first operator struck.";
                         break;
                     case "STAGE_06":
                         effectDescription =
