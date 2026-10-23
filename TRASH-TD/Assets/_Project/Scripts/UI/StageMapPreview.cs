@@ -44,6 +44,9 @@ namespace TrashTD.UI
         private const float DashSpeedTilesPerSecond = 1.4f;  // dashes flow spawn -> exit
         private const float MaxLaneSpacingTiles = 0.22f;
         private const float LaneSpreadTiles = 0.8f;          // all lanes together stay within this width
+        private const float LineWidthOfLane = 0.45f;         // line thickness as a fraction of the lane spacing (was 0.6)
+        private const float MinLineThickness = 3f;           // px
+        private const float CasingWidth = 1.5f;              // dark casing, as a multiple of the line thickness (was 1.6)
         private const float MarkerSizeTiles = 0.9f;
         private const float PingPeriod = 1.4f;
         // Matches StageBootstrapper.Stage3BackgroundAnimationFrameDuration
@@ -257,7 +260,7 @@ namespace TrashTD.UI
             List<(int spawn, List<Vector2Int> cells)> cellRoutes = ComputeRoutes(stage);
             int routeCount = cellRoutes.Count;
             float laneSpacing = Mathf.Min(MaxLaneSpacingTiles, LaneSpreadTiles / Mathf.Max(1, routeCount)) * tileScale;
-            float thickness = Mathf.Max(3f, laneSpacing * 0.6f);
+            float thickness = Mathf.Max(MinLineThickness, laneSpacing * LineWidthOfLane);
             var spawnColors = new Dictionary<int, Color>();
             for (int i = 0; i < routeCount; i++)
             {
@@ -428,7 +431,7 @@ namespace TrashTD.UI
 
                 var segment = new Segment
                 {
-                    casing = CreateSegment("RouteCasing", start, angle, thickness * 1.6f, CasingColor),
+                    casing = CreateSegment("RouteCasing", start, angle, thickness * CasingWidth, CasingColor),
                     core = CreateSegment("RouteCore", start, angle, thickness, new Color(color.r, color.g, color.b, 0.35f)),
                     dashes = dashes,
                     start = route.cumulative[i - 1] - thickness * 0.5f,
