@@ -1,0 +1,739 @@
+fileFormatVersion: 2
+guid: 109c134c1d7445e4bbd3975211ef60bc
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 2445962270219629192
+    second: StageMap_Anim_Overlay_0
+  - first:
+      213: 6015856017070922105
+    second: StageMap_Anim_Overlay_1
+  - first:
+      213: 5192809965226853290
+    second: StageMap_Anim_Overlay_2
+  - first:
+      213: 6571621216264151802
+    second: StageMap_Anim_Overlay_3
+  - first:
+      213: 6931633204279736750
+    second: StageMap_Anim_Overlay_4
+  - first:
+      213: -6816731665799755555
+    second: StageMap_Anim_Overlay_5
+  - first:
+      213: 576652091106204393
+    second: StageMap_Anim_Overlay_6
+  - first:
+      213: 3370326184865326966
+    second: StageMap_Anim_Overlay_7
+  - first:
+      213: 766554106874866283
+    second: StageMap_Anim_Overlay_8
+  - first:
+      213: 5363798910822465373
+    second: StageMap_Anim_Overlay_9
+  - first:
+      213: -8373594593764585750
+    second: StageMap_Anim_Overlay_10
+  - first:
+      213: -161797247700062671
+    second: StageMap_Anim_Overlay_11
+  - first:
+      213: 7102306416045961367
+    second: StageMap_Anim_Overlay_12
+  - first:
+      213: -221323757205035211
+    second: StageMap_Anim_Overlay_13
+  - first:
+      213: -4310404341599487138
+    second: StageMap_Anim_Overlay_14
+  - first:
+      213: 4642671124073770855
+    second: StageMap_Anim_Overlay_15
+  - first:
+      213: 6009708316958595710
+    second: StageMap_Anim_Overlay_16
+  - first:
+      213: -1170638518534575631
+    second: StageMap_Anim_Overlay_17
+  - first:
+      213: -4317626709306285172
+    second: StageMap_Anim_Overlay_18
+  - first:
+      213: 6924268851825756083
+    second: StageMap_Anim_Overlay_19
+  - first:
+      213: -2824038517054316084
+    second: StageMap_Anim_Overlay_20
+  - first:
+      213: -7807391705089746139
+    second: StageMap_Anim_Overlay_21
+  - first:
+      213: -1652575408792673445
+    second: StageMap_Anim_Overlay_22
+  - first:
+      213: -5489695250670850532
+    second: StageMap_Anim_Overlay_23
+  - first:
+      213: -774909099591546346
+    second: StageMap_Anim_Overlay_24
+  - first:
+      213: 3475071985931630962
+    second: StageMap_Anim_Overlay_25
+  - first:
+      213: -7288125700304308357
+    second: StageMap_Anim_Overlay_26
+  - first:
+      213: -6940856317474034264
+    second: StageMap_Anim_Overlay_27
+  - first:
+      213: 9201041936962455703
+    second: StageMap_Anim_Overlay_28
+  - first:
+      213: 8138617450909827733
+    second: StageMap_Anim_Overlay_29
+  - first:
+      213: -6843261214918242516
+    second: StageMap_Anim_Overlay_30
+  - first:
+      213: -2208624270142070654
+    second: StageMap_Anim_Overlay_31
+  - first:
+      213: -1158733738326957269
+    second: StageMap_Anim_Overlay_32
+  - first:
+      213: -8290120838657234380
+    second: StageMap_Anim_Overlay_33
+  - first:
+      213: -8288788906450005606
+    second: StageMap_Anim_Overlay_34
+  - first:
+      213: -2021677342971660161
+    second: StageMap_Anim_Overlay_35
+  - first:
+      213: -7693876508765601198
+    second: StageMap_Anim_Overlay_36
+  - first:
+      213: 8844977967459701267
+    second: StageMap_Anim_Overlay_37
+  - first:
+      213: -6972857588428874743
+    second: StageMap_Anim_Overlay_38
+  - first:
+      213: 8037911124961570709
+    second: StageMap_Anim_Overlay_39
+  - first:
+      213: 1198955684764401984
+    second: StageMap_Anim_Overlay_40
+  - first:
+      213: -880055573420790331
+    second: StageMap_Anim_Overlay_41
+  - first:
+      213: -4043256175188386479
+    second: StageMap_Anim_Overlay_42
+  - first:
+      213: -2991129256835086867
+    second: StageMap_Anim_Overlay_43
+  - first:
+      213: 1957730734717546608
+    second: StageMap_Anim_Overlay_44
+  - first:
+      213: 7885158030356084547
+    second: StageMap_Anim_Overlay_45
+  - first:
+      213: -844832832727064465
+    second: StageMap_Anim_Overlay_46
+  - first:
+      213: -2259416711010697479
+    second: StageMap_Anim_Overlay_47
+  - first:
+      213: 2512637555264218871
+    second: StageMap_Anim_Overlay_48
+  - first:
+      213: 4234194606716664555
+    second: StageMap_Anim_Overlay_49
+  - first:
+      213: -6535993320985768640
+    second: StageMap_Anim_Overlay_50
+  - first:
+      213: -6273739992084243743
+    second: StageMap_Anim_Overlay_51
+  - first:
+      213: -1388783930062480208
+    second: StageMap_Anim_Overlay_52
+  - first:
+      213: -167515055644526903
+    second: StageMap_Anim_Overlay_53
+  - first:
+      213: 212177860844214963
+    second: StageMap_Anim_Overlay_54
+  - first:
+      213: -2654572191253183260
+    second: StageMap_Anim_Overlay_55
+  - first:
+      213: -9005255556206429548
+    second: StageMap_Anim_Overlay_56
+  - first:
+      213: 811058687476484698
+    second: StageMap_Anim_Overlay_57
+  - first:
+      213: 2173486043458547563
+    second: StageMap_Anim_Overlay_58
+  - first:
+      213: 8203125897377801698
+    second: StageMap_Anim_Overlay_59
+  - first:
+      213: -1882081479997930842
+    second: StageMap_Anim_Overlay_60
+  - first:
+      213: 7507105033658328205
+    second: StageMap_Anim_Overlay_61
+  - first:
+      213: 7779559760527786338
+    second: StageMap_Anim_Overlay_62
+  - first:
+      213: -3601561740493577702
+    second: StageMap_Anim_Overlay_63
+  - first:
+      213: -503726643408598809
+    second: StageMap_Anim_Overlay_64
+  - first:
+      213: -977847943057435673
+    second: StageMap_Anim_Overlay_65
+  - first:
+      213: -6359232012494938122
+    second: StageMap_Anim_Overlay_66
+  - first:
+      213: 3566647406269407982
+    second: StageMap_Anim_Overlay_67
+  - first:
+      213: 7304027717817992897
+    second: StageMap_Anim_Overlay_68
+  - first:
+      213: 1255242696193352757
+    second: StageMap_Anim_Overlay_69
+  - first:
+      213: -8523288766918691644
+    second: StageMap_Anim_Overlay_70
+  - first:
+      213: -5782945129107474969
+    second: StageMap_Anim_Overlay_71
+  - first:
+      213: -4591805762075112599
+    second: StageMap_Anim_Overlay_72
+  - first:
+      213: 8569846175056092189
+    second: StageMap_Anim_Overlay_73
+  - first:
+      213: -519377492765984149
+    second: StageMap_Anim_Overlay_74
+  - first:
+      213: 4994572488251300467
+    second: StageMap_Anim_Overlay_75
+  - first:
+      213: -3321738750442136043
+    second: StageMap_Anim_Overlay_76
+  - first:
+      213: 3024265722738415961
+    second: StageMap_Anim_Overlay_77
+  - first:
+      213: -8345272771270668588
+    second: StageMap_Anim_Overlay_78
+  - first:
+      213: 8999909303239228489
+    second: StageMap_Anim_Overlay_79
+  - first:
+      213: 5715974821275006130
+    second: StageMap_Anim_Overlay_80
+  - first:
+      213: 3977706807300090358
+    second: StageMap_Anim_Overlay_81
+  - first:
+      213: -7643223124278046381
+    second: StageMap_Anim_Overlay_82
+  - first:
+      213: 8065969570470571379
+    second: StageMap_Anim_Overlay_83
+  - first:
+      213: 7849701782857365051
+    second: StageMap_Anim_Overlay_84
+  - first:
+      213: -6775939617626839397
+    second: StageMap_Anim_Overlay_85
+  - first:
+      213: -1009455542091900864
+    second: StageMap_Anim_Overlay_86
+  - first:
+      213: -9023439090962527911
+    second: StageMap_Anim_Overlay_87
+  - first:
+      213: -5790800917646530941
+    second: StageMap_Anim_Overlay_88
+  - first:
+      213: 9103419958760596745
+    second: StageMap_Anim_Overlay_89
+  - first:
+      213: -5959215126235541362
+    second: StageMap_Anim_Overlay_90
+  - first:
+      213: 8250855437102309202
+    second: StageMap_Anim_Overlay_91
+  - first:
+      213: 160786833660934381
+    second: StageMap_Anim_Overlay_92
+  - first:
+      213: -1345964351776264505
+    second: StageMap_Anim_Overlay_93
+  - first:
+      213: -5495823416627657044
+    second: StageMap_Anim_Overlay_94
+  - first:
+      213: 7620094665538709706
+    second: StageMap_Anim_Overlay_95
+  - first:
+      213: 2613700994107070025
+    second: StageMap_Anim_Overlay_96
+  - first:
+      213: 7513149255934125723
+    second: StageMap_Anim_Overlay_97
+  - first:
+      213: 7465855184150362457
+    second: StageMap_Anim_Overlay_98
+  - first:
+      213: 2305910981516317486
+    second: StageMap_Anim_Overlay_99
+  - first:
+      213: 1052366205333600823
+    second: StageMap_Anim_Overlay_100
+  - first:
+      213: 6057150787580044754
+    second: StageMap_Anim_Overlay_101
+  - first:
+      213: -8050196162783166199
+    second: StageMap_Anim_Overlay_102
+  - first:
+      213: 107546468900442135
+    second: StageMap_Anim_Overlay_103
+  - first:
+      213: -2551650838658192051
+    second: StageMap_Anim_Overlay_104
+  - first:
+      213: -3935294631748304699
+    second: StageMap_Anim_Overlay_105
+  - first:
+      213: -5143222112454053678
+    second: StageMap_Anim_Overlay_106
+  - first:
+      213: -7370307412184470083
+    second: StageMap_Anim_Overlay_107
+  - first:
+      213: 9039001945636912706
+    second: StageMap_Anim_Overlay_108
+  - first:
+      213: 1369716657308932973
+    second: StageMap_Anim_Overlay_109
+  - first:
+      213: 2518277512248013983
+    second: StageMap_Anim_Overlay_110
+  - first:
+      213: -3100640485054910013
+    second: StageMap_Anim_Overlay_111
+  - first:
+      213: -1930130298793137798
+    second: StageMap_Anim_Overlay_112
+  - first:
+      213: 5789473873830111431
+    second: StageMap_Anim_Overlay_113
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationMethod: 0
+  spriteTessellationDetail: -1
+  spriteGeometrySubdivision: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 4096
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: StageMap_Anim_Overlay_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 480
+        height: 270
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 882f27ab9bdc1f120800000000000000
+      internalID: 2445962270219629192
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: StageMap_Anim_Overlay_1
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 0
+        width: 480
+        height: 270
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 97998659c2d9c7350800000000000000
+      internalID: 6015856017070922105
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: StageMap_Anim_Overlay_2
+      rect:
+        serializedVersion: 2
+        x: 960
+        y: 0
+        width: 480
+        height: 270
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aa384739621901840800000000000000
+      internalID: 5192809965226853290
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: StageMap_Anim_Overlay_3
+      rect:
+        serializedVersion: 2
+        x: 1440
+        y: 0
+        width: 480
+        height: 270
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: af268d1ada6133b50800000000000000
+      internalID: 6571621216264151802
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: StageMap_Anim_Overlay_4
+      rect:
+        serializedVersion: 2
+        x: 1920
+        y: 0
+        width: 480
+        height: 270
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ea975668cab123060800000000000000
+      internalID: 6931633204279736750
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: StageMap_Anim_Overlay_5
+      rect:
+        serializedVersion: 2
+        x: 2400
+        y: 0
+        width: 480
+        height: 270
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dd849d2aaaa1661a0800000000000000
+      internalID: -6816731665799755555
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: StageMap_Anim_Overlay_6
+      rect:
+        serializedVersion: 2
+        x: 2880
+        y: 0
+        width: 480
+        height: 270
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9ea1f59850ea00800800000000000000
+      internalID: 576652091106204393
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: StageMap_Anim_Overlay_7
+      rect:
+        serializedVersion: 2
+        x: 3360
+        y: 0
+        width: 480
+        height: 270
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6776812fecdc5ce20800000000000000
+      internalID: 3370326184865326966
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: StageMap_Anim_Overlay_8
+      rect:
+        serializedVersion: 2
+        x: 3840
+        y: 0
+        width: 480
+        height: 270
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b6aa46916e853aa00800000000000000
+      internalID: 766554106874866283
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: StageMap_Anim_Overlay_9
+      rect:
+        serializedVersion: 2
+        x: 4320
+        y: 0
+        width: 480
+        height: 270
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d5f3336d0ba007a40800000000000000
+      internalID: 5363798910822465373
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: StageMap_Anim_Overlay_10
+      rect:
+        serializedVersion: 2
+        x: 4800
+        y: 0
+        width: 480
+        height: 270
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aeec78905140bcb80800000000000000
+      internalID: -8373594593764585750
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: StageMap_Anim_Overlay_11
+      rect:
+        serializedVersion: 2
+        x: 5280
+        y: 0
+        width: 480
+        height: 270
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 13ea33da24e21cdf0800000000000000
+      internalID: -161797247700062671
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 2d647e59e3276d743bd800f3563be4c7
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":480.0,"y":270.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":1,"keepEmptyRects":false,"isAlternate":false}'
+    nameFileIdTable:
+      StageMap_Anim_Overlay_0: 2445962270219629192
+      StageMap_Anim_Overlay_1: 6015856017070922105
+      StageMap_Anim_Overlay_10: -8373594593764585750
+      StageMap_Anim_Overlay_11: -161797247700062671
+      StageMap_Anim_Overlay_2: 5192809965226853290
+      StageMap_Anim_Overlay_3: 6571621216264151802
+      StageMap_Anim_Overlay_4: 6931633204279736750
+      StageMap_Anim_Overlay_5: -6816731665799755555
+      StageMap_Anim_Overlay_6: 576652091106204393
+      StageMap_Anim_Overlay_7: 3370326184865326966
+      StageMap_Anim_Overlay_8: 766554106874866283
+      StageMap_Anim_Overlay_9: 5363798910822465373
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

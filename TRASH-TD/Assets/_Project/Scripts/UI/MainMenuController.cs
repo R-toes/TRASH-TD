@@ -535,6 +535,32 @@ namespace TrashTD.UI
                     mapBg.color = new Color(0.02f, 0.05f, 0.03f, 1f);
                 }
 
+                // Add child Image stretched to fill the map sprite with 12-strip animation overlay
+                var animOverlayGo = new GameObject("StageMap_Anim_Overlay", typeof(RectTransform), typeof(Image));
+                animOverlayGo.transform.SetParent(mapContainerGo.transform, false);
+                var animOverlayRect = animOverlayGo.GetComponent<RectTransform>();
+                StretchFill(animOverlayRect);
+
+                var animOverlayImage = animOverlayGo.GetComponent<Image>();
+                animOverlayImage.sprite = null;
+                animOverlayImage.type = Image.Type.Simple;
+                animOverlayImage.preserveAspect = false;
+                animOverlayImage.raycastTarget = false;
+                animOverlayImage.color = Color.white;
+
+                var animOverlayComp = animOverlayGo.AddComponent<StageMapAnimOverlay>();
+                animOverlayComp.FrameDuration = 0.0833f;
+
+#if UNITY_EDITOR
+                var animController = UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/_Project/Animations/StageMap_Anim_Overlay.controller");
+                if (animController != null)
+                {
+                    var animator = animOverlayGo.AddComponent<Animator>();
+                    animator.runtimeAnimatorController = animController;
+                    animator.updateMode = AnimatorUpdateMode.UnscaledTime;
+                }
+#endif
+
                 // Add the layout driver so nodes scale with the map
                 stageMapLayout = mapContainerGo.AddComponent<StageMapLayout>();
 
@@ -1115,6 +1141,7 @@ namespace TrashTD.UI
             {
                 var child = stageListRoot.GetChild(i);
                 if (child.GetComponent<StageMapScanlines>() != null) continue;
+                if (child.GetComponent<StageMapAnimOverlay>() != null || child.name == "StageMap_Anim_Overlay") continue;
                 if (child.name.StartsWith("StageNode_")) Destroy(child.gameObject);
             }
 
