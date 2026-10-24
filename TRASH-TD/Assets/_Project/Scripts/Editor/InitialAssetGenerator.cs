@@ -89,7 +89,8 @@ namespace TrashTD.Editor
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Progeny.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Stagger.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Defender_Thornchin.asset"),
-                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Ignisaur.asset")
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Ignisaur.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Resicochet.asset")
             };
 
             // Assign Tile Sprites
@@ -522,6 +523,39 @@ namespace TrashTD.Editor
             caster.skillDescription = "Increases damage by 3% per enemy in range (stacks up to 5 times). Deals AoE Arts damage.";
             EditorUtility.SetDirty(caster);
 
+            // 4b. Caster (Resicochet)
+            var resicochetFrame0 = LoadSprite("Resicochet-Sheet.png", "Resicochet_0");
+            var resicochetFrame1 = LoadSprite("Resicochet-Sheet.png", "Resicochet_1");
+            var resicochetFrame2 = LoadSprite("Resicochet-Sheet.png", "Resicochet_2");
+            var resicochetFrame3 = LoadSprite("Resicochet-Sheet.png", "Resicochet_3");
+            var resicochetFrame4 = LoadSprite("Resicochet-Sheet.png", "Resicochet_4");
+            var resicochetFrame5 = LoadSprite("Resicochet-Sheet.png", "Resicochet_5");
+            var resicochetFrame6 = LoadSprite("Resicochet-Sheet.png", "Resicochet_6");
+            var resicochetFrame7 = LoadSprite("Resicochet-Sheet.png", "Resicochet_7");
+            var resicochetFrame8 = LoadSprite("Resicochet-Sheet.png", "Resicochet_8");
+            var resicochetFrame9 = LoadSprite("Resicochet-Sheet.png", "Resicochet_9");
+            var resicochetFrame10 = LoadSprite("Resicochet-Sheet.png", "Resicochet_10");
+            var resicochetFrame11 = LoadSprite("Resicochet-Sheet.png", "Resicochet_11");
+
+            var resicochetC1 = new[] { resicochetFrame0, resicochetFrame1, resicochetFrame2, resicochetFrame3 };
+            var resicochetC2 = new[] { resicochetFrame4, resicochetFrame5, resicochetFrame6, resicochetFrame7 };
+            var resicochetC3 = new[] { resicochetFrame8, resicochetFrame9, resicochetFrame10, resicochetFrame11 };
+
+            var resicochetPrefab = CreateResicochetPrefab(resicochetC1, resicochetC2, resicochetC3);
+            var resicochet = CreateOperator("OP_Caster_Resicochet", "Resicochet", OperatorClass.Caster, OperatorPosition.Ranged, OperatorRarity.Star3,
+                hp: 90, atk: 150, def: 40, res: 0, blockCount: 0, range: 2, interval: 1.5f, dp: 14,
+                new[]
+                {
+                    new Vector2Int(1, 0), new Vector2Int(2, 0),
+                    new Vector2Int(0, 1), new Vector2Int(1, 1),
+                    new Vector2Int(0, -1), new Vector2Int(1, -1)
+                },
+                resicochetFrame0, resicochetPrefab);
+            resicochet.damageType = DamageType.Arts;
+            resicochet.roleTags = new[] { "Arts", "Bounce", "Burst" };
+            resicochet.skillDescription = "Stores a charge every 5 seconds (up to 3). Attacks fire 1 projectile per charge that bounces to up to 4 targets, dealing less damage each bounce.";
+            EditorUtility.SetDirty(resicochet);
+
             // 5. Medic (Coalesce)
             var coalesceFrame0 = LoadSprite("Coalesce-Sheet.png", "Coalesce-Sheet_0");
             var coalesceFrame1 = LoadSprite("Coalesce-Sheet.png", "Coalesce-Sheet_1");
@@ -591,6 +625,49 @@ namespace TrashTD.Editor
                     "Passive - Chain Heal: Restores HP to an allied operator in range. The heal bounces to a second operator in the surrounding tiles of the healed operator (healing reduced by 50% when it bounces).";
                 EditorUtility.SetDirty(progeny);
             }
+        }
+
+        private static GameObject CreateResicochetPrefab(Sprite[] c1, Sprite[] c2, Sprite[] c3)
+        {
+            const string prefabName = "Prefab_OP_Resicochet";
+            string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null)
+            {
+                var existingOp = existing.GetComponent<TrashTD.Operators.ResicochetOperator>();
+                if (existingOp != null)
+                {
+                    existingOp.ConfigureAnimationFrames(c1, c2, c3);
+                }
+                var existingAnim = existing.GetComponent<TrashTD.Operators.OperatorSpriteAnimation>();
+                if (existingAnim != null && c1 != null && c1.Length > 0)
+                {
+                    existingAnim.Configure(c1);
+                }
+                var existingSr = existing.GetComponent<SpriteRenderer>();
+                if (existingSr != null && c1 != null && c1.Length > 0 && c1[0] != null)
+                {
+                    existingSr.sprite = c1[0];
+                }
+                EditorUtility.SetDirty(existing);
+                return existing;
+            }
+
+            var go = new GameObject(prefabName);
+            var spriteRenderer = go.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = c1 != null && c1.Length > 0 ? c1[0] : null;
+            spriteRenderer.sortingOrder = 5;
+            var op = go.AddComponent<TrashTD.Operators.ResicochetOperator>();
+            op.ConfigureAnimationFrames(c1, c2, c3);
+            var animation = go.AddComponent<TrashTD.Operators.OperatorSpriteAnimation>();
+            if (c1 != null && c1.Length > 0)
+            {
+                animation.Configure(c1);
+            }
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
         }
 
         private static GameObject CreateBubbletsPrefab(Sprite firstFrame, Sprite secondFrame)
@@ -1586,7 +1663,7 @@ namespace TrashTD.Editor
                     exitPointIndex = 0,
                     waypoints = new[]
                     {
-                        new Vector2Int(0, 1), new Vector2Int(1, 1), new Vector2Int(2, 1),
+                        new Vector2Int(0, 1), new Vector2Int(1, 1),
                         new Vector2Int(3, 1), new Vector2Int(4, 1), new Vector2Int(5, 1),
                         new Vector2Int(6, 1), new Vector2Int(7, 1), new Vector2Int(8, 1),
                         new Vector2Int(9, 1), new Vector2Int(10, 1), new Vector2Int(11, 1),
@@ -1811,7 +1888,7 @@ namespace TrashTD.Editor
                     exitPointIndex = 0,
                     waypoints = new[]
                     {
-                        new Vector2Int(0, 1), new Vector2Int(1, 1), new Vector2Int(2, 1),
+                        new Vector2Int(0, 1), new Vector2Int(1, 1),
                         new Vector2Int(3, 1), new Vector2Int(3, 2), new Vector2Int(3, 3),
                         new Vector2Int(3, 4), new Vector2Int(3, 5), new Vector2Int(4, 5),
                         new Vector2Int(5, 5), new Vector2Int(6, 5), new Vector2Int(7, 5),

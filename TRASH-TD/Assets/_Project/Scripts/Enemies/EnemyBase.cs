@@ -82,6 +82,10 @@ namespace TrashTD.Enemies
         private float chillSlowMultiplier = 1f;
         private bool isFrozen;
         private bool isStunned;
+        private float sluggishTimer;
+        private float sluggishMoveSpeedMultiplier = 1f;
+        private float sluggishAttackIntervalMultiplier = 1f;
+        private bool isSluggish;
         private SpriteRenderer[] animationRenderers;
         private int animationFrameIndex;
         private float animationFrameTimer;
@@ -110,6 +114,10 @@ namespace TrashTD.Enemies
         public bool IsFacingLeft => isFacingLeft;
         public bool IsFrozen => isFrozen;
         public bool IsStunned => isStunned;
+        public bool IsSluggish => isSluggish;
+        public float SluggishTimer => sluggishTimer;
+        public float SluggishMoveSpeedMultiplier => sluggishMoveSpeedMultiplier;
+        public float SluggishAttackIntervalMultiplier => sluggishAttackIntervalMultiplier;
         public bool IsInsideHole => isInsideHole;
         public Vector3 VisualPosition
         {
@@ -182,6 +190,14 @@ namespace TrashTD.Enemies
             chillSlowMultiplier = 1f;
             isFrozen = false;
             isStunned = false;
+            isSluggish = false;
+            sluggishTimer = 0f;
+            sluggishMoveSpeedMultiplier = 1f;
+            sluggishAttackIntervalMultiplier = 1f;
+            isSluggish = false;
+            sluggishTimer = 0f;
+            sluggishMoveSpeedMultiplier = 1f;
+            sluggishAttackIntervalMultiplier = 1f;
             CacheChillRenderers();
             UpdateChillVisual();
 
@@ -196,7 +212,7 @@ namespace TrashTD.Enemies
             // (casters keep their wind-up before the first ranged shot).
             attackTimer = data != null && data.movementType == EnemyMovementType.Ground &&
                           data.archetype != EnemyArchetype.Caster
-                ? Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval)
+                ? GetEffectiveAttackInterval()
                 : 0f;
             rangedAttackStopTimer = 0f;
             currentPathIndex = 0;
@@ -287,7 +303,7 @@ namespace TrashTD.Enemies
         {
             if (data == null) return;
 
-            float attackInterval = Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval);
+            float attackInterval = GetEffectiveAttackInterval();
             attackTimer = Mathf.Min(attackTimer + deltaTime, attackInterval);
         }
 
@@ -322,9 +338,7 @@ namespace TrashTD.Enemies
             }
 
             attackTimer += deltaTime;
-            float attackInterval = data != null
-                ? Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval)
-                : float.PositiveInfinity;
+            float attackInterval = GetEffectiveAttackInterval();
 
             if (attackTimer >= attackInterval)
             {
@@ -366,9 +380,7 @@ namespace TrashTD.Enemies
             }
 
             attackTimer += deltaTime;
-            float attackInterval = data != null
-                ? Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval)
-                : float.PositiveInfinity;
+            float attackInterval = GetEffectiveAttackInterval();
 
             if (attackTimer >= attackInterval)
             {
@@ -1200,7 +1212,7 @@ namespace TrashTD.Enemies
             if (blockingOperator == null) return;
 
             attackTimer += Time.deltaTime;
-            if (attackTimer >= Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval))
+            if (attackTimer >= GetEffectiveAttackInterval())
             {
                 attackTimer = 0f;
                 PlayAttackSound();
@@ -1286,6 +1298,43 @@ namespace TrashTD.Enemies
             UpdateChillVisual();
         }
 
+        public virtual float GetEffectiveAttackInterval()
+        {
+            if (data == null) return float.PositiveInfinity;
+            float interval = Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval);
+            if (isSluggish)
+            {
+                interval *= sluggishAttackIntervalMultiplier;
+            }
+            return interval;
+        }
+
+        public void ApplySluggish(float duration = 3.0f, float speedMultiplier = 0.6f, float attackIntervalMultiplier = 1.5f)
+        {
+            if (isDead || isInsideHole) return;
+
+            if (slowTimer <= 0f && sluggishTimer <= 0f && !isFrozen)
+            {
+                speedBeforeChill = currentMoveSpeed;
+            }
+
+            sluggishMoveSpeedMultiplier = Mathf.Min(sluggishMoveSpeedMultiplier, Mathf.Clamp01(speedMultiplier));
+            sluggishAttackIntervalMultiplier = Mathf.Max(sluggishAttackIntervalMultiplier, Mathf.Max(1f, attackIntervalMultiplier));
+            sluggishTimer = Mathf.Max(sluggishTimer, duration);
+
+            if (!isSluggish)
+            {
+                isSluggish = true;
+                Combat.FloatingCombatNumber.ShowText(VisualPosition, "SLUGGISH!", new Color(0.75f, 0.45f, 1f));
+            }
+
+            if (!isFrozen && !isStunned)
+            {
+                float mult = (slowTimer > 0f ? chillSlowMultiplier : 1f) * sluggishMoveSpeedMultiplier;
+                currentMoveSpeed = speedBeforeChill * mult;
+            }
+        }
+
         protected void UpdateChillStatus(float deltaTime)
         {
             bool wasSlowed = slowTimer > 0f;
@@ -1314,16 +1363,34 @@ namespace TrashTD.Enemies
                 }
             }
 
+            bool wasSluggish = isSluggish;
+            if (sluggishTimer > 0f)
+            {
+                sluggishTimer = Mathf.Max(0f, sluggishTimer - deltaTime);
+                if (sluggishTimer <= 0f)
+                {
+                    isSluggish = false;
+                    sluggishMoveSpeedMultiplier = 1f;
+                    sluggishAttackIntervalMultiplier = 1f;
+                }
+            }
+
             if (!isFrozen && !isStunned)
             {
-                if (slowTimer > 0f)
+                float speedMultiplier = 1f;
+                if (slowTimer > 0f) speedMultiplier *= chillSlowMultiplier;
+                if (sluggishTimer > 0f) speedMultiplier *= sluggishMoveSpeedMultiplier;
+
+                if (slowTimer > 0f || sluggishTimer > 0f)
                 {
-                    currentMoveSpeed = speedBeforeChill * chillSlowMultiplier;
+                    currentMoveSpeed = speedBeforeChill * speedMultiplier;
                 }
-                else if (wasSlowed || wasFrozen)
+                else if (wasSlowed || wasFrozen || wasSluggish)
                 {
                     currentMoveSpeed = speedBeforeChill;
                     chillSlowMultiplier = 1f;
+                    sluggishMoveSpeedMultiplier = 1f;
+                    sluggishAttackIntervalMultiplier = 1f;
                 }
             }
 

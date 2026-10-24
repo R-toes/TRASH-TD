@@ -12,10 +12,22 @@ namespace TrashTD.Operators
         private SpriteRenderer spriteRenderer;
         private float frameTimer;
         private int currentFrame;
+        private bool isCustomConfigured;
 
         public void Configure(Sprite[] animationFrames)
         {
             frames = animationFrames;
+            isCustomConfigured = true;
+            currentFrame = 0;
+            frameTimer = 0f;
+            if (spriteRenderer == null)
+            {
+                spriteRenderer = GetComponent<SpriteRenderer>();
+            }
+            if (spriteRenderer != null && frames != null && frames.Length > 0 && frames[0] != null)
+            {
+                spriteRenderer.sprite = frames[0];
+            }
         }
 
         private void Awake()
@@ -28,7 +40,7 @@ namespace TrashTD.Operators
                 TryResolveFramesFromTexture();
             }
 
-            if (HasValidFrames())
+            if (HasValidFrames() && spriteRenderer != null)
             {
                 spriteRenderer.sprite = frames[0];
             }
@@ -40,6 +52,8 @@ namespace TrashTD.Operators
             {
                 spriteRenderer = GetComponent<SpriteRenderer>();
             }
+
+            if (isCustomConfigured || GetComponent<ResicochetOperator>() != null) return;
 
             if (!HasValidFrames() || (spriteRenderer != null && spriteRenderer.sprite == null))
             {
@@ -54,6 +68,8 @@ namespace TrashTD.Operators
 
         public void RefreshFromOperatorDataOrRenderer(Sprite fallbackSprite = null)
         {
+            if (isCustomConfigured || GetComponent<ResicochetOperator>() != null) return;
+
             if (spriteRenderer == null)
             {
                 spriteRenderer = GetComponent<SpriteRenderer>();
@@ -99,10 +115,16 @@ namespace TrashTD.Operators
 
         private bool ShouldResolveFramesFromTexture()
         {
+            if (isCustomConfigured) return false;
+            if (GetComponent<ResicochetOperator>() != null) return false;
+
             if (spriteRenderer == null || spriteRenderer.sprite == null || spriteRenderer.sprite.texture == null)
             {
                 return false;
             }
+
+            string texName = spriteRenderer.sprite.texture.name.ToLowerInvariant();
+            if (texName.Contains("resicochet")) return false;
 
             int expectedFrameCount = GetExpectedFrameCount();
             if (frames == null || frames.Length != expectedFrameCount)
@@ -129,8 +151,14 @@ namespace TrashTD.Operators
             }
 
             Texture2D texture = spriteRenderer.sprite.texture;
+            string texName = texture.name.ToLowerInvariant();
+            if (texName.Contains("resicochet"))
+            {
+                return 4;
+            }
+
             int frameCount = Mathf.RoundToInt((float)texture.width / texture.height);
-            if (texture.name.ToLowerInvariant().Contains("basurocket") || texture.name.ToLowerInvariant().Contains("progeny") || texture.name.ToLowerInvariant().Contains("stag-ger") || texture.name.ToLowerInvariant().Contains("stagger") || texture.name.ToLowerInvariant().Contains("thornchin") || texture.name.ToLowerInvariant().Contains("coalesce") || texture.name.ToLowerInvariant().Contains("ignisaur"))
+            if (texName.Contains("basurocket") || texName.Contains("progeny") || texName.Contains("stag-ger") || texName.Contains("stagger") || texName.Contains("thornchin") || texName.Contains("coalesce") || texName.Contains("ignisaur"))
             {
                 frameCount = 4;
             }
@@ -150,25 +178,34 @@ namespace TrashTD.Operators
             Vector2 pivot = new Vector2(0.5f, 0.5f);
 
             int frameCount = GetExpectedFrameCount();
-            float frameWidth = texture.height > 0 ? texture.height : (texture.width / (float)frameCount);
-            float frameHeight = texture.height;
+            float frameWidth = (texture.height > 0 && texture.height * frameCount <= texture.width)
+                ? texture.height
+                : (texture.width / (float)frameCount);
+            float frameHeight = Mathf.Min(texture.height, frameWidth > 0 ? frameWidth : texture.height);
 
             frames = new Sprite[frameCount];
             for (int i = 0; i < frameCount; i++)
             {
-                frames[i] = Sprite.Create(texture, new Rect(i * frameWidth, 0, frameWidth, frameHeight), pivot, ppu);
+                float x = i * frameWidth;
+                if (x + frameWidth > texture.width || frameHeight > texture.height) break;
+                frames[i] = Sprite.Create(texture, new Rect(x, texture.height - frameHeight, frameWidth, frameHeight), pivot, ppu);
             }
         }
 
         private void Update()
         {
+            if (frames == null || frames.Length == 0) return;
+
             frameTimer += Time.deltaTime;
             if (frameTimer < frameDuration) return;
 
             int elapsedFrames = Mathf.FloorToInt(frameTimer / frameDuration);
             frameTimer %= frameDuration;
             currentFrame = (currentFrame + elapsedFrames) % frames.Length;
-            spriteRenderer.sprite = frames[currentFrame];
+            if (spriteRenderer != null && frames[currentFrame] != null)
+            {
+                spriteRenderer.sprite = frames[currentFrame];
+            }
         }
     }
 }

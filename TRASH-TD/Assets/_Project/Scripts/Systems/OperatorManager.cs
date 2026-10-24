@@ -207,7 +207,8 @@ namespace TrashTD.Systems
                    (opData.operatorName == "Coalesce" && !(opComp is CoalesceOperator)) ||
                    ((opData.operatorName == "Proxishot" || opData.operatorName == "Proxyshot") && !(opComp is ProxishotOperator)) ||
                    (opData.operatorName == "Ignisaur" && !(opComp is IgnisaurOperator)) ||
-                   (opData.operatorName == "Shadeslice" && !(opComp is ShadesliceOperator));
+                   (opData.operatorName == "Shadeslice" && !(opComp is ShadesliceOperator)) ||
+                   (opData.operatorName == "Resicochet" && !(opComp is ResicochetOperator));
         }
 
         private OperatorBase AddClassComponent(GameObject obj, OperatorData opData)
@@ -271,6 +272,10 @@ namespace TrashTD.Systems
             if (opData != null && opData.operatorName == "Shadeslice")
             {
                 return obj.AddComponent<ShadesliceOperator>();
+            }
+            if (opData != null && opData.operatorName == "Resicochet")
+            {
+                return obj.AddComponent<ResicochetOperator>();
             }
 
             OperatorClass opClass = opData != null ? opData.operatorClass : OperatorClass.Guard;

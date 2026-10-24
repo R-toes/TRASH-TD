@@ -51,7 +51,7 @@ namespace TrashTD.Enemies
             lockedTarget = null;
             hoverPhase = Random.value * Mathf.PI * 2f;
             // Ready to strike on first contact; flyers pass through range quickly.
-            attackTimer = StageCombatModifiers.GetAttackInterval(data.attackInterval);
+            attackTimer = GetEffectiveAttackInterval();
         }
 
         protected override void Update()
@@ -69,7 +69,7 @@ namespace TrashTD.Enemies
             // Re-evaluated every frame so the flyer slows down as soon as something is in range.
             lockedTarget = FindTarget();
 
-            float interval = StageCombatModifiers.GetAttackInterval(data.attackInterval);
+            float interval = GetEffectiveAttackInterval();
             attackTimer = Mathf.Min(attackTimer + Time.deltaTime, interval);
             if (attackTimer < interval || lockedTarget == null) return;
 

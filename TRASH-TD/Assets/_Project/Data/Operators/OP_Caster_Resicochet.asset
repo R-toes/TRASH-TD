@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
+  m_Name: OP_Caster_Resicochet
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
+  operatorName: Resicochet
+  operatorClass: 3
+  baseRarity: 3
+  position: 1
+  roleTags:
+  - Arts
+  - Bounce
+  - Burst
+  baseHP: 90
+  baseATK: 150
+  baseDEF: 40
+  baseRES: 0
+  blockCount: 0
+  attackRange: 2
+  attackInterval: 1.5
+  rangePattern:
+  - {x: 1, y: 0}
+  - {x: 2, y: 0}
+  - {x: 0, y: 1}
+  - {x: 1, y: 1}
+  - {x: 0, y: -1}
+  - {x: 1, y: -1}
+  damageType: 1
+  drawTwoCardsOnDeath: 0
+  bonusWhenIsolated: 0
+  isolatedAttackMultiplier: 1.5
+  skillDescription: 'Stores a charge every 5 seconds (up to 3). Attacks fire 1 projectile per charge that bounces to up to 4 targets, dealing less damage each bounce.'
+  chillPerHit: 0
+  chillSlowMultiplier: 0.65
+  chillSlowDuration: 2.5
+  chillFreezeThreshold: 100
+  chillFreezeDuration: 1.5
+  dpCost: 14
+  redeployCooldown: 60
+  portrait: {fileID: 2980719167767112441, guid: 5ab48ae432237224bbd8440a926669c8, type: 3}
+  operatorPrefab: {fileID: 4120733290429841632, guid: d7e8f9a0b1c234567890abcdef123456, type: 3}
+
