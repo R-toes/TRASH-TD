@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
+  m_Name: OP_Specialist_Framiliar
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
+  operatorName: Framiliar
+  operatorClass: 5
+  baseRarity: 2
+  position: 2
+  roleTags:
+  - Specialist
+  - Mimic
+  - Deck
+  baseHP: 100
+  baseATK: 50
+  baseDEF: 10
+  baseRES: 0
+  blockCount: 1
+  attackRange: 1
+  attackInterval: 1.2
+  rangePattern:
+  - {x: 1, y: 0}
+  - {x: 0, y: 0}
+  damageType: 0
+  drawTwoCardsOnDeath: 0
+  bonusWhenIsolated: 0
+  isolatedAttackMultiplier: 1.5
+  skillDescription: 'Copies any operator in your deck, taking on their form in grayscale. When retreated in the same preparation phase, returns as Framiliar; if retreated in the next prep phase, returns as the copied operator.'
+  chillPerHit: 0
+  chillSlowMultiplier: 0.65
+  chillSlowDuration: 2.5
+  chillFreezeThreshold: 100
+  chillFreezeDuration: 1.5
+  dpCost: 10
+  redeployCooldown: 0
+  portrait: {fileID: -2383767432185671046, guid: e47e00f265ee6fb43ae95c08488be5f9, type: 3}
+  operatorPrefab: {fileID: 6120733290429841632, guid: e2f3a4b5c6d7890123456789abcdef02, type: 3}
+

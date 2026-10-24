@@ -161,6 +161,20 @@ namespace TrashTD.UI
         private Text[] deckHeatLabels;
         private GameObject[] deckUpgradeBadges;
         private UpgradeArrowGraphic[] deckUpgradeBadgeLabels;
+        // Framiliar Copy Menu
+        private GameObject framiliarCopyMenuRoot;
+        private Text framiliarSubtitleText;
+        private Text framiliarEmptyMessageText;
+        private readonly List<DraftCard> activeFramiliarMatchingCards = new List<DraftCard>();
+        private Button[] framiliarCopyButtons;
+        private Text[] framiliarCopyLabels;
+        private Image[] framiliarCopyPortraits;
+        private Image[] framiliarCopyClassBadgeImages;
+        private Image[] framiliarCopyClassIconImages;
+        private GameObject[] framiliarCopyClassBadges;
+        private MenuButtonFeedback[] framiliarCopyFeedbacks;
+        private TrashTD.Operators.FramiliarOperator activeFramiliarOperator;
+        public bool IsFramiliarCopyMenuOpen => framiliarCopyMenuRoot != null && framiliarCopyMenuRoot.activeSelf;
         private CardDraftSystem draftSystem;
         private WaveManager waveManager;
         private EnemyManager enemyManager;
@@ -420,6 +434,7 @@ namespace TrashTD.UI
             CreatePlacementControls(root);
             CreateSelectedOperatorLabel(root);
             CreateSelectedOperatorDetailsPanel(root);
+            CreateFramiliarCopyMenu(root);
             CreateCooldownToast(root);
             CreatePausePanel(root); // last, so it renders above everything else
         }
@@ -944,7 +959,17 @@ namespace TrashTD.UI
             if (selectedOperator == null || !selectedOperator.IsDeployed || selectedOperator.DeployedCell == null || gridManager == null)
             {
                 SetSelectedOperatorName(string.Empty, Vector3.zero);
+                HideFramiliarCopyMenu();
                 return;
+            }
+
+            if (selectedOperator is TrashTD.Operators.FramiliarOperator framiliar && !framiliar.IsCopied)
+            {
+                ShowFramiliarCopyMenu(framiliar);
+            }
+            else
+            {
+                HideFramiliarCopyMenu();
             }
 
             selectedOperatorDetailsTarget = selectedOperator;
@@ -1029,6 +1054,7 @@ namespace TrashTD.UI
                 OperatorClass.Sniper => "Ranged Sniper / High Range",
                 OperatorClass.Caster => "Arts Damage / Magic Attacks",
                 OperatorClass.Medic => "Combat Support / Restores HP",
+                OperatorClass.Specialist => "Specialist / Fast Redeploy & Mimic",
                 _ => "Operator"
             };
         }
@@ -1042,6 +1068,7 @@ namespace TrashTD.UI
                 OperatorClass.Sniper => new Color(0.30f, 0.75f, 0.30f, 1f),
                 OperatorClass.Caster => new Color(0.70f, 0.30f, 0.85f, 1f),
                 OperatorClass.Medic => new Color(0.80f, 0.78f, 0.30f, 1f),
+                OperatorClass.Specialist => new Color(0.20f, 0.75f, 0.70f, 1f),
                 _ => new Color(0.5f, 0.7f, 0.9f, 1f)
             };
         }
@@ -1979,6 +2006,9 @@ namespace TrashTD.UI
                                      !NearCircle(px, py, new Vector2(31f, 37f), 5f)) ||
                                     (px >= 28f && px <= 34f && py >= 30f && py <= 42f));
                             break;
+                        case OperatorClass.Specialist:
+                            mark = (Mathf.Abs(px - 24f) + Mathf.Abs(py - 24f) <= 15f && Mathf.Abs(px - 24f) * Mathf.Abs(py - 24f) <= 28f) || NearCircle(px, py, new Vector2(24f, 24f), 4f);
+                            break;
                         case OperatorClass.Medic:
                             mark = (px >= 19f && px <= 29f && py >= 8f && py <= 40f) ||
                                    (px >= 8f && px <= 40f && py >= 19f && py <= 29f);
@@ -2123,6 +2153,255 @@ namespace TrashTD.UI
             texture.Apply();
             cooldownClockSprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), size);
             return cooldownClockSprite;
+        }
+
+        private void CreateFramiliarCopyMenu(Transform root)
+        {
+            framiliarCopyMenuRoot = new GameObject("FramiliarCopyMenu", typeof(RectTransform), typeof(Image), typeof(Outline));
+            framiliarCopyMenuRoot.transform.SetParent(root, false);
+
+            RectTransform menuRect = framiliarCopyMenuRoot.GetComponent<RectTransform>();
+            menuRect.anchorMin = new Vector2(0.5f, 0.5f);
+            menuRect.anchorMax = new Vector2(0.5f, 0.5f);
+            menuRect.pivot = new Vector2(0.5f, 0.5f);
+            menuRect.sizeDelta = new Vector2(640f, 185f);
+            menuRect.anchoredPosition = new Vector2(0f, 20f);
+
+            ApplyPanelContainer(framiliarCopyMenuRoot, PanelContainerType.Metal);
+            Outline outline = framiliarCopyMenuRoot.GetComponent<Outline>();
+            outline.effectColor = new Color(0.18f, 0.82f, 0.75f, 0.55f);
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            // Title
+            var title = CreateText(framiliarCopyMenuRoot.transform, "Title", "FRAMILIAR: COPY OPERATOR", 18, TextAnchor.MiddleLeft);
+            title.fontStyle = FontStyle.Bold;
+            title.color = new Color(0.25f, 0.95f, 0.85f, 1f);
+            SetPosition(title.rectTransform, new Vector2(20f, -14f), new Vector2(0f, 1f), new Vector2(350f, 24f), new Vector2(0f, 1f));
+
+            // Subtitle
+            framiliarSubtitleText = CreateText(framiliarCopyMenuRoot.transform, "Subtitle", "Select an operator from your deck to mimic its form and abilities.", 11, TextAnchor.MiddleLeft);
+            framiliarSubtitleText.color = new Color(0.75f, 0.80f, 0.85f, 0.85f);
+            SetPosition(framiliarSubtitleText.rectTransform, new Vector2(20f, -38f), new Vector2(0f, 1f), new Vector2(480f, 18f), new Vector2(0f, 1f));
+
+            // Empty state message (when no cards in deck match the tile position)
+            framiliarEmptyMessageText = CreateText(framiliarCopyMenuRoot.transform, "EmptyMessage", string.Empty, 13, TextAnchor.MiddleCenter);
+            framiliarEmptyMessageText.color = new Color(0.80f, 0.80f, 0.80f, 0.90f);
+            SetPosition(framiliarEmptyMessageText.rectTransform, new Vector2(0f, -15f), new Vector2(0.5f, 0.5f), new Vector2(500f, 36f), new Vector2(0.5f, 0.5f));
+            framiliarEmptyMessageText.gameObject.SetActive(false);
+
+            // Close button
+            var closeBtn = CreateButton(framiliarCopyMenuRoot.transform, "CloseButton", "✕", new Vector2(28f, 28f), ButtonContainerType.Dark);
+            SetPosition(closeBtn.GetComponent<RectTransform>(), new Vector2(-16f, -14f), new Vector2(1f, 1f), new Vector2(28f, 28f), new Vector2(1f, 1f));
+            closeBtn.onClick.AddListener(HideFramiliarCopyMenu);
+            AttachFeedback(closeBtn, new Color(1f, 0.4f, 0.4f, 1f), 1.05f);
+
+            // 8 Slots Container
+            var slotsRoot = new GameObject("CopySlotsContainer", typeof(RectTransform));
+            slotsRoot.transform.SetParent(framiliarCopyMenuRoot.transform, false);
+            RectTransform slotsRect = slotsRoot.GetComponent<RectTransform>();
+            slotsRect.anchorMin = new Vector2(0f, 0f);
+            slotsRect.anchorMax = new Vector2(1f, 0f);
+            slotsRect.pivot = new Vector2(0.5f, 0f);
+            slotsRect.sizeDelta = new Vector2(-32f, 115f);
+            slotsRect.anchoredPosition = new Vector2(0f, 12f);
+
+            framiliarCopyButtons = new Button[DeckSlotCount];
+            framiliarCopyLabels = new Text[DeckSlotCount];
+            framiliarCopyPortraits = new Image[DeckSlotCount];
+            framiliarCopyClassBadges = new GameObject[DeckSlotCount];
+            framiliarCopyClassBadgeImages = new Image[DeckSlotCount];
+            framiliarCopyClassIconImages = new Image[DeckSlotCount];
+            framiliarCopyFeedbacks = new MenuButtonFeedback[DeckSlotCount];
+
+            float slotWidth = 68f;
+            float slotHeight = 105f;
+            float spacing = (608f - (DeckSlotCount * slotWidth)) / (DeckSlotCount - 1);
+
+            for (int i = 0; i < DeckSlotCount; i++)
+            {
+                int slotIndex = i;
+                float slotX = i * (slotWidth + spacing) + slotWidth * 0.5f;
+                var slotBtn = CreateButton(slotsRoot.transform, $"CopySlot_{i + 1}", string.Empty, new Vector2(slotWidth, slotHeight), ButtonContainerType.Dark);
+                RectTransform btnRect = slotBtn.GetComponent<RectTransform>();
+                btnRect.anchorMin = new Vector2(0f, 0.5f);
+                btnRect.anchorMax = new Vector2(0f, 0.5f);
+                btnRect.pivot = new Vector2(0.5f, 0.5f);
+                btnRect.anchoredPosition = new Vector2(slotX, 0f);
+
+                // Portrait Image
+                var portraitGo = new GameObject("OperatorPortrait", typeof(RectTransform), typeof(Image));
+                portraitGo.transform.SetParent(slotBtn.transform, false);
+                RectTransform portRect = portraitGo.GetComponent<RectTransform>();
+                portRect.anchorMin = new Vector2(0.5f, 0.5f);
+                portRect.anchorMax = new Vector2(0.5f, 0.5f);
+                portRect.pivot = new Vector2(0.5f, 0.5f);
+                portRect.sizeDelta = new Vector2(50f, 56f);
+                portRect.anchoredPosition = new Vector2(0f, 10f);
+                var portImg = portraitGo.GetComponent<Image>();
+                portImg.preserveAspect = true;
+                portImg.raycastTarget = false;
+                framiliarCopyPortraits[i] = portImg;
+
+                // Class Badge
+                framiliarCopyClassBadges[i] = CreateClassBadge(slotBtn.transform, out framiliarCopyClassBadgeImages[i], out framiliarCopyClassIconImages[i]);
+                RectTransform badgeRect = framiliarCopyClassBadges[i].GetComponent<RectTransform>();
+                badgeRect.anchoredPosition = new Vector2(4f, -4f);
+
+                // Label (Name + Rarity)
+                var label = slotBtn.GetComponentInChildren<Text>();
+                if (label != null)
+                {
+                    label.fontSize = 9;
+                    label.resizeTextForBestFit = true;
+                    label.resizeTextMinSize = 7;
+                    label.resizeTextMaxSize = 10;
+                    label.alignment = TextAnchor.LowerCenter;
+                    RectTransform lblRect = label.GetComponent<RectTransform>();
+                    lblRect.anchorMin = new Vector2(0f, 0f);
+                    lblRect.anchorMax = new Vector2(1f, 0f);
+                    lblRect.pivot = new Vector2(0.5f, 0f);
+                    lblRect.sizeDelta = new Vector2(0f, 34f);
+                    lblRect.anchoredPosition = new Vector2(0f, 4f);
+                    framiliarCopyLabels[i] = label;
+                }
+
+                framiliarCopyButtons[i] = slotBtn;
+                framiliarCopyFeedbacks[i] = AttachFeedback(slotBtn, Color.white, 1.05f);
+                slotBtn.onClick.AddListener(() => SelectFramiliarCopySlot(slotIndex));
+            }
+
+            framiliarCopyMenuRoot.SetActive(false);
+        }
+
+        public void ShowFramiliarCopyMenu(TrashTD.Operators.FramiliarOperator framiliar)
+        {
+            if (framiliar == null || framiliarCopyMenuRoot == null) return;
+            activeFramiliarOperator = framiliar;
+            activeFramiliarMatchingCards.Clear();
+
+            GridCell cell = framiliar.DeployedCell;
+            if (cell == null && operatorManager != null && operatorManager.GridManager != null)
+            {
+                cell = operatorManager.GridManager.GetCell(operatorManager.GridManager.WorldToGridPosition(framiliar.transform.position));
+            }
+
+            bool isHighGround = cell != null && cell.TileType == TileType.HighGround;
+            bool isLowGround = cell != null && (cell.TileType == TileType.LowGround || cell.TileType == TileType.EnemyPath);
+
+            if (framiliarSubtitleText != null)
+            {
+                if (isHighGround)
+                    framiliarSubtitleText.text = "High Ground tile: Select a Ranged operator from your deck to mimic.";
+                else if (isLowGround)
+                    framiliarSubtitleText.text = "Low Ground tile: Select a Melee operator from your deck to mimic.";
+                else
+                    framiliarSubtitleText.text = "Select a compatible operator from your deck to mimic its form and abilities.";
+            }
+
+            var deck = playerDeck != null ? playerDeck.DeckSlots : null;
+            if (deck != null)
+            {
+                for (int i = 0; i < deck.Count; i++)
+                {
+                    var card = deck[i];
+                    if (card == null || card.operatorData == null) continue;
+                    if (card.operatorData.operatorName == "Framiliar") continue;
+
+                    // Enforce tile ground matching: only display matching operators, do not show non-matching!
+                    if (cell != null && !cell.SupportsPosition(card.operatorData.position)) continue;
+
+                    activeFramiliarMatchingCards.Add(card);
+                }
+            }
+
+            int matchingCount = activeFramiliarMatchingCards.Count;
+            if (framiliarEmptyMessageText != null)
+            {
+                framiliarEmptyMessageText.gameObject.SetActive(matchingCount == 0);
+                if (matchingCount == 0)
+                {
+                    framiliarEmptyMessageText.text = isHighGround
+                        ? "No Ranged (High Ground) operators found in your deck."
+                        : (isLowGround ? "No Melee (Low Ground) operators found in your deck." : "No matching operators in your deck.");
+                }
+            }
+
+            int framiliarUpgradeLevels = Mathf.Max(0, (int)framiliar.CurrentRarity - (int)(framiliar.OriginalFramiliarData != null ? framiliar.OriginalFramiliarData.baseRarity : (framiliar.Data != null ? framiliar.Data.baseRarity : OperatorRarity.Star2)));
+
+            float slotWidth = 68f;
+            float spacing = 12f;
+            float totalWidth = matchingCount * slotWidth + Mathf.Max(0, matchingCount - 1) * spacing;
+            float startX = -totalWidth * 0.5f + slotWidth * 0.5f;
+
+            for (int i = 0; i < DeckSlotCount; i++)
+            {
+                if (i < matchingCount)
+                {
+                    var card = activeFramiliarMatchingCards[i];
+                    framiliarCopyButtons[i].gameObject.SetActive(true);
+                    RectTransform btnRect = framiliarCopyButtons[i].GetComponent<RectTransform>();
+                    btnRect.anchorMin = new Vector2(0.5f, 0.5f);
+                    btnRect.anchorMax = new Vector2(0.5f, 0.5f);
+                    btnRect.pivot = new Vector2(0.5f, 0.5f);
+                    btnRect.anchoredPosition = new Vector2(startX + i * (slotWidth + spacing), 0f);
+
+                    framiliarCopyPortraits[i].sprite = card.operatorData.portrait;
+                    framiliarCopyPortraits[i].enabled = card.operatorData.portrait != null;
+                    framiliarCopyPortraits[i].color = Color.white;
+
+                    Color classColor = GetClassColor(card.operatorData.operatorClass);
+                    framiliarCopyClassBadgeImages[i].color = classColor;
+                    framiliarCopyClassIconImages[i].sprite = GetClassIconSprite(card.operatorData.operatorClass);
+                    framiliarCopyClassBadges[i].SetActive(true);
+
+                    // Upgrade inheritance
+                    int cardUpgrade = Mathf.Max(0, (int)card.rarity - (int)card.operatorData.baseRarity);
+                    int effectiveUpgrade = Mathf.Max(framiliarUpgradeLevels, cardUpgrade);
+                    OperatorRarity effectiveRarity = (OperatorRarity)Mathf.Clamp((int)card.operatorData.baseRarity + effectiveUpgrade, (int)card.operatorData.baseRarity, (int)OperatorRarity.Star5);
+
+                    string stars = new string('★', (int)effectiveRarity);
+                    if (effectiveUpgrade > cardUpgrade)
+                    {
+                        framiliarCopyLabels[i].text = $"{card.operatorData.operatorName}\n<color=#FFD700>{stars}</color>";
+                    }
+                    else
+                    {
+                        framiliarCopyLabels[i].text = $"{card.operatorData.operatorName}\n{stars}";
+                    }
+                    framiliarCopyLabels[i].color = Color.white;
+
+                    framiliarCopyButtons[i].interactable = true;
+                    framiliarCopyFeedbacks[i].glowColor = Color.Lerp(classColor, Color.white, 0.5f);
+                }
+                else
+                {
+                    framiliarCopyButtons[i].gameObject.SetActive(false);
+                }
+            }
+
+            framiliarCopyMenuRoot.SetActive(true);
+            framiliarCopyMenuRoot.transform.SetAsLastSibling();
+        }
+
+        public void HideFramiliarCopyMenu()
+        {
+            activeFramiliarOperator = null;
+            activeFramiliarMatchingCards.Clear();
+            if (framiliarCopyMenuRoot != null)
+            {
+                framiliarCopyMenuRoot.SetActive(false);
+            }
+        }
+
+        private void SelectFramiliarCopySlot(int slotIndex)
+        {
+            if (activeFramiliarOperator == null) return;
+            if (slotIndex < 0 || slotIndex >= activeFramiliarMatchingCards.Count) return;
+
+            var card = activeFramiliarMatchingCards[slotIndex];
+            var fram = activeFramiliarOperator;
+            HideFramiliarCopyMenu();
+            fram.CopyOperator(card);
         }
 
         private void CreateCooldownToast(Transform root)
@@ -3152,6 +3431,7 @@ namespace TrashTD.UI
                 OperatorClass.Sniper => new Color(0.15f, 0.50f, 0.15f, 1f),     // Green-tinted
                 OperatorClass.Caster => new Color(0.45f, 0.15f, 0.55f, 1f),     // Purple-tinted
                 OperatorClass.Medic => new Color(0.45f, 0.45f, 0.15f, 1f),      // Yellow-tinted
+                OperatorClass.Specialist => new Color(0.15f, 0.45f, 0.45f, 1f), // Teal-tinted
                 _ => new Color(0.06f, 0.07f, 0.10f, 1f)
             };
         }
@@ -3243,6 +3523,12 @@ namespace TrashTD.UI
         public void ConsumeEscapeKey()
         {
             lastEscapeHandledFrame = Time.frameCount;
+            if (IsFramiliarCopyMenuOpen)
+            {
+                HideFramiliarCopyMenu();
+                if (operatorManager != null) operatorManager.SelectOperator(null);
+                return;
+            }
         }
 
         public void TogglePause()
@@ -3258,6 +3544,12 @@ namespace TrashTD.UI
         {
             if (Time.frameCount == lastEscapeHandledFrame) return;
             lastEscapeHandledFrame = Time.frameCount;
+            if (IsFramiliarCopyMenuOpen)
+            {
+                HideFramiliarCopyMenu();
+                if (operatorManager != null) operatorManager.SelectOperator(null);
+                return;
+            }
 
 #if UNITY_EDITOR || DEBUG
             if (draftOverlayUI != null && draftOverlayUI.IsDeveloperPickerOpen)
@@ -3413,6 +3705,7 @@ namespace TrashTD.UI
 
         private void HandleWaveStarted(int current, int total)
         {
+            HideFramiliarCopyMenu();
             if (waveText != null)
             {
                 waveText.text = total > 0 ? $"{current}/{total}" : current.ToString();

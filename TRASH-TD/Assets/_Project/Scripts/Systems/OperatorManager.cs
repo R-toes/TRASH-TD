@@ -17,6 +17,7 @@ namespace TrashTD.Systems
         public static OperatorManager Instance { get; private set; }
 
         [SerializeField] private GridManager gridManager;
+        public GridManager GridManager => gridManager;
 
         private readonly List<OperatorBase> deployedOperators = new List<OperatorBase>();
 
@@ -208,7 +209,11 @@ namespace TrashTD.Systems
                    ((opData.operatorName == "Proxishot" || opData.operatorName == "Proxyshot") && !(opComp is ProxishotOperator)) ||
                    (opData.operatorName == "Ignisaur" && !(opComp is IgnisaurOperator)) ||
                    (opData.operatorName == "Shadeslice" && !(opComp is ShadesliceOperator)) ||
-                   (opData.operatorName == "Resicochet" && !(opComp is ResicochetOperator));
+                   (opData.operatorName == "Resicochet" && !(opComp is ResicochetOperator)) ||
+                   (opData.operatorName == "Castiel" && !(opComp is CastielOperator)) ||
+                   (opData.operatorName == "Echosquire" && !(opComp is EchosquireOperator)) ||
+                   (opData.operatorName == "QiFu" && !(opComp is QiFuOperator)) ||
+                   (opData.operatorName == "Framiliar" && !(opComp is FramiliarOperator));
         }
 
         private OperatorBase AddClassComponent(GameObject obj, OperatorData opData)
@@ -277,6 +282,22 @@ namespace TrashTD.Systems
             {
                 return obj.AddComponent<ResicochetOperator>();
             }
+            if (opData != null && opData.operatorName == "Castiel")
+            {
+                return obj.AddComponent<CastielOperator>();
+            }
+            if (opData != null && opData.operatorName == "Echosquire")
+            {
+                return obj.AddComponent<EchosquireOperator>();
+            }
+            if (opData != null && opData.operatorName == "QiFu")
+            {
+                return obj.AddComponent<QiFuOperator>();
+            }
+            if (opData != null && opData.operatorName == "Framiliar")
+            {
+                return obj.AddComponent<FramiliarOperator>();
+            }
 
             OperatorClass opClass = opData != null ? opData.operatorClass : OperatorClass.Guard;
             return opClass switch
@@ -286,15 +307,110 @@ namespace TrashTD.Systems
                 OperatorClass.Sniper => obj.AddComponent<SniperOperator>(),
                 OperatorClass.Caster => obj.AddComponent<CasterOperator>(),
                 OperatorClass.Medic => obj.AddComponent<MedicOperator>(),
+                OperatorClass.Specialist => obj.AddComponent<SpecialistOperator>(),
                 _ => obj.AddComponent<GuardOperator>()
             };
         }
 
         /// <summary>
-        /// Retreats an active operator and starts their redeploy cooldown.
-        /// If the operator was deployed and undeployed in the same Preparation phase without fighting,
-        /// redeploy cooldown is 0. Otherwise, normal retreat cooldown applies.
+        /// Transforms Framiliar on the battlefield into a grayscaled copy of target operator.
+        /// Strictly enforces tile/ground compatibility (no high ground on low ground, and vice versa).
+        /// Inherits Framiliar's merged upgrade levels if Framiliar was upgraded.
         /// </summary>
+        public OperatorBase TransformFramiliar(FramiliarOperator framiliar, OperatorData targetData, OperatorRarity rarity)
+        {
+            if (framiliar == null || targetData == null) return null;
+
+            GridCell cell = framiliar.DeployedCell;
+            if (cell == null && gridManager != null)
+            {
+                cell = gridManager.GetCell(gridManager.WorldToGridPosition(framiliar.transform.position));
+            }
+            if (cell == null) return null;
+
+            // Ground/height compatibility check
+            if (!cell.SupportsPosition(targetData.position)) return null;
+
+            OperatorFacing facing = framiliar.Facing;
+            bool fought = framiliar.HasFoughtInWave;
+            bool duringPrep = framiliar.DeployedDuringCurrentPreparation;
+            OperatorData originalData = framiliar.OriginalFramiliarData != null ? framiliar.OriginalFramiliarData : framiliar.Data;
+            OperatorRarity originalRarity = framiliar.OriginalFramiliarRarity;
+            int heat = framiliar.HeatStacks;
+            int currentHP = framiliar.CurrentHP;
+            int framiliarMaxHP = framiliar.MaxHP;
+
+            GameObject newOpObj;
+            if (targetData.operatorPrefab != null)
+            {
+                newOpObj = Instantiate(targetData.operatorPrefab, cell.WorldPosition, Quaternion.identity);
+            }
+            else
+            {
+                newOpObj = new GameObject($"Operator_{targetData.operatorName}_Copy");
+                newOpObj.transform.position = cell.WorldPosition;
+                var sr = newOpObj.AddComponent<SpriteRenderer>();
+                if (targetData.portrait != null) sr.sprite = targetData.portrait;
+            }
+
+            OperatorBase newOp = newOpObj.GetComponent<OperatorBase>();
+            if (newOp == null || ShouldReplaceWithSpecializedComponent(newOp, targetData))
+            {
+                if (newOp != null)
+                {
+                    DestroyImmediate(newOp);
+                }
+                newOp = AddClassComponent(newOpObj, targetData);
+            }
+
+            cell.Vacate();
+            newOp.Initialize(targetData, rarity, facing);
+            bool deployed = newOp.Deploy(cell);
+            if (!deployed)
+            {
+                // Safety rollback if deployment failed
+                cell.Deploy(framiliar.gameObject);
+                Destroy(newOpObj);
+                return null;
+            }
+
+            newOp.IsCopiedFromFramiliar = true;
+            newOp.OriginalFramiliarData = originalData;
+            newOp.OriginalFramiliarRarity = originalRarity;
+            newOp.HasFoughtInWave = fought;
+            newOp.DeployedDuringCurrentPreparation = duringPrep;
+            newOp.HeatStacks = heat;
+            newOp.IsBurning = heat >= 5;
+
+            float hpRatio = framiliarMaxHP > 0 ? (float)currentHP / framiliarMaxHP : 1f;
+            newOp.RestoreSavedHP(Mathf.Max(1, Mathf.RoundToInt(newOp.MaxHP * hpRatio)));
+
+            FramiliarOperator.ApplyGrayscale(newOpObj);
+
+            int idx = deployedOperators.IndexOf(framiliar);
+            if (idx >= 0)
+            {
+                deployedOperators[idx] = newOp;
+            }
+            else
+            {
+                deployedOperators.Add(newOp);
+            }
+
+            SelectOperator(newOp);
+
+            newOp.ApplyFacingVisuals();
+            OperatorUpgradeBadge.Show(newOp);
+            if (TrashTD.Combat.StageCombatModifiers.IsHeatHazardActive)
+            {
+                TrashTD.UI.OperatorHeatBar.ShowFor(newOp);
+            }
+
+            Destroy(framiliar.gameObject);
+            OnOperatorDeployed?.Invoke(newOp);
+            return newOp;
+        }
+
         public void RetreatOperator(OperatorBase op)
         {
             if (op == null || !deployedOperators.Contains(op)) return;
@@ -313,9 +429,11 @@ namespace TrashTD.Systems
                 : 0;
 
             // The card keeps the operator's exact HP so a redeploy doesn't heal it
-            DraftCard returnedCard = op.Data != null
-                ? new DraftCard(op.Data, op.CurrentRarity, cooldownRounds, op.HeatStacks, op.CurrentHP)
-                : null;
+            DraftCard returnedCard = (op.IsCopiedFromFramiliar && op.DeployedDuringCurrentPreparation && !op.HasFoughtInWave)
+                ? new DraftCard(op.OriginalFramiliarData != null ? op.OriginalFramiliarData : op.Data, op.OriginalFramiliarRarity, 0)
+                : (op.Data != null ? new DraftCard(op.Data, op.CurrentRarity, cooldownRounds, op.HeatStacks, op.CurrentHP) : null);
+
+
             deployedOperators.Remove(op);
             OnOperatorRetreated?.Invoke(op);
             op.Retreat();
@@ -343,6 +461,7 @@ namespace TrashTD.Systems
                 OperatorClass.Caster => 1,
                 OperatorClass.Defender => 2,
                 OperatorClass.Medic => 3,
+                OperatorClass.Specialist => 0,
                 _ => 0
             };
         }

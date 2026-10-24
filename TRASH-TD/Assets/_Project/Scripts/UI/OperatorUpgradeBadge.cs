@@ -15,6 +15,9 @@ namespace TrashTD.UI
         {
             if (op == null || op.Data == null) return;
 
+            Transform existing = op.transform.Find(BadgeObjectName);
+            if (existing != null) Object.DestroyImmediate(existing.gameObject);
+
             int upgradeLevels = Mathf.Clamp((int)op.CurrentRarity - (int)op.Data.baseRarity, 0, 2);
             if (upgradeLevels <= 0) return;
 

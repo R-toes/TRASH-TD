@@ -90,7 +90,8 @@ namespace TrashTD.Editor
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Stagger.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Defender_Thornchin.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Ignisaur.asset"),
-                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Resicochet.asset")
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Resicochet.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Specialist_Framiliar.asset")
             };
 
             // Assign Tile Sprites
@@ -221,6 +222,7 @@ namespace TrashTD.Editor
                     case OperatorClass.Sniper: go.AddComponent<SniperOperator>(); break;
                     case OperatorClass.Caster: go.AddComponent<CasterOperator>(); break;
                     case OperatorClass.Medic: go.AddComponent<MedicOperator>(); break;
+                    case OperatorClass.Specialist: go.AddComponent<SpecialistOperator>(); break;
                 }
             }
 
@@ -625,6 +627,74 @@ namespace TrashTD.Editor
                     "Passive - Chain Heal: Restores HP to an allied operator in range. The heal bounces to a second operator in the surrounding tiles of the healed operator (healing reduced by 50% when it bounces).";
                 EditorUtility.SetDirty(progeny);
             }
+
+            // 6. Specialist (Framiliar)
+            var framiliarFrame0 = LoadSprite("Framiliar-Sheet.png", "Framiliar-Sheet_0");
+            var framiliarFrame1 = LoadSprite("Framiliar-Sheet.png", "Framiliar-Sheet_1");
+            var framiliarFrame2 = LoadSprite("Framiliar-Sheet.png", "Framiliar-Sheet_2");
+            var framiliarFrame3 = LoadSprite("Framiliar-Sheet.png", "Framiliar-Sheet_3");
+            var framiliarFrames = (framiliarFrame0 != null && framiliarFrame1 != null && framiliarFrame2 != null && framiliarFrame3 != null)
+                ? new[] { framiliarFrame0, framiliarFrame1, framiliarFrame2, framiliarFrame3 }
+                : (framiliarFrame0 != null ? new[] { framiliarFrame0 } : null);
+
+            var framiliarPrefab = CreateFramiliarPrefab(framiliarFrames);
+            var framiliar = CreateOperator("OP_Specialist_Framiliar", "Framiliar", OperatorClass.Specialist, OperatorPosition.Any, OperatorRarity.Star2,
+                hp: 100, atk: 50, def: 10, res: 0, blockCount: 1, range: 1, interval: 1.2f, dp: 10,
+                new[]
+                {
+                    new Vector2Int(1, 0), new Vector2Int(0, 0)
+                },
+                framiliarFrame0, framiliarPrefab);
+            framiliar.damageType = DamageType.Physical;
+            framiliar.roleTags = new[] { "Specialist", "Mimic", "Deck" };
+            framiliar.skillDescription = "Copies any operator in your deck, taking on their form in grayscale. When retreated in the same preparation phase, returns as Framiliar; if retreated in the next prep phase, returns as the copied operator. Specialists have no retreat cooldown.";
+            EditorUtility.SetDirty(framiliar);
+        }
+
+        private static GameObject CreateFramiliarPrefab(Sprite[] frames)
+        {
+            const string prefabName = "Prefab_OP_Framiliar";
+            string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null)
+            {
+                var existingOp = existing.GetComponent<TrashTD.Operators.FramiliarOperator>();
+                if (existingOp != null && frames != null)
+                {
+                    existingOp.ConfigureAnimationFrames(frames);
+                }
+                var existingAnim = existing.GetComponent<TrashTD.Operators.OperatorSpriteAnimation>();
+                if (existingAnim != null && frames != null && frames.Length > 0)
+                {
+                    existingAnim.Configure(frames);
+                }
+                var existingSr = existing.GetComponent<SpriteRenderer>();
+                if (existingSr != null && frames != null && frames.Length > 0 && frames[0] != null)
+                {
+                    existingSr.sprite = frames[0];
+                }
+                EditorUtility.SetDirty(existing);
+                return existing;
+            }
+
+            var go = new GameObject(prefabName);
+            var spriteRenderer = go.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
+            spriteRenderer.sortingOrder = 5;
+            var op = go.AddComponent<TrashTD.Operators.FramiliarOperator>();
+            if (frames != null && frames.Length > 0)
+            {
+                op.ConfigureAnimationFrames(frames);
+            }
+            var animation = go.AddComponent<TrashTD.Operators.OperatorSpriteAnimation>();
+            if (frames != null && frames.Length > 0)
+            {
+                animation.Configure(frames);
+            }
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
         }
 
         private static GameObject CreateResicochetPrefab(Sprite[] c1, Sprite[] c2, Sprite[] c3)

@@ -190,6 +190,7 @@ namespace TrashTD.Core.GameLoop
 
             sandboxWaveNumber++;
             IsWaveInProgress = true;
+            OperatorManager.Instance?.MarkAllDeployedOperatorsAsFought();
             sandboxSpawnCoroutine = StartCoroutine(SpawnSandboxQueueRoutine(
                 queuedEnemies != null ? new List<EnemyData>(queuedEnemies) : new List<EnemyData>()));
             return true;
@@ -266,6 +267,7 @@ namespace TrashTD.Core.GameLoop
                 }
 
                 OnWaveStarted?.Invoke(CurrentWaveNumber, TotalWaves);
+            OperatorManager.Instance?.MarkAllDeployedOperatorsAsFought();
 
                 // Spawn all entries in wave
                 yield return StartCoroutine(SpawnWaveEntriesRoutine(currentWave));
@@ -306,6 +308,7 @@ namespace TrashTD.Core.GameLoop
             }
 
             OnWaveStarted?.Invoke(CurrentWaveNumber, TotalWaves);
+            OperatorManager.Instance?.MarkAllDeployedOperatorsAsFought();
 
             // Spawn all entries in wave
             yield return StartCoroutine(SpawnWaveEntriesRoutine(currentWave));

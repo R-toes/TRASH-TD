@@ -58,11 +58,16 @@ namespace TrashTD.Core.Grid
         }
 
         /// <summary>
-        /// Check if a specific operator position type can deploy on this tile (GDD 1.4.1).
+        /// Check if a specific operator position type is compatible with this tile (GDD 1.4.1),
+        /// regardless of whether the cell is currently occupied.
         /// </summary>
-        public bool CanDeploy(OperatorPosition operatorPosition)
+        public bool SupportsPosition(OperatorPosition operatorPosition)
         {
-            if (IsOccupied) return false;
+            if (operatorPosition == OperatorPosition.Any)
+            {
+                return TileType == TileType.LowGround || TileType == TileType.EnemyPath ||
+                       TileType == TileType.HighGround || TileType == TileType.Trap;
+            }
 
             return (TileType, operatorPosition) switch
             {
@@ -75,6 +80,15 @@ namespace TrashTD.Core.Grid
                 // For now, strictly ranged-only on High Ground per GDD
                 _ => false
             };
+        }
+
+        /// <summary>
+        /// Check if a specific operator position type can deploy on this tile (GDD 1.4.1).
+        /// </summary>
+        public bool CanDeploy(OperatorPosition operatorPosition)
+        {
+            if (IsOccupied) return false;
+            return SupportsPosition(operatorPosition);
         }
 
         /// <summary>

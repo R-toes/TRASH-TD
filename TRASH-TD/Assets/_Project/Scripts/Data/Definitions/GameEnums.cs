@@ -32,7 +32,8 @@ namespace TrashTD.Data
         Defender,   // Tank — high DEF/HP, blocks 2–4, low damage
         Sniper,     // Ranged DPS — high single-target damage, no blocking
         Caster,     // Ranged AoE (magic) — Arts damage bypasses DEF, hits RES
-        Medic       // Healer — restores HP to allies in range
+        Medic,      // Healer — restores HP to allies in range
+        Specialist  // Utility / Mimic / Control — specialized gameplay mechanics
     }
 
     /// <summary>
@@ -54,7 +55,8 @@ namespace TrashTD.Data
     public enum OperatorPosition
     {
         Melee,
-        Ranged
+        Ranged,
+        Any
     }
 
     /// <summary>

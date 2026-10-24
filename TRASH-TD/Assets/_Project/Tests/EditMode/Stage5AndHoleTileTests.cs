@@ -451,6 +451,148 @@ namespace TrashTD.Tests
             Object.DestroyImmediate(opMgrObj);
         }
 
+
+        [Test]
+        public void Stage5TrafficCar_HitsOperator_SlowsDownThenRecoversToOriginalSpeed()
+        {
+            var stage5 = Resources.Load<StageData>("Stages/STAGE_05");
+            gridManager.InitializeFromStageData(stage5);
+
+            var enemyMgrObj = new GameObject("TestEnemyMgr");
+            var enemyMgr = enemyMgrObj.AddComponent<EnemyManager>();
+            enemyMgr.Initialize(gridManager);
+
+            var opMgrObj = new GameObject("TestOpMgr");
+            var opMgr = opMgrObj.AddComponent<OperatorManager>();
+            opMgr.Initialize(gridManager);
+
+            var opObj = new GameObject("TestGuard");
+            opObj.transform.position = gridManager.GridToWorldPosition(4, 5);
+            var op = opObj.AddComponent<GuardOperator>();
+            var opData = ScriptableObject.CreateInstance<OperatorData>();
+            opData.baseHP = 1000;
+            opData.baseDEF = 50;
+            opData.operatorClass = OperatorClass.Guard;
+            op.Initialize(opData, OperatorRarity.Star1);
+            op.Deploy(gridManager.GetCell(4, 5));
+            opMgr.RegisterOperator(op);
+
+            var carObj = new GameObject("Car");
+            var car = carObj.AddComponent<Stage5TrafficCar>();
+            car.Initialize(5, null, gridManager, enemyMgr, opMgr, speed: 10f, sortingOrder: 9);
+
+            Assert.AreEqual(10f, car.OriginalSpeed);
+            Assert.AreEqual(10f, car.Speed);
+            Assert.IsFalse(car.IsSlowedDown);
+
+            // Move car to hit the operator at (4, 5)
+            car.transform.position = new Vector3(gridManager.GridToWorldPosition(4, 5).x - car.FrontBumperOffsetX, car.transform.position.y, 0f);
+            car.CheckCollisions(car.transform.position.x + car.FrontBumperOffsetX, car.transform.position.x + car.RearBumperOffsetX);
+
+            // Car should have hit the operator and slowed down immediately
+            Assert.IsTrue(car.IsSlowedDown, "Car should be in slowed down state after hitting operator.");
+            Assert.AreEqual(10f * Stage5TrafficCar.ImpactSlowdownRatio, car.Speed, 0.01f, "Car speed should drop to 30% on impact.");
+            Assert.Less(car.transform.localScale.x, 1.0f, "Car should squish horizontally on impact.");
+
+            // Halfway through recovery (0.35s)
+            car.UpdateSpeedAndVisuals(0.35f);
+            Assert.IsTrue(car.IsSlowedDown);
+            Assert.Greater(car.Speed, 10f * Stage5TrafficCar.ImpactSlowdownRatio);
+            Assert.Less(car.Speed, 10f);
+
+            // Full recovery (additional 0.4s -> 0.75s total)
+            car.UpdateSpeedAndVisuals(0.4f);
+            Assert.IsFalse(car.IsSlowedDown, "Car should no longer be slowed down after duration expires.");
+            Assert.AreEqual(10f, car.Speed, 0.01f, "Car speed should have fully recovered to original speed.");
+            Assert.AreEqual(Vector3.one, car.transform.localScale, "Car scale should return to base scale.");
+
+            Object.DestroyImmediate(carObj);
+            Object.DestroyImmediate(opObj);
+            Object.DestroyImmediate(opData);
+            Object.DestroyImmediate(enemyMgrObj);
+            Object.DestroyImmediate(opMgrObj);
+        }
+
+        [Test]
+        public void Stage5TrafficCar_StunsAgain_WhenDamageRampsBackUpTo80()
+        {
+            var stage5 = Resources.Load<StageData>("Stages/STAGE_05");
+            gridManager.InitializeFromStageData(stage5);
+
+            var enemyMgrObj = new GameObject("TestEnemyMgr");
+            var enemyMgr = enemyMgrObj.AddComponent<EnemyManager>();
+            enemyMgr.Initialize(gridManager);
+
+            var opMgrObj = new GameObject("TestOpMgr");
+            var opMgr = opMgrObj.AddComponent<OperatorManager>();
+            opMgr.Initialize(gridManager);
+
+            // Op 1 at tile 4 (4 tiles from startX=0.5 -> damage = 40 + (4/2)*20 = 80)
+            var op1Obj = new GameObject("Op1");
+            op1Obj.transform.position = gridManager.GridToWorldPosition(4, 5);
+            var op1 = op1Obj.AddComponent<GuardOperator>();
+            var op1Data = ScriptableObject.CreateInstance<OperatorData>();
+            op1Data.baseHP = 1000;
+            op1.Initialize(op1Data, OperatorRarity.Star1);
+            op1.Deploy(gridManager.GetCell(4, 5));
+            opMgr.RegisterOperator(op1);
+
+            // Op 2 at tile 5 (1 tile after Op 1 -> damage = 40)
+            var op2Obj = new GameObject("Op2");
+            op2Obj.transform.position = gridManager.GridToWorldPosition(5, 5);
+            var op2 = op2Obj.AddComponent<GuardOperator>();
+            var op2Data = ScriptableObject.CreateInstance<OperatorData>();
+            op2Data.baseHP = 1000;
+            op2.Initialize(op2Data, OperatorRarity.Star1);
+            op2.Deploy(gridManager.GetCell(5, 5));
+            opMgr.RegisterOperator(op2);
+
+            // Op 3 at tile 9 (4 tiles after Op 2 -> damage = 40 + (4/2)*20 = 80)
+            var op3Obj = new GameObject("Op3");
+            op3Obj.transform.position = gridManager.GridToWorldPosition(9, 5);
+            var op3 = op3Obj.AddComponent<GuardOperator>();
+            var op3Data = ScriptableObject.CreateInstance<OperatorData>();
+            op3Data.baseHP = 1000;
+            op3.Initialize(op3Data, OperatorRarity.Star1);
+            op3.Deploy(gridManager.GetCell(9, 5));
+            opMgr.RegisterOperator(op3);
+
+            var carObj = new GameObject("Car");
+            var car = carObj.AddComponent<Stage5TrafficCar>();
+            car.Initialize(5, null, gridManager, enemyMgr, opMgr, speed: 10f);
+
+            // 1. Hit Op 1 at tile 4 (damage 80) -> Stunned!
+            car.transform.position = new Vector3(gridManager.GridToWorldPosition(4, 5).x - car.FrontBumperOffsetX, car.transform.position.y, 0f);
+            car.CheckCollisions(car.transform.position.x + car.FrontBumperOffsetX, car.transform.position.x + car.RearBumperOffsetX);
+
+            Assert.AreEqual(920, op1.CurrentHP, "Op 1 should take 80 damage.");
+            Assert.IsTrue(op1.IsStunned, "First operator hit with 80 damage should be stunned.");
+
+            // 2. Hit Op 2 at tile 5 (1 tile from Op 1 -> damage 40) -> NOT Stunned!
+            car.transform.position = new Vector3(gridManager.GridToWorldPosition(5, 5).x - car.FrontBumperOffsetX, car.transform.position.y, 0f);
+            car.CheckCollisions(car.transform.position.x + car.FrontBumperOffsetX, car.transform.position.x + car.RearBumperOffsetX);
+
+            Assert.AreEqual(960, op2.CurrentHP, "Op 2 should take 40 damage.");
+            Assert.IsFalse(op2.IsStunned, "Op 2 should NOT be stunned because damage has not ramped back up to 80.");
+
+            // 3. Hit Op 3 at tile 9 (4 tiles from Op 2 -> damage 80) -> STUNNED AGAIN!
+            car.transform.position = new Vector3(gridManager.GridToWorldPosition(9, 5).x - car.FrontBumperOffsetX, car.transform.position.y, 0f);
+            car.CheckCollisions(car.transform.position.x + car.FrontBumperOffsetX, car.transform.position.x + car.RearBumperOffsetX);
+
+            Assert.AreEqual(920, op3.CurrentHP, "Op 3 should take 80 damage.");
+            Assert.IsTrue(op3.IsStunned, "Op 3 SHOULD BE STUNNED AGAIN because damage ramped back up to 80+.");
+
+            Object.DestroyImmediate(carObj);
+            Object.DestroyImmediate(op1Obj);
+            Object.DestroyImmediate(op1Data);
+            Object.DestroyImmediate(op2Obj);
+            Object.DestroyImmediate(op2Data);
+            Object.DestroyImmediate(op3Obj);
+            Object.DestroyImmediate(op3Data);
+            Object.DestroyImmediate(enemyMgrObj);
+            Object.DestroyImmediate(opMgrObj);
+        }
+
         [Test]
         public void OperatorStun_CannotAttackOrBlock_ReleasesBlockedEnemies()
         {

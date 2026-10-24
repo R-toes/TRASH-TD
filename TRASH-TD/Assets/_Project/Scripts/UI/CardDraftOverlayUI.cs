@@ -1666,6 +1666,7 @@ namespace TrashTD.UI
                 case OperatorClass.Sniper: return new Color(0.30f, 0.75f, 0.30f, 1f);
                 case OperatorClass.Caster: return new Color(0.70f, 0.30f, 0.85f, 1f);
                 case OperatorClass.Medic: return new Color(0.80f, 0.78f, 0.30f, 1f);
+                case OperatorClass.Specialist: return new Color(0.20f, 0.75f, 0.70f, 1f);
                 default: return CLASS_COLOR;
             }
         }
@@ -2859,6 +2860,7 @@ namespace TrashTD.UI
                 OperatorClass.Sniper => "Ranged Sniper / High Range",
                 OperatorClass.Caster => "Arts Damage / Magic Attacks",
                 OperatorClass.Medic => "Combat Support / Restores HP",
+                OperatorClass.Specialist => "Specialist / Fast Redeploy & Mimic",
                 _ => "Operator"
             };
         }

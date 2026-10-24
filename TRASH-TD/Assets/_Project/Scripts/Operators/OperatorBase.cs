@@ -58,7 +58,7 @@ namespace TrashTD.Operators
         public OperatorFacing Facing => facing;
         public OperatorClass OperatorClass => data.operatorClass;
         public virtual bool CanReceiveHealing => true;
-        public virtual bool CanHitAir => data != null && (data.position == OperatorPosition.Ranged || data.operatorClass == OperatorClass.Caster);
+        public virtual bool CanHitAir => data != null && (data.position == OperatorPosition.Ranged || data.position == OperatorPosition.Any || data.operatorClass == OperatorClass.Caster);
         public virtual bool IgnoresMissMechanic => false;
         public virtual bool IsCamouflaged => false;
         public virtual bool IsTargetable => !IsCamouflaged;
@@ -67,6 +67,9 @@ namespace TrashTD.Operators
         // --- Deployment & Combat Phase Tracking ---
         public bool HasFoughtInWave { get; set; } = false;
         public bool DeployedDuringCurrentPreparation { get; set; } = true;
+        public bool IsCopiedFromFramiliar { get; set; } = false;
+        public OperatorData OriginalFramiliarData { get; set; } = null;
+        public OperatorRarity OriginalFramiliarRarity { get; set; } = OperatorRarity.Star2;
 
         /// <summary>
         /// Checks whether this operator taunts the specified attacker position.
@@ -246,6 +249,9 @@ namespace TrashTD.Operators
         public virtual void Attack(EnemyBase target)
         {
             if (target == null || !isDeployed || isStunned) return;
+
+            HasFoughtInWave = true;
+            DeployedDuringCurrentPreparation = false;
 
             PlayAttackSound();
             CombatProjectileVisual.Fire(

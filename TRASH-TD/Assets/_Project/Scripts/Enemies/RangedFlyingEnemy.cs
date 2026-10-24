@@ -21,7 +21,8 @@ namespace TrashTD.Enemies
         {
             return op.OperatorClass == OperatorClass.Caster ||
                    op.OperatorClass == OperatorClass.Sniper ||
-                   op.OperatorClass == OperatorClass.Guard;
+                   op.OperatorClass == OperatorClass.Guard ||
+                   op.OperatorClass == OperatorClass.Specialist;
         }
 
         protected override int GetTargetPriority(OperatorBase op)
