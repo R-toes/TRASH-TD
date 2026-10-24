@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 1086861063096648025}
   - component: {fileID: 2220730834930650485}
   - component: {fileID: 616835801897076317}
+  - component: {fileID: 7058294136912038841}
   m_Layer: 0
   m_Name: Prefab_OP_Caster_Castiel
   m_TagString: Untagged
@@ -47,7 +48,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 5
-  m_Sprite: {fileID: 21300000, guid: a1111111111111111111111111111104, type: 3}
+  m_Sprite: {fileID: -1872746053690042025, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -66,3 +67,29 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.CastielOperator
   data: {fileID: 0}
+--- !u!114 &7058294136912038841
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1724151342938439340}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15730cd9b1a04c21b3c152b454d2f53a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
+  frameDuration: 0.1
+  frames:
+  - {fileID: -1872746053690042025, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}
+  - {fileID: -5796387372026674291, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}
+  - {fileID: 3777128509827197693, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}
+  - {fileID: 1030547028608914334, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}
+  - {fileID: -4813680998793477042, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}
+  - {fileID: -2553066469220534158, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}
+  - {fileID: -6532122213903934921, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}
+  - {fileID: 678376464910047175, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}
+  - {fileID: -7298312001040046922, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}
+  - {fileID: -465091719820887948, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}
+  - {fileID: 7587781951027793706, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}
+  - {fileID: 7919130679266081496, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}

@@ -9,6 +9,14 @@ namespace TrashTD.Operators
         [Min(0.01f)]
         [SerializeField] private float frameDuration = 0.25f;
 
+        public float FrameDuration
+        {
+            get => frameDuration;
+            set => frameDuration = Mathf.Max(0.01f, value);
+        }
+
+        public Sprite[] Frames => frames;
+
         private SpriteRenderer spriteRenderer;
         private float frameTimer;
         private int currentFrame;
@@ -34,6 +42,15 @@ namespace TrashTD.Operators
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
             frameDuration = Mathf.Max(0.01f, frameDuration);
+
+            if (spriteRenderer != null && spriteRenderer.sprite != null && spriteRenderer.sprite.texture != null)
+            {
+                string texName = spriteRenderer.sprite.texture.name.ToLowerInvariant();
+                if (texName.Contains("castiel") && Mathf.Approximately(frameDuration, 0.25f))
+                {
+                    frameDuration = 0.1f;
+                }
+            }
 
             if (ShouldResolveFramesFromTexture())
             {

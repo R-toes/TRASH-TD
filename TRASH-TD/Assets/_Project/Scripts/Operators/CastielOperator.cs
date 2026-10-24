@@ -19,6 +19,7 @@ namespace TrashTD.Operators
         private EnemyBase lockedTarget;
         private float lockDuration;
         private LightLaserVisual laser;
+        private OperatorSpriteAnimation spriteAnim;
 
         public override void Initialize(OperatorData operatorData, OperatorRarity rarity, OperatorFacing operatorFacing = OperatorFacing.Right)
         {
@@ -26,6 +27,11 @@ namespace TrashTD.Operators
             lockedTarget = null;
             lockDuration = 0f;
             laser = null;
+            spriteAnim = GetComponent<OperatorSpriteAnimation>();
+            if (spriteAnim != null)
+            {
+                spriteAnim.FrameDuration = 0.10f;
+            }
         }
 
         public override void Attack(EnemyBase target)
@@ -106,6 +112,13 @@ namespace TrashTD.Operators
             int damage = GetCurrentBeamDamage();
             lockedTarget.TryTakeAttackDamage(damage, DamageType.Arts, this);
             lockDuration += DamageTickInterval;
+
+            if (spriteAnim != null)
+            {
+                // Smoothly accelerate the halo spin as beam power ramps up (from 0.10s down to 0.04s)
+                float t = Mathf.Clamp01(lockDuration / (LockStepDuration * 5f));
+                spriteAnim.FrameDuration = Mathf.Lerp(0.10f, 0.04f, t);
+            }
         }
 
         private void ResetLock()
@@ -118,6 +131,11 @@ namespace TrashTD.Operators
 
             lockedTarget = null;
             lockDuration = 0f;
+
+            if (spriteAnim != null)
+            {
+                spriteAnim.FrameDuration = 0.10f;
+            }
         }
     }
 }
