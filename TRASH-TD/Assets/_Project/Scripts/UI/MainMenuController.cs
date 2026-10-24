@@ -64,7 +64,10 @@ namespace TrashTD.UI
         private static readonly Color RecRed = new Color(1f, 0.27f, 0.22f, 1f);
         private const float MenuColumnX = 144f;
         private const float MenuButtonLabelInset = 56f;
-        private const string StageSubtitleText = "CHOOSE YOUR DEPLOYMENT";
+        private const string StageActTitle = "ACT 1";
+        private const string StageZoneTitle = "NERC Development Zone";
+        private const string StageSubtitleText = "Choose deployment";
+        private const string StageZoneLore = "Once a thriving industrial region built around energy production, Calder Basin became the center of NERC's ambitious development program. What began as an effort to modernize the nation's energy infrastructure eventually left behind abandoned facilities, contaminated settlements, and entire districts deemed uninhabitable. Now, the NERC Development Zone is a fractured landscape of decaying industry and tightly controlled settlements, where the remnants of the corporation's legacy are impossible to escape.";
         private const string StageTickerIdle = "> AWAITING STAGE SELECTION";
         private const float StageLeftEdge = 280f;      // stage select title block x: clear of StageMapSidePanel (~244 wide at 1080 high)
         private const float StageBackButtonX = 150f;   // clear of the side panel's slanted bottom
@@ -153,8 +156,9 @@ namespace TrashTD.UI
         private Text menuHintText;
         private readonly List<MainMenuButtonView> mainMenuButtons = new List<MainMenuButtonView>();
         private RectTransform stageHeaderTitle;
+        private RectTransform stageZoneTitle;
         private RectTransform stageHeaderSubtitle;
-        private RectTransform stageHeaderDivider;
+        private RectTransform stageZoneLore;
         private RectTransform stageHint;
         private RectTransform stageTitlePlate;
         private Text stageHeaderSubtitleText;
@@ -574,27 +578,124 @@ namespace TrashTD.UI
             stageSidePanel = StageMapSidePanel.Create(stageSelectionPanel.transform);
 
             // Backing plate so the title block reads over busy map art
+            float headerX = 350f;
+            float headerY = -115f;
+            float headerWidth = 520f;
+            float headerHeight = 124f;
+
             var titlePlate = new GameObject("StageSelectorTitlePlate", typeof(RectTransform), typeof(Image));
             titlePlate.transform.SetParent(stageSelectionPanel.transform, false);
             stageTitlePlate = titlePlate.GetComponent<RectTransform>();
-            Place(stageTitlePlate, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(StageLeftEdge - 20f, -18f), new Vector2(470f, 112f));
+            Place(stageTitlePlate, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(headerX, headerY), new Vector2(headerWidth, headerHeight));
             var titlePlateImage = titlePlate.GetComponent<Image>();
             titlePlateImage.color = TerminalPlate;
-            titlePlateImage.raycastTarget = false;
+            titlePlateImage.raycastTarget = true;
             AddCornerBrackets(stageTitlePlate, 16f, 2f, AccentBright);
 
-            // Header overlay — left-aligned title block (over the map)
-            var headerTitle = MakeText(stageSelectionPanel.transform, "StageSelectorTitle", "SELECT STAGE", 42, TextAnchor.MiddleLeft,
+            // ACT 1 title (prominent large font size)
+            var actTitle = MakeText(stageSelectionPanel.transform, "StageSelectorActTitle", StageActTitle, 38, TextAnchor.MiddleLeft,
                 AccentBright, FontStyle.Bold);
-            Place(headerTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(StageLeftEdge, -30f), new Vector2(600f, 50f));
-            stageHeaderTitle = headerTitle.rectTransform;
-            var headerTitleShadow = headerTitle.gameObject.AddComponent<Shadow>();
-            headerTitleShadow.effectColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.30f);
-            headerTitleShadow.effectDistance = new Vector2(0f, -3f);
+            actTitle.horizontalOverflow = HorizontalWrapMode.Overflow;
+            actTitle.verticalOverflow = VerticalWrapMode.Overflow;
+            Place(actTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(headerX + 18f, headerY - 10f), new Vector2(280f, 44f));
+            stageHeaderTitle = actTitle.rectTransform;
+            var actTitleShadow = actTitle.gameObject.AddComponent<Shadow>();
+            actTitleShadow.effectColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.35f);
+            actTitleShadow.effectDistance = new Vector2(0f, -3f);
 
-            stageHeaderSubtitleText = MakeText(stageSelectionPanel.transform, "StageSelectorSubtitle", StageSubtitleText, 13, TextAnchor.MiddleLeft, TerminalText);
-            Place(stageHeaderSubtitleText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(StageLeftEdge + 4f, -82f), new Vector2(500f, 22f));
+            // NERC Development Zone on a new line below ACT 1
+            var zoneTitle = MakeText(stageSelectionPanel.transform, "StageSelectorZoneTitle", StageZoneTitle, 22, TextAnchor.MiddleLeft,
+                new Color(0.92f, 0.98f, 0.94f, 1f), FontStyle.Bold);
+            zoneTitle.horizontalOverflow = HorizontalWrapMode.Overflow;
+            zoneTitle.verticalOverflow = VerticalWrapMode.Overflow;
+            Place(zoneTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(headerX + 20f, headerY - 56f), new Vector2(headerWidth - 36f, 30f));
+            stageZoneTitle = zoneTitle.rectTransform;
+            var zoneTitleShadow = zoneTitle.gameObject.AddComponent<Shadow>();
+            zoneTitleShadow.effectColor = new Color(0f, 0f, 0f, 0.50f);
+            zoneTitleShadow.effectDistance = new Vector2(0f, -2f);
+
+            // Subtitle: Choose deployment
+            stageHeaderSubtitleText = MakeText(stageSelectionPanel.transform, "StageSelectorSubtitle", StageSubtitleText, 12, TextAnchor.MiddleLeft, TerminalText);
+            stageHeaderSubtitleText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            stageHeaderSubtitleText.verticalOverflow = VerticalWrapMode.Overflow;
+            Place(stageHeaderSubtitleText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(headerX + 20f, headerY - 92f), new Vector2(300f, 20f));
             stageHeaderSubtitle = stageHeaderSubtitleText.rectTransform;
+
+            // Info prompt
+            var intelBadge = MakeText(stageSelectionPanel.transform, "StageSelectorIntelBadge", "◆ [?] INTEL", 11, TextAnchor.MiddleRight,
+                new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.75f), FontStyle.Bold);
+            Place(intelBadge.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(headerX + headerWidth - 120f, headerY - 92f), new Vector2(100f, 20f));
+
+            // Hover lore card: auto-resizes to fit its text perfectly and appears beneath the title plate only when hovered
+            var loreCard = new GameObject("StageSelectorLoreCard", typeof(RectTransform), typeof(Image), typeof(CanvasGroup), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            loreCard.transform.SetParent(stageSelectionPanel.transform, false);
+            stageZoneLore = loreCard.GetComponent<RectTransform>();
+            stageZoneLore.anchorMin = new Vector2(0f, 1f);
+            stageZoneLore.anchorMax = new Vector2(0f, 1f);
+            stageZoneLore.pivot = new Vector2(0f, 1f);
+            stageZoneLore.anchoredPosition = new Vector2(headerX, headerY - headerHeight - 8f);
+            stageZoneLore.sizeDelta = new Vector2(headerWidth, 0f);
+
+            var loreCardImage = loreCard.GetComponent<Image>();
+            loreCardImage.color = new Color(0.012f, 0.035f, 0.024f, 0.96f);
+            loreCardImage.raycastTarget = true;
+
+            var loreVlg = loreCard.GetComponent<VerticalLayoutGroup>();
+            loreVlg.padding = new RectOffset(18, 18, 14, 18);
+            loreVlg.spacing = 8f;
+            loreVlg.childControlWidth = true;
+            loreVlg.childControlHeight = true;
+            loreVlg.childForceExpandWidth = true;
+            loreVlg.childForceExpandHeight = false;
+
+            var loreCsf = loreCard.GetComponent<ContentSizeFitter>();
+            loreCsf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            loreCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var loreOutline = loreCard.AddComponent<Outline>();
+            loreOutline.effectColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.35f);
+            loreOutline.effectDistance = new Vector2(1f, -1f);
+
+            // Bracket overlay that stretches to fill the auto-sized lore card without interfering with layout
+            var bracketOverlay = new GameObject("BracketOverlay", typeof(RectTransform), typeof(LayoutElement));
+            bracketOverlay.transform.SetParent(loreCard.transform, false);
+            StretchFill(bracketOverlay.GetComponent<RectTransform>());
+            var overlayLe = bracketOverlay.GetComponent<LayoutElement>();
+            overlayLe.ignoreLayout = true;
+            AddCornerBrackets(bracketOverlay.GetComponent<RectTransform>(), 12f, 2f, AccentBright);
+
+            var loreTag = MakeText(loreCard.transform, "LoreTag", "◆ NATIONAL ENERGY RESOURCE CORPORATION", 11, TextAnchor.MiddleLeft, AccentBright, FontStyle.Bold);
+            loreTag.horizontalOverflow = HorizontalWrapMode.Overflow;
+            var tagLe = loreTag.gameObject.AddComponent<LayoutElement>();
+            tagLe.minHeight = 18f;
+            tagLe.preferredHeight = 18f;
+            tagLe.flexibleHeight = 0f;
+
+            var loreDivider = new GameObject("LoreDivider", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            loreDivider.transform.SetParent(loreCard.transform, false);
+            var dividerLe = loreDivider.GetComponent<LayoutElement>();
+            dividerLe.minHeight = 1f;
+            dividerLe.preferredHeight = 1f;
+            dividerLe.flexibleHeight = 0f;
+            var loreDividerImage = loreDivider.GetComponent<Image>();
+            loreDividerImage.color = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.35f);
+            loreDividerImage.raycastTarget = false;
+
+            var loreBody = MakeText(loreCard.transform, "LoreBody", StageZoneLore, 11, TextAnchor.UpperLeft, new Color(TerminalText.r, TerminalText.g, TerminalText.b, 0.92f));
+            loreBody.lineSpacing = 1.38f;
+            loreBody.horizontalOverflow = HorizontalWrapMode.Wrap;
+            loreBody.verticalOverflow = VerticalWrapMode.Overflow;
+            var bodyLe = loreBody.gameObject.AddComponent<LayoutElement>();
+            bodyLe.preferredWidth = headerWidth - 36f;
+            bodyLe.flexibleHeight = 1f;
+
+            var loreGroup = loreCard.GetComponent<CanvasGroup>();
+            var hoverController = titlePlate.AddComponent<StageHeaderLoreHover>();
+            hoverController.Init(loreGroup);
+            var childTrigger = loreCard.AddComponent<StageHeaderLoreChildTrigger>();
+            childTrigger.parentHover = hoverController;
+
+            LayoutRebuilder.ForceRebuildLayoutImmediate(stageZoneLore);
 
             // Status ticker: types out the stage under the pointer
             var tickerPlate = new GameObject("StageTicker", typeof(RectTransform), typeof(Image));
@@ -623,14 +724,6 @@ namespace TrashTD.UI
             tickerTextRect.pivot = new Vector2(0f, 0.5f);
             tickerTextRect.anchoredPosition = Vector2.zero;
             tickerTextRect.sizeDelta = new Vector2(TickerViewportWidth, 0f);
-
-            var headerDivider = new GameObject("StageSelectorDivider", typeof(RectTransform), typeof(Image));
-            headerDivider.transform.SetParent(stageSelectionPanel.transform, false);
-            stageHeaderDivider = headerDivider.GetComponent<RectTransform>();
-            Place(stageHeaderDivider, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(StageLeftEdge + 4f, -110f), new Vector2(260f, 2f));
-            var headerDividerImage = headerDivider.GetComponent<Image>();
-            headerDividerImage.color = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.4f);
-            headerDividerImage.raycastTarget = false;
 
             stageProgressText = MakeText(stageSelectionPanel.transform, "StageProgressText", "", 14, TextAnchor.MiddleRight, TerminalText, FontStyle.Bold);
             Place(stageProgressText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-60f, -48f), new Vector2(300f, 26f));
@@ -1101,19 +1194,19 @@ namespace TrashTD.UI
 
             string[] stageNames = new[]
             {
-                "Stage 1", "Stage 2", "Stage 3",
-                "Stage 4", "Stage 5", "Stage 6"
+                "Blackwater Facilities", "Milestone 9", "Railyard Drain",
+                "NERC Works Plant", "New Calder Basin", "The Pale"
                 , "QA Sandbox"
             };
 
             string[] stageDescriptions = new[]
             {
-                "Clear the first wave of spreading hazard.",
-                "Hold the line through the trash docks.",
-                "Secure the scrapline junction.",
-                "Navigate the factory floor while fending off waves of pollutants.",
-                "Push through the cinder dump.",
-                "Hold the line through the meltdown.",
+                "An abandoned NERC research complex hiding the remnants of its secret experiments.",
+                "A deserted roadside fuel and repair station, long abandoned after supply routes collapsed.",
+                "A decaying freight yard choked with debris, stagnant water, and industrial waste.",
+                "A massive power plant left unstable after the disaster that crippled the region.",
+                "A fortified district serving as the last refuge for survivors within the development zone.",
+                "The ruined remains of old Calder Basin, devastated by nuclear catastrophe and industrial contamination.",
                 "Development-only map for enemy and operator testing."
             };
 
@@ -2062,8 +2155,8 @@ namespace TrashTD.UI
             RegisterEntrance(stageEntrance, stageTitlePlate, new Vector2(-60f, 0f), 0.00f);
             RegisterEntrance(stageEntrance, stageTickerPlate, new Vector2(0f, -30f), 0.20f);
             RegisterEntrance(stageEntrance, stageHeaderTitle, new Vector2(-60f, 0f), 0.00f);
+            RegisterEntrance(stageEntrance, stageZoneTitle, new Vector2(-60f, 0f), 0.03f);
             RegisterEntrance(stageEntrance, stageHeaderSubtitle, new Vector2(-40f, 0f), 0.06f);
-            RegisterEntrance(stageEntrance, stageHeaderDivider, new Vector2(-40f, 0f), 0.10f);
             RegisterEntrance(stageEntrance, stageProgressText, new Vector2(40f, 0f), 0.12f);
             RegisterEntrance(stageEntrance, backButton, new Vector2(-40f, 0f), 0.16f);
             RegisterEntrance(stageEntrance, stageHint, Vector2.zero, 0.30f);
@@ -2448,5 +2541,58 @@ namespace TrashTD.UI
 
             return go;
         }
+    }
+
+    /// <summary>
+    /// Displays the sector lore card when hovering over the stage selection title block.
+    /// </summary>
+    public class StageHeaderLoreHover : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+    {
+        [SerializeField] private CanvasGroup loreGroup;
+        private int hoverCount;
+        private float targetAlpha;
+
+        public void Init(CanvasGroup group)
+        {
+            loreGroup = group;
+            if (loreGroup != null)
+            {
+                loreGroup.alpha = 0f;
+                loreGroup.blocksRaycasts = false;
+            }
+        }
+
+        public void AddHover()
+        {
+            hoverCount++;
+            targetAlpha = 1f;
+            if (loreGroup != null) loreGroup.blocksRaycasts = true;
+        }
+
+        public void RemoveHover()
+        {
+            hoverCount = Mathf.Max(0, hoverCount - 1);
+            if (hoverCount == 0)
+            {
+                targetAlpha = 0f;
+                if (loreGroup != null) loreGroup.blocksRaycasts = false;
+            }
+        }
+
+        public void OnPointerEnter(PointerEventData eventData) => AddHover();
+        public void OnPointerExit(PointerEventData eventData) => RemoveHover();
+
+        private void Update()
+        {
+            if (loreGroup == null) return;
+            loreGroup.alpha = Mathf.MoveTowards(loreGroup.alpha, targetAlpha, Time.unscaledDeltaTime * 7f);
+        }
+    }
+
+    public class StageHeaderLoreChildTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+    {
+        public StageHeaderLoreHover parentHover;
+        public void OnPointerEnter(PointerEventData eventData) => parentHover?.AddHover();
+        public void OnPointerExit(PointerEventData eventData) => parentHover?.RemoveHover();
     }
 }
