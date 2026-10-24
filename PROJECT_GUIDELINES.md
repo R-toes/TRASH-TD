@@ -7,7 +7,7 @@
 
 ## 1. Core Mechanics Quick Reference
 
-### 1.1 Operator Classes (5 total)
+### 1.1 Operator Classes (6 total)
 
 | Class | Role | Position | Block Count | Notes |
 |---|---|---|---|---|
@@ -16,6 +16,10 @@
 | Sniper | Ranged DPS | Ranged | 0 | High single-target damage, no blocking |
 | Caster | Ranged AoE | Ranged | 0 | Arts damage (bypasses DEF, hits RES) |
 | Medic | Healer | Ranged | 0 | Restores HP to allies in range |
+| Specialist | Utility / mimic | Any | per operator (Framiliar 1) | **Team addition, not in the GDD** (2026-10-24, with Framiliar). `SpecialistOperator`; recall cooldown 0 like Guard. Raim to confirm |
+
+- **`OperatorPosition.Any`** deploys on Low Ground, Enemy Path, High Ground and Trap tiles (`GridCell.SupportsPosition`). `GridCell.CanDeploy` = not occupied + `SupportsPosition`; use `SupportsPosition` for "would this tile fit?" checks on occupied cells. An `Any` operator can hit air (`OperatorBase.CanHitAir`).
+- A new class must be added to every class switch: `OperatorManager.AddClassComponent` and the recall cooldown table, `InitialAssetGenerator`, the class colours/labels in `CardDraftOverlayUI` and `GameplayHUDUI`, and air-targeting rules such as `RangedFlyingEnemy.IsTargetable`.
 
 ### 1.2 Damage Formula (exact — do not alter)
 
@@ -60,7 +64,7 @@ This game does **NOT** use a pre-built squad/roster selection screen. Instead:
 Any UI, system, or flow that involves "select your squad before the stage" is **wrong** unless Raim explicitly changes this rule.
 
 - Drafted cards go into the player's **deck** (`PlayerDeck`); operators are deployed from the deck bar.
-- On the draft screen, **"View Map & Deck"** (minimize, M) lets the player rearrange, discard **and deploy** deck cards during the pick, the same as in Preparation. Deploying frees a deck slot for the card being picked. Restore (M / RESUME) to pick. The rule lives in `StageBootstrapper.IsDeploymentAllowed` (Sandbox, Preparation, or Card Pick while `CardDraftOverlayUI.IsMinimized`) and `GameplayHUDUI.IsDeckDeployPhase`.
+- On the draft screen, **"View Map & Deck"** (minimize, M) lets the player rearrange, discard **and deploy** deck cards during the pick, the same as in Preparation. Deploying frees a deck slot for the card being picked. Restore (M / RESUME) to pick. While minimized, RESUME sits on the deck bar between PREVIEW PATH and the bottom-right panel. The HUD reports that slot (`GameplayHUDUI.TryGetDeckBarFreeSlot`), and the draft re-places the button every frame, because the right-anchored panel moves with the aspect ratio. The rule lives in `StageBootstrapper.IsDeploymentAllowed` (Sandbox, Preparation, or Card Pick while `CardDraftOverlayUI.IsMinimized`) and `GameplayHUDUI.IsDeckDeployPhase`.
 - **HP persists through retreat.** A retreated operator's exact HP is saved on its returned card (`DraftCard.savedHP`, −1 = full) and restored on redeploy (`OperatorBase.RestoreSavedHP`, called after `Initialize`). Nothing heals a benched card. Merging copies never heals: the upgraded card keeps the lowest HP fraction among them.
 - At most **8 operators** can be deployed at once (`StageData.squadSizeLimit`; unlimited in Sandbox).
 - **Deploying:** pick a deck card, click a tile, then hold and drag from the operator to set its facing. Release to confirm. Esc cancels. **Right-click** cancels placement or undeploys the selected operator. Keyboard shortcuts are listed in §7.6.
@@ -79,7 +83,8 @@ Per GDD section 1.10 and the course's software-reuse objective:
 - **Adding a new creature or enemy must not require modifying existing code** — only creating a new data asset and (optionally) a new prefab
 - Architecture patterns (inheritance, interfaces, composition) are part of the assignment deliverable — favor reusable, extensible patterns over one-off implementations
 - **Stage data lives in `Assets/Resources/Stages/*.asset`** — the single source of stage data.
-- **Known deviation:** operators with a unique kit (e.g. Ignisaur, Proxishot, Chillpath, Shadeslice) currently need a subclass *and* a name check in `OperatorManager` (`ShouldReplaceWithSpecializedComponent` / `AddClassComponent`); 4-frame sprite sheets need a name check in `OperatorSpriteAnimation`; `OperatorData.GetTalentRangePattern` also checks for `"Shadeslice"` by name. Plain operators still need only a data asset + prefab. Prefer moving these name checks into `OperatorData` fields over adding more of them.
+- **Known deviation:** operators with a unique kit (e.g. Ignisaur, Proxishot, Chillpath, Shadeslice, Resicochet, Castiel, Echosquire, Framiliar) currently need a subclass *and* a name check in `OperatorManager` (`ShouldReplaceWithSpecializedComponent` / `AddClassComponent`); 4-frame sprite sheets need a name check in `OperatorSpriteAnimation`; `OperatorData.GetTalentRangePattern` also checks for `"Shadeslice"` by name. On the enemy side, `EnemyManager` checks for `"Askalaser"` by name. Plain operators still need only a data asset + prefab. Prefer moving these name checks into `OperatorData` fields over adding more of them.
+  - The checks compare `operatorName`, not the file name. The `"QiFu"` check never matches: `OP_Guard_QiFu.asset` is named **Chi Paw**, so Chi Paw relies on its prefab already having `QiFuOperator`.
 - **Draft pool:** `StageBootstrapper` fills `operatorPool` from `Assets/_Project/Data/Operators` **in the Editor only**. A player build only offers operators serialized in the scene's `operatorPool` — add new operators there before building.
 
 ---
@@ -91,7 +96,7 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 
 | Area | Status |
 |---|---|
-| **Narrative / Lore** | Not defined — no story, factions, or world-building |
+| **Narrative / Lore** | **Partly superseded** — the team writes stage lore: the NERC corporation, the Calder Basin / NERC Development Zone, and the stage names and `StageData.shortDescription` texts (§7.1), plus `MainMenuController.StageZoneLore`. Use the team's text as written; don't invent story, factions or world-building beyond it |
 | **Art / Visual Style** | **Superseded** — the team is adding real pixel-art sprite sheets for operators, enemies and UI (e.g. `Resources/UI/Deck BG.png`) and a pixel-art UI kit (see §7.5). Use placeholders only where no art exists yet |
 | **Audio Direction** | **Superseded** — per-unit SFX exist (see §7.4). Don't invent audio direction beyond that |
 | **Economy beyond card-draft** | Not defined — no currencies, shops, or meta-progression beyond the duplicate-upgrade system |
@@ -137,23 +142,25 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 - Use `FindAnyObjectByType<T>()`, not `FindFirstObjectByType<T>()` (deprecated).
 - Use the `FindObjectsByType<T>()` / `FindObjectsByType<T>(FindObjectsInactive)` overloads without a `FindObjectsSortMode`.
 - Use `#if UNITY_EDITOR || DEBUG`, not `DEVELOPMENT_BUILD` (deprecated); `Debug.isDebugBuild` at runtime.
+- **Domain reload is off** (Enter Play Mode options), so static fields survive from one play session to the next, but textures/sprites/materials created at runtime are destroyed when play mode ends. Check a cached object with Unity's `== null`. For a cached **array or list** of them, check the elements too (e.g. `Array.TrueForAll(frames, f => f != null)`). Otherwise the second play reuses destroyed sprites and draws nothing (this hid the Stage 1 mist).
 - A camera's target RenderTexture needs a depth buffer (e.g. `new RenderTexture(w, h, 24, ...)`). Without one, URP's render graph logs a warning every frame (`CrtScreen` used to flood the Console this way).
 
 ---
 
-## 7. Current Implementation Notes (as of 2026-10-22)
+## 7. Current Implementation Notes (as of 2026-10-24)
 
 ### 7.1 Roster
 
-**Operators (19)** — draft rarity in brackets:
+**Operators (21)** — draft rarity in brackets:
 
 | Class | Operators |
 |---|---|
 | Guard | Chi Paw (1★), Scrapper (1★), Echosquire (2★), Ignisaur (2★), Stag-ger (2★), Shadeslice (3★) |
 | Defender | Bulkhead (1★), Drawgoo (1★), Thornchin (2★), Mossmo (3★) |
 | Sniper | Deadeye (1★), Proxishot (2★), Basurocket (3★) |
-| Caster | Chillpath (1★), Pyrolite (1★), Castiel (2★) |
+| Caster | Chillpath (1★), Pyrolite (1★), Castiel (2★), Resicochet (3★) |
 | Medic | Coalesce (1★), Progeny (2★), Bubblets (3★) |
+| Specialist | Framiliar (2★) |
 
 Each asset's `skillDescription` is the authoritative description of that operator's kit. Recent changes:
 - **Ignisaur** (Guard): Physical melee on its own tile / blocked enemies, Arts projectiles on forward range tiles, can hit air. *Protean*: faster attacks when not blocking, +25% ATK when blocking.
@@ -163,13 +170,35 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - **Stag-ger** (Guard): hits every blocked enemy on its tile and in range ahead, including enemies blocked by allies. With nothing blocked, it hits one target. 20% dodge; a successful dodge gives +50% ATK on the next attack.
 - **Drawgoo** (Defender): on death, draws 2 random cards. An upgraded Drawgoo instead draws 3★ cards: 1 card (60%) or 2 (40%) (`CardDraftSystem.DrawRandomCardsToDeck(count, targetRarity)`).
 - **Mossmo** (Defender): doesn't attack. It **taunts** (`HasTaunt`): ranged enemies on a surrounding tile target it first. When it takes damage, it heals up to 2 operators in range, itself included.
+- **Castiel** (Caster, `CastielOperator`): continuous light laser locked on one target (`LightLaserVisual`). Ticks every 0.375 s; damage ramps every 1.5 s: 5 → 15 → 30 → 80 → 100 → 150. Its halo animation speeds up (frame 0.10 s → 0.04 s) as the beam ramps.
+- **Resicochet** (Caster, `ResicochetOperator`): high DEF, low RES. Stores a charge every 5 s (max 3, starts with 1). Each attack fires 1 projectile per charge, 0.5 s apart. Each projectile deals Arts damage and bounces to up to 4 targets in total, losing 25% per bounce. Every hit applies **Sluggish**. The sprite row follows the charge count (`Resicochet_0–11`, 4 frames per row).
+- **Framiliar** (Specialist, `FramiliarOperator`, position `Any`, blocks 1): after deploying, select it to open the copy menu (`GameplayHUDUI.ShowFramiliarCopyMenu`). The menu mirrors the deck slots; Framiliar cards are left out. Picking a card calls `OperatorManager.TransformFramiliar`:
+  - The copy replaces Framiliar on its tile, in grayscale (`FramiliarOperator.ApplyGrayscale`, `Resources/Shaders/GrayscaleSprite.shader`).
+  - The copied operator must fit the tile (`SupportsPosition`).
+  - It keeps facing, HP fraction, heat and the fought/prep flags. `IsCopiedFromFramiliar` / `OriginalFramiliarData` / `OriginalFramiliarRarity` remember the original.
+  - **Retreat:** retreating it in the same prep phase before it fights returns a Framiliar card at its original rarity with no cooldown. After it has fought, it returns as the copied operator for good. `WaveManager` calls `OperatorManager.MarkAllDeployedOperatorsAsFought()` whenever a wave starts (normal and sandbox).
 - **Talent range overlay:** `OperatorData.talentRangePattern` (optional) is drawn in orange under the green attack range in the placement preview. Use `GetTalentRangePattern()`.
 
-**Enemies (10):** Grunt (Sludge, Sand Plastic), Rusher (Toxic), Tank (Pollution, Sand Hulk), Caster (Sand Poncho, Smog), Air (Flying Melee, Flying Ranged, Acid Flyer). Acid Flyer and Smog Caster now have sprites but are **not yet used in waves** — confirm they're fully configured before adding them.
+**Enemies (14):** Grunt (Sludge, Sand Plastic, Oculite Spawn), Rusher (Toxic, Exploding Bug), Tank (Pollution, Sand Hulk, Oculoid Carrier), Caster (Sand Poncho, Smog, Askalaser), Air (Flying Melee, Flying Ranged, Acid Flyer).
+- **Not in any wave yet:** Acid Flyer, Smog Caster, Askalaser, Oculoid Carrier and Exploding Bug. Oculite Spawn is only spawned by Oculoid Carrier. Confirm a unit is fully configured before adding it to waves.
+- **Askalaser** (`AskalaserEnemy`): Arts damage, low DEF / high RES, Grunt speed, can't be blocked. It switches between two states:
+  - **State 1:** global range. Every 5 s it stops and deals 20 Arts damage to the deployed operator with the lowest DEF.
+  - **State 2:** starts when an operator is inside its pattern: a 12-tile diamond (distance ≤ 2) for every unit, widened to 5×5 minus the corners for ranged units. It stops and fires a Castiel-style ramping laser at the lowest-DEF target. The laser lasts until that target dies, camouflages or leaves the pattern.
+- **Oculoid Carrier** (`OculoidCarrierEnemy`): high DEF, low RES. Immune to Stage 6 acid rain and acid/trap tiles. While blocked, it reduces its blocker's block count by 1. On death it spawns 2 **Oculite Spawns** (`OculiteSpawnEnemy`: same DEF/RES profile and immunities), which continue to the exit.
+- **Exploding Bug** (`ExplodingBugEnemy`, a Rusher with Toxic Rusher stats): on death it deals its ATK as physical damage to operators on the 4 adjacent tiles.
 
-**Stages:** STAGE_01 through STAGE_06 (Stage 5 = "Boulevard"), plus STAGE_SANDBOX (development sandbox with multiple maps; cards can be deployed mid-wave and the squad limit is lifted).
+**Stages:** STAGE_01 Blackwater Facilities, STAGE_02 Milestone 9, STAGE_03 Railyard Drain, STAGE_04 NERC Works Plant, STAGE_05 New Calder Basin, STAGE_06 The Pale. The stages were renamed to the team's lore on 2026-10-24; the old names were Landfill Outskirts, Scrapyard Junction, Railyard Crossing, Industrial Factory, Boulevard and Meltdown. There is also STAGE_SANDBOX, a development sandbox with multiple maps, where cards can be deployed mid-wave and the squad limit is lifted.
 
 **Stage environments** (each has its own component created by `StageBootstrapper`, and an environment briefing in `GameplayHUDUI`; the constants in each script are authoritative, and some doc comments are out of date):
+- **Stage 1 — mist & rain** (`Stage1WeatherVisuals`, visual only, no gameplay effect):
+  - **Mist:** volumetric puffs (3 generated variants, lit from above, slowly billowing and bobbing) drift left in two layers (`MistLayers`):
+    - **Back** at sorting order 3: above the map art (1), beneath ground units (4–5).
+    - **Front** at order 11: above ground units and the foreground art (10), below air units (12). It may roll over operators and enemies.
+    - A gradient fog bank (order 11) covers the backdrop row above the grid.
+  - **Mist density:** thickness comes from a per-tile density field: full off the grid and along the edges, 0.55 on High Ground, 0.3 on the enemy lane and other walkable tiles. The front layer raises it to the power 2.2, so it is nearly invisible over the path (≈0.07) but heavy on the backdrop. Keep the path clear when tuning.
+  - **Rain:** it rains almost all the time. The forecast queue alternates light (30–60 s) and medium (25–50 s) spells. After a medium spell there is a 30% chance of a short dry break (6–12 s), so it's dry about 3% of the time. The stage opens already raining, and intensity eases between states.
+  - **Rain visuals:** slanted pixel streaks at order 24 (above units, below projectiles), splash dashes on the ground at order 3, a darkening tint at order 2, and up to 35% thicker mist.
+  - A `SpriteMask` clips the mist and rain to the map artwork. Runs on scaled time, so it freezes while paused.
 - **Stage 2 — falling items** (`Stage2FallingItemsHazard`): every 10 s an item drops on a random operator (40%), deployable tile (40%) or enemy (20%). Glass: 2 true damage/s for 5 s. Metal: 15 true damage. Tools: 15 true damage + 2 s stun. Thornchin doesn't retaliate. The hit pops Bubblets' shield, triggers Mossmo's heal, and can be dodged by Stag-ger. Proxishot still gains camo. Sprites come from `StageData.fallingItemSprites`.
 - **Stage 3 — sandstorm:** attack intervals ×0.95, 10% miss chance, wind/dust particles, animated background.
 - **Stage 4 — factory heat** (`Stage4HeatHazard`): each wave adds 1 heat stack to deployed operators. At 5 stacks they burn for 15 damage/s. Only retreating ends the burn. Heat is stored on the `DraftCard` (`heatStacks`) and drops by 2 per round while benched. Merges keep the highest heat. `OperatorHeatBar` displays it.
@@ -194,6 +223,7 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - `OperatorBase.IgnoresMissMechanic`, `IsCamouflaged`, `IsTargetable` — enemies skip operators that aren't targetable.
 - **Nothing happens between waves.** `OperatorBase.IsCombatPaused` is true in every phase except `WaveActive` (Card Pick and Preparation; never in Sandbox). While paused, operators take no damage of any kind (enemy, trap, weather), receive no healing, gain/lose no shields, and run no attacks, heals or abilities. Any operator with its own `Update`/`TakeDamage` override must respect it.
 - **True damage:** `DamageType.True` ignores DEF and RES (minimum 1). Hazards use `OperatorBase.TakeTrueDamage(dmg, ignoreShieldNegation, canDodge)` / `EnemyBase.TakeTrueDamage(dmg)`, not the ATK-based formula. Operator overrides of damage handling must also override `TakeTrueDamage`.
+- **Sluggish:** `EnemyBase.ApplySluggish(duration, speedMult, attackIntervalMult)`. Resicochet uses 3 s, ×0.6 move speed and ×1.5 attack interval. It stacks multiplicatively with chill slow, and repeat applications keep the strongest values and the longest timer. Enemy attack timing must read `EnemyBase.GetEffectiveAttackInterval()` (stage modifier + sluggish), not `data.attackInterval`.
 - **Stun:** `OperatorBase.ApplyStun(duration)` releases blocked enemies. While stunned, `GetBlockCount()` returns 0 and the operator can't attack. Use `GetBlockCount()`, not `data.blockCount`.
 - **Blocking position:** a blocked enemy stops on the boundary in front of its blocker (`EnemyBase.BlockedPosition`). Range checks for blocked enemies count both the blocker's tile and the adjacent path tile. Defenders also attack enemies in their range pattern when they aren't blocking.
 - Skip enemies with `IsInsideHole` in any targeting, blocking or status code.
@@ -225,9 +255,23 @@ Each asset's `skillDescription` is the authoritative description of that operato
   - **Lives:** `tube_frame` + tiled `tube_liquid` + `tube_surface` at 2×, built upright and rotated −90° so it reads horizontally. Liquid = current/max lives and drains toward the left. The frame flashes red on a lost life. In Sandbox the tube is hidden and "LIVES LOCKED" text shows instead.
   - Load whole UI textures with `GameplayHUDUI.LoadWholeTextureSprite(path, border)`: Point-filtered, ignores importer slicing, cached. Draw pixel art at whole-number scales (`pixelsPerUnitMultiplier = 1 / scale` for Sliced/Tiled images).
 - **Pause menu** (`GameplayHUDUI.CreatePausePanel`): `Resources/UI/panels/pause menu panel bg.png` (256×256) at 2×. The title sits in the header screen (art y 37–101) and four buttons in the body screen (y 104–217): Resume, Retry, Settings and Exit to Menu. Settings is added by `AudioSettingsUI.Create` from `Awake` into `PauseSettingsSlotPx`. Give every pause button its own slot: Settings used to sit on top of Retry and hid it.
-- **In-game path preview** (`GameplayPathPreviewOverlay`, toggled by the HUD's PREVIEW PATH button): draws each enemy route in world space with LineRenderers, using the same routes, colours and lanes as `StageMapPreview` (`ComputeRoutes`, `GetRouteColor`). Each route is a dark casing, a faint core and flowing dashes (lines 20% thinner, `LineThinning`), with pinging SPAWN/EXIT rings. On toggle, the routes draw in from the spawn over 0.9 s. Unscaled time.
-  - The dashes use `Resources/Shaders/AnimatedPathDash.shader` ("TrashTD/PathDash"). URP's 2D sprite shader ignores texture tiling and offset, so a material on it can't scroll. The lines use `LineTextureMode.Tile` (u = world units along the line), so the dash material's scale is `1 / dashPeriod` and its offset scrolls the dashes from spawn to exit. If the shader is missing, the dashes fall back to the sprite shader and stand still.
-- **Operator inspect label** shows name, rarity, ATK/HP and SHOW MORE. The skill text appears only in the SHOW MORE details panel.
+- **Path preview style** (`PathPreviewArt`, shared by both previews; change the look there, not in either preview):
+  - **Routes** are reclamation-plant conveyor lanes: a dark channel with bright rims and ">" chevrons that march spawn → exit at Grunt speed (1 tile/s). The chevrons show which way enemies walk.
+  - **Turns** get junction nodes; a **tracer blip** runs each route every few seconds.
+  - **Spawns:** a hazard-striped breach frame (marching stripes) with a blinking warning sign, in the route's colour, tagged `SPAWN` or `SPAWN n` when there are several routes.
+  - **Exits:** a green shield on a plate inside breathing lock-on brackets, tagged `EXIT`.
+  - Markers have square radar pings and terminal-style labels on dark tags.
+  - All art is generated white at 1 texel = 1 stage-art pixel, point-filtered, and tinted per route.
+  - **Lanes:** 10 art px wide, narrowing to at least 4 px when routes share a path (`LaneWidthPx`, `LaneOffsetTiles`).
+  - **Shared geometry:** both previews use `KeepCorners`, `OffsetIntoLane` and `PointAlong`.
+  - **Animation:** grid fades in → routes draw in behind a scan head (0.9 s) → junctions and spawns pop in → exits lock on as the routes arrive.
+- **In-game path preview** (`GameplayPathPreviewOverlay`, toggled by the HUD's PREVIEW PATH button, Esc closes it):
+  - **Look:** draws the `PathPreviewArt` style in world space, using the same routes, colours and lanes as `StageMapPreview` (`ComputeRoutes`, `GetRouteColor`). The stage art dims slightly and a faint phosphor tile grid appears.
+  - **Layering:** sorting orders 43–52, above units, the foreground art and weather. Unscaled time.
+  - **Shader:** the lanes are LineRenderers using `Resources/Shaders/AnimatedPathDash.shader` ("TrashTD/PathDash"). URP's 2D sprite shader ignores texture tiling and offset, so a material on it can't scroll.
+  - **Scrolling:** the lines use `LineTextureMode.Tile` (u = world units along the line), so the lane material's scale is `1 / (LanePeriodPx × art pixel)` and its offset scrolls the chevrons from spawn to exit. If the shader is missing, the lanes fall back to the sprite shader and stand still.
+  - **Labels** are `TextMesh` in the pixel font, sized from the measured mesh.
+- **Operator inspect label** shows name, rarity, ATK/HP and SHOW MORE. The skill text appears only in the SHOW MORE details panel. The panel also holds the Framiliar copy section (`CreateFramiliarCopySection`), which appears only when an uncopied Framiliar is selected.
 
 ### 7.6 Controls & Keybinds
 
@@ -266,6 +310,8 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
   - The title is a small hazard-yellow "TINY" over a large "RECLAIMERS" (two-step extruded shadow, occasional RGB-split glitch), with a tilted hazard-yellow "TD" sticker. Above the title, a boot line types out the number of playable stages.
   - Menu rows PLAY / SETTINGS / EXIT are styled by `StyleMainMenuButton`: a caret and bracket frame show while a row is selected (`MenuButtonFeedback.IsHot`). **Hovering selects the row**, so mouse and keyboard share one highlight. SETTINGS is still created by `AudioSettingsUI.Create`.
 - Stage select is a Pip-Boy style map, built in code by `MainMenuController.BuildStageButtons`. It replaced the old stage grid. The background is `Art/Levels/Stage Selector Map.png`. Clicking a dot opens the stage details modal (difficulty selector, then play). A locked dot wobbles and plays the denied sound.
+  - **Radar overlay** (`StageMapAnimOverlay`): a 12-frame sonar pulse (`Art/Levels/StageMap_Anim_Overlay.png`, `Animations/StageMap_Anim_Overlay.*`) stretched over the map art.
+  - **Lore card:** hovering the title block shows `StageZoneLore` in a card under the title plate (`StageHeaderLoreHover` / `StageHeaderLoreChildTrigger`, in `MainMenuController.cs`).
 - Each stage is a `StageMapNode` placed at a **normalized position** (0–1 across the map art, origin top-left) from `MainMenuController.StageNodePositions`. Index *i* is Stage *i*+1, so add an entry there when adding a stage. `StageMapLayout` (on the map art) rescales and repositions the nodes whenever the art resizes, so they stay in place at any 16:9 resolution.
 - **Stage markers** (`StageMapNode.Build`, called from `MainMenuController.CreateStageMapNode`) are built entirely by the node.
   - **Marker:** a chunky pixel target made of procedural sprites drawn small and point-scaled: core badge with the number, a rotating dashed ring, two staggered radar pings, and 4 lock-on ticks.
@@ -298,7 +344,7 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
 - **Locking is not progression.** A node is locked only if `IsStagePlayable(stageId)` is false (a hard-coded list of stage IDs). "X / 6 UNLOCKED" counts that list, not cleared stages. Don't add unlock-on-clear progression without asking Raim (see "Persistence model", §4).
 - **Terminal styling** (stage selector and dossier): the `Terminal*` colours in `MainMenuController`, `AddCornerBrackets` for L-shaped corner frames, and `StyleTerminalButton`. `MenuButtonFeedback` owns each button's `Outline` as its hover glow, so resting borders are brackets, not outlines. The selector has a title plate, a blinking cursor, and a status ticker that types out the hovered stage (`StageMapNode.HoverChanged`).
 - **Stage dossier** (the details modal, 1300×720): an animated `StageMapPreview` on the left, and stage info, stats, difficulty cards, a waves/lives briefing, Back and Play on the right.
-- **`StageMapPreview`** draws the stage art in UI with gameplay's tile math (`StageBootstrapper.SpawnVisualGridTiles`). A layer several map-widths wide is treated as an animation sheet (Stage 3's background). It shows one enemy route per spawn, chosen like `WaveManager.PrecomputePaths`: explicit `enemyPaths`, otherwise A* on a throwaway `GridManager`. Change both together if path rules change. Each route has its own colour (`StageMapPreview.GetRouteColor`, also used for its spawn marker and the legend) and its own lane, offset sideways and mitred at corners so shared tiles show routes side by side. Routes are dark casing + faint core + dashes, drawn 20% thinner than the lane-based width (`LineThinning` = 0.8) (a RawImage scrolling its uvRect) that flow from spawn to exit. Animation: boot scan reveal → routes draw from spawn → dashes keep flowing; spawn/exit pings; CRT scanlines (`StageMapScanlines.SourceRows` ≈ height / 4). No enemy blips.
+- **`StageMapPreview`** draws the stage art in UI with gameplay's tile math (`StageBootstrapper.SpawnVisualGridTiles`). A layer several map-widths wide is treated as an animation sheet (Stage 3's background). It shows one enemy route per spawn, chosen like `WaveManager.PrecomputePaths`: explicit `enemyPaths`, otherwise A* on a throwaway `GridManager`. Change both together if path rules change. Each route has its own colour (`StageMapPreview.GetRouteColor`, also used for its spawn marker and the legend) and its own lane, offset sideways and mitred at corners so shared tiles show routes side by side. Routes use the shared `PathPreviewArt` style (§7.5): each segment is a RawImage of the lane texture scrolling its uvRect, with junction nodes covering the overlap at corners. The legend's `[!]` / `[+]` tags stand for the spawn warning sign and the exit shield. Animation: boot scan reveal → phosphor tile grid → routes draw in behind a scan head → chevrons march and tracers run; marker pops and pings; CRT scanlines (`StageMapScanlines.SourceRows` ≈ height / 4).
 - The dossier's texts use best-fit (`MainMenuController.FitText`) so they shrink instead of clipping. The selector's ticker plate is a **fixed 820 px** and never resizes. Text sits in a `RectMask2D` viewport. A message that doesn't fit types out with the line sliding to keep the cursor visible, holds 1.2 s, then loops as a seamless marquee (message + gap + message, `PrepareStageTickerScroll` / `UpdateStageTicker`).
 - **CRT / old-TV look for the whole game** (`CrtDisplay`, `CrtScreen`, `Resources/Shaders/CrtScreen.shader` "TrashTD/UI/CRT"):
   - **`CrtDisplay`** is created before the first scene (`RuntimeInitializeOnLoadMethod`, DontDestroyOnLoad). Every frame it does three things:

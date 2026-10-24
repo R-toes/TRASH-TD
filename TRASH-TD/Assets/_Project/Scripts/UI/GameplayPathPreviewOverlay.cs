@@ -6,52 +6,61 @@ using TrashTD.Data;
 namespace TrashTD.UI
 {
     /// <summary>
-    /// In-game tactical enemy path preview overlay. Draws the animated enemy route lines,
-    /// lane offsets, and pulsing spawn/exit markers matching the stage select preview.
-    /// Includes the full sweep draw-in animation from spawn to exit, flowing dashes,
-    /// and concentric pulsing spawn/exit rings.
-    /// Rendered directly in world-space so it aligns perfectly with the active grid tiles.
-    /// Can be toggled on and off at any time during gameplay.
+    /// In-game enemy route preview, toggled by the HUD's PREVIEW PATH button (Esc closes it).
+    /// Same look as the stage dossier's StageMapPreview (PathPreviewArt): the map dims slightly and a phosphor
+    /// tile grid fades in, then each route draws in from its spawn behind a scan head as a conveyor lane whose
+    /// chevrons march toward the exit, with junction nodes on turns, a tracer blip, a hazard-striped spawn
+    /// frame and a shield exit marker. Routes, colours and lanes come from StageMapPreview, so both previews
+    /// always agree. Drawn in world space at the stage art's pixel scale, above the units and weather.
+    /// Runs on unscaled time, so it animates while paused.
     /// </summary>
     public sealed class GameplayPathPreviewOverlay : MonoBehaviour
     {
-        private static readonly Color CasingColor = new Color(0f, 0f, 0f, 0.65f);
-        private static readonly Color UnroutedSpawnColor = new Color(1f, 0.32f, 0.24f, 1f);
-        private static readonly Color ExitColor = new Color(0.32f, 1f, 0.60f, 1f);
+        private const int DimSortingOrder = 43;      // Above units, rain (24) and the foreground art
+        private const int GridSortingOrder = 44;
+        private const int LaneSortingOrder = 45;
+        private const int JunctionSortingOrder = 46;
+        private const int TracerSortingOrder = 47;
+        private const int MarkerSortingOrder = 48;   // Ping 48, body 49, icon 50, label 51-52
 
-        private const float RouteDrawDuration = 0.9f;
-        private const float DashSpeed = 1.4f;
-        private const float MaxLaneSpacingTiles = 0.22f;
-        private const float LaneSpreadTiles = 0.8f;
-        private const float PingPeriod = 1.4f;
-        private const float LineThinning = 0.8f; // route lines (and their casing) drawn 20% thinner
+        private const float DimAlpha = 0.16f;
+        private const float GridAlpha = 0.11f;
+        private const int LabelFontSize = 32;
+        private const float LabelHeightPx = 7f;
 
-        // URP's 2D sprite shader ignores texture offset/scale, so the dashes need their own shader to flow
-        private const string DashShaderPath = "Shaders/AnimatedPathDash"; // "TrashTD/PathDash"
-        private static Shader dashShader;
+        // URP's 2D sprite shader ignores texture offset/scale, so the lanes need their own shader to flow
+        private const string LaneShaderPath = "Shaders/AnimatedPathDash"; // "TrashTD/PathDash"
+        private static Shader laneShader;
 
         private sealed class RouteVisual
         {
-            public List<Vector3> fullPoints;
-            public List<float> cumulativeLengths;
-            public float totalLength;
-            public LineRenderer casingLine;
-            public LineRenderer coreLine;
-            public LineRenderer dashLine;
-            public Material dashMat;
-            public float dashPeriod;
+            public List<Vector2> points;
+            public List<float> cumulative;
+            public float length;
+            public float phase;
+            public Color color;
+            public LineRenderer lane;
+            public Material laneMaterial;
+            public readonly List<(SpriteRenderer renderer, float distance)> junctions = new List<(SpriteRenderer, float)>();
+            public float junctionScale;
+            public SpriteRenderer tracerHead;
+            public SpriteRenderer[] tracerTrail;
         }
 
         private sealed class MarkerVisual
         {
-            public Transform ping;
-            public SpriteRenderer baseRenderer;
-            public SpriteRenderer pingRenderer;
-            public SpriteRenderer dotRenderer;
-            public TextMesh labelTextMesh;
-            public Color color;
-            public float baseScale;
+            public Transform root;
+            public bool isSpawn;
+            public float appearAt;
             public float phase;
+            public Color color;
+            public SpriteRenderer frame;    // spawn: hazard frame; exit: plate
+            public SpriteRenderer icon;
+            public SpriteRenderer brackets; // exit only
+            public SpriteRenderer ping;
+            public SpriteRenderer labelPlate;
+            public SpriteRenderer labelUnderline;
+            public TextMesh label;
         }
 
         private GridManager gridManager;
@@ -60,9 +69,12 @@ namespace TrashTD.UI
         private GameObject visualRoot;
         private readonly List<RouteVisual> routes = new List<RouteVisual>();
         private readonly List<MarkerVisual> markers = new List<MarkerVisual>();
+        private readonly List<SpriteRenderer> gridLines = new List<SpriteRenderer>();
         private readonly List<Material> createdMaterials = new List<Material>();
+        private SpriteRenderer dim;
 
-        private Material lineBaseMaterial;
+        private float cellSize = 1f;
+        private float artPixel = 1f / 32f; // World units per stage-art pixel
 
         private bool isVisible;
         private float animTime;
@@ -131,6 +143,8 @@ namespace TrashTD.UI
         {
             routes.Clear();
             markers.Clear();
+            gridLines.Clear();
+            dim = null;
 
             foreach (Material m in createdMaterials)
             {
@@ -150,29 +164,20 @@ namespace TrashTD.UI
         private void OnDestroy()
         {
             ClearVisuals();
-            if (lineBaseMaterial != null) Destroy(lineBaseMaterial);
         }
 
-        private Material GetLineMaterial()
+        private Material CreateLaneMaterial()
         {
-            if (lineBaseMaterial != null) return lineBaseMaterial;
-            Shader shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default") ?? Shader.Find("Sprites/Default");
-            lineBaseMaterial = new Material(shader) { name = "PathPreviewLineMat" };
-            return lineBaseMaterial;
-        }
-
-        private Material CreateDashMaterial(Color color)
-        {
-            // Without the dash shader the dashes still draw, just standing still
-            if (dashShader == null) dashShader = Resources.Load<Shader>(DashShaderPath);
-            Shader shader = dashShader != null && dashShader.isSupported
-                ? dashShader
+            // Without the lane shader the lanes still draw, just standing still
+            if (laneShader == null) laneShader = Resources.Load<Shader>(LaneShaderPath);
+            Shader shader = laneShader != null && laneShader.isSupported
+                ? laneShader
                 : Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default") ?? Shader.Find("Sprites/Default");
             var mat = new Material(shader)
             {
-                name = "PathPreviewDashMat",
-                mainTexture = StageMapPreview.GetDashTexture(),
-                color = color
+                name = "PathPreviewLaneMat",
+                mainTexture = PathPreviewArt.GetLaneTexture(),
+                color = Color.white
             };
             createdMaterials.Add(mat);
             return mat;
@@ -206,132 +211,136 @@ namespace TrashTD.UI
                 visualRoot.transform.SetParent(transform, false);
             }
 
-            float cellSize = gridManager.CellSize;
+            cellSize = gridManager.CellSize;
+            float pixelsPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
+            artPixel = cellSize / pixelsPerTile;
+
+            BuildDimAndGrid();
+
             List<(int spawn, List<Vector2Int> cells)> cellRoutes = StageMapPreview.ComputeRoutes(stageData);
             int routeCount = cellRoutes.Count;
-
             if (routeCount == 0)
             {
                 Debug.LogWarning("[GameplayPathPreview] No enemy routes found for stage: " + stageData.stageId);
-                return;
             }
 
-            float laneSpacing = Mathf.Min(MaxLaneSpacingTiles, LaneSpreadTiles / Mathf.Max(1, routeCount)) * cellSize;
-            float thickness = Mathf.Max(0.09f * cellSize, laneSpacing * 0.7f) * LineThinning;
-            var spawnColors = new Dictionary<int, Color>();
-
+            float laneWidth = PathPreviewArt.LaneWidthPx(routeCount, pixelsPerTile) * artPixel;
+            var spawnRoutes = new Dictionary<int, int>(); // spawn index -> route index
             for (int r = 0; r < routeCount; r++)
             {
-                float laneOffset = (r - (routeCount - 1) * 0.5f) * laneSpacing;
-                Color color = StageMapPreview.GetRouteColor(r);
-                BuildRouteVisual(cellRoutes[r].cells, thickness, laneOffset, color, cellSize);
-                spawnColors[cellRoutes[r].spawn] = color;
+                float laneOffset = PathPreviewArt.LaneOffsetTiles(r, routeCount) * cellSize;
+                RouteVisual route = BuildRouteVisual(cellRoutes[r].cells, laneWidth, laneOffset, StageMapPreview.GetRouteColor(r), r / (float)routeCount);
+                if (route == null) continue;
+                spawnRoutes[cellRoutes[r].spawn] = routes.Count;
+                routes.Add(route);
             }
 
-            // Spawn & Exit Markers
+            // Spawn markers take their route's colour (and number, when there are several); exits are green
             if (stageData.spawnPoints != null)
             {
                 for (int s = 0; s < stageData.spawnPoints.Length; s++)
                 {
-                    Color color = spawnColors.TryGetValue(s, out Color routeColor) ? routeColor : UnroutedSpawnColor;
-                    Vector3 worldPos = gridManager.GridToWorldPosition(stageData.spawnPoints[s]);
-                    CreateMarker(worldPos, color, "SPAWN", cellSize, s * 0.23f);
+                    bool routed = spawnRoutes.TryGetValue(s, out int routeIndex);
+                    Color color = routed ? routes[routeIndex].color : PathPreviewArt.UnroutedSpawnColor;
+                    string label = routed && routes.Count > 1 ? $"SPAWN {routeIndex + 1}" : "SPAWN";
+                    CreateMarker(gridManager.GridToWorldPosition(stageData.spawnPoints[s]), color, label, true, s * 0.08f);
                 }
             }
 
             if (stageData.exitPoints != null)
             {
+                // Exits lock on as the routes finish drawing in
+                float exitsAppear = PathPreviewArt.RouteDrawDuration * 0.85f;
                 for (int e = 0; e < stageData.exitPoints.Length; e++)
                 {
-                    Vector3 worldPos = gridManager.GridToWorldPosition(stageData.exitPoints[e]);
-                    CreateMarker(worldPos, ExitColor, "EXIT", cellSize, e * 0.31f);
+                    CreateMarker(gridManager.GridToWorldPosition(stageData.exitPoints[e]), PathPreviewArt.ExitColor, "EXIT", false, exitsAppear + e * 0.08f);
                 }
             }
 
             // Apply initial animation state (t = 0)
             Update();
-
-            Debug.Log($"[GameplayPathPreview] Rebuilt {routeCount} routes in world-space for stage {stageData.stageId}.");
         }
 
-        private void BuildRouteVisual(List<Vector2Int> cells, float thickness, float laneOffset, Color color, float cellSize)
+        /// <summary>A light dim over the stage art and faint phosphor lines on the tile borders.</summary>
+        private void BuildDimAndGrid()
         {
-            if (cells == null || cells.Count < 2) return;
+            Vector2 gridMin = (Vector2)gridManager.GridToWorldPosition(0, 0) - Vector2.one * (cellSize * 0.5f);
+            Vector2 gridSize = new Vector2(stageData.gridWidth, stageData.gridHeight) * cellSize;
 
-            // 1. Convert to world centers and drop redundant collinear mid-points
-            var centers = new List<Vector2> { (Vector2)gridManager.GridToWorldPosition(cells[0]) };
-            for (int i = 1; i < cells.Count; i++)
+            // The art can be larger than the grid (e.g. Stage 1's backdrop row)
+            Vector2 artMin = gridMin;
+            Vector2 artMax = gridMin + gridSize;
+            if (stageData.mapVisualSprite != null)
             {
-                if (cells[i] == cells[i - 1]) continue;
-                Vector2 pt = (Vector2)gridManager.GridToWorldPosition(cells[i]);
-                if (centers.Count >= 2)
-                {
-                    Vector2 inDir = (centers[centers.Count - 1] - centers[centers.Count - 2]).normalized;
-                    Vector2 outDir = (pt - centers[centers.Count - 1]).normalized;
-                    if (Vector2.Dot(inDir, outDir) > 0.999f) centers.RemoveAt(centers.Count - 1);
-                }
-                centers.Add(pt);
-            }
-            if (centers.Count < 2) return;
-
-            // 2. Multi-lane corner mitering
-            var routePoints = new List<Vector3>();
-            for (int i = 0; i < centers.Count; i++)
-            {
-                Vector2 inNormal = i > 0 ? LeftNormal(centers[i] - centers[i - 1]) : Vector2.zero;
-                Vector2 outNormal = i < centers.Count - 1 ? LeftNormal(centers[i + 1] - centers[i]) : Vector2.zero;
-                Vector2 miter = inNormal + outNormal;
-                if (miter.sqrMagnitude < 0.0001f) miter = i > 0 ? inNormal : outNormal;
-                miter.Normalize();
-                Vector2 reference = i > 0 ? inNormal : outNormal;
-                float stretch = 1f / Mathf.Max(0.35f, Vector2.Dot(miter, reference));
-                Vector2 shifted = centers[i] + miter * laneOffset * stretch;
-                routePoints.Add(new Vector3(shifted.x, shifted.y, -0.05f));
+                float pixelsPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
+                Vector2 spriteMin = gridMin + stageData.visualTileOffset * cellSize;
+                Vector2 spriteMax = spriteMin + stageData.mapVisualSprite.rect.size / pixelsPerTile * cellSize;
+                artMin = Vector2.Min(artMin, spriteMin);
+                artMax = Vector2.Max(artMax, spriteMax);
             }
 
-            var cumulative = new List<float> { 0f };
-            float totalLen = 0f;
-            for (int p = 1; p < routePoints.Count; p++)
+            dim = CreatePixelRect("Dim", (artMin + artMax) * 0.5f, artMax - artMin, Color.clear, DimSortingOrder);
+
+            for (int x = 0; x <= stageData.gridWidth; x++)
             {
-                totalLen += Vector3.Distance(routePoints[p - 1], routePoints[p]);
-                cumulative.Add(totalLen);
+                Vector2 center = gridMin + new Vector2(x * cellSize, gridSize.y * 0.5f);
+                gridLines.Add(CreatePixelRect("GridColumn", center, new Vector2(artPixel, gridSize.y), Color.clear, GridSortingOrder));
             }
-
-            // 3. LineRenderers:
-            // Casing (dark under-layer)
-            LineRenderer casingLine = CreateLineRenderer("RouteCasing", thickness * 1.6f, CasingColor, GetLineMaterial(), 45);
-
-            // Core (faint solid color)
-            LineRenderer coreLine = CreateLineRenderer("RouteCore", thickness, new Color(color.r, color.g, color.b, 0.35f), GetLineMaterial(), 46);
-
-            // Dashes (flowing dashed pattern)
-            Material dashMat = CreateDashMaterial(color);
-            float dashPeriod = Mathf.Max(0.2f, cellSize * 0.5f);
-            LineRenderer dashLine = CreateLineRenderer("RouteDashes", thickness, color, dashMat, 47);
-            dashLine.textureMode = LineTextureMode.Tile;
-
-            routes.Add(new RouteVisual
+            for (int y = 0; y <= stageData.gridHeight; y++)
             {
-                fullPoints = routePoints,
-                cumulativeLengths = cumulative,
-                totalLength = totalLen,
-                casingLine = casingLine,
-                coreLine = coreLine,
-                dashLine = dashLine,
-                dashMat = dashMat,
-                dashPeriod = dashPeriod
-            });
+                Vector2 center = gridMin + new Vector2(gridSize.x * 0.5f, y * cellSize);
+                gridLines.Add(CreatePixelRect("GridRow", center, new Vector2(gridSize.x, artPixel), Color.clear, GridSortingOrder));
+            }
         }
 
-        private static Vector2 LeftNormal(Vector2 direction)
+        private RouteVisual BuildRouteVisual(List<Vector2Int> cells, float laneWidth, float laneOffset, Color color, float phase)
         {
-            Vector2 d = direction.normalized;
-            return new Vector2(-d.y, d.x);
+            if (cells == null || cells.Count < 2) return null;
+
+            var centers = new List<Vector2>(cells.Count);
+            foreach (Vector2Int cell in cells) centers.Add(gridManager.GridToWorldPosition(cell));
+            centers = PathPreviewArt.KeepCorners(centers);
+            if (centers.Count < 2) return null;
+
+            var route = new RouteVisual
+            {
+                points = PathPreviewArt.OffsetIntoLane(centers, laneOffset),
+                color = color,
+                phase = phase
+            };
+            route.cumulative = PathPreviewArt.CumulativeLengths(route.points, out route.length);
+            if (route.length <= 0.001f) return null;
+
+            route.laneMaterial = CreateLaneMaterial();
+            route.lane = CreateLineRenderer("RouteLane", laneWidth, color, route.laneMaterial, LaneSortingOrder);
+
+            // Junction nodes on every turn, slightly wider than the lane
+            Sprite junctionSprite = PathPreviewArt.GetJunction();
+            route.junctionScale = (laneWidth + 2f * artPixel) / junctionSprite.rect.width;
+            for (int i = 1; i < route.points.Count - 1; i++)
+            {
+                SpriteRenderer junction = CreateSprite("RouteJunction", visualRoot.transform, junctionSprite, color, JunctionSortingOrder);
+                junction.transform.position = route.points[i];
+                junction.transform.localScale = Vector3.one * route.junctionScale;
+                route.junctions.Add((junction, route.cumulative[i]));
+            }
+
+            Sprite pixel = PathPreviewArt.GetPixel();
+            route.tracerHead = CreateSprite("TracerHead", visualRoot.transform, pixel, Color.Lerp(color, Color.white, 0.55f), TracerSortingOrder + 1);
+            route.tracerHead.transform.localScale = Vector3.one * (PathPreviewArt.TracerHeadPx * artPixel);
+            route.tracerTrail = new SpriteRenderer[PathPreviewArt.TracerTrailLength];
+            for (int i = 0; i < route.tracerTrail.Length; i++)
+            {
+                route.tracerTrail[i] = CreateSprite("TracerTrail", visualRoot.transform, pixel, color, TracerSortingOrder);
+                route.tracerTrail[i].transform.localScale = Vector3.one * (Mathf.Max(2, PathPreviewArt.TracerHeadPx - 1 - i / 2) * artPixel);
+            }
+
+            return route;
         }
 
-        private LineRenderer CreateLineRenderer(string name, float width, Color color, Material material, int sortingOrder)
+        private LineRenderer CreateLineRenderer(string objectName, float width, Color color, Material material, int sortingOrder)
         {
-            var go = new GameObject(name);
+            var go = new GameObject(objectName);
             go.transform.SetParent(visualRoot.transform, false);
 
             var line = go.AddComponent<LineRenderer>();
@@ -342,77 +351,125 @@ namespace TrashTD.UI
             line.endWidth = width;
             line.startColor = color;
             line.endColor = color;
-            line.numCapVertices = 4;
-            line.numCornerVertices = 4;
+            // Square ends and mitred corners keep the pixel lane crisp; junction nodes sit on the corners
+            line.numCapVertices = 0;
+            line.numCornerVertices = 0;
+            line.textureMode = LineTextureMode.Tile;
             line.material = material;
             line.sortingOrder = sortingOrder;
             return line;
         }
 
-        private void CreateMarker(Vector3 position, Color color, string label, float cellSize, float phase)
+        private void CreateMarker(Vector3 position, Color color, string label, bool isSpawn, float appearAt)
         {
-            var markerGo = new GameObject(label + "MarkerGroup");
+            var markerGo = new GameObject(label + "Marker");
             markerGo.transform.SetParent(visualRoot.transform, false);
-            markerGo.transform.position = new Vector3(position.x, position.y, -0.06f);
+            markerGo.transform.position = new Vector3(position.x, position.y, 0f);
 
-            Sprite ringSprite = StageMapPreview.GetRingSprite();
-            float baseScale = cellSize * 0.85f;
+            var marker = new MarkerVisual
+            {
+                root = markerGo.transform,
+                isSpawn = isSpawn,
+                appearAt = appearAt,
+                phase = Random.value,
+                color = color
+            };
 
-            // Base Ring
-            var baseRing = new GameObject("BaseRing");
-            baseRing.transform.SetParent(markerGo.transform, false);
-            baseRing.transform.localScale = Vector3.one * baseScale;
-            var baseSr = baseRing.AddComponent<SpriteRenderer>();
-            baseSr.sprite = ringSprite;
-            baseSr.color = color;
-            baseSr.sortingOrder = 48;
+            marker.ping = CreateMarkerPart(marker.root, "Ping", PathPreviewArt.GetPingSquare(), color, MarkerSortingOrder);
+            float bodySizePx;
+            if (isSpawn)
+            {
+                marker.frame = CreateMarkerPart(marker.root, "HazardFrame", PathPreviewArt.GetSpawnFrames()[0], color, MarkerSortingOrder + 1);
+                marker.icon = CreateMarkerPart(marker.root, "Warning", PathPreviewArt.GetWarningIcon(), color, MarkerSortingOrder + 2);
+                bodySizePx = PathPreviewArt.SpawnFrameSizePx;
+            }
+            else
+            {
+                marker.brackets = CreateMarkerPart(marker.root, "Brackets", PathPreviewArt.GetExitBrackets(), color, MarkerSortingOrder + 1);
+                marker.frame = CreateMarkerPart(marker.root, "Plate", PathPreviewArt.GetExitPlate(), color, MarkerSortingOrder + 1);
+                marker.icon = CreateMarkerPart(marker.root, "Shield", PathPreviewArt.GetShieldIcon(), color, MarkerSortingOrder + 2);
+                bodySizePx = PathPreviewArt.ExitBracketSizePx;
+            }
 
-            // Pulsing Ring
-            var pingRing = new GameObject("PingRing");
-            pingRing.transform.SetParent(markerGo.transform, false);
-            pingRing.transform.localScale = Vector3.one * baseScale;
-            var pingSr = pingRing.AddComponent<SpriteRenderer>();
-            pingSr.sprite = ringSprite;
-            pingSr.color = color;
-            pingSr.sortingOrder = 48;
+            CreateMarkerLabel(marker, label, bodySizePx);
+            markers.Add(marker);
+        }
 
-            // Center Dot
-            var dot = new GameObject("CenterDot");
-            dot.transform.SetParent(markerGo.transform, false);
-            dot.transform.localScale = Vector3.one * (baseScale * 0.28f);
-            var dotSr = dot.AddComponent<SpriteRenderer>();
-            dotSr.sprite = ringSprite;
-            dotSr.color = color;
-            dotSr.sortingOrder = 48;
+        /// <summary>A pixel sprite at stage-art scale (the sprites are 1 unit per pixel).</summary>
+        private SpriteRenderer CreateMarkerPart(Transform parent, string objectName, Sprite sprite, Color color, int sortingOrder)
+        {
+            SpriteRenderer renderer = CreateSprite(objectName, parent, sprite, color, sortingOrder);
+            renderer.transform.localScale = Vector3.one * artPixel;
+            return renderer;
+        }
 
-            // Label text above marker
-            var textGo = new GameObject("MarkerLabel");
-            textGo.transform.SetParent(markerGo.transform, false);
-            textGo.transform.localPosition = new Vector3(0f, cellSize * 0.52f, 0f);
+        /// <summary>A terminal tag above the marker (below it when the grid ends there).</summary>
+        private void CreateMarkerLabel(MarkerVisual marker, string text, float bodySizePx)
+        {
+            Font font = UIFontHelper.GetPixelFont();
+            float textHeight = LabelHeightPx * artPixel;
+            float padding = 2f * artPixel;
 
-            var textMesh = textGo.AddComponent<TextMesh>();
-            textMesh.text = label;
-            textMesh.fontSize = 28;
-            textMesh.characterSize = 0.038f * cellSize;
-            textMesh.alignment = TextAlignment.Center;
-            textMesh.anchor = TextAnchor.MiddleCenter;
-            textMesh.fontStyle = FontStyle.Bold;
-            textMesh.color = color;
+            var textGo = new GameObject("Label");
+            textGo.transform.SetParent(marker.root, false);
+            marker.label = textGo.AddComponent<TextMesh>();
+            marker.label.font = font;
+            marker.label.fontSize = LabelFontSize;
+            // Roughly fontSize * characterSize / 10 world units per line; corrected below from the real mesh
+            marker.label.characterSize = textHeight * 10f / LabelFontSize;
+            marker.label.anchor = TextAnchor.MiddleCenter;
+            marker.label.alignment = TextAlignment.Center;
+            marker.label.text = text;
+            marker.label.color = marker.color;
 
             var meshRenderer = textGo.GetComponent<MeshRenderer>();
-            meshRenderer.sortingOrder = 49;
+            if (font != null) meshRenderer.sharedMaterial = font.material;
+            meshRenderer.sortingOrder = MarkerSortingOrder + 4;
 
-            markers.Add(new MarkerVisual
+            // The pixel font is monospaced with square glyphs, so the width follows the character count
+            Vector2 textSize = new Vector2(text.Length * textHeight, textHeight);
+            Vector3 measured = meshRenderer.bounds.size;
+            if (measured.y > 0.0001f)
             {
-                ping = pingRing.transform,
-                baseRenderer = baseSr,
-                pingRenderer = pingSr,
-                dotRenderer = dotSr,
-                labelTextMesh = textMesh,
-                color = color,
-                baseScale = baseScale,
-                phase = phase
-            });
+                float correction = textHeight / measured.y;
+                marker.label.characterSize *= correction;
+                textSize = new Vector2(measured.x * correction, textHeight);
+            }
+
+            var plateSize = new Vector2(textSize.x + padding * 2f, textSize.y + padding * 2f);
+            float offset = (bodySizePx * artPixel + plateSize.y) * 0.5f + padding;
+            float gridTop = gridManager.GridToWorldPosition(0, stageData.gridHeight - 1).y + cellSize * 0.5f;
+            bool roomAbove = marker.root.position.y + offset + plateSize.y * 0.5f <= gridTop + cellSize;
+            Vector3 center = new Vector3(0f, roomAbove ? offset : -offset, 0f);
+            textGo.transform.localPosition = center + new Vector3(0f, artPixel * 0.5f, 0f);
+
+            marker.labelPlate = CreateSprite("LabelPlate", marker.root, PathPreviewArt.GetPixel(), PathPreviewArt.LabelPlateColor, MarkerSortingOrder + 3);
+            marker.labelPlate.transform.localPosition = center;
+            marker.labelPlate.transform.localScale = new Vector3(plateSize.x, plateSize.y, 1f);
+
+            // A 1 px route-coloured underline ties the tag to its marker
+            marker.labelUnderline = CreateSprite("LabelUnderline", marker.root, PathPreviewArt.GetPixel(), marker.color, MarkerSortingOrder + 3);
+            marker.labelUnderline.transform.localPosition = center + new Vector3(0f, (artPixel - plateSize.y) * 0.5f, 0f);
+            marker.labelUnderline.transform.localScale = new Vector3(plateSize.x, artPixel, 1f);
+        }
+
+        private SpriteRenderer CreatePixelRect(string objectName, Vector2 center, Vector2 size, Color color, int sortingOrder)
+        {
+            SpriteRenderer renderer = CreateSprite(objectName, visualRoot.transform, PathPreviewArt.GetPixel(), color, sortingOrder);
+            renderer.transform.position = center;
+            renderer.transform.localScale = new Vector3(size.x, size.y, 1f);
+            return renderer;
+        }
+
+        private static SpriteRenderer CreateSprite(string objectName, Transform parent, Sprite sprite, Color color, int sortingOrder)
+        {
+            var go = new GameObject(objectName);
+            go.transform.SetParent(parent, false);
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.color = color;
+            renderer.sortingOrder = sortingOrder;
+            return renderer;
         }
 
         private void Update()
@@ -422,127 +479,123 @@ namespace TrashTD.UI
             animTime += Time.unscaledDeltaTime;
             float t = animTime;
 
-            float routeT = Mathf.Clamp01(t / RouteDrawDuration);
-            float drawn = EaseOutCubic(routeT);
-            float flow = Mathf.Repeat(t * DashSpeed, 1f); // dash periods; the texture repeats every 1
+            // 1. Dim and tile grid fade in
+            float gridFade = Mathf.Clamp01(t / PathPreviewArt.GridFadeDuration);
+            if (dim != null) dim.color = new Color(0f, 0f, 0f, DimAlpha * gridFade);
+            Color gridColor = PathPreviewArt.WithAlpha(PathPreviewArt.PhosphorColor, GridAlpha * gridFade);
+            foreach (SpriteRenderer line in gridLines) line.color = gridColor;
 
-            // 1. Draw-in sweep & flow animation
+            // 2. Routes draw in from the spawn behind a scan head, then the chevrons keep marching toward
+            // the exit at Grunt speed and a tracer runs the route now and then
+            float routeT = Mathf.Clamp01(t / PathPreviewArt.RouteDrawDuration);
+            float drawn = PathPreviewArt.EaseOutCubic(routeT);
+            float period = PathPreviewArt.LanePeriodPx * artPixel;
+            float flow = Mathf.Repeat(t * PathPreviewArt.FlowTilesPerSecond * cellSize / period, 1f);
+            float sinceDrawn = t - PathPreviewArt.RouteDrawDuration;
             foreach (RouteVisual route in routes)
             {
-                float currentLength = drawn * route.totalLength;
-                UpdateLinePositions(route, currentLength);
+                float visible = drawn * route.length;
+                UpdateLanePositions(route, visible);
 
-                if (route.dashMat != null)
+                // Tile mode gives u = distance along the line in world units: one chevron per period,
+                // scrolled so the chevrons travel spawn -> exit
+                route.laneMaterial.mainTextureScale = new Vector2(1f / period, 1f);
+                route.laneMaterial.mainTextureOffset = new Vector2(-flow, 0f);
+
+                foreach (var junction in route.junctions)
                 {
-                    // Tile mode gives u = distance along the line in world units, so one dash period per
-                    // dashPeriod units. Dashes stay put while the line draws in, then flow spawn -> exit.
-                    route.dashMat.mainTextureScale = new Vector2(1f / route.dashPeriod, 1f);
-                    route.dashMat.mainTextureOffset = new Vector2(-flow, 0f);
+                    float pop = Mathf.Clamp01((visible - junction.distance) / (0.25f * cellSize));
+                    junction.renderer.enabled = pop > 0f;
+                    junction.renderer.transform.localScale = Vector3.one * (route.junctionScale * PathPreviewArt.PopScale(PathPreviewArt.EaseOutCubic(pop)));
                 }
+
+                float head = routeT < 1f
+                    ? (routeT > 0f ? visible : -1f)
+                    : PathPreviewArt.TracerDistance(sinceDrawn, route.length, cellSize, route.phase);
+                PlaceTracer(route, head);
             }
 
-            // 2. Markers fade-in & ping animation
-            float markerAlpha = Mathf.Clamp01(t * 3.3f);
+            // 3. Markers pop in, then ping; spawn stripes march and exit brackets breathe
+            int stripeFrame = Mathf.FloorToInt(t * PathPreviewArt.StripeFramesPerSecond) % PathPreviewArt.SpawnFrameCount;
             foreach (MarkerVisual marker in markers)
             {
-                if (marker.baseRenderer != null)
-                {
-                    Color bc = marker.color;
-                    bc.a = markerAlpha;
-                    marker.baseRenderer.color = bc;
-                }
-                if (marker.dotRenderer != null)
-                {
-                    Color dc = marker.color;
-                    dc.a = markerAlpha;
-                    marker.dotRenderer.color = dc;
-                }
-                if (marker.labelTextMesh != null)
-                {
-                    Color tc = marker.color;
-                    tc.a = markerAlpha;
-                    marker.labelTextMesh.color = tc;
-                }
+                float pop = PathPreviewArt.Pop(t, marker.appearAt);
+                marker.root.gameObject.SetActive(pop > 0f);
+                marker.root.localScale = Vector3.one * PathPreviewArt.PopScale(pop);
 
-                if (marker.ping != null && marker.pingRenderer != null)
-                {
-                    float k = Mathf.Repeat(t / PingPeriod + marker.phase, 1f);
-                    float scaleMultiplier = Mathf.Lerp(1f, 2.1f, EaseOutCubic(k));
-                    marker.ping.localScale = Vector3.one * (marker.baseScale * scaleMultiplier);
+                float k = Mathf.Repeat(t / PathPreviewArt.PingPeriod + marker.phase, 1f);
+                marker.ping.transform.localScale = Vector3.one * (artPixel * Mathf.Lerp(1f, 1.9f, PathPreviewArt.EaseOutCubic(k)));
+                marker.ping.color = PathPreviewArt.WithAlpha(marker.color, (1f - k) * 0.8f * pop);
 
-                    Color pc = marker.color;
-                    pc.a = (1f - k) * 0.85f * markerAlpha;
-                    marker.pingRenderer.color = pc;
+                marker.frame.color = PathPreviewArt.WithAlpha(marker.color, pop);
+                marker.labelPlate.color = PathPreviewArt.WithAlpha(PathPreviewArt.LabelPlateColor, PathPreviewArt.LabelPlateColor.a * pop);
+                marker.labelUnderline.color = PathPreviewArt.WithAlpha(marker.color, pop);
+                marker.label.color = PathPreviewArt.WithAlpha(marker.color, pop);
+
+                if (marker.isSpawn)
+                {
+                    marker.frame.sprite = PathPreviewArt.GetSpawnFrames()[stripeFrame];
+                    float blink = Mathf.Repeat(t + marker.phase, 1f) < 0.65f ? 1f : 0.45f;
+                    marker.icon.color = PathPreviewArt.WithAlpha(marker.color, blink * pop);
+                }
+                else
+                {
+                    float breathe = 1f + 0.1f * (0.5f + 0.5f * Mathf.Sin((t + marker.phase) * 3f));
+                    marker.brackets.transform.localScale = Vector3.one * (artPixel * breathe);
+                    marker.brackets.color = PathPreviewArt.WithAlpha(marker.color, pop);
+                    marker.icon.color = PathPreviewArt.WithAlpha(marker.color, pop);
                 }
             }
         }
 
-        private static void UpdateLinePositions(RouteVisual route, float currentLength)
+        /// <summary>Tracer head at the given distance with its trail behind it; a negative distance hides it.</summary>
+        private void PlaceTracer(RouteVisual route, float headDistance)
         {
-            if (route.fullPoints.Count < 2) return;
-
-            if (currentLength >= route.totalLength - 0.001f)
+            bool show = headDistance >= 0f;
+            route.tracerHead.enabled = show;
+            if (show)
             {
-                int count = route.fullPoints.Count;
-                if (route.casingLine.positionCount != count)
-                {
-                    Vector3[] arr = route.fullPoints.ToArray();
-                    route.casingLine.positionCount = count;
-                    route.casingLine.SetPositions(arr);
-                    route.coreLine.positionCount = count;
-                    route.coreLine.SetPositions(arr);
-                    route.dashLine.positionCount = count;
-                    route.dashLine.SetPositions(arr);
-                }
-                return;
+                route.tracerHead.transform.position = PathPreviewArt.PointAlong(route.points, route.cumulative, headDistance);
             }
 
-            if (currentLength <= 0.005f)
+            for (int i = 0; i < route.tracerTrail.Length; i++)
             {
-                route.casingLine.positionCount = 0;
-                route.coreLine.positionCount = 0;
-                route.dashLine.positionCount = 0;
+                float distance = headDistance - (i + 1) * PathPreviewArt.TracerTrailSpacingPx * artPixel;
+                SpriteRenderer trail = route.tracerTrail[i];
+                trail.enabled = show && distance >= 0f;
+                if (!trail.enabled) continue;
+
+                trail.transform.position = PathPreviewArt.PointAlong(route.points, route.cumulative, distance);
+                trail.color = PathPreviewArt.WithAlpha(route.color, 0.75f - i * 0.22f);
+            }
+        }
+
+        /// <summary>Shows the route from its spawn up to the given distance.</summary>
+        private static void UpdateLanePositions(RouteVisual route, float visibleLength)
+        {
+            LineRenderer lane = route.lane;
+            if (visibleLength <= 0.005f)
+            {
+                lane.positionCount = 0;
                 return;
             }
 
             tempPoints.Clear();
-            tempPoints.Add(route.fullPoints[0]);
-
-            for (int i = 1; i < route.fullPoints.Count; i++)
+            tempPoints.Add(route.points[0]);
+            for (int i = 1; i < route.points.Count; i++)
             {
-                float segEndDist = route.cumulativeLengths[i];
-                if (currentLength >= segEndDist)
+                if (visibleLength >= route.cumulative[i])
                 {
-                    tempPoints.Add(route.fullPoints[i]);
+                    tempPoints.Add(route.points[i]);
+                    continue;
                 }
-                else
-                {
-                    float segStartDist = route.cumulativeLengths[i - 1];
-                    float segLen = segEndDist - segStartDist;
-                    float frac = segLen > 0.0001f ? (currentLength - segStartDist) / segLen : 0f;
-                    Vector3 partial = Vector3.Lerp(route.fullPoints[i - 1], route.fullPoints[i], frac);
-                    tempPoints.Add(partial);
-                    break;
-                }
+
+                tempPoints.Add(PathPreviewArt.PointAlong(route.points, route.cumulative, visibleLength));
+                break;
             }
 
-            int ptCount = tempPoints.Count;
-            Vector3[] pointsArray = tempPoints.ToArray();
-
-            route.casingLine.positionCount = ptCount;
-            route.casingLine.SetPositions(pointsArray);
-
-            route.coreLine.positionCount = ptCount;
-            route.coreLine.SetPositions(pointsArray);
-
-            route.dashLine.positionCount = ptCount;
-            route.dashLine.SetPositions(pointsArray);
-        }
-
-        private static float EaseOutCubic(float t)
-        {
-            float u = 1f - t;
-            return 1f - u * u * u;
+            if (lane.positionCount != tempPoints.Count) lane.positionCount = tempPoints.Count;
+            lane.SetPositions(tempPoints.ToArray());
         }
     }
 }

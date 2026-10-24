@@ -1561,7 +1561,7 @@ namespace TrashTD.UI
                         string hex = ColorUtility.ToHtmlStringRGB(StageMapPreview.GetRouteColor(i));
                         legend.Append($" <color=#{hex}>▶{i + 1}</color>");
                     }
-                    legend.Append("     ◆ SPAWN (ROUTE COLOUR)     <color=#52FF99>◆</color> EXIT");
+                    legend.Append("     [!] SPAWN (ROUTE COLOUR)     <color=#52FF99>[+]</color> EXIT");
                     stagePreviewInfo.text = legend.ToString();
                 }
             }
@@ -1650,7 +1650,7 @@ namespace TrashTD.UI
             stagePreview = screen.AddComponent<StageMapPreview>();
 
             stagePreviewInfo = MakeText(previewFrame.transform, "PreviewLegend",
-                "<color=#FF5C42>▶▶</color> ENEMY ROUTE    <color=#FF5C42>◆</color> SPAWN    <color=#52FF99>◆</color> EXIT", 12,
+                "<color=#FF5C42>▶▶</color> ENEMY ROUTE    <color=#FF5C42>[!]</color> SPAWN    <color=#52FF99>[+]</color> EXIT", 12,
                 TextAnchor.MiddleLeft, TerminalText);
             StretchBottom(stagePreviewInfo.rectTransform, 16f, 16f, 10f, 22f);
 

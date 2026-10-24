@@ -11,22 +11,19 @@ namespace TrashTD.UI
     /// Animated stage preview for the stage dossier. Lays out the stage art exactly as gameplay does
     /// (StageBootstrapper.SpawnVisualGridTiles: every layer placed in tile space from the grid's bottom-left,
     /// shifted by visualTileOffset), then draws the enemy routes WaveManager would use (explicit
-    /// StageData.enemyPaths, otherwise A* from each spawn) as coloured dashed lines flowing from spawn to
-    /// exit, and pulses the spawn and exit tiles. Each route has its own colour and lane, so routes that share
-    /// tiles run side by side instead of on top of each other. Put it on a RectTransform with no Graphic and call
-    /// Show(stage): it adds a CrtScreen (Monitor settings) there and builds the preview on that screen's
-    /// offscreen canvas. Runs on unscaled time.
+    /// StageData.enemyPaths, otherwise A* from each spawn) in the shared PathPreviewArt style: conveyor lanes
+    /// with chevrons marching spawn → exit, junction nodes on turns, hazard-striped spawn frames, a shield exit
+    /// marker, square pings, a tracer blip and a faint phosphor tile grid. Each route has its own colour and
+    /// lane, so routes that share tiles run side by side instead of on top of each other. Put it on a
+    /// RectTransform with no Graphic and call Show(stage): it adds a CrtScreen (Monitor settings) there and
+    /// builds the preview on that screen's offscreen canvas. Runs on unscaled time.
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
     public sealed class StageMapPreview : MonoBehaviour
     {
         private static readonly Color ScreenColor = new Color(0.012f, 0.035f, 0.022f, 1f);
-        private static readonly Color PhosphorColor = new Color(0.22f, 0.91f, 0.50f, 1f);
-        private static readonly Color CasingColor = new Color(0f, 0f, 0f, 0.55f);
-        private static readonly Color UnroutedSpawnColor = new Color(1f, 0.32f, 0.24f, 1f);
-        private static readonly Color ExitColor = new Color(0.32f, 1f, 0.60f, 1f);
 
-        /// <summary>Route colours in spawn order; exits keep the green ExitColor.</summary>
+        /// <summary>Route colours in spawn order; exits keep the green PathPreviewArt.ExitColor.</summary>
         public static readonly Color[] RouteColors =
         {
             new Color(1.00f, 0.38f, 0.26f, 1f), // red-orange
@@ -39,20 +36,10 @@ namespace TrashTD.UI
 
         private const float BootDelay = 0.10f;
         private const float BootDuration = 0.45f;
-        private const float RouteDrawDuration = 0.9f;
-        private const float DashPeriodTiles = 0.5f;          // one dash + gap
-        private const float DashSpeedTilesPerSecond = 1.4f;  // dashes flow spawn -> exit
-        private const float MaxLaneSpacingTiles = 0.22f;
-        private const float LaneSpreadTiles = 0.8f;          // all lanes together stay within this width
-        private const float LineThinning = 0.8f;             // route lines (and their casing) drawn 20% thinner
-        private const float MarkerSizeTiles = 0.9f;
-        private const float PingPeriod = 1.4f;
+        private const float GridAlpha = 0.09f;
         // Matches StageBootstrapper.Stage3BackgroundAnimationFrameDuration
         private const float SheetFrameDuration = 0.12f;
 
-        private static Sprite ringSprite;
-        private static Sprite dotSprite;
-        private static Texture2D dashTexture;
         private static readonly Dictionary<Sprite, Sprite[]> SheetFrameCache = new Dictionary<Sprite, Sprite[]>();
 
         public static Color GetRouteColor(int routeIndex) => RouteColors[Mathf.Abs(routeIndex) % RouteColors.Length];
@@ -64,10 +51,12 @@ namespace TrashTD.UI
         private RectTransform bootCover;
         private RectTransform bootScanLine;
         private Image bootScanImage;
+        private CanvasGroup gridGroup;
         private StageData stage;
         private Vector2 builtForSize;
         private float shownAt;
         private float tileScale = 1f; // UI units per tile
+        private float artPixel = 1f;  // UI units per stage-art pixel
 
         private readonly List<Route> routes = new List<Route>();
         private readonly List<Marker> markers = new List<Marker>();
@@ -78,27 +67,36 @@ namespace TrashTD.UI
 
         private sealed class Route
         {
-            public readonly List<Vector2> points = new List<Vector2>(); // UI space, inside content
-            public readonly List<float> cumulative = new List<float>();
-            public readonly List<Segment> segments = new List<Segment>();
+            public List<Vector2> points;   // UI space, inside content
+            public List<float> cumulative;
             public float length;
+            public float phase;
+            public Color color;
+            public readonly List<Segment> segments = new List<Segment>();
+            public readonly List<(Image image, float distance)> junctions = new List<(Image, float)>();
+            public Image tracerHead;
+            public Image[] tracerTrail;
         }
 
         private sealed class Segment
         {
-            public RectTransform casing;
-            public RectTransform core;
-            public RawImage dashes;
+            public RawImage lane;
             public float start;  // distance along the route where this segment's rect begins
             public float length;
         }
 
         private sealed class Marker
         {
-            public RectTransform ping;
-            public Image pingImage;
-            public Color color;
+            public RectTransform root;
+            public CanvasGroup group;
+            public bool isSpawn;
+            public float appearAt;
             public float phase;
+            public Color color;
+            public Image frame;    // spawn: hazard frame; exit: plate
+            public Image icon;
+            public Image brackets; // exit only
+            public Image ping;
         }
 
         private sealed class SheetAnimation
@@ -189,6 +187,7 @@ namespace TrashTD.UI
             markers.Clear();
             sheets.Clear();
             content = null;
+            gridGroup = null;
             // Size from the display: the offscreen canvas follows it a frame later
             builtForSize = display.rect.size;
             if (stage == null || builtForSize.x < 1f || builtForSize.y < 1f) return;
@@ -229,6 +228,7 @@ namespace TrashTD.UI
 
             Vector2 boundsSize = boundsMax - boundsMin;
             tileScale = Mathf.Min(builtForSize.x / boundsSize.x, builtForSize.y / boundsSize.y);
+            artPixel = tileScale / pixelsPerTile;
 
             var contentGo = new GameObject("PreviewContent", typeof(RectTransform));
             contentGo.transform.SetParent(root, false);
@@ -254,45 +254,54 @@ namespace TrashTD.UI
                 BuildFallbackTiles(ToUi);
             }
 
+            BuildTileGrid(ToUi);
+
             // Routes: one colour and one lane each, so shared tiles show every route side by side
             List<(int spawn, List<Vector2Int> cells)> cellRoutes = ComputeRoutes(stage);
             int routeCount = cellRoutes.Count;
-            float laneSpacing = Mathf.Min(MaxLaneSpacingTiles, LaneSpreadTiles / Mathf.Max(1, routeCount)) * tileScale;
-            float thickness = Mathf.Max(3f, laneSpacing * 0.6f) * LineThinning;
-            var spawnColors = new Dictionary<int, Color>();
+            float laneWidth = PathPreviewArt.LaneWidthPx(routeCount, pixelsPerTile) * artPixel;
+            var spawnRoutes = new Dictionary<int, int>(); // spawn index -> route index
             for (int i = 0; i < routeCount; i++)
             {
-                float laneOffset = (i - (routeCount - 1) * 0.5f) * laneSpacing;
-                Color color = GetRouteColor(i);
-                Route route = BuildRoute(cellRoutes[i].cells, ToUi, thickness, laneOffset, color);
+                float laneOffset = PathPreviewArt.LaneOffsetTiles(i, routeCount) * tileScale;
+                Route route = BuildRoute(cellRoutes[i].cells, ToUi, laneWidth, laneOffset, GetRouteColor(i), i / (float)routeCount);
                 if (route == null) continue;
+                spawnRoutes[cellRoutes[i].spawn] = routes.Count;
                 routes.Add(route);
-                spawnColors[cellRoutes[i].spawn] = color;
             }
 
-            // Draw order across all routes: casings, then faint cores, then dashes, so no route's
-            // dark casing covers a neighbouring lane's dashes
+            // Draw order across all routes: lanes, then junctions, then tracers, so no route's junction
+            // covers a neighbouring lane's tracer
             foreach (Route route in routes)
             {
-                foreach (Segment segment in route.segments) segment.core.SetAsLastSibling();
+                foreach (var junction in route.junctions) junction.image.transform.SetAsLastSibling();
             }
             foreach (Route route in routes)
             {
-                foreach (Segment segment in route.segments) segment.dashes.transform.SetAsLastSibling();
+                for (int i = route.tracerTrail.Length - 1; i >= 0; i--) route.tracerTrail[i].transform.SetAsLastSibling();
+                route.tracerHead.transform.SetAsLastSibling();
             }
 
-            // Spawn markers take their route's colour; exits are green
+            // Spawn markers take their route's colour (and number, when there are several); exits are green
+            float routesStart = BootDelay + BootDuration;
             if (stage.spawnPoints != null)
             {
                 for (int s = 0; s < stage.spawnPoints.Length; s++)
                 {
-                    Color color = spawnColors.TryGetValue(s, out Color routeColor) ? routeColor : UnroutedSpawnColor;
-                    AddMarker(ToUi(CellCenter(stage.spawnPoints[s])), color, "SPAWN");
+                    bool routed = spawnRoutes.TryGetValue(s, out int routeIndex);
+                    Color color = routed ? routes[routeIndex].color : PathPreviewArt.UnroutedSpawnColor;
+                    string label = routed && routes.Count > 1 ? $"SPAWN {routeIndex + 1}" : "SPAWN";
+                    AddMarker(ToUi(CellCenter(stage.spawnPoints[s])), color, label, true, routesStart + s * 0.08f);
                 }
             }
             if (stage.exitPoints != null)
             {
-                foreach (Vector2Int exit in stage.exitPoints) AddMarker(ToUi(CellCenter(exit)), ExitColor, "EXIT");
+                // Exits lock on as the routes finish drawing in
+                float exitsAppear = routesStart + PathPreviewArt.RouteDrawDuration * 0.85f;
+                for (int e = 0; e < stage.exitPoints.Length; e++)
+                {
+                    AddMarker(ToUi(CellCenter(stage.exitPoints[e])), PathPreviewArt.ExitColor, "EXIT", false, exitsAppear + e * 0.08f);
+                }
             }
 
             BuildBootOverlay();
@@ -367,47 +376,49 @@ namespace TrashTD.UI
             }
         }
 
-        private Route BuildRoute(List<Vector2Int> cells, System.Func<Vector2, Vector2> toUi, float thickness, float laneOffset, Color color)
+        /// <summary>Faint phosphor lines on the tile borders, fading in with the routes.</summary>
+        private void BuildTileGrid(System.Func<Vector2, Vector2> toUi)
+        {
+            var gridGo = new GameObject("TileGrid", typeof(RectTransform), typeof(CanvasGroup));
+            gridGo.transform.SetParent(content, false);
+            Stretch((RectTransform)gridGo.transform);
+            gridGroup = gridGo.GetComponent<CanvasGroup>();
+            gridGroup.alpha = 0f;
+            gridGroup.blocksRaycasts = false;
+
+            float line = Mathf.Max(1f, artPixel);
+            Vector2 origin = toUi(Vector2.zero);
+            Vector2 size = new Vector2(stage.gridWidth, stage.gridHeight) * tileScale;
+            Color color = PathPreviewArt.WithAlpha(PathPreviewArt.PhosphorColor, GridAlpha);
+
+            for (int x = 0; x <= stage.gridWidth; x++)
+            {
+                Image image = CreateImage(gridGo.transform, "GridColumn", null, color);
+                PlaceBottomLeft(image.rectTransform, origin + new Vector2(x * tileScale - line * 0.5f, 0f), new Vector2(line, size.y));
+            }
+            for (int y = 0; y <= stage.gridHeight; y++)
+            {
+                Image image = CreateImage(gridGo.transform, "GridRow", null, color);
+                PlaceBottomLeft(image.rectTransform, origin + new Vector2(0f, y * tileScale - line * 0.5f), new Vector2(size.x, line));
+            }
+        }
+
+        private Route BuildRoute(List<Vector2Int> cells, System.Func<Vector2, Vector2> toUi, float laneWidth, float laneOffset, Color color, float phase)
         {
             if (cells == null || cells.Count < 2) return null;
 
-            var route = new Route();
-
-            // Corners only: drop points that continue in a straight line (and repeated cells)
-            var centers = new List<Vector2> { toUi(CellCenter(cells[0])) };
-            for (int i = 1; i < cells.Count; i++)
-            {
-                if (cells[i] == cells[i - 1]) continue;
-                Vector2 point = toUi(CellCenter(cells[i]));
-                if (centers.Count >= 2)
-                {
-                    Vector2 inDir = (centers[centers.Count - 1] - centers[centers.Count - 2]).normalized;
-                    Vector2 outDir = (point - centers[centers.Count - 1]).normalized;
-                    if (Vector2.Dot(inDir, outDir) > 0.999f) centers.RemoveAt(centers.Count - 1);
-                }
-                centers.Add(point);
-            }
+            var centers = new List<Vector2>(cells.Count);
+            foreach (Vector2Int cell in cells) centers.Add(toUi(CellCenter(cell)));
+            centers = PathPreviewArt.KeepCorners(centers);
             if (centers.Count < 2) return null;
 
-            // Shift the whole polyline sideways into this route's lane, mitring the corners
-            for (int i = 0; i < centers.Count; i++)
+            var route = new Route
             {
-                Vector2 inNormal = i > 0 ? LeftNormal(centers[i] - centers[i - 1]) : Vector2.zero;
-                Vector2 outNormal = i < centers.Count - 1 ? LeftNormal(centers[i + 1] - centers[i]) : Vector2.zero;
-                Vector2 miter = inNormal + outNormal;
-                if (miter.sqrMagnitude < 0.0001f) miter = i > 0 ? inNormal : outNormal;
-                miter.Normalize();
-                Vector2 reference = i > 0 ? inNormal : outNormal;
-                float stretch = 1f / Mathf.Max(0.35f, Vector2.Dot(miter, reference));
-                route.points.Add(centers[i] + miter * laneOffset * stretch);
-            }
-
-            route.cumulative.Add(0f);
-            for (int i = 1; i < route.points.Count; i++)
-            {
-                route.length += Vector2.Distance(route.points[i - 1], route.points[i]);
-                route.cumulative.Add(route.length);
-            }
+                points = PathPreviewArt.OffsetIntoLane(centers, laneOffset),
+                color = color,
+                phase = phase
+            };
+            route.cumulative = PathPreviewArt.CumulativeLengths(route.points, out route.length);
             if (route.length < 1f) return null;
 
             for (int i = 1; i < route.points.Count; i++)
@@ -415,43 +426,45 @@ namespace TrashTD.UI
                 Vector2 a = route.points[i - 1];
                 Vector2 b = route.points[i];
                 Vector2 dir = (b - a).normalized;
-                // Overlap half a thickness at both ends so corners join without gaps
-                Vector2 start = a - dir * thickness * 0.5f;
-                float length = Vector2.Distance(a, b) + thickness;
+                // Overlap half a lane width at both ends so corners join without gaps (junctions cover the overlap)
+                Vector2 start = a - dir * laneWidth * 0.5f;
                 float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
 
-                var dashes = new GameObject("RouteDashes", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
-                dashes.transform.SetParent(content, false);
-                dashes.texture = GetDashTexture();
-                dashes.color = color;
-                dashes.raycastTarget = false;
-                PlaceSegment(dashes.rectTransform, start, angle, thickness);
+                var lane = new GameObject("RouteLane", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
+                lane.transform.SetParent(content, false);
+                lane.texture = PathPreviewArt.GetLaneTexture();
+                lane.color = color;
+                lane.raycastTarget = false;
+                PlaceSegment(lane.rectTransform, start, angle, laneWidth);
 
-                var segment = new Segment
+                route.segments.Add(new Segment
                 {
-                    casing = CreateSegment("RouteCasing", start, angle, thickness * 1.6f, CasingColor),
-                    core = CreateSegment("RouteCore", start, angle, thickness, new Color(color.r, color.g, color.b, 0.35f)),
-                    dashes = dashes,
-                    start = route.cumulative[i - 1] - thickness * 0.5f,
-                    length = length
-                };
-                route.segments.Add(segment);
+                    lane = lane,
+                    start = route.cumulative[i - 1] - laneWidth * 0.5f,
+                    length = Vector2.Distance(a, b) + laneWidth
+                });
+            }
+
+            // Junction nodes on every turn, sized to cover the lane overlap
+            float junctionSize = laneWidth + 2f * artPixel;
+            for (int i = 1; i < route.points.Count - 1; i++)
+            {
+                Image junction = CreateImage(content, "RouteJunction", PathPreviewArt.GetJunction(), color);
+                PlaceCentered(junction.rectTransform, route.points[i], Vector2.one * junctionSize);
+                route.junctions.Add((junction, route.cumulative[i]));
+            }
+
+            route.tracerHead = CreateImage(content, "TracerHead", PathPreviewArt.GetPixel(), Color.Lerp(color, Color.white, 0.55f));
+            PlaceCentered(route.tracerHead.rectTransform, route.points[0], Vector2.one * PathPreviewArt.TracerHeadPx * artPixel);
+            route.tracerTrail = new Image[PathPreviewArt.TracerTrailLength];
+            for (int i = 0; i < route.tracerTrail.Length; i++)
+            {
+                float size = Mathf.Max(2, PathPreviewArt.TracerHeadPx - 1 - i / 2) * artPixel;
+                route.tracerTrail[i] = CreateImage(content, "TracerTrail", PathPreviewArt.GetPixel(), color);
+                PlaceCentered(route.tracerTrail[i].rectTransform, route.points[0], Vector2.one * size);
             }
 
             return route;
-        }
-
-        private static Vector2 LeftNormal(Vector2 direction)
-        {
-            Vector2 d = direction.normalized;
-            return new Vector2(-d.y, d.x);
-        }
-
-        private RectTransform CreateSegment(string objectName, Vector2 start, float angle, float thickness, Color color)
-        {
-            Image image = CreateImage(content, objectName, null, color);
-            PlaceSegment(image.rectTransform, start, angle, thickness);
-            return image.rectTransform;
         }
 
         private static void PlaceSegment(RectTransform rt, Vector2 start, float angle, float thickness)
@@ -463,35 +476,85 @@ namespace TrashTD.UI
             rt.localRotation = Quaternion.Euler(0f, 0f, angle);
         }
 
-        private void AddMarker(Vector2 position, Color color, string label)
+        private void AddMarker(Vector2 position, Color color, string label, bool isSpawn, float appearAt)
         {
-            float size = MarkerSizeTiles * tileScale;
+            var markerGo = new GameObject(label + "Marker", typeof(RectTransform), typeof(CanvasGroup));
+            markerGo.transform.SetParent(content, false);
+            var markerRoot = (RectTransform)markerGo.transform;
+            PlaceCentered(markerRoot, position, Vector2.zero);
+            var group = markerGo.GetComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
 
-            Image ring = CreateImage(content, label + "Marker", GetRingSprite(), color);
-            PlaceCentered(ring.rectTransform, position, Vector2.one * size);
+            var marker = new Marker
+            {
+                root = markerRoot,
+                group = group,
+                isSpawn = isSpawn,
+                appearAt = appearAt,
+                phase = Random.value,
+                color = color
+            };
 
-            Image ping = CreateImage(content, label + "Ping", GetRingSprite(), color);
-            PlaceCentered(ping.rectTransform, position, Vector2.one * size);
+            marker.ping = CreateMarkerPart(markerRoot, "Ping", PathPreviewArt.GetPingSquare(), color, PathPreviewArt.PingSizePx);
+            float bodySize;
+            if (isSpawn)
+            {
+                marker.frame = CreateMarkerPart(markerRoot, "HazardFrame", PathPreviewArt.GetSpawnFrames()[0], color, PathPreviewArt.SpawnFrameSizePx);
+                marker.icon = CreateMarkerPart(markerRoot, "Warning", PathPreviewArt.GetWarningIcon(), color, 0);
+                bodySize = PathPreviewArt.SpawnFrameSizePx;
+            }
+            else
+            {
+                marker.brackets = CreateMarkerPart(markerRoot, "Brackets", PathPreviewArt.GetExitBrackets(), color, PathPreviewArt.ExitBracketSizePx);
+                marker.frame = CreateMarkerPart(markerRoot, "Plate", PathPreviewArt.GetExitPlate(), color, PathPreviewArt.ExitPlateSizePx);
+                marker.icon = CreateMarkerPart(markerRoot, "Shield", PathPreviewArt.GetShieldIcon(), color, 0);
+                bodySize = PathPreviewArt.ExitBracketSizePx;
+            }
 
-            Image core = CreateImage(content, label + "Core", GetDotSprite(), color);
-            PlaceCentered(core.rectTransform, position, Vector2.one * size * 0.28f);
+            AddMarkerLabel(markerRoot, position, label, color, bodySize * artPixel);
+            markers.Add(marker);
+        }
 
-            var text = new GameObject(label + "Label", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
-            text.transform.SetParent(content, false);
+        /// <summary>A pixel sprite drawn at stage-art scale. sizePx 0 = the sprite's own size.</summary>
+        private Image CreateMarkerPart(Transform parent, string objectName, Sprite sprite, Color color, int sizePx)
+        {
+            Image image = CreateImage(parent, objectName, sprite, color);
+            Vector2 size = sizePx > 0 ? Vector2.one * sizePx : sprite.rect.size;
+            PlaceCentered(image.rectTransform, Vector2.zero, size * artPixel);
+            image.rectTransform.anchorMin = image.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            return image;
+        }
+
+        /// <summary>A terminal tag above the marker (below it when there's no room above).</summary>
+        private void AddMarkerLabel(RectTransform markerRoot, Vector2 markerPosition, string label, Color color, float bodySize)
+        {
+            var plate = CreateImage(markerRoot, "LabelPlate", PathPreviewArt.GetPixel(), PathPreviewArt.LabelPlateColor);
+            var text = new GameObject("Label", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
+            text.transform.SetParent(plate.transform, false);
             text.font = UIFontHelper.GetPixelFont();
-            text.fontSize = Mathf.Clamp(Mathf.RoundToInt(tileScale * 0.26f), 10, 15);
-            text.fontStyle = FontStyle.Bold;
-            text.alignment = TextAnchor.LowerCenter;
+            text.fontSize = Mathf.Clamp(Mathf.RoundToInt(tileScale * 0.22f), 8, 13);
+            text.alignment = TextAnchor.MiddleCenter;
             text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
             text.color = color;
             text.text = label;
             text.raycastTarget = false;
-            var shadow = text.gameObject.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0f, 0f, 0f, 0.9f);
-            shadow.effectDistance = new Vector2(1f, -1f);
-            PlaceCentered(text.rectTransform, position + new Vector2(0f, size * 0.5f + 10f), new Vector2(120f, 20f));
+            Stretch(text.rectTransform);
 
-            markers.Add(new Marker { ping = ping.rectTransform, pingImage = ping, color = color, phase = Random.value });
+            float padding = Mathf.Max(3f, artPixel * 2f);
+            Vector2 plateSize = new Vector2(text.preferredWidth + padding * 2f, text.fontSize + padding * 1.5f);
+            float offset = bodySize * 0.5f + plateSize.y * 0.5f + padding;
+            bool roomAbove = markerPosition.y + offset + plateSize.y * 0.5f <= content.sizeDelta.y;
+            PlaceCentered(plate.rectTransform, new Vector2(0f, roomAbove ? offset : -offset), plateSize);
+            plate.rectTransform.anchorMin = plate.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+
+            // A 1 px route-coloured underline ties the tag to its marker
+            Image underline = CreateImage(plate.transform, "Underline", PathPreviewArt.GetPixel(), color);
+            underline.rectTransform.anchorMin = Vector2.zero;
+            underline.rectTransform.anchorMax = new Vector2(1f, 0f);
+            underline.rectTransform.pivot = new Vector2(0.5f, 0f);
+            underline.rectTransform.sizeDelta = new Vector2(0f, Mathf.Max(1f, artPixel));
+            underline.rectTransform.anchoredPosition = Vector2.zero;
         }
 
         private void BuildBootOverlay()
@@ -504,7 +567,7 @@ namespace TrashTD.UI
             bootCover.offsetMin = Vector2.zero;
             bootCover.offsetMax = Vector2.zero;
 
-            bootScanImage = CreateImage(root, "BootScanLine", null, PhosphorColor);
+            bootScanImage = CreateImage(root, "BootScanLine", null, PathPreviewArt.PhosphorColor);
             bootScanLine = bootScanImage.rectTransform;
             bootScanLine.anchorMin = new Vector2(0f, 1f);
             bootScanLine.anchorMax = new Vector2(1f, 1f);
@@ -532,7 +595,7 @@ namespace TrashTD.UI
             {
                 bootScanLine.anchorMin = new Vector2(0f, 1f - boot);
                 bootScanLine.anchorMax = new Vector2(1f, 1f - boot);
-                Color c = PhosphorColor;
+                Color c = PathPreviewArt.PhosphorColor;
                 c.a = boot < 1f ? 1f : Mathf.Clamp01(1f - (t - BootDelay - BootDuration) * 4f);
                 bootScanImage.color = c;
             }
@@ -547,44 +610,89 @@ namespace TrashTD.UI
                 }
             }
 
-            // 2. Routes draw in from the spawn, then their dashes keep flowing toward the exit.
-            // The dash pattern is laid along the route's length, so it stays continuous around corners.
-            float routeT = Mathf.Clamp01((t - BootDelay - BootDuration) / RouteDrawDuration);
-            float drawn = EaseOutCubic(routeT);
-            float dashPeriod = DashPeriodTiles * tileScale;
-            float flow = t * DashSpeedTilesPerSecond * tileScale;
+            float routesStart = BootDelay + BootDuration;
+            if (gridGroup != null) gridGroup.alpha = Mathf.Clamp01((t - routesStart) / PathPreviewArt.GridFadeDuration);
+
+            // 2. Routes draw in from the spawn behind a scan head, then the chevrons keep marching toward
+            // the exit and a tracer runs the route now and then. The lane pattern is laid along the route's
+            // length, so it stays continuous around corners.
+            float routeT = Mathf.Clamp01((t - routesStart) / PathPreviewArt.RouteDrawDuration);
+            float drawn = PathPreviewArt.EaseOutCubic(routeT);
+            float period = PathPreviewArt.LanePeriodPx * artPixel;
+            float flow = t * PathPreviewArt.FlowTilesPerSecond * tileScale;
+            float sinceDrawn = t - routesStart - PathPreviewArt.RouteDrawDuration;
             foreach (Route route in routes)
             {
                 float visible = drawn * route.length;
                 foreach (Segment segment in route.segments)
                 {
                     float segmentVisible = Mathf.Clamp(visible - segment.start, 0f, segment.length);
-                    SetLength(segment.casing, segmentVisible);
-                    SetLength(segment.core, segmentVisible);
-                    SetLength(segment.dashes.rectTransform, segmentVisible);
-                    segment.dashes.uvRect = new Rect((segment.start - flow) / dashPeriod, 0f, segmentVisible / dashPeriod, 1f);
+                    RectTransform rt = segment.lane.rectTransform;
+                    rt.sizeDelta = new Vector2(segmentVisible, rt.sizeDelta.y);
+                    segment.lane.gameObject.SetActive(segmentVisible > 0.5f);
+                    segment.lane.uvRect = new Rect((segment.start - flow) / period, 0f, segmentVisible / period, 1f);
                 }
+
+                foreach (var junction in route.junctions)
+                {
+                    float pop = Mathf.Clamp01((visible - junction.distance) / (0.25f * tileScale));
+                    junction.image.gameObject.SetActive(pop > 0f);
+                    junction.image.rectTransform.localScale = Vector3.one * PathPreviewArt.PopScale(PathPreviewArt.EaseOutCubic(pop));
+                }
+
+                float head = routeT < 1f
+                    ? (routeT > 0f ? visible : -1f)
+                    : PathPreviewArt.TracerDistance(sinceDrawn, route.length, tileScale, route.phase);
+                PlaceTracer(route, head);
             }
 
-            // 3. Spawn / exit pings
-            float markerAlpha = Mathf.Clamp01((t - BootDelay - BootDuration) * 3f);
+            // 3. Markers pop in, then ping; spawn stripes march and exit brackets breathe
+            int stripeFrame = Mathf.FloorToInt(t * PathPreviewArt.StripeFramesPerSecond) % PathPreviewArt.SpawnFrameCount;
             foreach (Marker marker in markers)
             {
-                float k = Mathf.Repeat(t / PingPeriod + marker.phase, 1f);
-                float scale = Mathf.Lerp(1f, 2.1f, EaseOutCubic(k));
-                marker.ping.localScale = new Vector3(scale, scale, 1f);
-                Color c = marker.color;
-                c.a = (1f - k) * 0.8f * markerAlpha;
-                marker.pingImage.color = c;
+                float pop = PathPreviewArt.Pop(t, marker.appearAt);
+                marker.group.alpha = pop;
+                marker.root.gameObject.SetActive(pop > 0f);
+                marker.root.localScale = Vector3.one * PathPreviewArt.PopScale(pop);
+
+                float k = Mathf.Repeat(t / PathPreviewArt.PingPeriod + marker.phase, 1f);
+                float pingScale = Mathf.Lerp(1f, 1.9f, PathPreviewArt.EaseOutCubic(k));
+                marker.ping.rectTransform.localScale = new Vector3(pingScale, pingScale, 1f);
+                marker.ping.color = PathPreviewArt.WithAlpha(marker.color, (1f - k) * 0.8f);
+
+                if (marker.isSpawn)
+                {
+                    marker.frame.sprite = PathPreviewArt.GetSpawnFrames()[stripeFrame];
+                    marker.icon.color = PathPreviewArt.WithAlpha(marker.color, Mathf.Repeat(t + marker.phase, 1f) < 0.65f ? 1f : 0.45f);
+                }
+                else
+                {
+                    float breathe = 1f + 0.1f * (0.5f + 0.5f * Mathf.Sin((t + marker.phase) * 3f));
+                    marker.brackets.rectTransform.localScale = new Vector3(breathe, breathe, 1f);
+                }
             }
         }
 
-        private static void SetLength(RectTransform rt, float length)
+        /// <summary>Tracer head at the given distance with its trail behind it; a negative distance hides it.</summary>
+        private void PlaceTracer(Route route, float headDistance)
         {
-            Vector2 size = rt.sizeDelta;
-            size.x = length;
-            rt.sizeDelta = size;
-            rt.gameObject.SetActive(length > 0.5f);
+            bool show = headDistance >= 0f;
+            route.tracerHead.gameObject.SetActive(show);
+            if (show)
+            {
+                route.tracerHead.rectTransform.anchoredPosition = PathPreviewArt.PointAlong(route.points, route.cumulative, headDistance);
+            }
+
+            for (int i = 0; i < route.tracerTrail.Length; i++)
+            {
+                float distance = headDistance - (i + 1) * PathPreviewArt.TracerTrailSpacingPx * artPixel;
+                Image trail = route.tracerTrail[i];
+                trail.gameObject.SetActive(show && distance >= 0f);
+                if (!trail.gameObject.activeSelf) continue;
+
+                trail.rectTransform.anchoredPosition = PathPreviewArt.PointAlong(route.points, route.cumulative, distance);
+                trail.color = PathPreviewArt.WithAlpha(route.color, 0.75f - i * 0.22f);
+            }
         }
 
         // ─────────────────────────────────────────────────────
@@ -708,65 +816,6 @@ namespace TrashTD.UI
             rt.anchorMax = Vector2.one;
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
-        }
-
-        private static float EaseOutCubic(float t)
-        {
-            float u = 1f - t;
-            return 1f - u * u * u;
-        }
-
-        internal static Sprite GetRingSprite()
-        {
-            if (ringSprite == null) ringSprite = CreateCircleSprite(64, 0.80f, 1f);
-            return ringSprite;
-        }
-
-        internal static Sprite GetDotSprite()
-        {
-            if (dotSprite == null) dotSprite = CreateCircleSprite(32, 0f, 1f);
-            return dotSprite;
-        }
-
-        /// <summary>One dash period along U (60% dash, 40% gap), repeated by the RawImage's uvRect.</summary>
-        internal static Texture2D GetDashTexture()
-        {
-            if (dashTexture != null) return dashTexture;
-
-            const int width = 10;
-            dashTexture = new Texture2D(width, 1, TextureFormat.RGBA32, false)
-            {
-                filterMode = FilterMode.Point,
-                wrapMode = TextureWrapMode.Repeat
-            };
-            for (int x = 0; x < width; x++)
-            {
-                dashTexture.SetPixel(x, 0, x < 6 ? Color.white : Color.clear);
-            }
-            dashTexture.Apply();
-            return dashTexture;
-        }
-
-        /// <summary>White circle (innerRatio 0) or ring (inner radius as a fraction of the outer one).</summary>
-        private static Sprite CreateCircleSprite(int size, float innerRatio, float outerRatio)
-        {
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-            var pixels = new Color32[size * size];
-            float center = (size - 1) * 0.5f;
-            float outer = center * outerRatio;
-            float inner = center * innerRatio;
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    float d = Vector2.Distance(new Vector2(x, y), new Vector2(center, center));
-                    float a = Mathf.Clamp01(outer - d + 0.5f) * (innerRatio > 0f ? Mathf.Clamp01(d - inner + 0.5f) : 1f);
-                    pixels[y * size + x] = new Color(1f, 1f, 1f, a);
-                }
-            }
-            texture.SetPixels32(pixels);
-            texture.Apply();
-            return Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
         }
     }
 }

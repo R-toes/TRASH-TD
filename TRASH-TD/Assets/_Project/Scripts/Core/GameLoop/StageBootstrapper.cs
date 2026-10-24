@@ -209,7 +209,11 @@ namespace TrashTD.Core.GameLoop
             // 3. Center Camera
             CenterCameraOnGrid();
 
-            if (EnvironmentStageId == "STAGE_02")
+            if (EnvironmentStageId == "STAGE_01")
+            {
+                CreateStage1WeatherVisuals();
+            }
+            else if (EnvironmentStageId == "STAGE_02")
             {
                 CreateStage2FallingItemsHazard();
             }
@@ -1318,6 +1322,13 @@ namespace TrashTD.Core.GameLoop
                     enemy.TakeTrueDamage(AcidRainDamagePerTick);
                 }
             }
+        }
+
+        private void CreateStage1WeatherVisuals()
+        {
+            GameObject weatherObj = new GameObject("Stage1WeatherVisuals");
+            weatherObj.transform.SetParent(transform);
+            weatherObj.AddComponent<Stage1WeatherVisuals>().Initialize(gridManager, stageData);
         }
 
         private void CreateStage2FallingItemsHazard()

@@ -317,6 +317,7 @@ namespace TrashTD.UI
 
             if (minimized)
             {
+                PositionRestoreButton();
                 var keyboard = UnityEngine.InputSystem.Keyboard.current;
                 if (keyboard != null && keyboard.mKey.wasPressedThisFrame) SetMinimized(false);
                 return;
@@ -1459,7 +1460,51 @@ namespace TrashTD.UI
             }
 
             if (restoreBar != null) restoreBar.SetActive(value);
+            if (value) PositionRestoreButton();
             PlayClick();
+        }
+
+        /// <summary>
+        /// Puts RESUME in the free deck-bar strip between PREVIEW PATH and the bottom-right panel
+        /// (GameplayHUDUI.TryGetDeckBarFreeSlot). Runs every frame while minimized, because that strip
+        /// moves with the resolution. If the strip is too narrow (tall aspect ratios), the button sits just
+        /// above it. Without the HUD it keeps its default top-centre spot.
+        /// </summary>
+        private void PositionRestoreButton()
+        {
+            if (restoreBar == null || canvas == null) return;
+            if (gameplayHudUI == null) gameplayHudUI = FindAnyObjectByType<GameplayHUDUI>();
+            if (gameplayHudUI == null || !gameplayHudUI.TryGetDeckBarFreeSlot(out Rect slot)) return;
+
+            const float PreferredWidth = 200f;
+            const float MinWidth = 140f;
+            const float Height = 48f;
+            const float Margin = 12f;
+
+            var canvasRect = (RectTransform)canvas.transform;
+            Camera cam = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, slot.min, cam, out Vector2 min) ||
+                !RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, slot.max, cam, out Vector2 max))
+            {
+                return;
+            }
+
+            var rt = (RectTransform)restoreBar.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+
+            Vector2 center = (min + max) * 0.5f;
+            float width = Mathf.Min(PreferredWidth, max.x - min.x - Margin * 2f);
+            if (width >= MinWidth)
+            {
+                rt.sizeDelta = new Vector2(width, Height);
+                rt.anchoredPosition = center;
+            }
+            else
+            {
+                rt.sizeDelta = new Vector2(PreferredWidth, Height);
+                rt.anchoredPosition = new Vector2(center.x, max.y + Margin + Height * 0.5f);
+            }
         }
 
         private void ResetMinimized()

@@ -251,6 +251,7 @@ namespace TrashTD.UI
         private CardDraftOverlayUI draftOverlayUI;
         private int lastEscapeHandledFrame = -1;
         private Button previewPathButton;
+        private RectTransform bottomRightPanelRect;
         private Text previewPathButtonText;
         private MenuButtonFeedback previewPathFeedback;
         private GameplayPathPreviewOverlay pathPreviewOverlay;
@@ -1479,7 +1480,8 @@ namespace TrashTD.UI
         {
             var panel = new GameObject("BottomRightPanel", typeof(RectTransform));
             panel.transform.SetParent(deckBar, false);
-            SetPosition(panel.GetComponent<RectTransform>(), Vector2.zero, new Vector2(1f, 0f),
+            bottomRightPanelRect = panel.GetComponent<RectTransform>();
+            SetPosition(bottomRightPanelRect, Vector2.zero, new Vector2(1f, 0f),
                 new Vector2(BottomRightPanelWidthPx * pxScale, BottomRightPanelHeightPx * pxScale), new Vector2(1f, 0f));
 
             if (HasAnyBottomRightSprites())
@@ -1683,18 +1685,22 @@ namespace TrashTD.UI
             var icon = new GameObject("TrashIcon", typeof(RectTransform), typeof(Image));
             icon.transform.SetParent(zone.transform, false);
             var iconRect = icon.GetComponent<RectTransform>();
-            SetPosition(iconRect, new Vector2(0f, 12f), new Vector2(0.5f, 0.5f),
-                new Vector2(34f, 38f), new Vector2(0.5f, 0.5f));
+            // icon_discard is 16x16 pixel art: draw it at exactly 2x in its own colours, so it stays crisp
+            SetPosition(iconRect, new Vector2(0f, 10f), new Vector2(0.5f, 0.5f),
+                new Vector2(32f, 32f), new Vector2(0.5f, 0.5f));
             var iconImage = icon.GetComponent<Image>();
             iconImage.sprite = CreateTrashIconSprite();
-            iconImage.color = new Color(1f, 0.35f, 0.38f, 1f);
+            iconImage.color = Color.white;
+            iconImage.preserveAspect = true;
             iconImage.raycastTarget = false;
 
-            var discardLabel = CreateText(zone.transform, "DiscardLabel", "DISCARD", 11, TextAnchor.MiddleCenter);
+            // Size 11 needed ~77 px for "DISCARD" and clipped the last letter; 10 fits the 80 px screen
+            var discardLabel = CreateText(zone.transform, "DiscardLabel", "DISCARD", 10, TextAnchor.MiddleCenter);
             discardLabel.color = new Color(1f, 0.78f, 0.78f, 1f);
+            discardLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
             discardLabel.raycastTarget = false;
             SetPosition(discardLabel.GetComponent<RectTransform>(), new Vector2(0f, -24f), new Vector2(0.5f, 0.5f),
-                new Vector2(74f, 18f), new Vector2(0.5f, 0.5f));
+                new Vector2(80f, 18f), new Vector2(0.5f, 0.5f));
 
             var button = zone.GetComponent<Button>();
             button.interactable = false;
@@ -1730,6 +1736,37 @@ namespace TrashTD.UI
 
             previewPathFeedback = AttachFeedback(previewPathButton, AccentColor, 1.05f, () => PlaySfx(clickClip, 1.1f));
             previewPathButton.onClick.AddListener(TogglePathPreview);
+        }
+
+        /// <summary>
+        /// Screen rect of the free strip on the deck bar between the PREVIEW PATH button (or the discard screen,
+        /// if that button is missing) and the bottom-right panel, at the discard screen's height. The card draft
+        /// puts its RESUME button here while minimized. The bottom-right panel is anchored to the right edge, so
+        /// the strip's width depends on the aspect ratio.
+        /// </summary>
+        public bool TryGetDeckBarFreeSlot(out Rect screenRect)
+        {
+            screenRect = default;
+            RectTransform left = previewPathButton != null ? (RectTransform)previewPathButton.transform : trashDropZone;
+            if (left == null || trashDropZone == null || bottomRightPanelRect == null || canvas == null) return false;
+
+            Camera cam = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            Rect leftRect = GetScreenRect(left, cam);
+            Rect discardRect = GetScreenRect(trashDropZone, cam);
+            Rect panelRect = GetScreenRect(bottomRightPanelRect, cam);
+            if (panelRect.xMin <= leftRect.xMax) return false;
+
+            screenRect = Rect.MinMaxRect(leftRect.xMax, discardRect.yMin, panelRect.xMin, discardRect.yMax);
+            return true;
+        }
+
+        private static Rect GetScreenRect(RectTransform rect, Camera cam)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            Vector2 min = RectTransformUtility.WorldToScreenPoint(cam, corners[0]);
+            Vector2 max = RectTransformUtility.WorldToScreenPoint(cam, corners[2]);
+            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
         }
 
         private void EnsurePathPreviewOverlay()
