@@ -66,7 +66,8 @@ namespace TrashTD.Operators
                     0.2f,
                     0.12f,
                     burstOnImpact: true,
-                    () => ApplyDamage(target, DamageType.Arts));
+                    () => ApplyDamage(target, DamageType.Arts),
+                    style: ProjectileStyle.FireOrb);
             }
         }
 

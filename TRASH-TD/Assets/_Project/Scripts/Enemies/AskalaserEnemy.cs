@@ -468,7 +468,8 @@ namespace TrashTD.Enemies
                 0.1f,
                 0.05f,
                 false,
-                DealDamage);
+                DealDamage,
+                ProjectileStyle.ArtsOrb);
         }
 
         public void SetState1Timer(float timer) => state1Timer = timer;

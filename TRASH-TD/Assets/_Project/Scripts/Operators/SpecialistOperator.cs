@@ -81,7 +81,7 @@ namespace TrashTD.Operators
                             target.TryTakeAttackDamage(damage, data.damageType, this);
                             PlayImpactSound();
                         }
-                    });
+                    }, ProjectileStyle.ArtsOrb);
             }
             else
             {

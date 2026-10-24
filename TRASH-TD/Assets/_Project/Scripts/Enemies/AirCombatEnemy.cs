@@ -229,7 +229,8 @@ namespace TrashTD.Enemies
                 0.12f,
                 0.08f,
                 false,
-                () => ApplyRangedImpact(target, blastRadiusInTiles, collateralRatio));
+                () => ApplyRangedImpact(target, blastRadiusInTiles, collateralRatio),
+                ProjectileStyle.Sludge);
         }
 
         private void ApplyRangedImpact(OperatorBase target, float blastRadiusInTiles, float collateralRatio)
@@ -240,7 +241,7 @@ namespace TrashTD.Enemies
             float radius = CellSize * blastRadiusInTiles;
             PlayImpactSound();
             target.TryTakeAttackDamage(CurrentATK, Data.damageType, this);
-            AoeBlastVisual.PlayCircle(impactPoint, radius, new Color(0.7f, 0.4f, 1f, 0.35f));
+            AoeBlastVisual.PlayCircle(impactPoint, radius, new Color(0.7f, 0.4f, 1f, 0.35f), AoeStyle.Acid);
 
             if (OperatorManager.Instance == null) return;
 

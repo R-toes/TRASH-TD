@@ -68,7 +68,7 @@ namespace TrashTD.Operators
                         {
                             ApplyRetaliationDamage(target);
                         }
-                    });
+                    }, ProjectileStyle.Quill);
             }
         }
 

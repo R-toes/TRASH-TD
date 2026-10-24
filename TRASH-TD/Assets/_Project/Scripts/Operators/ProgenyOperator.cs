@@ -37,7 +37,8 @@ namespace TrashTD.Operators
                 14f,
                 0.13f,
                 0.06f,
-                true);
+                true,
+                style: ProjectileStyle.Heal);
 
             // Chain heal: Bounce to a second operator in the surrounding 8 tiles of the first target
             OperatorBase bounceTarget = FindBounceTarget(target);
@@ -55,7 +56,8 @@ namespace TrashTD.Operators
                     14f,
                     0.11f,
                     0.05f,
-                    true);
+                    true,
+                    style: ProjectileStyle.Heal);
             }
         }
 

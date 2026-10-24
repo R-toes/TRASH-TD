@@ -220,6 +220,51 @@ Each asset's `skillDescription` is the authoritative description of that operato
 
 - `EnemyBase.VisualPosition` — centre of the visible sprite. Aim visuals (projectiles, swipes, damage numbers, health bars) at it, not `transform.position`; game logic (range, grid cells) still uses `transform.position`.
 - `CombatProjectileVisual.Fire(start, EnemyBase target, ...)` follows a moving target — prefer it over the fixed-position overload.
+- **Combat effects are pixel art** at the stage-art scale (32 texels per unit, point-filtered, positions snapped to that pixel grid).
+  - `CombatFxArt` generates the sprites, shaded from one colour.
+  - `PixelParticles` is a pooled particle system that runs on scaled time.
+  - `CombatFx` holds reusable effects (sparks, flash, smoke, explosion, crosses, droplets, pop).
+- **Projectiles:** pass a `ProjectileStyle` as the last argument of `Fire`. The default is `Bolt`; the `size`/`trailWidth`/`burstOnImpact` arguments no longer change the look. Current styles:
+
+  | Style | Used by |
+  |---|---|
+  | Bullet | snipers, Deadeye |
+  | Pellet | Proxishot (via `FireShotgunSpread`, one muzzle blast) |
+  | ArtsOrb | casters, Specialist, Resicochet, Askalaser |
+  | FireOrb | Ignisaur |
+  | Frost | Chillpath / chill casters |
+  | Rocket | Basurocket |
+  | Quill | Thornchin |
+  | Heal | Progeny |
+  | Bubble | Bubblets |
+  | Sludge | enemy shots and the flyers' purple acid |
+  | Sand | `FireSand` |
+  | Bolt | everything else |
+
+  - Lobbed styles (Sludge, Sand, Heal, Bubble) arc visually only, so `onImpact` timing is unchanged.
+- **AoE:** `AoeBlastVisual.PlayCircle` / `PlayCells` always draw the exact area hit: a dithered fill with a crisp rim (cells get corner brackets and ripple out from the centre), plus a shockwave for circles. Pass an `AoeStyle`:
+
+  | Style | Used by |
+  |---|---|
+  | Explosion | Basurocket, Exploding Bug |
+  | Arts | caster splash |
+  | Heal | Mossmo |
+  | Bubble | Bubblets' shield pop and splash |
+  | Acid | flyer blast |
+  | Pulse | default |
+
+  - The area fill's alpha is capped at 0.75 so units stay readable.
+- **Sorting orders:**
+
+  | Layer | Order |
+  |---|---|
+  | AoE area | 25 |
+  | Shockwave | 26 |
+  | Explosions | 30 |
+  | Trails | 38 |
+  | Orb halo | 39 |
+  | Projectiles | 40 |
+  | Impacts | 41–42 |
 - `OperatorBase.IgnoresMissMechanic`, `IsCamouflaged`, `IsTargetable` — enemies skip operators that aren't targetable.
 - **Nothing happens between waves.** `OperatorBase.IsCombatPaused` is true in every phase except `WaveActive` (Card Pick and Preparation; never in Sandbox). While paused, operators take no damage of any kind (enemy, trap, weather), receive no healing, gain/lose no shields, and run no attacks, heals or abilities. Any operator with its own `Update`/`TakeDamage` override must respect it.
 - **True damage:** `DamageType.True` ignores DEF and RES (minimum 1). Hazards use `OperatorBase.TakeTrueDamage(dmg, ignoreShieldNegation, canDodge)` / `EnemyBase.TakeTrueDamage(dmg)`, not the ATK-based formula. Operator overrides of damage handling must also override `TakeTrueDamage`.

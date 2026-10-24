@@ -93,7 +93,7 @@ namespace TrashTD.Operators
                     {
                         BubbleShield.Apply(target, currentATK, this);
                     }
-                });
+                }, style: ProjectileStyle.Bubble);
         }
 
         /// <summary>

@@ -100,7 +100,8 @@ namespace TrashTD.Operators
                     0.2f,
                     0.14f,
                     true,
-                    () => ApplyChillImpact(target));
+                    () => ApplyChillImpact(target),
+                    ProjectileStyle.Frost);
                 return;
             }
 
@@ -112,7 +113,8 @@ namespace TrashTD.Operators
                 0.26f,
                 0.2f,
                 false,
-                () => ApplyArtsImpact(target));
+                () => ApplyArtsImpact(target),
+                ProjectileStyle.ArtsOrb);
         }
 
         public void ApplyAttackImpact(EnemyBase target)
@@ -157,7 +159,7 @@ namespace TrashTD.Operators
 
             if (EnemyManager.Instance == null || splashRadius <= 0f) return;
 
-            AoeBlastVisual.PlayCircle(target.VisualPosition, splashRadius, new Color(0.74f, 0.38f, 1f, 0.5f));
+            AoeBlastVisual.PlayCircle(target.VisualPosition, splashRadius, new Color(0.74f, 0.38f, 1f, 0.5f), AoeStyle.Arts);
 
             var splashTargets = EnemyManager.Instance.GetEnemiesInRadius(target.transform.position, splashRadius, data.position);
             int secondaryAtk = Mathf.RoundToInt(currentATK * splashDamageRatio * GetDamageMultiplier());

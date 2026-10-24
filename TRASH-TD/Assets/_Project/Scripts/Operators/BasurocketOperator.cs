@@ -43,7 +43,8 @@ namespace TrashTD.Operators
                 0.18f,
                 0.1f,
                 true,
-                () => ApplyBlastDamage(gridManager, impactPosition));
+                () => ApplyBlastDamage(gridManager, impactPosition),
+                ProjectileStyle.Rocket);
         }
 
         private void ApplyBlastDamage(GridManager gridManager, Vector2Int impactPosition)
@@ -56,7 +57,7 @@ namespace TrashTD.Operators
             List<Vector3> blastCellPositions = new List<Vector3>(blastCells.Count);
             for (int i = 0; i < blastCells.Count; i++)
                 blastCellPositions.Add(blastCells[i].WorldPosition);
-            AoeBlastVisual.PlayCells(blastCellPositions, gridManager.CellSize, BlastColor);
+            AoeBlastVisual.PlayCells(blastCellPositions, gridManager.CellSize, BlastColor, AoeStyle.Explosion);
             PlayImpactSound(); // the explosion, even if the target moved out of the blast
 
             List<EnemyBase> blastTargets = EnemyManager.Instance.GetEnemiesInCells(blastCells, data.position);
