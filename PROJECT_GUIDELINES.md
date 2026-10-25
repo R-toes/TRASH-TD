@@ -179,13 +179,14 @@ Each asset's `skillDescription` is the authoritative description of that operato
   - **Retreat:** retreating it in the same prep phase before it fights returns a Framiliar card at its original rarity with no cooldown. After it has fought, it returns as the copied operator for good. `WaveManager` calls `OperatorManager.MarkAllDeployedOperatorsAsFought()` whenever a wave starts (normal and sandbox).
 - **Talent range overlay:** `OperatorData.talentRangePattern` (optional) is drawn in orange under the green attack range in the placement preview. Use `GetTalentRangePattern()`.
 
-**Enemies (14):** Grunt (Sludge, Sand Plastic, Oculite Spawn), Rusher (Toxic, Exploding Bug), Tank (Pollution, Sand Hulk, Oculoid Carrier), Caster (Sand Poncho, Smog, Askalaser), Air (Flying Melee, Flying Ranged, Acid Flyer).
-- **Not in any wave yet:** Acid Flyer, Smog Caster, Askalaser, Oculoid Carrier and Exploding Bug. Oculite Spawn is only spawned by Oculoid Carrier. Confirm a unit is fully configured before adding it to waves.
+**Enemies (15):** Grunt (Sludge, Sand Plastic, Oculite Spawn, Robozombie), Rusher (Toxic, Exploding Bug), Tank (Pollution, Sand Hulk, Oculoid Carrier), Caster (Sand Poncho, Smog, Askalaser), Air (Flying Melee, Flying Ranged, Acid Flyer).
+- **Not in any wave yet:** Acid Flyer, Smog Caster, Askalaser, Oculoid Carrier, Exploding Bug and Robozombie. Oculite Spawn is only spawned by Oculoid Carrier. Confirm a unit is fully configured before adding it to waves.
 - **Askalaser** (`AskalaserEnemy`): Arts damage, low DEF / high RES, Grunt speed, can't be blocked. It switches between two states:
   - **State 1:** global range. Every 5 s it stops and deals 20 Arts damage to the deployed operator with the lowest DEF.
   - **State 2:** starts when an operator is inside its pattern: a 12-tile diamond (distance ≤ 2) for every unit, widened to 5×5 minus the corners for ranged units. It stops and fires a Castiel-style ramping laser at the lowest-DEF target. The laser lasts until that target dies, camouflages or leaves the pattern.
 - **Oculoid Carrier** (`OculoidCarrierEnemy`): high DEF, low RES. Immune to Stage 6 acid rain and acid/trap tiles. While blocked, it reduces its blocker's block count by 1. On death it spawns 2 **Oculite Spawns** (`OculiteSpawnEnemy`: same DEF/RES profile and immunities), which continue to the exit.
 - **Exploding Bug** (`ExplodingBugEnemy`, a Rusher with Toxic Rusher stats): on death it deals its ATK as physical damage to operators on the 4 adjacent tiles.
+- **Robozombie** (`RobozombieEnemy`, a Grunt with Sludge Grunt stats): has a 25% chance on death to detonate like an Exploding Bug, dealing 3× ATK true damage to operators on the 4 adjacent tiles.
 
 **Stages:** STAGE_01 Blackwater Facilities, STAGE_02 Milestone 9, STAGE_03 Railyard Drain, STAGE_04 NERC Works Plant, STAGE_05 New Calder Basin, STAGE_06 The Pale. The stages were renamed to the team's lore on 2026-10-24; the old names were Landfill Outskirts, Scrapyard Junction, Railyard Crossing, Industrial Factory, Boulevard and Meltdown. There is also STAGE_SANDBOX, a development sandbox with multiple maps, where cards can be deployed mid-wave and the squad limit is lifted.
 
