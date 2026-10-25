@@ -26,7 +26,8 @@ namespace TrashTD.Operators
                 0.14f,
                 0.08f,
                 false,
-                () => ApplySniperDamage(target));
+                () => ApplySniperDamage(target),
+                ProjectileStyle.Bullet);
         }
 
         private void ApplySniperDamage(EnemyBase target)

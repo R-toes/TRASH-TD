@@ -665,7 +665,8 @@ namespace TrashTD.Enemies
                 0.1f,
                 0.05f,
                 false,
-                onImpact);
+                onImpact,
+                ProjectileStyle.Sludge);
         }
 
         private void UpdateTrapDamage(float deltaTime)

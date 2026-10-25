@@ -143,7 +143,7 @@ namespace TrashTD.Operators
             Vector3 pos = transform.position;
 
             // Cyan burst effect scaled to 32x32 px bounds (0.5 unit radius = 1 unit diameter)
-            AoeBlastVisual.PlayCircle(pos, 0.5f, new Color(0.35f, 0.88f, 1f, 0.85f));
+            AoeBlastVisual.PlayCircle(pos, 0.5f, new Color(0.35f, 0.88f, 1f, 0.85f), AoeStyle.Bubble);
 
             // Floating indicator on recipient
             if (showBlockedText)
@@ -221,7 +221,7 @@ namespace TrashTD.Operators
             // If front cell exists and has enemies, play splash on front cell too
             if (frontCell != null && hitEnemies.Count > 0)
             {
-                AoeBlastVisual.PlayCircle(frontCell.WorldPosition, 0.8f, new Color(0.35f, 0.88f, 1f, 0.6f));
+                AoeBlastVisual.PlayCircle(frontCell.WorldPosition, 0.8f, new Color(0.35f, 0.88f, 1f, 0.6f), AoeStyle.Bubble);
             }
 
             int baseAtk = bubbletATK > 0 ? bubbletATK : (source != null ? source.CurrentATK : 45);

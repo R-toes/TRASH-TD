@@ -179,13 +179,14 @@ Each asset's `skillDescription` is the authoritative description of that operato
   - **Retreat:** retreating it in the same prep phase before it fights returns a Framiliar card at its original rarity with no cooldown. After it has fought, it returns as the copied operator for good. `WaveManager` calls `OperatorManager.MarkAllDeployedOperatorsAsFought()` whenever a wave starts (normal and sandbox).
 - **Talent range overlay:** `OperatorData.talentRangePattern` (optional) is drawn in orange under the green attack range in the placement preview. Use `GetTalentRangePattern()`.
 
-**Enemies (14):** Grunt (Sludge, Sand Plastic, Oculite Spawn), Rusher (Toxic, Exploding Bug), Tank (Pollution, Sand Hulk, Oculoid Carrier), Caster (Sand Poncho, Smog, Askalaser), Air (Flying Melee, Flying Ranged, Acid Flyer).
-- **Not in any wave yet:** Acid Flyer, Smog Caster, Askalaser, Oculoid Carrier and Exploding Bug. Oculite Spawn is only spawned by Oculoid Carrier. Confirm a unit is fully configured before adding it to waves.
+**Enemies (15):** Grunt (Sludge, Sand Plastic, Oculite Spawn, Robozombie), Rusher (Toxic, Exploding Bug), Tank (Pollution, Sand Hulk, Oculoid Carrier), Caster (Sand Poncho, Smog, Askalaser), Air (Flying Melee, Flying Ranged, Acid Flyer).
+- **Not in any wave yet:** Acid Flyer, Smog Caster, Askalaser, Oculoid Carrier, Exploding Bug and Robozombie. Oculite Spawn is only spawned by Oculoid Carrier. Confirm a unit is fully configured before adding it to waves.
 - **Askalaser** (`AskalaserEnemy`): Arts damage, low DEF / high RES, Grunt speed, can't be blocked. It switches between two states:
   - **State 1:** global range. Every 5 s it stops and deals 20 Arts damage to the deployed operator with the lowest DEF.
   - **State 2:** starts when an operator is inside its pattern: a 12-tile diamond (distance ≤ 2) for every unit, widened to 5×5 minus the corners for ranged units. It stops and fires a Castiel-style ramping laser at the lowest-DEF target. The laser lasts until that target dies, camouflages or leaves the pattern.
 - **Oculoid Carrier** (`OculoidCarrierEnemy`): high DEF, low RES. Immune to Stage 6 acid rain and acid/trap tiles. While blocked, it reduces its blocker's block count by 1. On death it spawns 2 **Oculite Spawns** (`OculiteSpawnEnemy`: same DEF/RES profile and immunities), which continue to the exit.
 - **Exploding Bug** (`ExplodingBugEnemy`, a Rusher with Toxic Rusher stats): on death it deals its ATK as physical damage to operators on the 4 adjacent tiles.
+- **Robozombie** (`RobozombieEnemy`, a Grunt with Sludge Grunt stats): has a 25% chance on death to detonate like an Exploding Bug, dealing 3× ATK true damage to operators on the 4 adjacent tiles.
 
 **Stages:** STAGE_01 Blackwater Facilities, STAGE_02 Milestone 9, STAGE_03 Railyard Drain, STAGE_04 NERC Works Plant, STAGE_05 New Calder Basin, STAGE_06 The Pale. The stages were renamed to the team's lore on 2026-10-24; the old names were Landfill Outskirts, Scrapyard Junction, Railyard Crossing, Industrial Factory, Boulevard and Meltdown. There is also STAGE_SANDBOX, a development sandbox with multiple maps, where cards can be deployed mid-wave and the squad limit is lifted.
 
@@ -220,6 +221,51 @@ Each asset's `skillDescription` is the authoritative description of that operato
 
 - `EnemyBase.VisualPosition` — centre of the visible sprite. Aim visuals (projectiles, swipes, damage numbers, health bars) at it, not `transform.position`; game logic (range, grid cells) still uses `transform.position`.
 - `CombatProjectileVisual.Fire(start, EnemyBase target, ...)` follows a moving target — prefer it over the fixed-position overload.
+- **Combat effects are pixel art** at the stage-art scale (32 texels per unit, point-filtered, positions snapped to that pixel grid).
+  - `CombatFxArt` generates the sprites, shaded from one colour.
+  - `PixelParticles` is a pooled particle system that runs on scaled time.
+  - `CombatFx` holds reusable effects (sparks, flash, smoke, explosion, crosses, droplets, pop).
+- **Projectiles:** pass a `ProjectileStyle` as the last argument of `Fire`. The default is `Bolt`; the `size`/`trailWidth`/`burstOnImpact` arguments no longer change the look. Current styles:
+
+  | Style | Used by |
+  |---|---|
+  | Bullet | snipers, Deadeye |
+  | Pellet | Proxishot (via `FireShotgunSpread`, one muzzle blast) |
+  | ArtsOrb | casters, Specialist, Resicochet, Askalaser |
+  | FireOrb | Ignisaur |
+  | Frost | Chillpath / chill casters |
+  | Rocket | Basurocket |
+  | Quill | Thornchin |
+  | Heal | Progeny |
+  | Bubble | Bubblets |
+  | Sludge | enemy shots and the flyers' purple acid |
+  | Sand | `FireSand` |
+  | Bolt | everything else |
+
+  - Lobbed styles (Sludge, Sand, Heal, Bubble) arc visually only, so `onImpact` timing is unchanged.
+- **AoE:** `AoeBlastVisual.PlayCircle` / `PlayCells` always draw the exact area hit: a dithered fill with a crisp rim (cells get corner brackets and ripple out from the centre), plus a shockwave for circles. Pass an `AoeStyle`:
+
+  | Style | Used by |
+  |---|---|
+  | Explosion | Basurocket, Exploding Bug |
+  | Arts | caster splash |
+  | Heal | Mossmo |
+  | Bubble | Bubblets' shield pop and splash |
+  | Acid | flyer blast |
+  | Pulse | default |
+
+  - The area fill's alpha is capped at 0.75 so units stay readable.
+- **Sorting orders:**
+
+  | Layer | Order |
+  |---|---|
+  | AoE area | 25 |
+  | Shockwave | 26 |
+  | Explosions | 30 |
+  | Trails | 38 |
+  | Orb halo | 39 |
+  | Projectiles | 40 |
+  | Impacts | 41–42 |
 - `OperatorBase.IgnoresMissMechanic`, `IsCamouflaged`, `IsTargetable` — enemies skip operators that aren't targetable.
 - **Nothing happens between waves.** `OperatorBase.IsCombatPaused` is true in every phase except `WaveActive` (Card Pick and Preparation; never in Sandbox). While paused, operators take no damage of any kind (enemy, trap, weather), receive no healing, gain/lose no shields, and run no attacks, heals or abilities. Any operator with its own `Update`/`TakeDamage` override must respect it.
 - **True damage:** `DamageType.True` ignores DEF and RES (minimum 1). Hazards use `OperatorBase.TakeTrueDamage(dmg, ignoreShieldNegation, canDodge)` / `EnemyBase.TakeTrueDamage(dmg)`, not the ATK-based formula. Operator overrides of damage handling must also override `TakeTrueDamage`.

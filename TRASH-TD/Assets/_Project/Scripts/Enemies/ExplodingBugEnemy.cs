@@ -34,7 +34,7 @@ namespace TrashTD.Enemies
             Color flashColor = new Color(1f, 0.55f, 0.1f, 1f);
 
             // Expanding ring blast visual — radius 1.5 covers the full adjacent-tile area.
-            AoeBlastVisual.PlayCircle(explosionPos, 1.5f, flashColor);
+            AoeBlastVisual.PlayCircle(explosionPos, 1.5f, flashColor, AoeStyle.Explosion);
 
             // Flash a "BOOM!" text above the enemy.
             FloatingCombatNumber.ShowText(explosionPos, "BOOM!", flashColor);

@@ -342,7 +342,8 @@ namespace TrashTD.Operators
                 0.24f,
                 0.12f,
                 true,
-                () => HandleHitAndBounce(primaryTarget, primaryTarget, 0, new HashSet<EnemyBase> { primaryTarget }, chargeMultiplier));
+                () => HandleHitAndBounce(primaryTarget, primaryTarget, 0, new HashSet<EnemyBase> { primaryTarget }, chargeMultiplier),
+                ProjectileStyle.ArtsOrb);
         }
 
         /// <summary>
@@ -381,7 +382,8 @@ namespace TrashTD.Operators
                         0.2f,
                         0.1f,
                         true,
-                        () => HandleHitAndBounce(primaryTarget, nextTarget, bounceIndex + 1, hitEnemies, chargeMultiplier));
+                        () => HandleHitAndBounce(primaryTarget, nextTarget, bounceIndex + 1, hitEnemies, chargeMultiplier),
+                        ProjectileStyle.ArtsOrb);
                 }
             }
         }

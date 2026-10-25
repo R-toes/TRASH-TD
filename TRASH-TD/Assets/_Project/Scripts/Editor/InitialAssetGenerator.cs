@@ -257,6 +257,34 @@ namespace TrashTD.Editor
             return prefab;
         }
 
+        private static GameObject CreateOrGetRobozombiePrefab(string prefabName, Sprite[] frames)
+        {
+            string path = $"{EnemyPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            var go = new GameObject(prefabName);
+            go.transform.localScale = new Vector3(1.2f, 1.2f, 1f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
+            sr.sortingOrder = 4;
+
+            go.AddComponent<RobozombieEnemy>();
+            var anim = go.AddComponent<RobozombieSpriteAnimation>();
+            if (frames != null && frames.Length > 0)
+            {
+                var framesField = typeof(RobozombieSpriteAnimation).GetField("frames", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (framesField != null)
+                {
+                    framesField.SetValue(anim, frames);
+                }
+            }
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
         private static void GenerateOperators()
         {
             // 1. Guard (Scrapper)
@@ -1108,6 +1136,21 @@ namespace TrashTD.Editor
             CreateEnemy("Enemy_Grunt_Sludge", "Sludge Grunt", EnemyArchetype.Grunt, EnemyMovementType.Ground,
                 hp: 100, atk: 25, def: 10, res: 0, speed: 1.0f, isUnblockable: false,
                 gruntSprite, gruntPrefab);
+
+            var robozombieFrames = LoadSpriteFrames("Robozombie Grunt Sheet.png", "Robozombie Grunt Sheet", 8);
+            bool hasAllRobozombieFrames = true;
+            for (int i = 0; i < robozombieFrames.Length; i++)
+                hasAllRobozombieFrames &= robozombieFrames[i] != null;
+
+            if (hasAllRobozombieFrames)
+            {
+                var robozombiePrefab = CreateOrGetRobozombiePrefab("Prefab_Enemy_Robozombie", robozombieFrames);
+                var robozombie = CreateEnemy("Enemy_Grunt_Robozombie", "Robozombie", EnemyArchetype.Grunt,
+                    EnemyMovementType.Ground, hp: 200, atk: 25, def: 10, res: 0, speed: 0.75f,
+                    isUnblockable: false, robozombieFrames[0], robozombiePrefab);
+                robozombie.visualOffset = new Vector3(0f, 0.2f, 0f);
+                EditorUtility.SetDirty(robozombie);
+            }
 
             var rusherSprite = LoadSprite("tex_enemy_rusher.png");
             var rusherPrefab = CreateOrGetEnemyPrefab("Prefab_Enemy_Rusher", rusherSprite, EnemyArchetype.Rusher);
