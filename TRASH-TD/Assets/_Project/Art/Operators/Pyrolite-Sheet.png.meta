@@ -161,6 +161,50 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: Pyrolite-Sheet_2
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d5ae126cc9a1b064c8767891bfc8892d
+      internalID: 1763755506
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pyrolite-Sheet_3
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a7e4d8457fba59f4aaa0caab4ca4f8ab
+      internalID: -681737365
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
@@ -179,6 +223,8 @@ TextureImporter:
     nameFileIdTable:
       Pyrolite-Sheet_0: -6978141465280609473
       Pyrolite-Sheet_1: -4257263752715702465
+      Pyrolite-Sheet_2: 1763755506
+      Pyrolite-Sheet_3: -681737365
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
