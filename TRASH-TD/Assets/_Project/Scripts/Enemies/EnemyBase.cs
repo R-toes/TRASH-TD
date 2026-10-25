@@ -86,7 +86,7 @@ namespace TrashTD.Enemies
         private float sluggishMoveSpeedMultiplier = 1f;
         private float sluggishAttackIntervalMultiplier = 1f;
         private bool isSluggish;
-        private SpriteRenderer[] animationRenderers;
+        protected SpriteRenderer[] animationRenderers;
         private int animationFrameIndex;
         private float animationFrameTimer;
         private SpriteRenderer[] chillRenderers;
@@ -119,6 +119,7 @@ namespace TrashTD.Enemies
         public float SluggishMoveSpeedMultiplier => sluggishMoveSpeedMultiplier;
         public float SluggishAttackIntervalMultiplier => sluggishAttackIntervalMultiplier;
         public bool IsInsideHole => isInsideHole;
+        public virtual bool CanBeTargetedBy(OperatorPosition opPosition) => true;
         public Vector3 VisualPosition
         {
             get

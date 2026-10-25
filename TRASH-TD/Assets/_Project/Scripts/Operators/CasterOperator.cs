@@ -55,7 +55,7 @@ namespace TrashTD.Operators
             for (int i = 0; i < candidates.Count; i++)
             {
                 var candidate = candidates[i];
-                if (candidate == null || candidate.IsDead || candidate == excludeTarget) continue;
+                if (candidate == null || candidate.IsDead || candidate == excludeTarget || !CanAttackTarget(candidate)) continue;
 
                 var splashGroup = EnemyManager.Instance.GetEnemiesInRadius(candidate.transform.position, splashRadius, data.position);
                 int count = splashGroup != null ? splashGroup.Count : 1;

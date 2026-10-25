@@ -40,6 +40,8 @@ namespace TrashTD.Operators
         protected EnemyBase currentTarget;
         protected float stunTimer;
         protected bool isStunned;
+        protected float bindTimer;
+        protected bool isBound;
         protected SpriteRenderer spriteRenderer;
 
         // --- Skill (composition) ---
@@ -105,6 +107,8 @@ namespace TrashTD.Operators
 
         public bool IsStunned => isStunned;
         public float StunTimer => stunTimer;
+        public bool IsBound => isBound;
+        public float BindTimer => bindTimer;
         public IReadOnlyList<EnemyBase> BlockedEnemies => blockedEnemies;
         public int HeatStacks { get; set; }
         public bool IsBurning { get; set; }
@@ -248,7 +252,7 @@ namespace TrashTD.Operators
 
         public virtual void Attack(EnemyBase target)
         {
-            if (target == null || !isDeployed || isStunned) return;
+            if (target == null || !isDeployed || isStunned || isBound) return;
 
             HasFoughtInWave = true;
             DeployedDuringCurrentPreparation = false;
@@ -368,7 +372,7 @@ namespace TrashTD.Operators
 
         public virtual bool TryBlock(EnemyBase enemy)
         {
-            if (enemy == null || !isDeployed || isStunned) return false;
+            if (enemy == null || !isDeployed || isStunned || isBound) return false;
             if (blockedEnemies.Count >= GetBlockCount()) return false;
             if (enemy.Data != null && enemy.Data.isUnblockable) return false;
             if (enemy is Enemies.OculoidCarrierEnemy carrier && (GetBlockCount() - blockedEnemies.Count) <= carrier.BlockCountReduction) return false;
@@ -398,7 +402,7 @@ namespace TrashTD.Operators
             }
         }
 
-        public int GetBlockCount() => (isStunned || data == null) ? 0 : Mathf.Max(0, data.blockCount + blockCountModifier);
+        public int GetBlockCount() => (isStunned || isBound || data == null) ? 0 : Mathf.Max(0, data.blockCount + blockCountModifier);
         public int GetCurrentBlockCount() => blockedEnemies.Count;
 
         // ========================
@@ -442,6 +446,56 @@ namespace TrashTD.Operators
             }
         }
 
+        // ========================
+        // Bind System
+        // ========================
+
+        /// <summary>
+        /// Applies a bind to this operator. While bound, an operator cannot attack, block, or use abilities.
+        /// </summary>
+        public virtual void ApplyBind(float duration, EnemyBase source = null)
+        {
+            if (!isDeployed || currentHP <= 0 || duration <= 0f) return;
+
+            bindTimer = Mathf.Max(bindTimer, duration);
+            if (!isBound)
+            {
+                isBound = true;
+                TrashTD.Combat.FloatingCombatNumber.ShowText(transform.position, "BOUND!", new Color(0.72f, 0.45f, 0.95f));
+            }
+
+            // Immediately release any currently blocked enemies
+            for (int i = blockedEnemies.Count - 1; i >= 0; i--)
+            {
+                ReleaseBlock(blockedEnemies[i]);
+            }
+
+            UpdateStunVisual();
+        }
+
+        public virtual void RemoveBind()
+        {
+            if (isBound)
+            {
+                isBound = false;
+                bindTimer = 0f;
+                UpdateStunVisual();
+            }
+        }
+
+        public void UpdateBindStatus(float dt)
+        {
+            if (bindTimer > 0f)
+            {
+                bindTimer = Mathf.Max(0f, bindTimer - dt);
+                if (bindTimer <= 0f)
+                {
+                    isBound = false;
+                    UpdateStunVisual();
+                }
+            }
+        }
+
         protected virtual void UpdateStunVisual()
         {
             if (spriteRenderer == null)
@@ -453,7 +507,11 @@ namespace TrashTD.Operators
             if (spriteRenderer != null)
             {
                 Color current = spriteRenderer.color;
-                if (isStunned)
+                if (isBound)
+                {
+                    spriteRenderer.color = new Color(0.72f, 0.45f, 0.95f, current.a);
+                }
+                else if (isStunned)
                 {
                     spriteRenderer.color = new Color(1f, 0.95f, 0.4f, current.a);
                 }
@@ -498,9 +556,10 @@ namespace TrashTD.Operators
                 trapDamageTimer = 0f;
             }
 
-            if (isStunned)
+            if (isStunned || isBound)
             {
-                UpdateStunStatus(Time.deltaTime);
+                if (isStunned) UpdateStunStatus(Time.deltaTime);
+                if (isBound) UpdateBindStatus(Time.deltaTime);
                 return;
             }
 
@@ -522,9 +581,10 @@ namespace TrashTD.Operators
             }
         }
 
-        protected virtual bool CanAttackTarget(EnemyBase target)
+        public virtual bool CanAttackTarget(EnemyBase target)
         {
-            if (isStunned || target == null || target.IsDead || target.IsInsideHole) return false;
+            if (isStunned || isBound || target == null || target.IsDead || target.IsInsideHole) return false;
+            if (data != null && !target.CanBeTargetedBy(data.position)) return false;
             return target.MovementType != EnemyMovementType.Air || CanHitAir;
         }
 
@@ -681,6 +741,7 @@ namespace TrashTD.Operators
         /// </summary>
         public void ActivateSkill()
         {
+            if (isStunned || isBound) return;
             if (equippedSkill != null && equippedSkill.IsReady())
             {
                 equippedSkill.Activate(this);
@@ -699,6 +760,8 @@ namespace TrashTD.Operators
         {
             isStunned = false;
             stunTimer = 0f;
+            isBound = false;
+            bindTimer = 0f;
             UpdateStunVisual();
         }
 

@@ -249,7 +249,7 @@ namespace TrashTD.Operators
             // Charge accumulation: 1 charge every 5 seconds (up to 3 charges).
             // Never charges during preparation or draft phase; only during active wave combat.
             bool isWaveActive = IsWaveActive();
-            if (isWaveActive && !isStunned && charges < MaxChargeCount)
+            if (isWaveActive && !isStunned && !isBound && charges < MaxChargeCount)
             {
                 chargeTimer += Time.deltaTime;
                 if (chargeTimer >= ChargeIntervalSeconds)
@@ -271,7 +271,7 @@ namespace TrashTD.Operators
             base.Update();
         }
 
-        protected override bool CanAttackTarget(EnemyBase target)
+        public override bool CanAttackTarget(EnemyBase target)
         {
             if (isFiringBurst) return false;
             return base.CanAttackTarget(target);
@@ -279,7 +279,7 @@ namespace TrashTD.Operators
 
         public override void Attack(EnemyBase target)
         {
-            if (target == null || !isDeployed || isStunned || isFiringBurst) return;
+            if (target == null || !isDeployed || isStunned || isBound || isFiringBurst) return;
 
             int burstCount = charges;
             float chargeMultiplier = GetChargeDamageMultiplier(charges);
@@ -302,7 +302,7 @@ namespace TrashTD.Operators
 
             for (int i = 0; i < shotsToFire; i++)
             {
-                if (!isDeployed || isStunned || currentHP <= 0) break;
+                if (!isDeployed || isStunned || isBound || currentHP <= 0) break;
 
                 EnemyBase currentEnemy = initialTarget;
                 if (currentEnemy == null || currentEnemy.IsDead || !CanAttackTarget(currentEnemy))

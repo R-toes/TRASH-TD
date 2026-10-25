@@ -57,7 +57,7 @@ namespace TrashTD.Operators
             for (int i = 0; i < candidates.Count; i++)
             {
                 var enemy = candidates[i];
-                if (enemy == null || enemy.IsDead) continue;
+                if (enemy == null || enemy.IsDead || !CanAttackTarget(enemy)) continue;
 
                 bool isAir = enemy.MovementType == TrashTD.Data.EnemyMovementType.Air;
                 bool bestIsAir = bestTarget != null && bestTarget.MovementType == TrashTD.Data.EnemyMovementType.Air;

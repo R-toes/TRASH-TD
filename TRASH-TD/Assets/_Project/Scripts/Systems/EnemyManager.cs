@@ -176,6 +176,8 @@ namespace TrashTD.Systems
             {
                 if (enemyData != null && (enemyData.enemyName == "Askalaser" || enemyData.enemyName == "Askalazer"))
                     enemyComp = enemyObj.AddComponent<Enemies.AskalaserEnemy>();
+                else if (enemyData != null && enemyData.enemyName == "Hextension")
+                    enemyComp = enemyObj.AddComponent<Enemies.HextensionEnemy>();
                 else
                     enemyComp = AddArchetypeComponent(enemyObj, enemyData.archetype);
             }
@@ -289,7 +291,15 @@ namespace TrashTD.Systems
 
         public List<EnemyBase> GetEnemiesInCells(IEnumerable<GridCell> cells, OperatorPosition operatorPosition)
         {
-            return GetEnemiesInCells(cells, operatorPosition != OperatorPosition.Melee);
+            var list = GetEnemiesInCells(cells, operatorPosition != OperatorPosition.Melee);
+            for (int i = list.Count - 1; i >= 0; i--)
+            {
+                if (list[i] != null && !list[i].CanBeTargetedBy(operatorPosition))
+                {
+                    list.RemoveAt(i);
+                }
+            }
+            return list;
         }
 
         private List<EnemyBase> GetEnemiesInCells(IEnumerable<GridCell> cells, bool canTargetAir)
@@ -380,7 +390,15 @@ namespace TrashTD.Systems
 
         public List<EnemyBase> GetEnemiesInRadius(Vector3 center, float radius, OperatorPosition operatorPosition)
         {
-            return GetEnemiesInRadius(center, radius, operatorPosition != OperatorPosition.Melee);
+            var list = GetEnemiesInRadius(center, radius, operatorPosition != OperatorPosition.Melee);
+            for (int i = list.Count - 1; i >= 0; i--)
+            {
+                if (list[i] != null && !list[i].CanBeTargetedBy(operatorPosition))
+                {
+                    list.RemoveAt(i);
+                }
+            }
+            return list;
         }
 
         private List<EnemyBase> GetEnemiesInRadius(Vector3 center, float radius, bool canTargetAir)

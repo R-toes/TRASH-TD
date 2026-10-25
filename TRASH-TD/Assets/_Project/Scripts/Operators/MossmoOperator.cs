@@ -54,7 +54,7 @@ namespace TrashTD.Operators
             base.TakeDamage(rawATK, damageType, attacker);
             int hpAfter = currentHP;
 
-            if (hpBefore > hpAfter && healCooldownTimer <= 0f)
+            if (hpBefore > hpAfter && healCooldownTimer <= 0f && !isStunned && !isBound)
             {
                 healCooldownTimer = attacker != null ? EnemyHealCooldownDuration : EnvironmentHealCooldownDuration;
                 TriggerReactiveHeal(originCell);
@@ -70,7 +70,7 @@ namespace TrashTD.Operators
             bool dealt = base.TakeTrueDamage(damage, ignoreShieldNegation, canDodge);
             int hpAfter = currentHP;
 
-            if (hpBefore > hpAfter && healCooldownTimer <= 0f)
+            if (hpBefore > hpAfter && healCooldownTimer <= 0f && !isStunned && !isBound)
             {
                 healCooldownTimer = EnvironmentHealCooldownDuration;
                 TriggerReactiveHeal(originCell);
@@ -93,7 +93,7 @@ namespace TrashTD.Operators
 
         public void Heal(OperatorBase target)
         {
-            if (target == null) return;
+            if (target == null || isStunned || isBound) return;
             target.Heal(GetHealAmount());
         }
 
@@ -104,7 +104,7 @@ namespace TrashTD.Operators
 
         private void TriggerReactiveHeal(GridCell originCell)
         {
-            if (data == null) return;
+            if (isStunned || isBound || data == null) return;
 
             GridManager gridManager = FindAnyObjectByType<GridManager>();
             List<OperatorBase> candidates = null;

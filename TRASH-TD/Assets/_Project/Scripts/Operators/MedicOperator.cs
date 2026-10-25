@@ -31,9 +31,10 @@ namespace TrashTD.Operators
             // No heals between waves.
             if (IsCombatPaused) return;
 
-            if (isStunned)
+            if (isStunned || isBound)
             {
-                UpdateStunStatus(Time.deltaTime);
+                if (isStunned) UpdateStunStatus(Time.deltaTime);
+                if (isBound) UpdateBindStatus(Time.deltaTime);
                 return;
             }
 
@@ -57,7 +58,7 @@ namespace TrashTD.Operators
 
         public virtual void Heal(OperatorBase target)
         {
-            if (target == null || isStunned) return;
+            if (target == null || isStunned || isBound) return;
             target.Heal(GetHealAmount());
             // A Medic's heal is its "attack"; it only has a sound if the operator has its own Attack clip.
             Audio.UnitSfx.Play(data, Audio.UnitSfxEvent.Attack);
