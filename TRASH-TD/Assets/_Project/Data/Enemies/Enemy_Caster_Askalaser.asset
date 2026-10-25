@@ -38,6 +38,10 @@ MonoBehaviour:
   - {fileID: 8378108469960924863, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
   - {fileID: 8700831560550339715, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
   - {fileID: 6185113606006777530, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: -576868730, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: -769456495, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: -2022588538, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: 817836860, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
   animationFrameRate: 8
   visualScale: 1
   visualOffset: {x: 0, y: 0, z: 0}

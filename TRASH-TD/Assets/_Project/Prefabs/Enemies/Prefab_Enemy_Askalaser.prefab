@@ -106,4 +106,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Enemies.AskalaserEnemy
   data: {fileID: 0}
+  muzzleOffset: {x: 0.36, y: 0.33}
+  defaultAnimationFrames:
+  - {fileID: 6240201879323441985, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: 8378108469960924863, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: 8700831560550339715, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: 6185113606006777530, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: -576868730, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: -769456495, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: -2022588538, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: 817836860, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  laserAnimationFrames:
+  - {fileID: -893837518, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: -630588386, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: 8748553, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: -916969482, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: -204929576, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: 2042620240, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: 1172761101, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  - {fileID: 215292059, guid: 9566bf24b03a19c4ab94f790c63c1c67, type: 3}
+  animationFrameRate: 8
 

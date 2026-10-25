@@ -42,7 +42,7 @@ namespace TrashTD.Enemies
     ///   - Prioritizes target with lowest DEF.
     ///   - When lock breaks: switches to another target in range (ramp resets to 5) or transitions back to State 1.
     /// </summary>
-    public class AskalaserEnemy : EnemyBase
+    public class AskalaserEnemy : EnemyBase, IEnemySpriteFrames
     {
         public const float State1AttackInterval = 5.0f;
         public const int State1Damage = 20;
@@ -62,6 +62,16 @@ namespace TrashTD.Enemies
         [SerializeField] private float lockDuration = 0f;
         [SerializeField] private float laserTickTimer = 0f;
 
+        [Header("Laser Muzzle")]
+        [SerializeField] private Vector2 muzzleOffset = new Vector2(0.36f, 0.33f);
+        private Transform muzzleTransform;
+
+        [Header("Animation Frames")]
+        [SerializeField] private Sprite[] defaultAnimationFrames;
+        [SerializeField] private Sprite[] laserAnimationFrames;
+        [SerializeField] private float animationFrameRate = 8f;
+
+        private AskalaserState lastAnimState = (AskalaserState)(-1);
         private LightLaserVisual laserVisual;
         private GridManager cachedGridManager;
 
@@ -69,6 +79,127 @@ namespace TrashTD.Enemies
         public OperatorBase CurrentLockedTarget => lockedTarget;
         public float LockDuration => lockDuration;
         public float State1Timer => state1Timer;
+
+        public Vector2 MuzzleOffset
+        {
+            get => muzzleOffset;
+            set => muzzleOffset = value;
+        }
+
+        public Transform MuzzleTransform => muzzleTransform;
+
+        public Sprite[] DefaultAnimationFrames
+        {
+            get => defaultAnimationFrames;
+            set => defaultAnimationFrames = value;
+        }
+
+        public Sprite[] LaserAnimationFrames
+        {
+            get => laserAnimationFrames;
+            set => laserAnimationFrames = value;
+        }
+
+        public Sprite[] Frames => defaultAnimationFrames ?? (data != null ? data.animationFrames : null);
+        public float FrameDuration => 1f / Mathf.Max(0.01f, animationFrameRate > 0f ? animationFrameRate : (data != null && data.animationFrameRate > 0f ? data.animationFrameRate : 8f));
+
+        public Sprite[] CurrentAnimationFrames
+        {
+            get
+            {
+                if (CurrentState == AskalaserState.State2_Laser && laserAnimationFrames != null && laserAnimationFrames.Length > 0)
+                {
+                    return laserAnimationFrames;
+                }
+                if (defaultAnimationFrames != null && defaultAnimationFrames.Length > 0)
+                {
+                    return defaultAnimationFrames;
+                }
+                return data != null ? data.animationFrames : null;
+            }
+        }
+
+        public Vector3 GetMuzzleOffset()
+        {
+            float x = isFacingLeft ? -muzzleOffset.x : muzzleOffset.x;
+            float y = muzzleOffset.y;
+            return new Vector3(x, y, 0f);
+        }
+
+        public Vector3 GetMuzzlePosition()
+        {
+            return transform.position + GetMuzzleOffset();
+        }
+
+        public void UpdateMuzzlePosition()
+        {
+            if (muzzleTransform != null)
+            {
+                muzzleTransform.localPosition = GetMuzzleOffset();
+            }
+        }
+
+        private void EnsureMuzzleTransform()
+        {
+            if (muzzleTransform == null)
+            {
+                var child = transform.Find("LaserMuzzle");
+                if (child != null)
+                {
+                    muzzleTransform = child;
+                }
+                else
+                {
+                    var go = new GameObject("LaserMuzzle");
+                    go.transform.SetParent(transform, false);
+                    muzzleTransform = go.transform;
+                }
+            }
+            UpdateMuzzlePosition();
+        }
+
+        public override void Initialize(EnemyData enemyData, int difficultyLevel)
+        {
+            base.Initialize(enemyData, difficultyLevel);
+
+            if (defaultAnimationFrames == null || defaultAnimationFrames.Length == 0)
+            {
+                if (enemyData != null && enemyData.animationFrames != null)
+                {
+                    defaultAnimationFrames = enemyData.animationFrames;
+                }
+            }
+
+            if (laserAnimationFrames == null || laserAnimationFrames.Length == 0)
+            {
+                TryResolveLaserFramesFromTexture();
+            }
+
+            EnsureMuzzleTransform();
+            UpdateSpriteAnimation(0f);
+        }
+
+        private void TryResolveLaserFramesFromTexture()
+        {
+            Sprite sample = (defaultAnimationFrames != null && defaultAnimationFrames.Length > 0)
+                ? defaultAnimationFrames[0]
+                : (data != null && data.sprite != null ? data.sprite : null);
+
+            if (sample == null || sample.texture == null) return;
+
+            Texture2D tex = sample.texture;
+            if (tex.height >= 64 && tex.width >= 256)
+            {
+                float ppu = sample.pixelsPerUnit > 0f ? sample.pixelsPerUnit : 32f;
+                Vector2 pivot = new Vector2(0.5f, 0.5f);
+                laserAnimationFrames = new Sprite[8];
+                for (int i = 0; i < 8; i++)
+                {
+                    // Bottom row in texture coordinates is y: 0 to 32
+                    laserAnimationFrames[i] = Sprite.Create(tex, new Rect(i * 32, 0, 32, 32), pivot, ppu);
+                }
+            }
+        }
 
         public GridManager EffectiveGridManager
         {
@@ -291,8 +422,17 @@ namespace TrashTD.Enemies
             base.MoveAlongPath();
         }
 
+        public override void UpdateFacing(float deltaX)
+        {
+            base.UpdateFacing(deltaX);
+            UpdateMuzzlePosition();
+        }
+
         protected override void Update()
         {
+            EnsureMuzzleTransform();
+            UpdateMuzzlePosition();
+
             base.Update();
 
             if (IsDead) return;
@@ -304,6 +444,59 @@ namespace TrashTD.Enemies
             }
 
             UpdateAskalaser(Time.deltaTime);
+        }
+
+        protected override void UpdateSpriteAnimation(float deltaTime)
+        {
+            Sprite[] currentFrames = CurrentAnimationFrames;
+            if (currentFrames == null || currentFrames.Length == 0)
+                return;
+
+            if (lastAnimState != CurrentState)
+            {
+                lastAnimState = CurrentState;
+                animationFrameIndex = 0;
+                animationFrameTimer = 0f;
+                ApplyCurrentFrame(currentFrames);
+            }
+
+            if (currentFrames.Length <= 1)
+            {
+                ApplyCurrentFrame(currentFrames);
+                return;
+            }
+
+            float fps = animationFrameRate > 0f ? animationFrameRate : (data != null && data.animationFrameRate > 0f ? data.animationFrameRate : 8f);
+            float frameDuration = 1f / Mathf.Max(0.01f, fps);
+
+            animationFrameTimer += deltaTime;
+            while (animationFrameTimer >= frameDuration)
+            {
+                animationFrameTimer -= frameDuration;
+                animationFrameIndex = (animationFrameIndex + 1) % currentFrames.Length;
+                ApplyCurrentFrame(currentFrames);
+            }
+        }
+
+        private void ApplyCurrentFrame(Sprite[] frames)
+        {
+            if (frames == null || animationFrameIndex >= frames.Length || frames[animationFrameIndex] == null)
+                return;
+
+            if (animationRenderers == null)
+                animationRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+
+            for (int i = 0; i < animationRenderers.Length; i++)
+            {
+                if (animationRenderers[i] != null)
+                {
+                    animationRenderers[i].sprite = frames[animationFrameIndex];
+                    if (animationRenderers[i].gameObject.name != "AirShadow")
+                    {
+                        animationRenderers[i].flipX = isFacingLeft;
+                    }
+                }
+            }
         }
 
         public void UpdateAskalaser(float deltaTime)
@@ -374,6 +567,10 @@ namespace TrashTD.Enemies
         {
             if (target == null) return;
 
+            UpdateFacing(target.transform.position.x - transform.position.x);
+            EnsureMuzzleTransform();
+            UpdateMuzzlePosition();
+
             if (lockedTarget != target)
             {
                 ResetLock();
@@ -386,7 +583,7 @@ namespace TrashTD.Enemies
             {
                 PlayAttackSound();
                 laserVisual = LightLaserVisual.Fire(
-                    transform,
+                    muzzleTransform,
                     lockedTarget.transform,
                     LaserColor,
                     LaserTickInterval,
@@ -461,7 +658,7 @@ namespace TrashTD.Enemies
 
             Color projectileColor = data != null ? data.attackProjectileColor : LaserColor;
             CombatProjectileVisual.Fire(
-                transform.position,
+                GetMuzzlePosition(),
                 target.transform.position,
                 projectileColor,
                 8f,

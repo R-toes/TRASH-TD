@@ -87,8 +87,8 @@ namespace TrashTD.Enemies
         private float sluggishAttackIntervalMultiplier = 1f;
         private bool isSluggish;
         protected SpriteRenderer[] animationRenderers;
-        private int animationFrameIndex;
-        private float animationFrameTimer;
+        protected int animationFrameIndex;
+        protected float animationFrameTimer;
         private SpriteRenderer[] chillRenderers;
         private Color[] originalRendererColors;
 
@@ -510,7 +510,7 @@ namespace TrashTD.Enemies
             Combat.SandHulkSlamVisual.Play(center, direction, gridManager.CellSize, tileRange);
         }
 
-        private void UpdateSpriteAnimation(float deltaTime)
+        protected virtual void UpdateSpriteAnimation(float deltaTime)
         {
             if (data == null || data.animationFrames == null || data.animationFrames.Length <= 1)
                 return;
@@ -525,7 +525,7 @@ namespace TrashTD.Enemies
             }
         }
 
-        private void ApplyAnimationFrame()
+        protected virtual void ApplyAnimationFrame()
         {
             if (data == null || data.animationFrames == null ||
                 animationFrameIndex >= data.animationFrames.Length ||
@@ -772,7 +772,7 @@ namespace TrashTD.Enemies
         /// Walking right unmirrors the sprite (flipX = false).
         /// Moving purely up or down maintains the previous mirrored state.
         /// </summary>
-        public void UpdateFacing(float deltaX)
+        public virtual void UpdateFacing(float deltaX)
         {
             const float threshold = 0.001f;
             if (deltaX < -threshold)
