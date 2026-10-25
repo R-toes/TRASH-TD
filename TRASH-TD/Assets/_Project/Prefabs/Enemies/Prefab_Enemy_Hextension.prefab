@@ -107,6 +107,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Enemies.HextensionEnemy
   data: {fileID: 11400000, guid: 8f355c5f387a41ed9c3a01b7fa1314e9, type: 2}
+  wireOriginOffset: {x: 0.31, y: -0.14}
 --- !u!114 &7942113375804192003
 MonoBehaviour:
   m_ObjectHideFlags: 0

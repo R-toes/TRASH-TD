@@ -461,7 +461,10 @@ namespace TrashTD.Operators
             if (!isBound)
             {
                 isBound = true;
-                TrashTD.Combat.FloatingCombatNumber.ShowText(transform.position, "BOUND!", new Color(0.72f, 0.45f, 0.95f));
+                Color textColor = (source is HextensionEnemy hex)
+                    ? WireColorPalette.GetCoreColor(hex.CurrentWireColor)
+                    : new Color(0.72f, 0.45f, 0.95f);
+                TrashTD.Combat.FloatingCombatNumber.ShowText(transform.position, "BOUND!", textColor);
             }
 
             // Immediately release any currently blocked enemies

@@ -47,6 +47,11 @@ namespace TrashTD.Enemies
         [SerializeField] private float chipDamageTimer;
         [SerializeField] private bool hasCastBind;
 
+        [Header("Wire Bind")]
+        [SerializeField] private WireColorType currentWireColor;
+        private bool hasManualWireColor;
+        [SerializeField] private Vector2 wireOriginOffset = new Vector2(0.31f, -0.14f);
+
         private BindingLineVisual lineVisual;
         private GridManager cachedGridManager;
 
@@ -55,6 +60,25 @@ namespace TrashTD.Enemies
         public float BindDurationRemaining => bindDurationRemaining;
         public bool HasCastBind => hasCastBind;
         public bool IsInvisibleToRanged => !hasCastBind;
+        public WireColorType CurrentWireColor => currentWireColor;
+        public BindingLineVisual LineVisual => lineVisual;
+        public Vector2 WireOriginOffset
+        {
+            get => wireOriginOffset;
+            set => wireOriginOffset = value;
+        }
+
+        public Vector3 GetWireOriginPosition()
+        {
+            float xOffset = isFacingLeft ? -wireOriginOffset.x : wireOriginOffset.x;
+            return transform.position + new Vector3(xOffset, wireOriginOffset.y, 0f);
+        }
+
+        public void SetWireColor(WireColorType wireColor)
+        {
+            currentWireColor = wireColor;
+            hasManualWireColor = true;
+        }
 
         public override bool CanBeTargetedBy(OperatorPosition opPosition)
         {
@@ -174,7 +198,7 @@ namespace TrashTD.Enemies
 
         public bool IsTargetInBindRange(OperatorBase op)
         {
-            if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || !op.IsTargetable || op.IsCamouflaged)
+            if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || !op.IsTargetable || op.IsCamouflaged || op.IsBound)
                 return false;
 
             Vector2Int opPos = GetOperatorGridPos(op);
@@ -213,6 +237,7 @@ namespace TrashTD.Enemies
             for (int i = 0; i < deployed.Count; i++)
             {
                 OperatorBase op = deployed[i];
+                if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || op.IsBound) continue;
                 if (!IsTargetInBindRange(op)) continue;
 
                 float dist = (op.transform.position - transform.position).sqrMagnitude;
@@ -241,7 +266,11 @@ namespace TrashTD.Enemies
 
         public void StartBind(OperatorBase target)
         {
-            if (target == null) return;
+            if (target == null || target.IsBound) return;
+
+            // Turn Hextension to face the operator being bound so its wire arm aligns properly
+            float dx = target.transform.position.x - transform.position.x;
+            UpdateFacing(dx);
 
             hasCastBind = true;
             UpdateInvisibilityVisual();
@@ -258,12 +287,18 @@ namespace TrashTD.Enemies
                 return;
             }
 
+            if (!hasManualWireColor)
+            {
+                currentWireColor = WireColorPalette.GetRandomWireColor();
+            }
+
             target.ApplyBind(BindDuration, this);
-            lineVisual = BindingLineVisual.Create(transform, target);
+            lineVisual = BindingLineVisual.Create(transform, target, currentWireColor);
         }
 
         public void StopBindAndTransition()
         {
+            hasManualWireColor = false;
             if (boundTarget != null)
             {
                 boundTarget.RemoveBind();
