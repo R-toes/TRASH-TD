@@ -9,6 +9,8 @@ namespace TrashTD.Combat
         Pulse,     // Plain shockwave and a few sparks
         Arts,      // Magic burst: sparks and twinkles
         Explosion, // Fireball, debris, embers and smoke
+        JunkRocket,    // Basurocket: one bright fireball and a burst of colourful scrap
+        HeavyOrdnance, // THE ERADICATOR: crimson fireball, shrapnel, black smoke column, scorch mark
         Heal,      // Rising heal crosses
         Bubble,    // Water droplets and pops
         Acid       // Corrosive splash: drips and fumes
@@ -165,6 +167,14 @@ namespace TrashTD.Combat
                         Vector2 offset = Random.insideUnitCircle.normalized * radius * Random.Range(0.4f, 0.7f);
                         CombatFx.Explosion(center + offset, radius * 0.3f, 0.06f + i * 0.05f, true);
                     }
+                    break;
+
+                case AoeStyle.JunkRocket:
+                    CombatFx.JunkRocketBlast(center, radius);
+                    break;
+
+                case AoeStyle.HeavyOrdnance:
+                    CombatFx.HeavyOrdnanceBlast(center, radius);
                     break;
 
                 case AoeStyle.Arts:

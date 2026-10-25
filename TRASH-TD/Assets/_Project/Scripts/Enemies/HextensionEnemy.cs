@@ -20,7 +20,7 @@ namespace TrashTD.Enemies
     /// Characteristics:
     /// - Arts damage type.
     /// - Low DEF (5), high RES (40).
-    /// - Unblockable.
+    /// - Blockable (weight 1); it never melees its blocker.
     /// - Ability: Binds 1 operator in range for the first time:
     ///   - Stops in place and casts a 15-second channel.
     ///   - Same range pattern as Askalaser (Yellow for all units, Green for Ranged only).

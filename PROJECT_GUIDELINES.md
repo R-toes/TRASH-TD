@@ -83,7 +83,7 @@ Per GDD section 1.10 and the course's software-reuse objective:
 - **Adding a new creature or enemy must not require modifying existing code** — only creating a new data asset and (optionally) a new prefab
 - Architecture patterns (inheritance, interfaces, composition) are part of the assignment deliverable — favor reusable, extensible patterns over one-off implementations
 - **Stage data lives in `Assets/Resources/Stages/*.asset`** — the single source of stage data.
-- **Known deviation:** operators with a unique kit (e.g. Ignisaur, Proxishot, Chillpath, Shadeslice, Resicochet, Castiel, Echosquire, Framiliar) currently need a subclass *and* a name check in `OperatorManager` (`ShouldReplaceWithSpecializedComponent` / `AddClassComponent`); 4-frame sprite sheets need a name check in `OperatorSpriteAnimation`; `OperatorData.GetTalentRangePattern` also checks for `"Shadeslice"` by name. On the enemy side, `EnemyManager` checks for `"Askalaser"` by name. Plain operators still need only a data asset + prefab. Prefer moving these name checks into `OperatorData` fields over adding more of them.
+- **Known deviation:** operators with a unique kit (e.g. Ignisaur, Proxishot, Chillpath, Shadeslice, Resicochet, Castiel, Echosquire, Framiliar) currently need a subclass *and* a name check in `OperatorManager` (`ShouldReplaceWithSpecializedComponent` / `AddClassComponent`); 4-frame sprite sheets need a name check in `OperatorSpriteAnimation`; `OperatorData.GetTalentRangePattern` also checks for `"Shadeslice"` by name. On the enemy side, `EnemyManager` checks for `"Askalaser"` and `"Hextension"` by name. Plain operators still need only a data asset + prefab. Prefer moving these name checks into `OperatorData` fields over adding more of them.
   - The checks compare `operatorName`, not the file name. The `"QiFu"` check never matches: `OP_Guard_QiFu.asset` is named **Chi Paw**, so Chi Paw relies on its prefab already having `QiFuOperator`.
 - **Draft pool:** `StageBootstrapper` fills `operatorPool` from `Assets/_Project/Data/Operators` **in the Editor only**. A player build only offers operators serialized in the scene's `operatorPool` — add new operators there before building.
 
@@ -147,7 +147,7 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 
 ---
 
-## 7. Current Implementation Notes (as of 2026-10-24)
+## 7. Current Implementation Notes (as of 2026-10-26)
 
 ### 7.1 Roster
 
@@ -170,7 +170,7 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - **Stag-ger** (Guard): hits every blocked enemy on its tile and in range ahead, including enemies blocked by allies. With nothing blocked, it hits one target. 20% dodge; a successful dodge gives +50% ATK on the next attack.
 - **Drawgoo** (Defender): on death, draws 2 random cards. An upgraded Drawgoo instead draws 3★ cards: 1 card (60%) or 2 (40%) (`CardDraftSystem.DrawRandomCardsToDeck(count, targetRarity)`).
 - **Mossmo** (Defender): doesn't attack. It **taunts** (`HasTaunt`): ranged enemies on a surrounding tile target it first. When it takes damage, it heals up to 2 operators in range, itself included.
-- **Castiel** (Caster, `CastielOperator`): continuous light laser locked on one target (`LightLaserVisual`). Ticks every 0.375 s; damage ramps every 1.5 s: 5 → 15 → 30 → 80 → 100 → 150. Its halo animation speeds up (frame 0.10 s → 0.04 s) as the beam ramps.
+- **Castiel** (Caster, `CastielOperator`): continuous light laser locked on one target (`LightLaserVisual`, `LaserPalette.Holy`: white core, pale yellow body, gold glow). Ticks every 0.375 s; damage ramps every 1.5 s: 5 → 15 → 30 → 80 → 100 → 150. Its halo animation speeds up (frame 0.10 s → 0.04 s) as the beam ramps.
 - **Resicochet** (Caster, `ResicochetOperator`): high DEF, low RES. Stores a charge every 5 s (max 3, starts with 1). Each attack fires 1 projectile per charge, 0.5 s apart. Each projectile deals Arts damage and bounces to up to 4 targets in total, losing 25% per bounce. Every hit applies **Sluggish**. The sprite row follows the charge count (`Resicochet_0–11`, 4 frames per row).
 - **Framiliar** (Specialist, `FramiliarOperator`, position `Any`, blocks 1): after deploying, select it to open the copy menu (`GameplayHUDUI.ShowFramiliarCopyMenu`). The menu mirrors the deck slots; Framiliar cards are left out. Picking a card calls `OperatorManager.TransformFramiliar`:
   - The copy replaces Framiliar on its tile, in grayscale (`FramiliarOperator.ApplyGrayscale`, `Resources/Shaders/GrayscaleSprite.shader`).
@@ -179,11 +179,37 @@ Each asset's `skillDescription` is the authoritative description of that operato
   - **Retreat:** retreating it in the same prep phase before it fights returns a Framiliar card at its original rarity with no cooldown. After it has fought, it returns as the copied operator for good. `WaveManager` calls `OperatorManager.MarkAllDeployedOperatorsAsFought()` whenever a wave starts (normal and sandbox).
 - **Talent range overlay:** `OperatorData.talentRangePattern` (optional) is drawn in orange under the green attack range in the placement preview. Use `GetTalentRangePattern()`.
 
-**Enemies (15):** Grunt (Sludge, Sand Plastic, Oculite Spawn, Robozombie), Rusher (Toxic, Exploding Bug), Tank (Pollution, Sand Hulk, Oculoid Carrier), Caster (Sand Poncho, Smog, Askalaser), Air (Flying Melee, Flying Ranged, Acid Flyer).
-- **Not in any wave yet:** Acid Flyer, Smog Caster, Askalaser, Oculoid Carrier, Exploding Bug and Robozombie. Oculite Spawn is only spawned by Oculoid Carrier. Confirm a unit is fully configured before adding it to waves.
-- **Askalaser** (`AskalaserEnemy`): Arts damage, low DEF / high RES, Grunt speed, can't be blocked. It switches between two states:
+- **Deadeye** (Sniper): `DeadeyeSpriteAnimation` plays the 8-frame `Deadeye-Sheet` at 0.125 s per frame. The prefab lists all 8 frames; the component accepts any count of 2 or more.
+- **Basurocket** (Sniper): its rocket blasts a circle of `BasurocketOperator.BlastRadiusTiles` (1.75 tiles, a bit bigger than the 1.5-tile caster splash) around where the rocket lands. It used to blast the 3×3 tiles around the target cell. The circle drawn is the area hit. The blast is yellow-orange (`AoeStyle.JunkRocket`), so it never looks like THE ERADICATOR's crimson blast.
+
+**Enemies (18):** Grunt (Sludge, Sand Plastic, Oculite Spawn, Robozombie), Rusher (Toxic, Exploding Bug), Tank (Pollution, Sand Hulk, Oculoid Carrier, THE ERADICATOR), Caster (Sand Poncho, Smog, Askalaser, Hextension, Roboflame), Air (Flying Melee, Flying Ranged, Acid Flyer).
+- **Not in any wave yet:** Acid Flyer, Smog Caster, Askalaser, Oculoid Carrier, Exploding Bug, Robozombie, Hextension, Roboflame and THE ERADICATOR. In the Editor the sandbox lists every enemy asset, so all of them can be spawned there. Oculite Spawn is only spawned by Oculoid Carrier. Confirm a unit is fully configured before adding it to waves.
+- **Casters are blockable** (block weight 1). This overrides GDD 1.4.4 / 1.5, which made them immune; the team changed it on 2026-10-26. Every caster asset has `isUnblockable: 0`.
+  - **While blocked**, a caster stops in front of its blocker and keeps using its own attacks on its usual targets. It never melees the blocker: `EnemyBase.AttackBlocker` skips casters, and `UpdateRangedBehavior` holds the blocked position.
+  - **Per caster:** Askalaser keeps its State 1 / State 2 attacks, Hextension binds and then shoots, and Roboflame holds and flames instead of creeping on.
+- **Roboflame** (`RoboflameEnemy`, Caster, `Enemy_Caster_Roboflame.asset`): Arts damage, 400 HP, 20 ATK per tick, DEF 20 / RES 25, speed 0.7.
+  - **Flame cone:** relative to its path direction, the cone covers its own tile, 1 tile ahead, and 3 tiles across at 2 tiles ahead (`GetConeCells`).
+  - **Attack:** it walks until an operator is in the cone, then sprays fire for 3.5 s, sweeping side to side. Each sweep (0.7 s) is one damage tick of ATK Arts damage to every operator in the cone, so a burst is 5 ticks. A 1.5 s cooldown follows. If the cone empties mid-burst, the burst ends early.
+  - **Movement:** while flaming it creeps forward at 15% speed (it holds in front of a blocker instead) (`BurstMoveSpeedMultiplier`), and the flame follows its path direction. During the cooldown it walks at 75% speed (`CooldownMoveSpeedMultiplier`). Otherwise it walks at full speed.
+  - **Stage 4:** every 2nd tick that lands on the same operator adds 1 heat stack to it (`Stage4HeatHazard.AddHeatStack`).
+  - **Visuals:** `FlamethrowerVisual.Emit` draws the jet: hot puffs, big licking tongues, a flickering nozzle glow, flames curling up off the stream, and embers and smoke at its tip. `FlamethrowerVisual.Ignite` adds a burst of flame on every operator a tick hits. The 4-frame sheet plays through `EnemyData.animationFrames`.
+- **THE ERADICATOR** (`EradicatorEnemy`, Tank, `Enemy_Tank_Eradicator.asset`): 1500 HP, 60 ATK, DEF 50 / RES 10, speed 0.4, physical damage, **block weight 2**, life cost 2. It is drawn at 2× (`visualScale: 2`, 64 px frames, like Sand Hulk).
+  - **Melee:** it swings at its blocker, or at a ground operator (any tile except High Ground) on its own tile or one of the 4 adjacent tiles, every attack interval (2 s). The first hit on each operator stuns it for 2 s. Melee replaces rockets.
+  - **Rockets:** otherwise, every 3 s (1.5 attack intervals) it stops briefly and fires at the lowest-HP operator within 3 tiles (taunt first). Each rocket blasts a 1.75-tile circle around its target (`BlastRadiusTiles`, the same size as Basurocket's).
+  - **Blast look:** a crimson heavy-ordnance blast (`AoeStyle.HeavyOrdnance`): a red-tinted fireball, dark shrapnel, a column of black smoke, a second shockwave and a scorch mark left on the ground.
+  - **Warning marker:** while a rocket is in the air, `BlastWarningVisual` marks the blast area. It shows a faint fill and a target ring that blinks faster as impact nears, and a second ring closes in on the centre.
+  - **Heavy rocket:** every 4th rocket uses its own projectile (`ProjectileStyle.HeavyRocket`) and a "HEAVY!" label, and deals 1.5× damage. Its blast is the same, in molten red-orange instead of crimson. On Stage 4 it also adds 1 heat stack to every operator it hits.
+  - Rockets launch from the pods on its back (`launcherOffset`, mirrored with facing).
+- **Askalaser** (`AskalaserEnemy`): Arts damage, low DEF / high RES, Grunt speed, blockable (weight 1). It switches between two states:
   - **State 1:** global range. Every 5 s it stops and deals 20 Arts damage to the deployed operator with the lowest DEF.
-  - **State 2:** starts when an operator is inside its pattern: a 12-tile diamond (distance ≤ 2) for every unit, widened to 5×5 minus the corners for ranged units. It stops and fires a Castiel-style ramping laser at the lowest-DEF target. The laser lasts until that target dies, camouflages or leaves the pattern.
+  - **State 2:** starts when an operator is inside its pattern: a 12-tile diamond (distance ≤ 2) for every unit, widened to 5×5 minus the corners for ranged units. It stops and fires a Castiel-style ramping laser at the lowest-DEF target. The laser lasts until that target dies, camouflages or leaves the pattern. The laser uses `LaserPalette.Crimson` (pink-white core, red body, dark crimson glow), so it never looks like Castiel's.
+  - **Sprites:** the top row of the sheet is the walk cycle and the bottom row (8 × 32 px) is the laser animation, used in State 2. The laser starts from a `LaserMuzzle` child (`muzzleOffset`, mirrored with facing).
+- **Hextension** (`HextensionEnemy`, Caster): Arts damage, 550 HP, 50 ATK, DEF 5 / RES 40, blockable (weight 1).
+  - **Before it binds:** ranged operators can't target it (`CanBeTargetedBy`), and it is drawn at 45% alpha.
+  - **Bind:** it casts this once, on the first operator inside Askalaser's pattern. Taunt wins; otherwise it picks the lowest RES, then the nearest.
+  - **While binding:** it stops and channels for 15 s, dealing 25 Arts damage per second. The target is bound (see Bind in §7.3) and tethered by a wire of a random colour: red, blue or yellow (`BindingLineVisual`, `WireColorPalette`).
+  - **Breaking the bind:** the bind ends early if the target is Proxishot, camouflages, dies or leaves the field, or if Hextension is stunned, frozen, pushed back, falls into a hole or dies. A Bubblets bubble that absorbs a tick does not break it.
+  - **After the bind** (whether it finished or broke), Hextension can be targeted by everyone, gets ATK ×1.6 and fights as a normal ranged caster for the rest of its life.
 - **Oculoid Carrier** (`OculoidCarrierEnemy`): high DEF, low RES. Immune to Stage 6 acid rain and acid/trap tiles. While blocked, it reduces its blocker's block count by 1. On death it spawns 2 **Oculite Spawns** (`OculiteSpawnEnemy`: same DEF/RES profile and immunities), which continue to the exit.
 - **Exploding Bug** (`ExplodingBugEnemy`, a Rusher with Toxic Rusher stats): on death it deals its ATK as physical damage to operators on the 4 adjacent tiles.
 - **Robozombie** (`RobozombieEnemy`, a Grunt with Sludge Grunt stats): has a 25% chance on death to detonate like an Exploding Bug, dealing 3× ATK true damage to operators on the 4 adjacent tiles.
@@ -201,7 +227,13 @@ Each asset's `skillDescription` is the authoritative description of that operato
   - **Rain visuals:** slanted pixel streaks at order 24 (above units, below projectiles), splash dashes on the ground at order 3, a darkening tint at order 2, and up to 35% thicker mist.
   - A `SpriteMask` clips the mist and rain to the map artwork. Runs on scaled time, so it freezes while paused.
 - **Stage 2 — falling items** (`Stage2FallingItemsHazard`): every 10 s an item drops on a random operator (40%), deployable tile (40%) or enemy (20%). Glass: 2 true damage/s for 5 s. Metal: 15 true damage. Tools: 15 true damage + 2 s stun. Thornchin doesn't retaliate. The hit pops Bubblets' shield, triggers Mossmo's heal, and can be dodged by Stag-ger. Proxishot still gains camo. Sprites come from `StageData.fallingItemSprites`.
-- **Stage 3 — sandstorm:** attack intervals ×0.95, 10% miss chance, wind/dust particles, animated background.
+- **Stage 3 — sandstorm:** attack intervals ×0.95 and a 10% miss chance (`StageCombatModifiers`), plus an animated background.
+  - **Visuals** (`Stage3SandstormVisuals`, visual only): pixel-art dust clouds blow left to right in two layers, like the Stage 1 mist. They are point-filtered sprites in 3 sand tones with dithered edges; they never scale and are snapped to the art grid.
+    - **Back** layer at order 3, beneath the units.
+    - **Front** layer at order 11. A per-tile density field (full off the grid, 0.6 on High Ground, 0.3 on walkable tiles, squared for the front layer) keeps the enemy lane readable.
+  - **Wind:** 1 px wind streaks fly above the units at order 24, and sand grains hop along the ground at order 3.
+  - **Gusts:** the wind cycles between a breeze (8–16 s) and gusts (4–8 s), with a 30% chance of a short lull afterwards. Gusts arrive fast and die down slowly.
+  - Gust strength drives cloud speed and thickness, streak and grain counts, and a warm haze at order 2. A `SpriteMask` clips everything to the map art. Runs on scaled time.
 - **Stage 4 — factory heat** (`Stage4HeatHazard`): each wave adds 1 heat stack to deployed operators. At 5 stacks they burn for 15 damage/s. Only retreating ends the burn. Heat is stored on the `DraftCard` (`heatStacks`) and drops by 2 per round while benched. Merges keep the highest heat. `OperatorHeatBar` displays it.
 - **Stage 5 — traffic** (`Stage5CarEncounter` / `Stage5TrafficCar`): from wave 6, 5 rolls per wave at 20% each. Each success queues a car on lane y=4 or y=5, 5–10 s apart. A car deals true damage to ground enemies and operators it passes: 40, plus 20 for every 2 tiles travelled. It ignores shield negation but pops bubbles. The first operator hit (if it survives) is stunned for 5 s. Stage 5 also uses Hole tiles (§1.3).
 - **Stage 6 — acid rain:** 3 physical damage to operators and enemies every 2 s while a wave runs, rain particles.
@@ -234,7 +266,8 @@ Each asset's `skillDescription` is the authoritative description of that operato
   | ArtsOrb | casters, Specialist, Resicochet, Askalaser |
   | FireOrb | Ignisaur |
   | Frost | Chillpath / chill casters |
-  | Rocket | Basurocket |
+  | Rocket | Basurocket, THE ERADICATOR |
+  | HeavyRocket | THE ERADICATOR's every 4th rocket (bigger body, glowing halo, fiery exhaust) |
   | Quill | Thornchin |
   | Heal | Progeny |
   | Bubble | Bubblets |
@@ -247,7 +280,9 @@ Each asset's `skillDescription` is the authoritative description of that operato
 
   | Style | Used by |
   |---|---|
-  | Explosion | Basurocket, Exploding Bug |
+  | Explosion | Exploding Bug, Robozombie |
+  | JunkRocket | Basurocket: one bright yellow-orange fireball and a burst of colourful scrap (`CombatFx.JunkRocketBlast`) |
+  | HeavyOrdnance | THE ERADICATOR: crimson fireball, shrapnel, black smoke column, second shockwave, scorch mark (`CombatFx.HeavyOrdnanceBlast`) |
   | Arts | caster splash |
   | Heal | Mossmo |
   | Bubble | Bubblets' shield pop and splash |
@@ -271,6 +306,21 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - **True damage:** `DamageType.True` ignores DEF and RES (minimum 1). Hazards use `OperatorBase.TakeTrueDamage(dmg, ignoreShieldNegation, canDodge)` / `EnemyBase.TakeTrueDamage(dmg)`, not the ATK-based formula. Operator overrides of damage handling must also override `TakeTrueDamage`.
 - **Sluggish:** `EnemyBase.ApplySluggish(duration, speedMult, attackIntervalMult)`. Resicochet uses 3 s, ×0.6 move speed and ×1.5 attack interval. It stacks multiplicatively with chill slow, and repeat applications keep the strongest values and the longest timer. Enemy attack timing must read `EnemyBase.GetEffectiveAttackInterval()` (stage modifier + sluggish), not `data.attackInterval`.
 - **Stun:** `OperatorBase.ApplyStun(duration)` releases blocked enemies. While stunned, `GetBlockCount()` returns 0 and the operator can't attack. Use `GetBlockCount()`, not `data.blockCount`.
+- **Block weight:** each blocked enemy takes `EnemyData.blockWeight` slots (THE ERADICATOR takes 2). `GetCurrentBlockCount()` returns the slots in use, not the number of enemies, and `OperatorBase.GetBlockWeight(enemy)` gives one enemy's weight.
+- **Bind:** `OperatorBase.ApplyBind(duration, source)` / `RemoveBind()`. Bind is a separate status from Stun, with its own timer: it releases blocked enemies, makes `GetBlockCount()` return 0, and stops attacks, blocking and abilities (charges, heals, Mossmo's reactive heal). The operator is tinted purple and shows "BOUND!".
+  - Any operator with its own `Update`, attack or ability code must check `isBound` as well as `isStunned`. `BlockingSystem.CanBlock` already checks it.
+- **Enemy targetability:** `EnemyBase.CanBeTargetedBy(OperatorPosition)` is virtual and returns true by default (Hextension overrides it).
+  - `OperatorBase.CanAttackTarget` (now public) and `EnemyManager.GetEnemiesInCells` / `GetEnemiesInRadius` (the overloads that take an `OperatorPosition`) respect it.
+  - Custom targeting loops should filter their candidates through `CanAttackTarget`, as Sniper and Caster do.
+- **Enemy animation:** `EnemyBase.UpdateSpriteAnimation` / `ApplyAnimationFrame` / `UpdateFacing` are `protected virtual`, so an enemy with several animation rows (Askalaser) can swap frame sets.
+- **Custom enemy behaviour:** an enemy with its own `Update` should start with `if (!TickStatusEffects(Time.deltaTime)) return;`. That runs the hole stay, animation, trap damage, chill/stun timers and pushback, and returns false when the enemy can't act.
+  - Then use `HoldBlockedPosition`, `GetPathForwardDirection`, `MoveAlongPath` (or `MoveAlongPathBy(distance)` for a custom pace) and `CurrentGrid` as needed. Roboflame and THE ERADICATOR put their per-frame logic in a public `Step(deltaTime)` so EditMode tests can drive it.
+- **Ramping lasers** (`LightLaserVisual`, used by Castiel and Askalaser): a pixel-art beam built from three stretched 1-texel layers (core, body, glow), snapped to whole art pixels. `Fire(source, target, LaserPalette, tickInterval, onTick)`.
+  - **Driving it:** the owner calls `SetStage(0–5)` as its damage ramps (one stage per step: 5/15/30/80/100/150) and `OnDamageTick()` on every hit.
+  - **Stages:** each stage widens and brightens the beam (core 1→3 px, body 2→7 px, glow 0→14 px). Stage 1 adds the glow and sparks at the impact. Stage 2 makes the beam pulse. Stage 3 streams motes along it, with sparkles (Holy) or crackling arcs (Crimson). Stage 4 adds a width flicker and a halo ring (Holy) or heat smoke (Crimson) at the impact. Stage 5 adds a burst on every tick.
+  - **Feedback:** a stage-up flashes both ends and pops a ring at the target. Six pips above the source show the current stage.
+  - Castiel's beam shows the power of its *next* tick: it steps up right after the tick that crosses a 1.5 s mark. Askalaser's steps up continuously with its lock time (`GetLaserStageForDuration`).
+- **Heat from enemies:** `Stage4HeatHazard.AddHeatStack(op)` is public. Enemy fire attacks call it only when `StageCombatModifiers.IsHeatHazardActive` is true (Stage 4, or the sandbox on the Stage 4 map).
 - **Blocking position:** a blocked enemy stops on the boundary in front of its blocker (`EnemyBase.BlockedPosition`). Range checks for blocked enemies count both the blocker's tile and the adjacent path tile. Defenders also attack enemies in their range pattern when they aren't blocking.
 - Skip enemies with `IsInsideHole` in any targeting, blocking or status code.
 - Enemy attack timers are "time since last attack", capped at one interval. Ground melee enemies spawn ready and keep charging while walking, so they **hit their blocker immediately on contact**; air combat enemies and Sand Hulk's frontal slam work the same way. Enemy casters keep their wind-up before the first shot.

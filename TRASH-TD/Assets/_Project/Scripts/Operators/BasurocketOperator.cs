@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using TrashTD.Audio;
 using TrashTD.Combat;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
@@ -11,13 +10,14 @@ namespace TrashTD.Operators
 {
     /// <summary>
     /// Long-range explosive sniper. It can target only cells two to seven tiles
-    /// in front of it and damages the target cell plus its eight neighbors.
+    /// in front of it; its rocket blasts a circle around the target, a bit bigger than a caster's splash.
     /// </summary>
     public sealed class BasurocketOperator : SniperOperator
     {
-        private const int BlastRadius = 1;
+        /// <summary>Blast radius in tiles (caster splash is 1.5).</summary>
+        public const float BlastRadiusTiles = 1.75f;
         private const float BlastDamageMultiplier = 1f;
-        private static readonly Color BlastColor = new Color(1f, 0.25f, 0.08f);
+        private static readonly Color BlastColor = new Color(1f, 0.62f, 0.12f); // Yellow-orange: never the Eradicator's crimson
 
         public override void Attack(EnemyBase target)
         {
@@ -28,10 +28,9 @@ namespace TrashTD.Operators
             if (gridManager == null)
                 return;
 
-            Vector2Int impactPosition = gridManager.WorldToGridPosition(target.transform.position);
-            List<GridCell> blastCells = GetBlastCells(gridManager, impactPosition);
-
-            if (EnemyManager.Instance.GetEnemiesInCells(blastCells, data.position).Count == 0)
+            float radius = BlastRadiusTiles * gridManager.CellSize;
+            Vector3 aimPosition = target.transform.position;
+            if (EnemyManager.Instance.GetEnemiesInRadius(aimPosition, radius, data.position).Count == 0)
                 return;
 
             PlayAttackSound();
@@ -43,24 +42,20 @@ namespace TrashTD.Operators
                 0.18f,
                 0.1f,
                 true,
-                () => ApplyBlastDamage(gridManager, impactPosition),
+                // The rocket homes on its target, so it blows up where the target is when it lands.
+                () => ApplyBlastDamage(target != null && !target.IsDead ? target.transform.position : aimPosition, radius),
                 ProjectileStyle.Rocket);
         }
 
-        private void ApplyBlastDamage(GridManager gridManager, Vector2Int impactPosition)
+        private void ApplyBlastDamage(Vector3 center, float radius)
         {
-            if (gridManager == null || EnemyManager.Instance == null)
+            if (EnemyManager.Instance == null)
                 return;
 
-            List<GridCell> blastCells = GetBlastCells(gridManager, impactPosition);
-
-            List<Vector3> blastCellPositions = new List<Vector3>(blastCells.Count);
-            for (int i = 0; i < blastCells.Count; i++)
-                blastCellPositions.Add(blastCells[i].WorldPosition);
-            AoeBlastVisual.PlayCells(blastCellPositions, gridManager.CellSize, BlastColor, AoeStyle.Explosion);
+            AoeBlastVisual.PlayCircle(center, radius, BlastColor, AoeStyle.JunkRocket);
             PlayImpactSound(); // the explosion, even if the target moved out of the blast
 
-            List<EnemyBase> blastTargets = EnemyManager.Instance.GetEnemiesInCells(blastCells, data.position);
+            List<EnemyBase> blastTargets = EnemyManager.Instance.GetEnemiesInRadius(center, radius, data.position);
             HashSet<EnemyBase> uniqueTargets = new HashSet<EnemyBase>();
             for (int i = 0; i < blastTargets.Count; i++)
             {
@@ -72,21 +67,6 @@ namespace TrashTD.Operators
                 damage = DamageCalculator.CalculateDamage(damage, blastTarget.CurrentDEF);
                 blastTarget.TryTakeAttackDamage(damage, DamageType.Physical, this);
             }
-        }
-
-        private static List<GridCell> GetBlastCells(GridManager gridManager, Vector2Int impactPosition)
-        {
-            List<GridCell> blastCells = new List<GridCell>();
-            for (int y = -BlastRadius; y <= BlastRadius; y++)
-            {
-                for (int x = -BlastRadius; x <= BlastRadius; x++)
-                {
-                    GridCell cell = gridManager.GetCell(impactPosition.x + x, impactPosition.y + y);
-                    if (cell != null)
-                        blastCells.Add(cell);
-                }
-            }
-            return blastCells;
         }
     }
 }

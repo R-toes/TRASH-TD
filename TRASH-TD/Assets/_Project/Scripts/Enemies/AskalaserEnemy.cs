@@ -20,7 +20,7 @@ namespace TrashTD.Enemies
     /// - Arts damage type.
     /// - Low DEF, high RES.
     /// - Moves at Grunt speed (1.0 tiles/sec).
-    /// - Unblockable / immune to blocking (Caster archetype).
+    /// - Blockable (weight 1); while blocked it keeps using its State 1 / State 2 attacks.
     /// 
     /// Two Combat States:
     /// - State 1 (Global):
@@ -51,7 +51,7 @@ namespace TrashTD.Enemies
         public const float LaserTickInterval = 0.375f;
         public const float LaserStepDuration = 1.5f;
 
-        public static readonly Color LaserColor = new Color(1f, 0.95f, 0.5f, 1f);
+        public static readonly Color LaserColor = new Color(1f, 0.2f, 0.16f, 1f);
 
         [Header("Askalaser State")]
         [SerializeField] private float state1Timer = 0f;
@@ -261,6 +261,10 @@ namespace TrashTD.Enemies
             if (duration < LaserStepDuration * 5f) return 100;
             return 150;
         }
+
+        /// <summary>Ramp stage 0-5 (one per damage step), shown by the laser visual.</summary>
+        public static int GetLaserStageForDuration(float duration) =>
+            Mathf.Clamp(Mathf.FloorToInt(duration / LaserStepDuration), 0, LightLaserVisual.MaxStage);
 
         public int GetCurrentLaserDamage() => GetLaserDamageForDuration(lockDuration);
 
@@ -518,6 +522,8 @@ namespace TrashTD.Enemies
                 }
 
                 lockDuration += deltaTime;
+                if (laserVisual != null)
+                    laserVisual.SetStage(GetLaserStageForDuration(lockDuration));
                 laserTickTimer += deltaTime;
 
                 while (laserTickTimer >= LaserTickInterval)
@@ -585,7 +591,7 @@ namespace TrashTD.Enemies
                 laserVisual = LightLaserVisual.Fire(
                     muzzleTransform,
                     lockedTarget.transform,
-                    LaserColor,
+                    LaserPalette.Crimson,
                     LaserTickInterval,
                     null);
             }
@@ -620,6 +626,8 @@ namespace TrashTD.Enemies
             int damage = GetCurrentLaserDamage();
             PlayImpactSound();
             lockedTarget.TryTakeAttackDamage(damage, DamageType.Arts, this);
+            if (laserVisual != null)
+                laserVisual.OnDamageTick();
 
             // Check if target died, retreated, or activated Camouflage (e.g. Proxyshot)
             if (lockedTarget == null || !lockedTarget.IsDeployed || lockedTarget.CurrentHP <= 0 ||
@@ -675,11 +683,6 @@ namespace TrashTD.Enemies
         // ==========================================
         // Enemy Base Overrides
         // ==========================================
-
-        public override void OnBlocked(OperatorBase blocker)
-        {
-            // Enemy casters are immune to blocking per GDD 1.4.4 & 1.5
-        }
 
         public override void ForceKill()
         {

@@ -98,6 +98,19 @@ namespace TrashTD.Combat
             "..nnnnnnr..",
             "...nn......");
 
+        /// <summary>
+        /// The Eradicator's heavy warhead: a long, fat rocket with hazard stripes, a big red nose and a twin
+        /// exhaust flame. Untinted.
+        /// </summary>
+        public static Sprite HeavyRocket() => Shaded("heavyrocket", Color.white,
+            "..nn..........",
+            ".nnnmmmmmmrr..",
+            "fynmymmymmrrr.",
+            "fynmlymmymrrrr",
+            "fynmymmymmrrr.",
+            ".nnnmmmmmmrr..",
+            "..nn..........");
+
         /// <summary>A lumpy clod of sand in four tones. Untinted.</summary>
         public static Sprite SandClod()
         {
@@ -258,6 +271,39 @@ namespace TrashTD.Combat
             });
         }
 
+        /// <summary>
+        /// A scorch mark left on the ground: a ragged disc, solid in the middle and breaking into a dither at
+        /// its noisy edge. White; the effect tints it (dark).
+        /// </summary>
+        public static Sprite Scorch(int radiusPx)
+        {
+            return Cached("scorch" + radiusPx, () =>
+            {
+                int size = radiusPx * 2 + 1;
+                Texture2D texture = NewTexture(size, size, "Fx Scorch " + radiusPx);
+                float c = radiusPx;
+                for (int y = 0; y < size; y++)
+                {
+                    for (int x = 0; x < size; x++)
+                    {
+                        float d = new Vector2(x - c, y - c).magnitude / radiusPx;
+                        float edge = 0.7f + 0.3f * ValueNoise(x / 3f, y / 3f, 29);
+                        Color color = Color.clear;
+                        if (d <= edge * 0.75f) color = Color.white;
+                        else if (d <= edge && (x + y) % 2 == 0) color = new Color(1f, 1f, 1f, 0.7f);
+                        else if (d <= edge * 1.15f && x % 2 == 0 && y % 2 == 0) color = new Color(1f, 1f, 1f, 0.45f);
+                        texture.SetPixel(x, y, color);
+                    }
+                }
+                texture.Apply();
+                return ToSprite(texture);
+            });
+        }
+
+        /// <summary>A 1 px target ring for blast warnings, sized to the blast radius.</summary>
+        public static Sprite TargetRing(int radiusPx) => Cached("targetring" + radiusPx,
+            () => BuildRing("Fx TargetRing " + radiusPx, radiusPx, 1f, false));
+
         /// <summary>One grid cell of a cell-based AoE: dithered fill, 1 px rim and 4 px corner brackets.</summary>
         public static Sprite AreaCell()
         {
@@ -292,7 +338,7 @@ namespace TrashTD.Combat
         /// </summary>
         public static Sprite[] ExplosionFrames(int sizePx)
         {
-            sizePx = Mathf.Clamp(sizePx / 4 * 4, 12, 96);
+            sizePx = Mathf.Clamp(sizePx / 4 * 4, 12, 128);
             return CachedFrames("explosion" + sizePx, () =>
             {
                 Color[] palette =

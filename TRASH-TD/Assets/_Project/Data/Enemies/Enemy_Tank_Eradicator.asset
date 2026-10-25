@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f34436990ad48f4d90f0736ce7dcdd3, type: 3}
+  m_Name: Enemy_Tank_Eradicator
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.EnemyData
+  enemyName: THE ERADICATOR
+  archetype: 2
+  movementType: 0
+  baseHP: 1500
+  baseATK: 60
+  baseDEF: 50
+  baseRES: 10
+  moveSpeed: 0.4
+  damageType: 0
+  attackProjectileColor: {r: 1, g: 0.55, b: 0.18, a: 1}
+  usesSandProjectileVisual: 0
+  attackInterval: 2
+  attackRange: 3
+  frontAreaAttackTiles: 0
+  isUnblockable: 0
+  operatorAttackMissChance: 0
+  blockWeight: 2
+  isAcidRainImmune: 0
+  isAcidTileImmune: 0
+  lifePointCost: 2
+  sprite: {fileID: -812050756258117261, guid: 3eaac4298076a0f43aa403fde8aaaf15, type: 3}
+  animationFrames:
+  - {fileID: -812050756258117261, guid: 3eaac4298076a0f43aa403fde8aaaf15, type: 3}
+  - {fileID: 6988191094431027829, guid: 3eaac4298076a0f43aa403fde8aaaf15, type: 3}
+  - {fileID: -7445935230263261914, guid: 3eaac4298076a0f43aa403fde8aaaf15, type: 3}
+  - {fileID: -6474214151231470620, guid: 3eaac4298076a0f43aa403fde8aaaf15, type: 3}
+  - {fileID: 6423476325718516410, guid: 3eaac4298076a0f43aa403fde8aaaf15, type: 3}
+  - {fileID: -6788099468539307656, guid: 3eaac4298076a0f43aa403fde8aaaf15, type: 3}
+  - {fileID: -4167309429868174119, guid: 3eaac4298076a0f43aa403fde8aaaf15, type: 3}
+  - {fileID: -1190759884280220669, guid: 3eaac4298076a0f43aa403fde8aaaf15, type: 3}
+  animationFrameRate: 8
+  visualScale: 2
+  visualOffset: {x: 0, y: 0.2, z: 0}
+  enemyPrefab: {fileID: 4017071742725256548, guid: 533985cfcdac56c51a603e330fdaf29d, type: 3}

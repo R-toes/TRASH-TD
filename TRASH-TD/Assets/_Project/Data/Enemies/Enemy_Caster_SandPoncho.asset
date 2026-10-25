@@ -25,7 +25,7 @@ MonoBehaviour:
   usesSandProjectileVisual: 1
   attackInterval: 2
   attackRange: 0
-  isUnblockable: 1
+  isUnblockable: 0
   operatorAttackMissChance: 0.2
   blockWeight: 1
   lifePointCost: 1

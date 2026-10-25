@@ -56,7 +56,7 @@ namespace TrashTD.Operators
                 laser = LightLaserVisual.Fire(
                     transform,
                     target,
-                    new Color(1f, 0.98f, 0.65f, 1f),
+                    LaserPalette.Holy,
                     DamageTickInterval,
                     ApplyBeamTick);
             }
@@ -95,15 +95,12 @@ namespace TrashTD.Operators
             return bestTarget;
         }
 
-        private int GetCurrentBeamDamage()
-        {
-            if (lockDuration < LockStepDuration) return 5;
-            if (lockDuration < LockStepDuration * 2f) return 15;
-            if (lockDuration < LockStepDuration * 3f) return 30;
-            if (lockDuration < LockStepDuration * 4f) return 80;
-            if (lockDuration < LockStepDuration * 5f) return 100;
-            return 150;
-        }
+        private static readonly int[] BeamDamageByStage = { 5, 15, 30, 80, 100, 150 };
+
+        /// <summary>Ramp stage 0-5: one step every LockStepDuration of lock.</summary>
+        private int GetBeamStage() => Mathf.Min(BeamDamageByStage.Length - 1, Mathf.FloorToInt(lockDuration / LockStepDuration));
+
+        private int GetCurrentBeamDamage() => BeamDamageByStage[GetBeamStage()];
 
         private void ApplyBeamTick()
         {
@@ -112,6 +109,12 @@ namespace TrashTD.Operators
             int damage = GetCurrentBeamDamage();
             lockedTarget.TryTakeAttackDamage(damage, DamageType.Arts, this);
             lockDuration += DamageTickInterval;
+
+            if (laser != null)
+            {
+                laser.OnDamageTick();
+                laser.SetStage(GetBeamStage()); // The beam shows the power of the next tick
+            }
 
             if (spriteAnim != null)
             {

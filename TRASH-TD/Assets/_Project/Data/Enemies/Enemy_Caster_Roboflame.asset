@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f34436990ad48f4d90f0736ce7dcdd3, type: 3}
+  m_Name: Enemy_Caster_Roboflame
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.EnemyData
+  enemyName: Roboflame
+  archetype: 3
+  movementType: 0
+  baseHP: 400
+  baseATK: 20
+  baseDEF: 20
+  baseRES: 25
+  moveSpeed: 0.7
+  damageType: 1
+  attackProjectileColor: {r: 1, g: 0.55, b: 0.15, a: 1}
+  usesSandProjectileVisual: 0
+  attackInterval: 0.7
+  attackRange: 2
+  frontAreaAttackTiles: 0
+  isUnblockable: 0
+  operatorAttackMissChance: 0
+  blockWeight: 1
+  isAcidRainImmune: 0
+  isAcidTileImmune: 0
+  lifePointCost: 1
+  sprite: {fileID: 3921802857699500693, guid: c23a5216256fb1d449108db383beec68, type: 3}
+  animationFrames:
+  - {fileID: 3921802857699500693, guid: c23a5216256fb1d449108db383beec68, type: 3}
+  - {fileID: 2577328954169323472, guid: c23a5216256fb1d449108db383beec68, type: 3}
+  - {fileID: -8494315030529572762, guid: c23a5216256fb1d449108db383beec68, type: 3}
+  - {fileID: -7672118031781343636, guid: c23a5216256fb1d449108db383beec68, type: 3}
+  animationFrameRate: 8
+  visualScale: 1
+  visualOffset: {x: 0, y: 0, z: 0}
+  enemyPrefab: {fileID: 4017071742725256548, guid: 931450fc59c004e429d00ded43ad221a, type: 3}

@@ -110,6 +110,112 @@ namespace TrashTD.Combat
             Smoke(position, new Color(0.38f, 0.36f, 0.35f, 0.75f), Mathf.Clamp(Mathf.RoundToInt(radius * 4f), 2, 8), radius * 0.45f, 0.9f, 0.4f, delay + 0.18f);
         }
 
+        private static readonly Color[] JunkColors =
+        {
+            new Color(0.86f, 0.2f, 0.16f),  // soda-can red
+            new Color(0.25f, 0.7f, 0.3f),   // bottle green
+            new Color(0.3f, 0.55f, 0.95f),  // can blue
+            new Color(0.8f, 0.82f, 0.86f),  // tin
+            new Color(1f, 0.85f, 0.3f)      // label yellow
+        };
+
+        /// <summary>
+        /// Basurocket's junk rocket: one bright yellow-orange fireball with a burst of colourful scrap (can and
+        /// bottle bits) flung out and tumbling down. Clean and bright, no smoke column.
+        /// </summary>
+        public static void JunkRocketBlast(Vector2 position, float radius)
+        {
+            Explosion(position, radius * 0.85f);
+            Flash(position, new Color(1f, 0.9f, 0.4f), true);
+            Sparks(position, new Color(1f, 0.85f, 0.3f), 10, radius * 5f, 0.3f, 2f, big: true);
+
+            int scraps = Mathf.Clamp(Mathf.RoundToInt(radius * 8f), 8, 16);
+            for (int i = 0; i < scraps; i++)
+            {
+                Vector2 dir = new Vector2(Random.Range(-1f, 1f), Random.Range(0.2f, 1f)).normalized;
+                Color color = JunkColors[i % JunkColors.Length];
+                PixelParticles.Emit(new PixelParticle
+                {
+                    Position = position,
+                    Velocity = dir * radius * Random.Range(3f, 5f),
+                    Life = Random.Range(0.55f, 0.8f),
+                    Gravity = 9f,
+                    Drag = 1.2f,
+                    StartColor = color,
+                    EndColor = new Color(color.r, color.g, color.b, 0f),
+                    Sprite = i % 3 == 0 ? CombatFxArt.Dot1() : CombatFxArt.Dot2(),
+                    Rotation = Random.Range(0f, 90f),
+                    SortingOrder = ImpactSortingOrder
+                });
+            }
+        }
+
+        /// <summary>
+        /// THE ERADICATOR's heavy ordnance: a crimson-tinted fireball, dark shrapnel thrown wide, a column of
+        /// black smoke, a second trailing shockwave and a scorch mark left on the ground for a moment.
+        /// </summary>
+        public static void HeavyOrdnanceBlast(Vector2 position, float radius)
+        {
+            int sizePx = Mathf.RoundToInt(radius * 0.85f * 2.2f * CombatFxArt.PixelsPerUnit);
+            PixelParticles.Emit(new PixelParticle
+            {
+                Position = position,
+                Life = 0.5f,
+                StartColor = new Color(1f, 0.6f, 0.55f),
+                EndColor = new Color(0.75f, 0.35f, 0.35f, 0.85f),
+                Frames = CombatFxArt.ExplosionFrames(sizePx),
+                SortingOrder = ExplosionSortingOrder
+            });
+            Flash(position, new Color(1f, 0.3f, 0.25f), true);
+
+            // Shrapnel: dark metal chunks thrown wide and falling back, plus red-hot fragments
+            Sparks(position, new Color(0.42f, 0.42f, 0.48f), 14, radius * 6f, 0.55f, 6f, big: true);
+            Sparks(position, new Color(1f, 0.32f, 0.18f), 10, radius * 4.5f, 0.4f, 3f);
+
+            // A rising column of thick black smoke
+            for (int i = 0; i < 8; i++)
+            {
+                PixelParticles.Emit(new PixelParticle
+                {
+                    Position = position + Random.insideUnitCircle * radius * 0.35f,
+                    Velocity = new Vector2(Random.Range(-0.15f, 0.15f), Random.Range(0.5f, 0.9f)) * radius,
+                    Life = Random.Range(1.1f, 1.5f),
+                    Delay = 0.12f + Random.Range(0f, 0.15f),
+                    Drag = 0.8f,
+                    StartColor = new Color(0.13f, 0.1f, 0.1f, 0.85f),
+                    EndColor = new Color(0.22f, 0.2f, 0.2f, 0f),
+                    StartScale = 2f,
+                    EndScale = 3f,
+                    Frames = CombatFxArt.SmokeFrames(),
+                    SortingOrder = ExplosionSortingOrder + 1
+                });
+            }
+
+            // Second shockwave ring, trailing the area's own
+            int radiusPx = Mathf.Max(3, Mathf.RoundToInt(radius * CombatFxArt.PixelsPerUnit));
+            PixelParticles.Emit(new PixelParticle
+            {
+                Position = position,
+                Life = 0.28f,
+                Delay = 0.12f,
+                StartColor = new Color(1f, 0.25f, 0.2f, 0.9f),
+                EndColor = new Color(0.6f, 0.05f, 0.05f, 0f),
+                Frames = CombatFxArt.ShockwaveFrames(radiusPx),
+                SortingOrder = ExplosionSortingOrder - 4
+            });
+
+            // Scorch mark on the ground, beneath the units
+            PixelParticles.Emit(new PixelParticle
+            {
+                Position = position,
+                Life = 1.8f,
+                StartColor = new Color(0.08f, 0.05f, 0.04f, 0.6f),
+                EndColor = new Color(0.08f, 0.05f, 0.04f, 0f),
+                Sprite = CombatFxArt.Scorch(Mathf.RoundToInt(radiusPx * 0.75f)),
+                SortingOrder = 3
+            });
+        }
+
         /// <summary>A small 1 px ring popping open.</summary>
         public static void Pop(Vector2 position, Color color, float delay = 0f)
         {

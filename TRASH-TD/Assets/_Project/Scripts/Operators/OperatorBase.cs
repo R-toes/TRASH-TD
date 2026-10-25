@@ -373,9 +373,10 @@ namespace TrashTD.Operators
         public virtual bool TryBlock(EnemyBase enemy)
         {
             if (enemy == null || !isDeployed || isStunned || isBound) return false;
-            if (blockedEnemies.Count >= GetBlockCount()) return false;
+            int freeSlots = GetBlockCount() - GetCurrentBlockCount();
+            if (freeSlots < GetBlockWeight(enemy)) return false;
             if (enemy.Data != null && enemy.Data.isUnblockable) return false;
-            if (enemy is Enemies.OculoidCarrierEnemy carrier && (GetBlockCount() - blockedEnemies.Count) <= carrier.BlockCountReduction) return false;
+            if (enemy is Enemies.OculoidCarrierEnemy carrier && freeSlots <= carrier.BlockCountReduction) return false;
 
             blockedEnemies.Add(enemy);
             enemy.OnBlocked(this);
@@ -396,14 +397,25 @@ namespace TrashTD.Operators
         public void ModifyBlockCount(int delta)
         {
             blockCountModifier += delta;
-            while (blockedEnemies.Count > GetBlockCount() && blockedEnemies.Count > 0)
+            while (GetCurrentBlockCount() > GetBlockCount() && blockedEnemies.Count > 0)
             {
                 ReleaseBlock(blockedEnemies[blockedEnemies.Count - 1]);
             }
         }
 
         public int GetBlockCount() => (isStunned || isBound || data == null) ? 0 : Mathf.Max(0, data.blockCount + blockCountModifier);
-        public int GetCurrentBlockCount() => blockedEnemies.Count;
+
+        /// <summary>Block slots in use: each blocked enemy takes its EnemyData.blockWeight (heavy units take 2).</summary>
+        public int GetCurrentBlockCount()
+        {
+            int used = 0;
+            for (int i = 0; i < blockedEnemies.Count; i++)
+                used += GetBlockWeight(blockedEnemies[i]);
+            return used;
+        }
+
+        public static int GetBlockWeight(EnemyBase enemy) =>
+            enemy != null && enemy.Data != null ? Mathf.Max(1, enemy.Data.blockWeight) : 1;
 
         // ========================
         // Stun System

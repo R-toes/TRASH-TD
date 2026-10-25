@@ -108,8 +108,11 @@ namespace TrashTD.Core.GameLoop
             OperatorHeatBar.ShowFor(op);
         }
 
-        private static void AddHeatStack(OperatorBase op)
+        /// <summary>Adds one heat stack (max 5); at 5 the operator ignites. Also used by enemy fire attacks (Roboflame, Eradicator).</summary>
+        public static void AddHeatStack(OperatorBase op)
         {
+            if (op == null) return;
+
             int previousStacks = op.HeatStacks;
             op.HeatStacks = Mathf.Min(MaxHeatStacks, op.HeatStacks + 1);
             if (op.HeatStacks > previousStacks)

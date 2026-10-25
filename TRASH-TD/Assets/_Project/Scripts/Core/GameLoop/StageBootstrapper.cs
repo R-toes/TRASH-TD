@@ -27,8 +27,6 @@ namespace TrashTD.Core.GameLoop
         private const int Stage3BackgroundFrameHeight = 224;
         private const float Stage3BackgroundAnimationFrameDuration = 0.12f;
         private static Sprite weatherDotSprite;
-        private static Texture2D dustCloudTexture;
-        private static Material dustCloudMaterial;
         private static readonly Color TalentRangeColor = new Color(1f, 0.55f, 0.08f, 0.45f);
 
         private const string DefaultSandboxMapStageId = "STAGE_01";
@@ -972,74 +970,9 @@ namespace TrashTD.Core.GameLoop
 
         private void CreateStage3SandstormVisuals()
         {
-            float cellSize = gridManager.CellSize;
-            float mapWidth = stageData.gridWidth * cellSize;
-            float mapHeight = stageData.gridHeight * cellSize;
-            Vector3 gridBottomLeft = gridManager.GridToWorldPosition(0, 0)
-                - new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f);
-            Vector3 mapCenter = gridBottomLeft + new Vector3(mapWidth * 0.5f, mapHeight * 0.5f, 0f);
-
-            var weatherRoot = new GameObject("Stage3SandstormVisuals");
-            weatherRoot.transform.SetParent(transform, false);
-
-            ParticleSystem wind = CreateWeatherParticleSystem(
-                weatherRoot.transform,
-                "SandstormWind",
-                new Color(0.95f, 0.78f, 0.48f, 0.14f),
-                new Vector3(0.12f, 0.035f, 0.02f),
-                2.8f,
-                12f,
-                7);
-            wind.transform.position = mapCenter;
-            var windShape = wind.shape;
-            windShape.shapeType = ParticleSystemShapeType.Box;
-            windShape.scale = new Vector3(mapWidth + 1f, mapHeight, 0.1f);
-            var windVelocity = wind.velocityOverLifetime;
-            windVelocity.enabled = true;
-            windVelocity.space = ParticleSystemSimulationSpace.World;
-            windVelocity.x = new ParticleSystem.MinMaxCurve(3f);
-            windVelocity.y = new ParticleSystem.MinMaxCurve(0f);
-
-            var windTrails = wind.trails;
-            windTrails.enabled = true;
-            windTrails.mode = ParticleSystemTrailMode.PerParticle;
-            windTrails.ratio = 0.45f;
-            windTrails.lifetime = 0.45f;
-            windTrails.dieWithParticles = true;
-            windTrails.widthOverTrail = new ParticleSystem.MinMaxCurve(
-                0.35f,
-                AnimationCurve.EaseInOut(0f, 1f, 1f, 0f));
-            windTrails.colorOverLifetime = new ParticleSystem.MinMaxGradient(
-                new Color(0.95f, 0.78f, 0.48f, 0.07f));
-            wind.GetComponent<ParticleSystemRenderer>().trailMaterial = GetWeatherParticleMaterial();
-            wind.Play();
-
-            ParticleSystem dust = CreateWeatherParticleSystem(
-                weatherRoot.transform,
-                "SandstormDust",
-                new Color(0.78f, 0.62f, 0.39f, 0.5f),
-                new Vector3(0.3f, 0.2f, 0.02f),
-                9f,
-                28f,
-                7);
-            dust.transform.position = mapCenter;
-            var dustShape = dust.shape;
-            dustShape.shapeType = ParticleSystemShapeType.Box;
-            dustShape.scale = new Vector3(mapWidth + 1f, mapHeight, 0.1f);
-            var dustMain = dust.main;
-            dustMain.startSizeX = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
-            dustMain.startSizeY = new ParticleSystem.MinMaxCurve(0.3f, 0.55f);
-            var dustVelocity = dust.velocityOverLifetime;
-            dustVelocity.enabled = true;
-            dustVelocity.space = ParticleSystemSimulationSpace.World;
-            dustVelocity.x = new ParticleSystem.MinMaxCurve(1.2f, 2f);
-            dustVelocity.y = new ParticleSystem.MinMaxCurve(-0.08f, 0.08f);
-            // All three axes must use the same curve mode (two constants), or Unity errors.
-            dustVelocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
-            ParticleSystemRenderer dustRenderer = dust.GetComponent<ParticleSystemRenderer>();
-            dustRenderer.sharedMaterial = GetDustCloudMaterial();
-            dustRenderer.sortingOrder = 8;
-            dust.Play();
+            GameObject weatherObj = new GameObject("Stage3SandstormVisuals");
+            weatherObj.transform.SetParent(transform, false);
+            weatherObj.AddComponent<Stage3SandstormVisuals>().Initialize(gridManager, stageData);
         }
 
         private void CreateAcidRainDrops(Transform parent, Vector3 gridBottomLeft, float mapWidth, float mapHeight, float cellSize)
@@ -1102,140 +1035,6 @@ namespace TrashTD.Core.GameLoop
             }
 
             return weatherDotSprite;
-        }
-
-        private static ParticleSystem CreateWeatherParticleSystem(
-            Transform parent,
-            string objectName,
-            Color color,
-            Vector3 particleSize,
-            float lifetime,
-            float emissionRate,
-            int sortingOrder)
-        {
-            var effectObject = new GameObject(objectName);
-            effectObject.transform.SetParent(parent, false);
-
-            var particles = effectObject.AddComponent<ParticleSystem>();
-            var main = particles.main;
-            main.loop = true;
-            main.playOnAwake = false;
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 1000;
-            main.startLifetime = lifetime;
-            main.startSpeed = 0f;
-            main.startSize3D = true;
-            main.startSizeX = particleSize.x;
-            main.startSizeY = particleSize.y;
-            main.startSizeZ = particleSize.z;
-            main.startColor = color;
-
-            var emission = particles.emission;
-            emission.rateOverTime = emissionRate;
-
-            var renderer = effectObject.GetComponent<ParticleSystemRenderer>();
-            renderer.renderMode = ParticleSystemRenderMode.Billboard;
-            renderer.sortingOrder = sortingOrder;
-            renderer.sharedMaterial = GetWeatherParticleMaterial();
-
-            var colorOverLifetime = particles.colorOverLifetime;
-            colorOverLifetime.enabled = true;
-            var fade = new Gradient();
-            fade.SetKeys(
-                new[]
-                {
-                    new GradientColorKey(color, 0f),
-                    new GradientColorKey(color, 1f)
-                },
-                new[]
-                {
-                    new GradientAlphaKey(0f, 0f),
-                    new GradientAlphaKey(color.a, 0.15f),
-                    new GradientAlphaKey(color.a, 0.8f),
-                    new GradientAlphaKey(0f, 1f)
-                });
-            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(fade);
-
-            return particles;
-        }
-
-        private static Material weatherParticleMaterial;
-
-        private static Material GetDustCloudMaterial()
-        {
-            if (dustCloudMaterial != null) return dustCloudMaterial;
-
-            Shader shader = Shader.Find("Sprites/Default");
-            if (shader == null)
-            {
-                Material weatherMaterial = GetWeatherParticleMaterial();
-                if (weatherMaterial == null) return null;
-                dustCloudMaterial = new Material(weatherMaterial);
-            }
-            else
-            {
-                dustCloudMaterial = new Material(shader);
-            }
-
-            dustCloudMaterial.name = "Level3 Dust Cloud Particles";
-            dustCloudMaterial.mainTexture = GetDustCloudTexture();
-            return dustCloudMaterial;
-        }
-
-        private static Texture2D GetDustCloudTexture()
-        {
-            if (dustCloudTexture != null) return dustCloudTexture;
-
-            const int textureSize = 64;
-            dustCloudTexture = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false)
-            {
-                name = "Level3 Soft Dust Cloud",
-                filterMode = FilterMode.Bilinear,
-                wrapMode = TextureWrapMode.Clamp
-            };
-
-            var pixels = new Color[textureSize * textureSize];
-            for (int y = 0; y < textureSize; y++)
-            {
-                for (int x = 0; x < textureSize; x++)
-                {
-                    float dx = (x + 0.5f) / textureSize * 2f - 1f;
-                    float dy = (y + 0.5f) / textureSize * 2f - 1f;
-                    float radius = Mathf.Sqrt(dx * dx + dy * dy);
-                    float edgeVariation =
-                        Mathf.Sin(dx * 5f + dy * 3f) * 0.06f +
-                        Mathf.Sin(dx * 9f - dy * 7f) * 0.035f;
-                    float edge = 0.88f + edgeVariation;
-                    float alpha = 1f - Mathf.SmoothStep(edge - 0.5f, edge, radius);
-                    alpha *= alpha;
-                    pixels[y * textureSize + x] = new Color(1f, 1f, 1f, alpha);
-                }
-            }
-
-            dustCloudTexture.SetPixels(pixels);
-            dustCloudTexture.Apply();
-            return dustCloudTexture;
-        }
-
-        private static Material GetWeatherParticleMaterial()
-        {
-            if (weatherParticleMaterial != null) return weatherParticleMaterial;
-
-            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            if (shader == null) shader = Shader.Find("Particles/Standard Unlit");
-            if (shader == null) shader = Shader.Find("Sprites/Default");
-            if (shader == null)
-            {
-                Debug.LogError("StageBootstrapper: No supported shader found for Level 3 weather particles.");
-                return null;
-            }
-
-            weatherParticleMaterial = new Material(shader)
-            {
-                name = "Level3 Weather Particles",
-                mainTexture = Texture2D.whiteTexture
-            };
-            return weatherParticleMaterial;
         }
 
         private void UpdateStage6AcidRainDamage()

@@ -24,7 +24,7 @@ MonoBehaviour:
   attackProjectileColor: {r: 0.55, g: 0.9, b: 0.3, a: 1}
   attackInterval: 2
   attackRange: 0
-  isUnblockable: 1
+  isUnblockable: 0
   operatorAttackMissChance: 0
   blockWeight: 1
   lifePointCost: 1

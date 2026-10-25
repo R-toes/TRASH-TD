@@ -15,6 +15,7 @@ namespace TrashTD.Combat
         FireOrb,  // Fire magic: orb shedding flames, bursts into a small fireball
         Frost,    // Ice shard trailing frost, shatters on impact
         Rocket,   // Junk rocket with a smoke trail (its blast is drawn by the AoE)
+        HeavyRocket, // Eradicator's every-4th warhead: bigger, glowing, trailing fire (blast drawn by the AoE)
         Quill,    // Spine/needle
         Heal,     // Healing cross lobbed to an ally
         Bubble,   // Wobbling bubble lobbed to an ally, pops on arrival
@@ -167,7 +168,7 @@ namespace TrashTD.Combat
             visual.body.sprite = GetBodySprite(style, color);
             visual.body.sortingOrder = BodySortingOrder;
 
-            if (style == ProjectileStyle.ArtsOrb || style == ProjectileStyle.FireOrb)
+            if (style == ProjectileStyle.ArtsOrb || style == ProjectileStyle.FireOrb || style == ProjectileStyle.HeavyRocket)
             {
                 var haloObject = new GameObject("Halo");
                 haloObject.transform.SetParent(projectile.transform, false);
@@ -195,6 +196,7 @@ namespace TrashTD.Combat
                 ProjectileStyle.FireOrb => CombatFxArt.Orb(color),
                 ProjectileStyle.Frost => CombatFxArt.Shard(color),
                 ProjectileStyle.Rocket => CombatFxArt.Rocket(),
+                ProjectileStyle.HeavyRocket => CombatFxArt.HeavyRocket(),
                 ProjectileStyle.Quill => CombatFxArt.Quill(color),
                 ProjectileStyle.Heal => CombatFxArt.HealCross(color),
                 ProjectileStyle.Bubble => CombatFxArt.Bubble(color),
@@ -220,7 +222,7 @@ namespace TrashTD.Combat
         private static bool IsOriented(ProjectileStyle style)
         {
             return style == ProjectileStyle.Bolt || style == ProjectileStyle.Bullet || style == ProjectileStyle.Frost ||
-                   style == ProjectileStyle.Rocket || style == ProjectileStyle.Quill;
+                   style == ProjectileStyle.Rocket || style == ProjectileStyle.HeavyRocket || style == ProjectileStyle.Quill;
         }
 
         private void ApplyOrientation(Vector2 direction)
@@ -242,6 +244,11 @@ namespace TrashTD.Combat
                 case ProjectileStyle.Rocket:
                     CombatFx.Flash(muzzle, new Color(1f, 0.6f, 0.2f), true);
                     CombatFx.Smoke(start, new Color(0.62f, 0.6f, 0.58f, 0.6f), 3, 0.12f, 0.5f, 0.25f, sortingOrder: CombatFx.TrailSortingOrder);
+                    break;
+                case ProjectileStyle.HeavyRocket:
+                    CombatFx.Flash(muzzle, color, true);
+                    CombatFx.Sparks(muzzle, new Color(1f, 0.6f, 0.2f), 8, 2.6f, 0.25f, direction: -direction, coneDegrees: 120f, big: true);
+                    CombatFx.Smoke(start, new Color(0.5f, 0.48f, 0.46f, 0.7f), 6, 0.2f, 0.7f, 0.3f, sortingOrder: CombatFx.TrailSortingOrder);
                     break;
                 case ProjectileStyle.ArtsOrb:
                 case ProjectileStyle.FireOrb:
@@ -328,6 +335,7 @@ namespace TrashTD.Combat
             {
                 ProjectileStyle.Bullet => 1f,
                 ProjectileStyle.FireOrb => 2f,
+                ProjectileStyle.HeavyRocket => 2f,
                 ProjectileStyle.Bolt => 2f,
                 ProjectileStyle.Pellet => 2f,
                 ProjectileStyle.Heal => 6f,
@@ -440,6 +448,33 @@ namespace TrashTD.Combat
                     });
                     break;
 
+                case ProjectileStyle.HeavyRocket:
+                    Vector2 exhaust = position - direction * CombatFxArt.Pixel * 7f;
+                    PixelParticles.Emit(new PixelParticle
+                    {
+                        Position = exhaust + Random.insideUnitCircle * CombatFxArt.Pixel * 2f,
+                        Velocity = new Vector2(Random.Range(-0.15f, 0.15f), Random.Range(0.05f, 0.25f)),
+                        Life = Random.Range(0.6f, 0.85f),
+                        Drag = 1f,
+                        StartColor = new Color(0.42f, 0.4f, 0.4f, 0.8f),
+                        EndColor = new Color(0.25f, 0.24f, 0.24f, 0f),
+                        Frames = CombatFxArt.SmokeFrames(),
+                        SortingOrder = CombatFx.TrailSortingOrder - 1
+                    });
+                    PixelParticles.Emit(new PixelParticle
+                    {
+                        Position = exhaust,
+                        Velocity = -direction * 1.2f + Random.insideUnitCircle * 0.4f,
+                        Life = Random.Range(0.12f, 0.2f),
+                        StartColor = new Color(1f, 0.95f, 0.6f, 1f),
+                        EndColor = new Color(1f, 0.25f, 0.05f, 0f),
+                        StartScale = 1f,
+                        EndScale = 2f,
+                        Sprite = CombatFxArt.Dot2(),
+                        SortingOrder = CombatFx.TrailSortingOrder
+                    });
+                    break;
+
                 case ProjectileStyle.Heal:
                     PixelParticles.Emit(new PixelParticle
                     {
@@ -533,6 +568,10 @@ namespace TrashTD.Combat
                     break;
                 case ProjectileStyle.Rocket:
                     CombatFx.Flash(position, new Color(1f, 0.6f, 0.2f), true);
+                    break;
+                case ProjectileStyle.HeavyRocket:
+                    CombatFx.Flash(position, color, true);
+                    CombatFx.Sparks(position, new Color(1f, 0.55f, 0.15f), 10, 3.2f, 0.35f, 3f, big: true);
                     break;
                 case ProjectileStyle.Heal:
                     CombatFx.Crosses(position, color, 3, 0.12f, true);

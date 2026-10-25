@@ -300,6 +300,52 @@ namespace TrashTD.Enemies
             }
         }
 
+        /// <summary>
+        /// Per-frame upkeep for enemies with their own Update: hole stay, animation, trap damage, chill/stun
+        /// timers and pushback. Returns false when the enemy can't act this frame.
+        /// </summary>
+        protected bool TickStatusEffects(float deltaTime)
+        {
+            if (isDead) return false;
+
+            if (isInsideHole)
+            {
+                UpdateHoleStay(deltaTime);
+                return false;
+            }
+
+            UpdateSpriteAnimation(deltaTime);
+            UpdateTrapDamage(deltaTime);
+            if (isDead) return false;
+
+            UpdateChillStatus(deltaTime);
+            if (isFrozen || isStunned) return false;
+
+            if (isPushingBack)
+            {
+                UpdatePushback();
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>Walks into (and then holds) the stopping point in front of the blocker.</summary>
+        protected void HoldBlockedPosition(float deltaTime)
+        {
+            if (Vector3.Distance(transform.position, blockedPosition) > 0.02f)
+            {
+                UpdateFacing(blockedPosition.x - transform.position.x);
+                transform.position = Vector3.MoveTowards(transform.position, blockedPosition, currentMoveSpeed * deltaTime);
+            }
+            else
+            {
+                transform.position = blockedPosition;
+            }
+        }
+
+        protected GridManager CurrentGrid => gridManager;
+
         private void ChargeMeleeAttack(float deltaTime)
         {
             if (data == null) return;
@@ -353,7 +399,11 @@ namespace TrashTD.Enemies
                 }
             }
 
-            MoveAlongPath();
+            // A blocked caster holds in front of its blocker and keeps shooting its usual targets.
+            if (isBlocked)
+                HoldBlockedPosition(deltaTime);
+            else
+                MoveAlongPath();
         }
 
         protected void UpdateFrontalAreaAttackBehavior(int tileRange)
@@ -464,7 +514,7 @@ namespace TrashTD.Enemies
             return targets;
         }
 
-        private Vector2Int GetPathForwardDirection()
+        protected Vector2Int GetPathForwardDirection()
         {
             if (path == null) return Vector2Int.zero;
 
@@ -701,12 +751,17 @@ namespace TrashTD.Enemies
         /// </summary>
         protected virtual void MoveAlongPath()
         {
+            MoveAlongPathBy(currentMoveSpeed * Time.deltaTime);
+        }
+
+        /// <summary>Moves up to <paramref name="step"/> world units along the path (for enemies that set their own pace).</summary>
+        protected void MoveAlongPathBy(float step)
+        {
             if (path == null || currentPathIndex >= path.Count)
                 return;
 
             Vector3 targetPos = path[currentPathIndex];
             UpdateFacing(targetPos.x - transform.position.x);
-            float step = currentMoveSpeed * Time.deltaTime;
 
             transform.position = Vector3.MoveTowards(transform.position, targetPos, step);
 
@@ -1212,6 +1267,9 @@ namespace TrashTD.Enemies
         protected virtual void AttackBlocker()
         {
             if (blockingOperator == null) return;
+
+            // Casters never melee their blocker; they keep their own ranged attacks (Askalaser, Hextension).
+            if (data != null && data.archetype == EnemyArchetype.Caster) return;
 
             attackTimer += Time.deltaTime;
             if (attackTimer >= GetEffectiveAttackInterval())

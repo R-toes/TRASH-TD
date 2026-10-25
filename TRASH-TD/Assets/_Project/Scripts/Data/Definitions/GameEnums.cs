@@ -109,7 +109,7 @@ namespace TrashTD.Data
         Grunt,      // Basic ground unit
         Rusher,     // Fast movement
         Tank,       // High HP/DEF
-        Caster,     // Ranged, ignores blockers
+        Caster,     // Ranged; blockable (weight 1), keeps its ranged attacks while blocked
         Flyer       // Ignores ground path (Air movement)
     }
 

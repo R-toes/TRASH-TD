@@ -1200,7 +1200,7 @@ namespace TrashTD.Editor
                 : LoadSprite("tex_enemy_caster.png");
             var casterPrefab = CreateOrGetEnemyPrefab("Prefab_Enemy_Caster", casterSprite, EnemyArchetype.Caster);
             var smogCaster = CreateEnemy("Enemy_Caster_Smog", "Smog Caster", EnemyArchetype.Caster, EnemyMovementType.Ground,
-                hp: 110, atk: 35, def: 10, res: 15, speed: 0.85f, isUnblockable: true,
+                hp: 110, atk: 35, def: 10, res: 15, speed: 0.85f, isUnblockable: false,
                 casterSprite, casterPrefab);
             if (hasAllSmogCasterFrames)
             {
@@ -1212,7 +1212,7 @@ namespace TrashTD.Editor
             var sandPonchoSprite = LoadSprite("Sand Poncho Enemy Sheet.png", "Sand Poncho Enemy Sheet_0");
             var sandPoncho = CreateEnemy("Enemy_Caster_SandPoncho", "Sand Poncho", EnemyArchetype.Caster,
                 EnemyMovementType.Ground, hp: 110, atk: 35, def: 10, res: 15, speed: 0.65f,
-                isUnblockable: true, sandPonchoSprite, casterPrefab);
+                isUnblockable: false, sandPonchoSprite, casterPrefab);
             sandPoncho.damageType = DamageType.Arts;
             sandPoncho.operatorAttackMissChance = 0.2f;
             sandPoncho.attackProjectileColor = new Color(0.95f, 0.72f, 0.34f);
