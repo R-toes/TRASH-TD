@@ -80,7 +80,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingOrder: 5
-  m_Sprite: {fileID: -7339511831693593426, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
+  m_Sprite: {fileID: -1433936279, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -116,9 +116,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15730cd9b1a04c21b3c152b454d2f53a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
+  frameDuration: 0.125
   frames:
-  - {fileID: -7339511831693593426, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
-  - {fileID: 6027439898363060179, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
-  - {fileID: 6314478493991636238, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
-  - {fileID: -8447856876888761679, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
+  - {fileID: -1433936279, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
+  - {fileID: -1852208288, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
+  - {fileID: 1991774566, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
+  - {fileID: -1225885546, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
+  - {fileID: -1729168255, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
+  - {fileID: -468944462, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
+  - {fileID: -1557945625, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
+  - {fileID: 1602364546, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
 

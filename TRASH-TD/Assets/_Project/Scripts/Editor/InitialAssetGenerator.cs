@@ -374,9 +374,15 @@ namespace TrashTD.Editor
             var staggerFrame1 = LoadSprite("Stag-ger-Sheet.png", "Stag-ger-Sheet_1");
             var staggerFrame2 = LoadSprite("Stag-ger-Sheet.png", "Stag-ger-Sheet_2");
             var staggerFrame3 = LoadSprite("Stag-ger-Sheet.png", "Stag-ger-Sheet_3");
+            var staggerFrame4 = LoadSprite("Stag-ger-Sheet.png", "Stag-ger-Sheet_4");
+            var staggerFrame5 = LoadSprite("Stag-ger-Sheet.png", "Stag-ger-Sheet_5");
+            var staggerFrame6 = LoadSprite("Stag-ger-Sheet.png", "Stag-ger-Sheet_6");
+            var staggerFrame7 = LoadSprite("Stag-ger-Sheet.png", "Stag-ger-Sheet_7");
             if (staggerFrame0 != null && staggerFrame1 != null && staggerFrame2 != null && staggerFrame3 != null)
             {
-                var staggerFrames = new[] { staggerFrame0, staggerFrame1, staggerFrame2, staggerFrame3 };
+                var staggerFrames = (staggerFrame4 != null && staggerFrame5 != null && staggerFrame6 != null && staggerFrame7 != null)
+                    ? new[] { staggerFrame0, staggerFrame1, staggerFrame2, staggerFrame3, staggerFrame4, staggerFrame5, staggerFrame6, staggerFrame7 }
+                    : new[] { staggerFrame0, staggerFrame1, staggerFrame2, staggerFrame3 };
                 var staggerPrefab = CreateStaggerPrefab(staggerFrames);
                 var stagger = CreateOperator(
                     "OP_Guard_Stagger",

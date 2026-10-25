@@ -43,12 +43,24 @@ namespace TrashTD.Operators
             spriteRenderer = GetComponent<SpriteRenderer>();
             frameDuration = Mathf.Max(0.01f, frameDuration);
 
-            if (spriteRenderer != null && spriteRenderer.sprite != null && spriteRenderer.sprite.texture != null)
+            if (spriteRenderer != null)
             {
-                string texName = spriteRenderer.sprite.texture.name.ToLowerInvariant();
-                if (texName.Contains("castiel") && Mathf.Approximately(frameDuration, 0.25f))
+                if (spriteRenderer.sprite == null && frames != null && frames.Length > 0 && frames[0] != null)
                 {
-                    frameDuration = 0.1f;
+                    spriteRenderer.sprite = frames[0];
+                }
+
+                if (spriteRenderer.sprite != null && spriteRenderer.sprite.texture != null)
+                {
+                    string texName = spriteRenderer.sprite.texture.name.ToLowerInvariant();
+                    if (texName.Contains("castiel") && Mathf.Approximately(frameDuration, 0.25f))
+                    {
+                        frameDuration = 0.1f;
+                    }
+                    else if ((texName.Contains("stag-ger") || texName.Contains("stagger")) && Mathf.Approximately(frameDuration, 0.25f))
+                    {
+                        frameDuration = 0.125f;
+                    }
                 }
             }
 
@@ -130,17 +142,41 @@ namespace TrashTD.Operators
             return true;
         }
 
+        private Sprite GetSampleSprite()
+        {
+            if (spriteRenderer != null && spriteRenderer.sprite != null)
+            {
+                return spriteRenderer.sprite;
+            }
+
+            if (frames != null)
+            {
+                for (int i = 0; i < frames.Length; i++)
+                {
+                    if (frames[i] != null) return frames[i];
+                }
+            }
+
+            if (TryGetComponent<OperatorBase>(out var op) && op != null && op.Data != null && op.Data.portrait != null)
+            {
+                return op.Data.portrait;
+            }
+
+            return null;
+        }
+
         private bool ShouldResolveFramesFromTexture()
         {
             if (isCustomConfigured) return false;
             if (GetComponent<ResicochetOperator>() != null) return false;
 
-            if (spriteRenderer == null || spriteRenderer.sprite == null || spriteRenderer.sprite.texture == null)
+            Sprite sample = GetSampleSprite();
+            if (sample == null || sample.texture == null)
             {
                 return false;
             }
 
-            string texName = spriteRenderer.sprite.texture.name.ToLowerInvariant();
+            string texName = sample.texture.name.ToLowerInvariant();
             if (texName.Contains("resicochet")) return false;
 
             int expectedFrameCount = GetExpectedFrameCount();
@@ -162,12 +198,13 @@ namespace TrashTD.Operators
 
         private int GetExpectedFrameCount()
         {
-            if (spriteRenderer == null || spriteRenderer.sprite == null || spriteRenderer.sprite.texture == null)
+            Sprite sample = GetSampleSprite();
+            if (sample == null || sample.texture == null)
             {
                 return 2;
             }
 
-            Texture2D texture = spriteRenderer.sprite.texture;
+            Texture2D texture = sample.texture;
             string texName = texture.name.ToLowerInvariant();
             if (texName.Contains("resicochet"))
             {
@@ -175,7 +212,7 @@ namespace TrashTD.Operators
             }
 
             int frameCount = Mathf.RoundToInt((float)texture.width / texture.height);
-            if (texName.Contains("basurocket") || texName.Contains("progeny") || texName.Contains("stag-ger") || texName.Contains("stagger") || texName.Contains("thornchin") || texName.Contains("coalesce") || texName.Contains("ignisaur"))
+            if (texName.Contains("basurocket") || texName.Contains("progeny") || texName.Contains("thornchin") || texName.Contains("coalesce") || texName.Contains("ignisaur"))
             {
                 frameCount = 4;
             }
@@ -185,13 +222,14 @@ namespace TrashTD.Operators
 
         private void TryResolveFramesFromTexture()
         {
-            if (spriteRenderer == null || spriteRenderer.sprite == null || spriteRenderer.sprite.texture == null)
+            Sprite sample = GetSampleSprite();
+            if (sample == null || sample.texture == null)
             {
                 return;
             }
 
-            Texture2D texture = spriteRenderer.sprite.texture;
-            float ppu = spriteRenderer.sprite.pixelsPerUnit > 0f ? spriteRenderer.sprite.pixelsPerUnit : 32f;
+            Texture2D texture = sample.texture;
+            float ppu = sample.pixelsPerUnit > 0f ? sample.pixelsPerUnit : 32f;
             Vector2 pivot = new Vector2(0.5f, 0.5f);
 
             int frameCount = GetExpectedFrameCount();
@@ -206,6 +244,14 @@ namespace TrashTD.Operators
                 float x = i * frameWidth;
                 if (x + frameWidth > texture.width || frameHeight > texture.height) break;
                 frames[i] = Sprite.Create(texture, new Rect(x, texture.height - frameHeight, frameWidth, frameHeight), pivot, ppu);
+            }
+
+            if (spriteRenderer != null && (spriteRenderer.sprite == null || spriteRenderer.sprite == sample))
+            {
+                if (frames.Length > 0 && frames[0] != null)
+                {
+                    spriteRenderer.sprite = frames[0];
+                }
             }
         }
 

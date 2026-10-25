@@ -3,17 +3,29 @@ guid: df8e3333148be9f4294cdddc815a2788
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -7339511831693593426
+      213: -1433936279
     second: Stag-ger-Sheet_0
   - first:
-      213: 6027439898363060179
+      213: -1852208288
     second: Stag-ger-Sheet_1
   - first:
-      213: 6314478493991636238
+      213: 1991774566
     second: Stag-ger-Sheet_2
   - first:
-      213: -8447856876888761679
+      213: -1225885546
     second: Stag-ger-Sheet_3
+  - first:
+      213: -1729168255
+    second: Stag-ger-Sheet_4
+  - first:
+      213: -468944462
+    second: Stag-ger-Sheet_5
+  - first:
+      213: -1557945625
+    second: Stag-ger-Sheet_6
+  - first:
+      213: 1602364546
+    second: Stag-ger-Sheet_7
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -137,10 +149,10 @@ TextureImporter:
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: ea4702f10e0d42a90800000000000000
-      internalID: -7339511831693593426
+      spriteID: 9820918192a4e8b48a2c0c27d587a883
+      internalID: -1433936279
       vertices: []
       indices: 
       edges: []
@@ -159,10 +171,10 @@ TextureImporter:
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: 3df52fe17a4c5a350800000000000000
-      internalID: 6027439898363060179
+      spriteID: c385b4baabd56f94783723ac580de5ae
+      internalID: -1852208288
       vertices: []
       indices: 
       edges: []
@@ -181,10 +193,10 @@ TextureImporter:
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: e0d07381cb881a750800000000000000
-      internalID: 6314478493991636238
+      spriteID: 469c58af12d8737409aac5eabc7bfef7
+      internalID: 1991774566
       vertices: []
       indices: 
       edges: []
@@ -203,10 +215,98 @@ TextureImporter:
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: 1ba54bbddee23ca80800000000000000
-      internalID: -8447856876888761679
+      spriteID: 6fbf8d2c84a270e4f95636babbfc5168
+      internalID: -1225885546
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Stag-ger-Sheet_4
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fa79942bd894e7948ad2d1ed72bb69d0
+      internalID: -1729168255
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Stag-ger-Sheet_5
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b7626a342bf8dec4f86fed23cd33df39
+      internalID: -468944462
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Stag-ger-Sheet_6
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 72157a21d25b3564f964bfc8aa4e8025
+      internalID: -1557945625
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Stag-ger-Sheet_7
+      rect:
+        serializedVersion: 2
+        x: 224
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 02d53c87e1c77fb44b6a577e861be33a
+      internalID: 1602364546
       vertices: []
       indices: 
       edges: []
@@ -227,10 +327,14 @@ TextureImporter:
       - key: SpriteEditor.SliceSettings
         value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":32.0,"y":32.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":1,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
-      Stag-ger-Sheet_0: -7339511831693593426
-      Stag-ger-Sheet_1: 6027439898363060179
-      Stag-ger-Sheet_2: 6314478493991636238
-      Stag-ger-Sheet_3: -8447856876888761679
+      Stag-ger-Sheet_0: -1433936279
+      Stag-ger-Sheet_1: -1852208288
+      Stag-ger-Sheet_2: 1991774566
+      Stag-ger-Sheet_3: -1225885546
+      Stag-ger-Sheet_4: -1729168255
+      Stag-ger-Sheet_5: -468944462
+      Stag-ger-Sheet_6: -1557945625
+      Stag-ger-Sheet_7: 1602364546
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
