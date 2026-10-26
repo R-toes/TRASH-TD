@@ -1102,7 +1102,8 @@ namespace TrashTD.Tests
         [Test]
         public void Drawgoo_Asset_SkillDescription_And_UpgradeMerge_GrantsRandom3StarOnDeath()
         {
-            var drawgooData = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>("Assets/_Project/Data/Operators/OP_Guard_Drawgoo.asset");
+            var drawgooData = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>("Assets/_Project/Data/Operators/OP_Specialist_Drawgoo.asset");
+            Assert.AreEqual(OperatorClass.Specialist, drawgooData.operatorClass, "Drawgoo should be Specialist class.");
             Assert.IsNotNull(drawgooData, "Drawgoo asset should exist.");
             Assert.IsTrue(drawgooData.skillDescription.Contains("3-star"), "Drawgoo asset description should mention 3-star upgrade.");
 

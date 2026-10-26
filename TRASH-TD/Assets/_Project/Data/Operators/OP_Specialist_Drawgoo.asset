@@ -10,13 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
-  m_Name: OP_Guard_Drawgoo
+  m_Name: OP_Specialist_Drawgoo
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
   operatorName: Drawgoo
-  operatorClass: 1
+  operatorClass: 5
   baseRarity: 1
   position: 0
-  roleTags: []
+  roleTags:
+  - Specialist
+  - Deck
+  - Draw
   baseHP: 150
   baseATK: 10
   baseDEF: 10

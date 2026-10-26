@@ -75,7 +75,7 @@ namespace TrashTD.Editor
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Scrapper.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_QiFu.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Echosquire.asset"),
-                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Drawgoo.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Specialist_Drawgoo.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Guard_Shadeslice.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Defender_Bulkhead.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Defender_Mossmo.asset"),
