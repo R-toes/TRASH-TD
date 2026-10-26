@@ -615,15 +615,28 @@ namespace TrashTD.UI
             selectedOperatorDetailsRarity.raycastTarget = false;
             SetPosition(selectedOperatorDetailsRarity.rectTransform, new Vector2(detailsMargin, -72f), new Vector2(0f, 1f), new Vector2(detailsInnerWidth - 90f, 28f), new Vector2(0f, 1f));
 
+            const float classIconSize = 34f;
+            var iconObject = new GameObject("OperatorClassIcon", typeof(RectTransform), typeof(Image));
+            iconObject.transform.SetParent(content, false);
+            selectedOperatorDetailsClassIcon = iconObject.GetComponent<Image>();
+            selectedOperatorDetailsClassIcon.preserveAspect = true;
+            selectedOperatorDetailsClassIcon.raycastTarget = false;
+            selectedOperatorDetailsClassIcon.color = Color.white;
+            SetPosition(selectedOperatorDetailsClassIcon.rectTransform, new Vector2(detailsMargin, -114f), new Vector2(0f, 1f), new Vector2(classIconSize, classIconSize), new Vector2(0f, 1f));
+
+            float chipsStartX = detailsMargin + classIconSize + 10f;
+            float chipsTotalWidth = detailsInnerWidth - classIconSize - 10f;
+            const float chipGap = 10f;
+            float detailChipWidth = (chipsTotalWidth - chipGap * 2f) / 3f;
+
             selectedOperatorDetailsChipBackgrounds = new Image[3];
             selectedOperatorDetailsChipLabels = new Text[3];
             selectedOperatorDetailsChipOutlines = new Outline[3];
-            float detailChipWidth = (detailsInnerWidth - 24f) / 3f;
             for (int i = 0; i < selectedOperatorDetailsChipLabels.Length; i++)
             {
                 var chip = new GameObject($"TypeChip_{i}", typeof(RectTransform), typeof(Image), typeof(Outline));
                 chip.transform.SetParent(content, false);
-                float chipX = detailsMargin + (detailChipWidth + 12f) * i;
+                float chipX = chipsStartX + (detailChipWidth + chipGap) * i;
                 SetPosition(chip.GetComponent<RectTransform>(), new Vector2(chipX, -114f), new Vector2(0f, 1f), new Vector2(detailChipWidth, 34f), new Vector2(0f, 1f));
                 selectedOperatorDetailsChipBackgrounds[i] = chip.GetComponent<Image>();
                 selectedOperatorDetailsChipBackgrounds[i].color = new Color(0.07f, 0.085f, 0.115f, 1f);
@@ -631,16 +644,6 @@ namespace TrashTD.UI
                 selectedOperatorDetailsChipOutlines[i] = chip.GetComponent<Outline>();
                 selectedOperatorDetailsChipOutlines[i].effectDistance = new Vector2(1.5f, -1.5f);
                 selectedOperatorDetailsChipOutlines[i].effectColor = new Color(1f, 1f, 1f, 0.2f);
-
-                if (i == 0)
-                {
-                    var iconObject = new GameObject("ClassIcon", typeof(RectTransform), typeof(Image));
-                    iconObject.transform.SetParent(chip.transform, false);
-                    selectedOperatorDetailsClassIcon = iconObject.GetComponent<Image>();
-                    selectedOperatorDetailsClassIcon.preserveAspect = true;
-                    selectedOperatorDetailsClassIcon.raycastTarget = false;
-                    SetPosition(selectedOperatorDetailsClassIcon.rectTransform, new Vector2(8f, 0f), new Vector2(0f, 0.5f), new Vector2(22f, 22f), new Vector2(0f, 0.5f));
-                }
 
                 selectedOperatorDetailsChipLabels[i] = CreateText(chip.transform, $"Label_{i}", string.Empty, 13, TextAnchor.MiddleCenter);
                 selectedOperatorDetailsChipLabels[i].fontStyle = FontStyle.Bold;
@@ -651,8 +654,8 @@ namespace TrashTD.UI
                 RectTransform chipTextRect = selectedOperatorDetailsChipLabels[i].rectTransform;
                 chipTextRect.anchorMin = Vector2.zero;
                 chipTextRect.anchorMax = Vector2.one;
-                chipTextRect.offsetMin = new Vector2(i == 0 ? 32f : 0f, 0f);
-                chipTextRect.offsetMax = new Vector2(-4f, 0f);
+                chipTextRect.offsetMin = Vector2.zero;
+                chipTextRect.offsetMax = Vector2.zero;
             }
 
             selectedOperatorDetailsRoles = CreateText(content, "Roles", string.Empty, 12, TextAnchor.MiddleLeft);
@@ -1040,6 +1043,8 @@ namespace TrashTD.UI
             selectedOperatorDetailsPortrait.color = Color.white;
             selectedOperatorDetailsName.text = data.operatorName;
             selectedOperatorDetailsClassIcon.sprite = GetClassIconSprite(data.operatorClass);
+            selectedOperatorDetailsClassIcon.color = Color.white;
+            selectedOperatorDetailsClassIcon.enabled = selectedOperatorDetailsClassIcon.sprite != null;
             selectedOperatorDetailsChipLabels[0].text = data.operatorClass.ToString().ToUpperInvariant();
             selectedOperatorDetailsChipLabels[1].text = data.position == OperatorPosition.Melee ? "MELEE" : "RANGED";
             Color classColor = GetDraftClassColor(data.operatorClass);
@@ -1976,21 +1981,18 @@ namespace TrashTD.UI
 
         private GameObject CreateClassBadge(Transform parent, out Image backgroundImage, out Image iconImage)
         {
-            var badge = new GameObject("ClassBadge", typeof(RectTransform), typeof(Image), typeof(Outline));
+            var badge = new GameObject("ClassBadge", typeof(RectTransform), typeof(Image));
             badge.transform.SetParent(parent, false);
             RectTransform badgeRect = badge.GetComponent<RectTransform>();
             badgeRect.anchorMin = new Vector2(1f, 0.36f);
             badgeRect.anchorMax = new Vector2(1f, 0.36f);
             badgeRect.pivot = new Vector2(0.5f, 0.5f);
-            badgeRect.sizeDelta = new Vector2(24f, 24f);
+            badgeRect.sizeDelta = new Vector2(26f, 26f);
             badgeRect.anchoredPosition = new Vector2(-6f, 0f);
 
             backgroundImage = badge.GetComponent<Image>();
             backgroundImage.raycastTarget = false;
-            Outline outline = badge.GetComponent<Outline>();
-            outline.effectColor = new Color(0.02f, 0.025f, 0.035f, 0.95f);
-            outline.effectDistance = new Vector2(1.5f, -1.5f);
-            outline.useGraphicAlpha = false;
+            backgroundImage.color = Color.clear;
 
             var iconObject = new GameObject("ClassIcon", typeof(RectTransform), typeof(Image));
             iconObject.transform.SetParent(badge.transform, false);
@@ -2001,100 +2003,116 @@ namespace TrashTD.UI
             RectTransform iconRect = iconImage.rectTransform;
             iconRect.anchorMin = Vector2.zero;
             iconRect.anchorMax = Vector2.one;
-            iconRect.offsetMin = new Vector2(5f, 5f);
-            iconRect.offsetMax = new Vector2(-5f, -5f);
+            iconRect.offsetMin = Vector2.zero;
+            iconRect.offsetMax = Vector2.zero;
 
             badge.SetActive(false);
             return badge;
         }
 
-        public static Sprite GetClassIconSprite(OperatorClass opClass)
+        private static bool classIconsLoaded = false;
+
+        public static void ReloadClassIcons()
         {
-            if (ClassIconSprites.TryGetValue(opClass, out Sprite sprite) && sprite != null) return sprite;
+            classIconsLoaded = false;
+            ClassIconSprites.Clear();
+            EnsureClassIconsLoaded();
+        }
 
-            const int size = 48;
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            texture.filterMode = FilterMode.Bilinear;
-            texture.wrapMode = TextureWrapMode.Clamp;
-            var pixels = new Color[size * size];
+        private static void EnsureClassIconsLoaded()
+        {
+            if (classIconsLoaded && ClassIconSprites.Count >= 6) return;
 
-            bool NearLine(float x, float y, Vector2 start, Vector2 end, float thickness)
+            Sprite[] sprites = null;
+
+#if UNITY_EDITOR
+            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/class-icons.png");
+            if (assets != null && assets.Length > 0)
             {
-                Vector2 point = new Vector2(x, y);
-                Vector2 line = end - start;
-                float lengthSquared = line.sqrMagnitude;
-                float t = lengthSquared > 0f ? Mathf.Clamp01(Vector2.Dot(point - start, line) / lengthSquared) : 0f;
-                return Vector2.Distance(point, start + line * t) <= thickness;
-            }
-
-            bool NearCircle(float x, float y, Vector2 center, float radius)
-            {
-                return (new Vector2(x, y) - center).sqrMagnitude <= radius * radius;
-            }
-
-            bool IsShield(float x, float y)
-            {
-                if (y < 6f || y > 42f) return false;
-                float outerHalfWidth = y >= 24f ? 17f : Mathf.Lerp(1f, 17f, (y - 6f) / 18f);
-                float innerHalfWidth = y >= 27f ? 12.5f : Mathf.Lerp(0f, 12.5f, (y - 9f) / 18f);
-                bool outer = Mathf.Abs(x - 24f) <= outerHalfWidth;
-                bool inner = y >= 10f && y <= 38f && Mathf.Abs(x - 24f) < innerHalfWidth;
-                return outer && !inner;
-            }
-
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
+                var list = new List<Sprite>();
+                for (int i = 0; i < assets.Length; i++)
                 {
-                    float px = x + 0.5f;
-                    float py = y + 0.5f;
-                    bool mark = false;
-                    switch (opClass)
-                    {
-                        case OperatorClass.Guard:
-                            mark = NearLine(px, py, new Vector2(12f, 10f), new Vector2(36f, 34f), 2.5f) ||
-                                   NearLine(px, py, new Vector2(30f, 32f), new Vector2(37f, 25f), 2f) ||
-                                   NearLine(px, py, new Vector2(24f, 23f), new Vector2(17f, 30f), 2f) ||
-                                   NearLine(px, py, new Vector2(10f, 11f), new Vector2(17f, 4f), 2f);
-                            break;
-                        case OperatorClass.Defender:
-                            mark = IsShield(px, py);
-                            break;
-                        case OperatorClass.Sniper:
-                            float dx = (px - 18f) / 13f;
-                            float dy = (py - 24f) / 19f;
-                            float ellipse = dx * dx + dy * dy;
-                            mark = (ellipse <= 1f && ellipse >= 0.76f && px <= 21f) ||
-                                   NearLine(px, py, new Vector2(21f, 6f), new Vector2(21f, 42f), 1.5f) ||
-                                   NearLine(px, py, new Vector2(19f, 24f), new Vector2(42f, 24f), 1.5f) ||
-                                   NearLine(px, py, new Vector2(35f, 19f), new Vector2(42f, 24f), 1.5f) ||
-                                   NearLine(px, py, new Vector2(35f, 29f), new Vector2(42f, 24f), 1.5f);
-                            break;
-                        case OperatorClass.Caster:
-                            mark = NearLine(px, py, new Vector2(15f, 5f), new Vector2(31f, 36f), 2.6f) ||
-                                   NearLine(px, py, new Vector2(10f, 15f), new Vector2(20f, 10f), 2f) ||
-                                   ((NearCircle(px, py, new Vector2(31f, 37f), 8f) &&
-                                     !NearCircle(px, py, new Vector2(31f, 37f), 5f)) ||
-                                    (px >= 28f && px <= 34f && py >= 30f && py <= 42f));
-                            break;
-                        case OperatorClass.Specialist:
-                            mark = (Mathf.Abs(px - 24f) + Mathf.Abs(py - 24f) <= 15f && Mathf.Abs(px - 24f) * Mathf.Abs(py - 24f) <= 28f) || NearCircle(px, py, new Vector2(24f, 24f), 4f);
-                            break;
-                        case OperatorClass.Medic:
-                            mark = (px >= 19f && px <= 29f && py >= 8f && py <= 40f) ||
-                                   (px >= 8f && px <= 40f && py >= 19f && py <= 29f);
-                            break;
-                    }
+                    if (assets[i] is Sprite s) list.Add(s);
+                }
+                sprites = list.ToArray();
+            }
+#endif
 
-                    if (mark) pixels[y * size + x] = Color.white;
+            if (sprites == null || sprites.Length == 0)
+            {
+                sprites = Resources.LoadAll<Sprite>("UI/icons/class-icons");
+            }
+
+            if (sprites != null && sprites.Length > 0)
+            {
+                for (int i = 0; i < sprites.Length; i++)
+                {
+                    Sprite s = sprites[i];
+                    if (s == null) continue;
+                    switch (s.name)
+                    {
+                        case "class-icons_0": ClassIconSprites[OperatorClass.Sniper] = s; break;
+                        case "class-icons_1": ClassIconSprites[OperatorClass.Medic] = s; break;
+                        case "class-icons_2": ClassIconSprites[OperatorClass.Caster] = s; break;
+                        case "class-icons_3": ClassIconSprites[OperatorClass.Defender] = s; break;
+                        case "class-icons_4": ClassIconSprites[OperatorClass.Guard] = s; break;
+                        case "class-icons_5": ClassIconSprites[OperatorClass.Specialist] = s; break;
+                    }
                 }
             }
 
-            texture.SetPixels(pixels);
-            texture.Apply();
-            sprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), size);
-            ClassIconSprites[opClass] = sprite;
-            return sprite;
+            // Fallback: If sub-sprites are not found or sliced, load Texture2D and slice them manually
+            // (0 - sniper, 1 - medic, 2 - caster, 3 - defender, 4 - guard, 5 - specialist)
+            if (ClassIconSprites.Count < 6)
+            {
+                Texture2D tex = null;
+#if UNITY_EDITOR
+                tex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_Project/Art/class-icons.png");
+#endif
+                if (tex == null)
+                {
+                    tex = Resources.Load<Texture2D>("UI/icons/class-icons");
+                }
+                if (tex == null)
+                {
+                    string diskPath = System.IO.Path.Combine(Application.dataPath, "_Project/Art/class-icons.png");
+                    if (System.IO.File.Exists(diskPath))
+                    {
+                        byte[] raw = System.IO.File.ReadAllBytes(diskPath);
+                        tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                        tex.LoadImage(raw);
+                    }
+                }
+
+                if (tex != null)
+                {
+                    tex.filterMode = FilterMode.Point;
+                    if (!ClassIconSprites.ContainsKey(OperatorClass.Sniper))
+                        ClassIconSprites[OperatorClass.Sniper] = Sprite.Create(tex, new Rect(0f, 32f, 32f, 32f), new Vector2(0.5f, 0.5f), 32f);
+                    if (!ClassIconSprites.ContainsKey(OperatorClass.Medic))
+                        ClassIconSprites[OperatorClass.Medic] = Sprite.Create(tex, new Rect(32f, 32f, 32f, 32f), new Vector2(0.5f, 0.5f), 32f);
+                    if (!ClassIconSprites.ContainsKey(OperatorClass.Caster))
+                        ClassIconSprites[OperatorClass.Caster] = Sprite.Create(tex, new Rect(64f, 32f, 32f, 32f), new Vector2(0.5f, 0.5f), 32f);
+                    if (!ClassIconSprites.ContainsKey(OperatorClass.Defender))
+                        ClassIconSprites[OperatorClass.Defender] = Sprite.Create(tex, new Rect(0f, 0f, 32f, 32f), new Vector2(0.5f, 0.5f), 32f);
+                    if (!ClassIconSprites.ContainsKey(OperatorClass.Guard))
+                        ClassIconSprites[OperatorClass.Guard] = Sprite.Create(tex, new Rect(32f, 0f, 32f, 32f), new Vector2(0.5f, 0.5f), 32f);
+                    if (!ClassIconSprites.ContainsKey(OperatorClass.Specialist))
+                        ClassIconSprites[OperatorClass.Specialist] = Sprite.Create(tex, new Rect(64f, 0f, 32f, 32f), new Vector2(0.5f, 0.5f), 32f);
+                }
+            }
+
+            classIconsLoaded = true;
+        }
+
+        public static Sprite GetClassIconSprite(OperatorClass opClass)
+        {
+            EnsureClassIconsLoaded();
+            if (ClassIconSprites.TryGetValue(opClass, out Sprite sprite) && sprite != null)
+            {
+                return sprite;
+            }
+            return null;
         }
 
         private GameObject CreateCooldownBadge(Transform parent, out Image clockImage, out Text roundsText)
@@ -2457,8 +2475,9 @@ namespace TrashTD.UI
                         framiliarCopyPortraits[i].color = Color.white;
 
                         Color classColor = GetClassColor(card.operatorData.operatorClass);
-                        framiliarCopyClassBadgeImages[i].color = classColor;
+                        framiliarCopyClassBadgeImages[i].color = Color.clear;
                         framiliarCopyClassIconImages[i].sprite = GetClassIconSprite(card.operatorData.operatorClass);
+                        framiliarCopyClassIconImages[i].color = Color.white;
                         framiliarCopyClassBadges[i].SetActive(true);
 
                         // Upgrade inheritance
@@ -3391,8 +3410,9 @@ namespace TrashTD.UI
                     deckPortraitImages[i].enabled = card.operatorData.portrait != null;
                     deckPortraitImages[i].color = isReady ? Color.white : new Color(0.55f, 0.55f, 0.55f, 1f);
                     Color classColor = GetClassColor(card.operatorData.operatorClass);
-                    deckClassBadgeImages[i].color = classColor;
+                    deckClassBadgeImages[i].color = Color.clear;
                     deckClassIconImages[i].sprite = GetClassIconSprite(card.operatorData.operatorClass);
+                    deckClassIconImages[i].color = Color.white;
                     deckClassBadges[i].SetActive(true);
                     deckButtonLabels[i].text = $"{card.operatorData.operatorName}\n{stars}";
                     deckButtons[i].interactable = true;

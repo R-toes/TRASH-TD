@@ -609,8 +609,9 @@ namespace TrashTD.UI
                 cardAccents[i].color = rarityColor;
                 portraitBgImages[i].color = Color.Lerp(PORTRAIT_BG, rarityColor, 0.10f);
                 portraitFrames[i].effectColor = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.6f);
-                classBadgeBackgrounds[i].color = GetClassColor(opData.operatorClass);
+                classBadgeBackgrounds[i].color = Color.clear;
                 classBadgeIcons[i].sprite = GameplayHUDUI.GetClassIconSprite(opData.operatorClass);
+                classBadgeIcons[i].color = Color.white;
 
                 // The hover glow stays neutral while face-down so it can't give away the rarity.
                 cardFeedbacks[i].glowColor = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.95f);
@@ -1103,6 +1104,8 @@ namespace TrashTD.UI
             // Type chips: class / position / damage type
             SetChip(detailClassChip, op.operatorClass.ToString().ToUpper(), GetClassColor(op.operatorClass));
             detailClassChip.icon.sprite = GameplayHUDUI.GetClassIconSprite(op.operatorClass);
+            detailClassChip.icon.color = Color.white;
+            detailClassChip.icon.enabled = detailClassChip.icon.sprite != null;
             bool isMelee = op.position == OperatorPosition.Melee;
             SetChip(detailPositionChip, isMelee ? "MELEE" : "RANGED", isMelee ? MELEE_COLOR : RANGED_COLOR);
             GetDamageType(op, out string damageLabel, out Color damageColor);
@@ -2211,31 +2214,29 @@ namespace TrashTD.UI
             portraitImages[index].color = Color.white;
             portraitImages[index].raycastTarget = false;
 
-            var classBadge = new GameObject($"ClassBadge_{index}", typeof(RectTransform), typeof(Image), typeof(Outline));
+            var classBadge = new GameObject($"ClassBadge_{index}", typeof(RectTransform), typeof(Image));
             classBadge.transform.SetParent(portraitBg.transform, false);
             RectTransform classBadgeRect = classBadge.GetComponent<RectTransform>();
             classBadgeRect.anchorMin = new Vector2(0f, 1f);
             classBadgeRect.anchorMax = new Vector2(0f, 1f);
             classBadgeRect.pivot = new Vector2(0f, 1f);
             classBadgeRect.anchoredPosition = new Vector2(10f, -10f);
-            classBadgeRect.sizeDelta = new Vector2(50f, 50f);
+            classBadgeRect.sizeDelta = new Vector2(44f, 44f);
             classBadgeBackgrounds[index] = classBadge.GetComponent<Image>();
             classBadgeBackgrounds[index].raycastTarget = false;
-            Outline badgeOutline = classBadge.GetComponent<Outline>();
-            badgeOutline.effectColor = new Color(0.02f, 0.025f, 0.035f, 0.95f);
-            badgeOutline.effectDistance = new Vector2(2f, -2f);
-            badgeOutline.useGraphicAlpha = false;
+            classBadgeBackgrounds[index].color = Color.clear;
 
             var classIconObject = new GameObject($"ClassIcon_{index}", typeof(RectTransform), typeof(Image));
             classIconObject.transform.SetParent(classBadge.transform, false);
             classBadgeIcons[index] = classIconObject.GetComponent<Image>();
             classBadgeIcons[index].preserveAspect = true;
             classBadgeIcons[index].raycastTarget = false;
+            classBadgeIcons[index].color = Color.white;
             RectTransform classIconRect = classBadgeIcons[index].rectTransform;
             classIconRect.anchorMin = Vector2.zero;
             classIconRect.anchorMax = Vector2.one;
-            classIconRect.offsetMin = new Vector2(8f, 8f);
-            classIconRect.offsetMax = new Vector2(-8f, -8f);
+            classIconRect.offsetMin = Vector2.zero;
+            classIconRect.offsetMax = Vector2.zero;
 
             // --- Name (bottom) ---
             nameTexts[index] = MakeText(front.transform, $"Name_{index}", "", 26,
@@ -2449,11 +2450,22 @@ namespace TrashTD.UI
             detailStarsText = MakeText(content, "DetailStars", "", 22, TextAnchor.MiddleLeft, STAR_COLOR);
             StretchTopRT(detailStarsText, margin, margin, 72f, 28f);
 
-            // Type chips (class / position / damage type)
-            float chipWidth = (innerWidth - 24f) / 3f;
-            detailClassChip = CreateChip(content, "ClassChip", margin, 114f, chipWidth, 34f, true);
-            detailPositionChip = CreateChip(content, "PositionChip", margin + chipWidth + 12f, 114f, chipWidth, 34f);
-            detailDamageChip = CreateChip(content, "DamageChip", margin + (chipWidth + 12f) * 2f, 114f, chipWidth, 34f);
+            // Separate standalone class icon and 3 type chips (class / position / damage type)
+            const float classIconSize = 34f;
+            var classIconObj = new GameObject("DetailClassIcon", typeof(RectTransform), typeof(Image));
+            classIconObj.transform.SetParent(content, false);
+            var detailClassIconImg = classIconObj.GetComponent<Image>();
+            detailClassIconImg.preserveAspect = true;
+            detailClassIconImg.raycastTarget = false;
+            detailClassIconImg.color = Color.white;
+            PlaceTopLeft(classIconObj.transform, margin, 114f, classIconSize, classIconSize);
+
+            float chipsStartX = margin + classIconSize + 10f;
+            float chipWidth = (innerWidth - classIconSize - 10f - 20f) / 3f;
+            detailClassChip = CreateChip(content, "ClassChip", chipsStartX, 114f, chipWidth, 34f, false);
+            detailClassChip.icon = detailClassIconImg;
+            detailPositionChip = CreateChip(content, "PositionChip", chipsStartX + chipWidth + 10f, 114f, chipWidth, 34f, false);
+            detailDamageChip = CreateChip(content, "DamageChip", chipsStartX + (chipWidth + 10f) * 2f, 114f, chipWidth, 34f, false);
 
             // Role line (role tags / class summary)
             detailRoleText = MakeText(content, "DetailRole", "", 12, TextAnchor.MiddleLeft,
