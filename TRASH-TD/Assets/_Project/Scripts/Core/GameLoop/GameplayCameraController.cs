@@ -7,13 +7,17 @@ namespace TrashTD.Core.GameLoop
 {
     /// <summary>
     /// Gameplay camera on top of the framing StageBootstrapper computes (the "home" view):
-    ///   - Look-around: the camera drifts a little toward the cursor (or a held touch), smoothly, so the player can
-    ///     peek at the map edges behind the HUD bars. Zoomed in, the same cursor position reaches all the way to
-    ///     the map's edges, so moving the cursor looks around the zoomed view.
+    ///   - Fully zoomed out: look-around. The camera drifts a little toward the cursor (or a held touch), smoothly,
+    ///     so the player can peek at the map edges behind the HUD bars. On the HUD bars or outside the window it
+    ///     glides slowly back to the centre.
+    ///   - Zoomed in: map navigation like the stage-select map. Drag to pan (with inertia), the wheel zooms toward
+    ///     the cursor, and the view stays within the map art. A left-drag only starts from the map (not UI) while no
+    ///     card is being placed, and only after the pointer moves a few pixels, so clicks still select and deploy.
+    ///     Right / middle drags always pan.
     ///   - Zoom: mouse wheel (pinch on touch screens) between the home view and <see cref="MaxZoom"/>.
     ///   - Shake: <see cref="Shake"/> adds a decaying positional shake (used when lives are lost).
-    /// Input is ignored while paused, while the draft screen or results are up, or with the pointer over UI.
-    /// Everything runs on unscaled time so shakes still play out on the stopped results screen.
+    /// Input is ignored while paused, while the draft screen or results are up. Unscaled time throughout, so shakes
+    /// still play out on the stopped results screen.
     /// </summary>
     public sealed class GameplayCameraController : MonoBehaviour
     {
@@ -21,10 +25,14 @@ namespace TrashTD.Core.GameLoop
 
         public const float MaxZoom = 2.25f;
         private const float ZoomStep = 0.15f;          // per wheel notch, as a fraction of the current zoom
-        private const float LookNudge = 0.035f;         // extra look range at home zoom, as a fraction of the view height
+        private const float DragZoomThreshold = 1.02f;  // above this (target) zoom the camera is navigated by dragging
+        private const float LookNudge = 0.035f;         // look range at home zoom, as a fraction of the view height
         private const float LookDeadZone = 0.2f;        // cursor distance from the centre (0..1) that keeps the camera still
         private const float FollowSharpness = 4.5f;
         private const float ReturnSharpness = 1.6f;     // slower glide back to the centre (cursor on the HUD bars)
+        private const float DragSharpness = 18f;
+        private const float DragStartPixels = 8f;       // pointer travel before a press becomes a pan
+        private const float InertiaDamping = 5f;
         private const float ZoomSharpness = 9f;
         private const float EdgeMargin = 0.3f;          // world units the view may go past the map art
 
@@ -41,15 +49,31 @@ namespace TrashTD.Core.GameLoop
 
         private float zoom = 1f;
         private float targetZoom = 1f;
+        private Vector2 offset;             // current camera offset from the home framing
+
+        // Look-around (zoomed out)
         private Vector2 lookInput;          // -1..1 per axis, after dead zone and easing
         private bool returningHome;         // cursor is on the top bar / deck bar: glide slowly back to centre
-        private Vector2 offset;             // current camera offset from the home framing
-        private float pinchDistance = -1f;
 
+        // Drag navigation (zoomed in)
+        private Vector2 dragTarget;
+        private Vector2 dragVelocity;       // world units / s, for inertia after release
+        private bool pointerDown;
+        private bool dragging;
+        private Vector2 pressStart;
+        private Vector2 lastPointer;
+        private float lastDragTime;
+
+        private float pinchDistance = -1f;
         private float shakeStrength;
         private float shakeTime;
 
+        private GameplayHUDUI hud;
+        private CardDraftOverlayUI draft;
+        private StageBootstrapper bootstrapper;
+
         public float Zoom => zoom;
+        private bool DragMode => targetZoom > DragZoomThreshold;
 
         private void Awake()
         {
@@ -69,8 +93,9 @@ namespace TrashTD.Core.GameLoop
             homeSize = Mathf.Max(0.1f, orthographicSize);
             mapBounds = bounds;
             zoom = targetZoom = 1f;
-            offset = Vector2.zero;
+            offset = dragTarget = dragVelocity = Vector2.zero;
             lookInput = Vector2.zero;
+            pointerDown = dragging = false;
             initialized = cam != null;
         }
 
@@ -91,19 +116,42 @@ namespace TrashTD.Core.GameLoop
             if (!initialized || cam == null) return;
             float dt = Time.unscaledDeltaTime;
 
-            if (InputAllowed()) ReadInput();
-            else pinchDistance = -1f;
+            if (InputAllowed())
+            {
+                ReadInput(dt);
+            }
+            else
+            {
+                pinchDistance = -1f;
+                pointerDown = dragging = false;
+            }
 
             // Zoom eases toward its target
             zoom = Mathf.Lerp(zoom, targetZoom, 1f - Mathf.Exp(-ZoomSharpness * dt));
             float size = homeSize / zoom;
-
-            // Look-around offset: home nudge + whatever range the zoom opens up, per axis
             float aspect = cam.aspect > 0f ? cam.aspect : 16f / 9f;
-            Vector2 range = GetLookRange(size, aspect);
-            Vector2 target = Vector2.Scale(lookInput, range);
-            float sharpness = returningHome ? ReturnSharpness : FollowSharpness;
-            offset = Vector2.Lerp(offset, target, 1f - Mathf.Exp(-sharpness * dt));
+            Vector2 range = GetViewRange(size, aspect);
+
+            if (DragMode)
+            {
+                // Drag navigation: inertia after release, kept inside the map
+                if (!dragging && dragVelocity.sqrMagnitude > 1e-6f)
+                {
+                    dragTarget += dragVelocity * dt;
+                    dragVelocity *= Mathf.Exp(-InertiaDamping * dt);
+                }
+                dragTarget = new Vector2(Mathf.Clamp(dragTarget.x, -range.x, range.x), Mathf.Clamp(dragTarget.y, -range.y, range.y));
+                offset = Vector2.Lerp(offset, dragTarget, 1f - Mathf.Exp(-DragSharpness * dt));
+            }
+            else
+            {
+                // Look-around toward the cursor
+                Vector2 target = Vector2.Scale(lookInput, range);
+                float sharpness = returningHome ? ReturnSharpness : FollowSharpness;
+                offset = Vector2.Lerp(offset, target, 1f - Mathf.Exp(-sharpness * dt));
+                dragTarget = offset;
+                dragVelocity = Vector2.zero;
+            }
 
             // Shake decays quickly; scaled with the view so it reads the same at any zoom
             Vector2 shake = Vector2.zero;
@@ -131,11 +179,13 @@ namespace TrashTD.Core.GameLoop
             return new Vector2(0f, hudShift);
         }
 
-        private Vector2 GetLookRange(float size, float aspect)
+        /// <summary>
+        /// How far the view may move from the home framing per axis: a small nudge, plus whatever the zoom opens up
+        /// between the visible playable area (between the HUD bars) and the map art.
+        /// </summary>
+        private Vector2 GetViewRange(float size, float aspect)
         {
             float nudge = LookNudge * size * 2f;
-
-            // Visible playable area (between the HUD bars) vs the map art, per axis
             float playHalfWidth = size * aspect;
             float playHalfHeight = size * (1f - TopHudFraction - BottomHudFraction);
             float mapHalfWidth = mapBounds.width * 0.5f + EdgeMargin;
@@ -146,51 +196,109 @@ namespace TrashTD.Core.GameLoop
                 nudge + Mathf.Max(0f, mapHalfHeight - playHalfHeight));
         }
 
-        private void ReadInput()
-        {
-            Vector2? pointer = null;
+        // ─────────────────────────────────────────────────────
+        //  Input
+        // ─────────────────────────────────────────────────────
 
-            // Touch: a held finger acts as the cursor; two fingers pinch to zoom
+        private void ReadInput(float dt)
+        {
+            if (Screen.width <= 0 || Screen.height <= 0) return;
+
+            // Touch: two fingers pinch to zoom
             Touchscreen touchscreen = Touchscreen.current;
             if (touchscreen != null && touchscreen.touches.Count > 1 &&
                 touchscreen.touches[0].press.isPressed && touchscreen.touches[1].press.isPressed)
             {
                 float distance = Vector2.Distance(touchscreen.touches[0].position.ReadValue(), touchscreen.touches[1].position.ReadValue());
-                if (pinchDistance > 0f && distance > 0f)
-                {
-                    targetZoom = Mathf.Clamp(targetZoom * (distance / pinchDistance), 1f, MaxZoom);
-                }
+                if (pinchDistance > 0f && distance > 0f) SetTargetZoom(targetZoom * (distance / pinchDistance), null);
                 pinchDistance = distance;
+                pointerDown = dragging = false;
                 return;
             }
             pinchDistance = -1f;
 
+            // Pointer: a held touch, otherwise the mouse
+            Vector2? pointer = null;
+            bool pressed = false;
+            bool pressedThisFrame = false;
+            bool leftPress = false;
             if (touchscreen != null && touchscreen.primaryTouch.press.isPressed)
             {
                 pointer = touchscreen.primaryTouch.position.ReadValue();
+                pressed = true;
+                pressedThisFrame = touchscreen.primaryTouch.press.wasPressedThisFrame;
+                leftPress = pressedThisFrame;
             }
 
             Mouse mouse = Mouse.current;
             if (pointer == null && mouse != null)
             {
                 pointer = mouse.position.ReadValue();
+                pressed = mouse.leftButton.isPressed || mouse.rightButton.isPressed || mouse.middleButton.isPressed;
+                leftPress = mouse.leftButton.wasPressedThisFrame;
+                pressedThisFrame = leftPress || mouse.rightButton.wasPressedThisFrame || mouse.middleButton.wasPressedThisFrame;
 
                 float scroll = mouse.scroll.ReadValue().y;
                 if (Mathf.Abs(scroll) > 0.01f && !PointerOverUi())
                 {
                     float notches = Mathf.Sign(scroll) * Mathf.Max(1f, Mathf.Abs(scroll) / 120f);
-                    targetZoom = Mathf.Clamp(targetZoom * Mathf.Pow(1f + ZoomStep, notches), 1f, MaxZoom);
+                    SetTargetZoom(targetZoom * Mathf.Pow(1f + ZoomStep, notches), CrtDisplay.ScreenToPicture(pointer.Value));
                 }
-
-                // Hold still while dragging (placing / setting an operator's facing)
-                if (mouse.leftButton.isPressed || mouse.rightButton.isPressed) return;
             }
 
             if (pointer == null) return;
             Vector2 picture = CrtDisplay.ScreenToPicture(pointer.Value);
-            if (Screen.width <= 0 || Screen.height <= 0) return;
 
-            // Outside the window, or on the top bar / deck bar: glide slowly back to the default centre view
+            if (DragMode) ReadDrag(picture, pressed, pressedThisFrame, leftPress, dt);
+            else ReadLook(picture, pressed);
+        }
+
+        /// <summary>Zoomed in: press on the map, move past the threshold, and the map follows the pointer.</summary>
+        private void ReadDrag(Vector2 picture, bool pressed, bool pressedThisFrame, bool leftPress, float dt)
+        {
+            returningHome = false;
+            lookInput = Vector2.zero;
+
+            if (pressedThisFrame)
+            {
+                bool blocked = PointerOverUi() || (leftPress && IsPlacingCard());
+                pointerDown = !blocked;
+                dragging = false;
+                pressStart = lastPointer = picture;
+                if (pointerDown) dragVelocity = Vector2.zero;
+            }
+
+            if (pointerDown && pressed)
+            {
+                if (!dragging && (picture - pressStart).sqrMagnitude > DragStartPixels * DragStartPixels) dragging = true;
+                if (dragging)
+                {
+                    float worldPerPixel = 2f * cam.orthographicSize / Screen.height;
+                    Vector2 worldDelta = (picture - lastPointer) * worldPerPixel;
+                    dragTarget -= worldDelta;
+                    if (dt > 0f) dragVelocity = Vector2.Lerp(dragVelocity, -worldDelta / dt, 0.5f);
+                    if (worldDelta.sqrMagnitude > 0f) lastDragTime = Time.unscaledTime;
+                }
+                lastPointer = picture;
+                return;
+            }
+
+            if (!pressed)
+            {
+                // A pause before letting go cancels the fling
+                if (dragging && Time.unscaledTime - lastDragTime > 0.08f) dragVelocity = Vector2.zero;
+                pointerDown = dragging = false;
+            }
+        }
+
+        /// <summary>Fully zoomed out: drift toward the cursor; glide home on the HUD bars or outside the window.</summary>
+        private void ReadLook(Vector2 picture, bool pressed)
+        {
+            pointerDown = dragging = false;
+
+            // Hold still while a button is held (placing / setting an operator's facing)
+            if (pressed) return;
+
             bool outside = picture.x < 0f || picture.y < 0f || picture.x > Screen.width || picture.y > Screen.height;
             float heightFraction = picture.y / Screen.height;
             bool onHudBar = heightFraction < BottomHudFraction || heightFraction > 1f - TopHudFraction;
@@ -210,6 +318,28 @@ namespace TrashTD.Core.GameLoop
             lookInput = new Vector2(ShapeAxis(normalized.x), ShapeAxis(normalized.y));
         }
 
+        /// <summary>
+        /// Changes the zoom target. With a cursor, a zoom that stays in drag mode keeps the point under the cursor
+        /// roughly in place (like the stage-select map).
+        /// </summary>
+        private void SetTargetZoom(float value, Vector2? cursorPicture)
+        {
+            float previous = targetZoom;
+            targetZoom = Mathf.Clamp(value, 1f, MaxZoom);
+            if (!DragMode || Mathf.Approximately(previous, targetZoom)) return;
+
+            if (previous <= DragZoomThreshold) dragTarget = offset;
+            if (cursorPicture.HasValue)
+            {
+                float oldSize = homeSize / previous;
+                float newSize = homeSize / targetZoom;
+                float worldPerPixel = 2f * oldSize / Screen.height;
+                Vector2 fromCentre = (cursorPicture.Value - new Vector2(Screen.width, Screen.height) * 0.5f) * worldPerPixel;
+                dragTarget += fromCentre * (1f - newSize / oldSize);
+            }
+            dragVelocity = Vector2.zero;
+        }
+
         /// <summary>Dead zone around the centre, then a smooth ramp to the edge.</summary>
         private static float ShapeAxis(float value)
         {
@@ -223,8 +353,11 @@ namespace TrashTD.Core.GameLoop
             return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
         }
 
-        private GameplayHUDUI hud;
-        private CardDraftOverlayUI draft;
+        private bool IsPlacingCard()
+        {
+            if (bootstrapper == null) bootstrapper = FindAnyObjectByType<StageBootstrapper>();
+            return bootstrapper != null && bootstrapper.IsPlacementActive;
+        }
 
         private bool InputAllowed()
         {

@@ -721,6 +721,9 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
+        /// <summary>A deck card is being placed (preview, pending card or facing drag); an operator selection doesn't count.</summary>
+        public bool IsPlacementActive => isPlacementPreviewActive || pendingDeployCard != null || isDraggingToDeploy;
+
         public bool IsPlacementOrSelectionActive()
         {
             return isPlacementPreviewActive || pendingDeployCard != null || isDraggingToDeploy ||

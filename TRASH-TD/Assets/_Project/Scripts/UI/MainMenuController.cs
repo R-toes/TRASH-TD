@@ -47,7 +47,6 @@ namespace TrashTD.UI
         private static readonly Color TextDim = new Color(0.50f, 0.58f, 0.68f, 1f);
         private static readonly Color CardColor = new Color(0.06f, 0.07f, 0.10f, 1f);
         private static readonly Color CardLockedColor = new Color(0.045f, 0.05f, 0.065f, 1f);
-        private static readonly Color DifficultyCardColor = new Color(0.030f, 0.075f, 0.050f, 1f);
 
         // Terminal (Pip-Boy) styling shared by the stage selector and the stage dossier
         private static readonly Color TerminalPanel = new Color(0.016f, 0.042f, 0.028f, 0.97f);
@@ -120,7 +119,13 @@ namespace TrashTD.UI
         private StageMapLayout stageMapLayout;
         private StageMapNavigator mapNavigator;
         private StageMapSidePanel stageSidePanel;
-        private readonly Dictionary<StageDifficulty, DifficultyCardView> difficultyCards = new Dictionary<StageDifficulty, DifficultyCardView>();
+        private Slider difficultySlider;
+        private RectTransform difficultySliderRoot;
+        private Image difficultyFill;
+        private Image difficultyKnob;
+        private Image difficultyKnobHighlight;
+        private Image[] difficultyNotches;
+        private Text[] difficultyNotchLabels;
         private StageData selectedStage;
         private int selectedStageIndex = -1;
         private StageDifficulty selectedDifficulty = StageDifficulty.Normal;
@@ -231,16 +236,6 @@ namespace TrashTD.UI
             public Text caret;
             public RectTransform label;
             public float hot;
-        }
-
-        private sealed class DifficultyCardView
-        {
-            public Button button;
-            public MenuButtonFeedback feedback;
-            public Image tierBar;
-            public Text nameText;
-            public Text waveText;
-            public Image[] pips;
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -1690,17 +1685,20 @@ namespace TrashTD.UI
             stageDetailsTitle.resizeTextMaxSize = 34;
             StretchTop(stageDetailsTitle.rectTransform, 0f, 0f, 24f, 52f);
 
+            // Column blocks (622 px tall) are spaced evenly, DetailsGap apart: name (0..76), description,
+            // stats + divider, difficulty label + slider, info strip, and the Back / Play buttons at the bottom.
             stageDetailsDescription = MakeText(column.transform, "StageDetailsDescription", "", 15, TextAnchor.UpperLeft, new Color(0.62f, 0.76f, 0.68f, 1f));
             FitText(stageDetailsDescription, 11, 15);
-            StretchTop(stageDetailsDescription.rectTransform, 0f, 0f, 84f, 64f);
+            stageDetailsDescription.lineSpacing = 1.25f;
+            StretchTop(stageDetailsDescription.rectTransform, 0f, 0f, DetailsDescriptionTop, DetailsDescriptionHeight);
 
             stageDetailsStats = MakeText(column.transform, "StageDetailsStats", "", 12, TextAnchor.MiddleLeft, TerminalText, FontStyle.Bold);
             FitText(stageDetailsStats, 10, 12);
-            StretchTop(stageDetailsStats.rectTransform, 0f, 0f, 154f, 22f);
+            StretchTop(stageDetailsStats.rectTransform, 0f, 0f, DetailsStatsTop, 22f);
 
             var divider = new GameObject("DetailsDivider", typeof(RectTransform), typeof(Image));
             divider.transform.SetParent(column.transform, false);
-            StretchTop(divider.GetComponent<RectTransform>(), 0f, 0f, 182f, 2f);
+            StretchTop(divider.GetComponent<RectTransform>(), 0f, 0f, DetailsStatsTop + 30f, 2f);
             var dividerImage = divider.GetComponent<Image>();
             dividerImage.color = new Color(TerminalLine.r, TerminalLine.g, TerminalLine.b, 0.25f);
             dividerImage.raycastTarget = false;
@@ -1724,6 +1722,17 @@ namespace TrashTD.UI
         private const float DossierHeight = 720f;
         private const float DossierHeaderHeight = 46f;
         private const float DossierPadding = 28f;
+
+        // Details column layout (column pixels from the top; the column is 622 px tall, Back / Play fill 560..622).
+        // Blocks: name 0..76, description 96 px, stats + divider 32 px, difficulty label + slider 82 px, info strip
+        // 80 px, buttons 62 px; the 194 px left over is split evenly into five gaps.
+        private const float DetailsGap = 39f;
+        private const float DetailsDescriptionTop = 76f + DetailsGap;                                   // 115
+        private const float DetailsDescriptionHeight = 96f;
+        private const float DetailsStatsTop = DetailsDescriptionTop + DetailsDescriptionHeight + DetailsGap; // 250
+        private const float DifficultyLabelTop = DetailsStatsTop + 32f + DetailsGap;                   // 321
+        private const float DifficultyBriefingTop = DifficultyLabelTop + 82f + DetailsGap;             // 442
+        private const float DifficultyBriefingHeight = 80f;
         private const float PreviewFrameWidth = 800f;
 
         /// <summary>Four L-shaped terminal corner brackets; a negative inset pushes them outside the rect.</summary>
@@ -1769,54 +1778,47 @@ namespace TrashTD.UI
             }
         }
 
+        /// <summary>
+        /// Difficulty picker in the stage details column, kept compact: a "> DIFFICULTY" label, a stepped pixel
+        /// slider (EASY / NORMAL / HARD notches; press anywhere on it, drag, or use the arrow keys) and one framed
+        /// strip with the choice, its waves and lives, and a one-line blurb. Colours follow the selection.
+        /// </summary>
         private void BuildDifficultySelector()
         {
-            if (stageDetailsPanel == null || difficultyCards.Count > 0) return;
+            if (stageDetailsPanel == null || difficultySlider != null) return;
 
             Transform parent = stageDetailsColumn != null ? (Transform)stageDetailsColumn
                 : stageDetailsModal != null ? (Transform)stageDetailsModal : stageDetailsPanel.transform;
 
-            difficultyLabel = MakeText(parent, "DifficultyLabel", "> SELECT DIFFICULTY", 12, TextAnchor.MiddleLeft, TerminalText, FontStyle.Bold);
-            StretchTop(difficultyLabel.rectTransform, 0f, 0f, 198f, 20f);
+            difficultyLabel = MakeText(parent, "DifficultyLabel", "> DIFFICULTY", 12, TextAnchor.MiddleLeft, TerminalText, FontStyle.Bold);
+            StretchTop(difficultyLabel.rectTransform, 0f, 0f, DifficultyLabelTop, 20f);
 
-            // Three equal cards in a row (inset a little so the selected card's 1.05 scale stays inside the column)
-            var row = new GameObject("DifficultyRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
-            row.transform.SetParent(parent, false);
-            StretchTop(row.GetComponent<RectTransform>(), 4f, 4f, 226f, 146f);
-            var layout = row.GetComponent<HorizontalLayoutGroup>();
-            layout.spacing = 12f;
-            layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = true;
+            BuildDifficultySlider(parent);
 
-            foreach (var difficulty in DifficultyOrder)
-            {
-                difficultyCards[difficulty] = CreateDifficultyCard(row.transform, difficulty);
-            }
-
-            // Briefing plate under the cards: name, blurb and waves/lives for the chosen difficulty
+            // Info strip under the slider: ◆ NORMAL ... WAVES 20 / LIVES 15, blurb underneath
             var briefing = new GameObject("DifficultyBriefing", typeof(RectTransform), typeof(Image));
             briefing.transform.SetParent(parent, false);
             difficultyBriefing = briefing.GetComponent<RectTransform>();
-            StretchTop(difficultyBriefing, 0f, 0f, 386f, 160f);
+            StretchTop(difficultyBriefing, 0f, 0f, DifficultyBriefingTop, DifficultyBriefingHeight);
             var briefingImage = briefing.GetComponent<Image>();
             briefingImage.color = TerminalPlate;
             briefingImage.raycastTarget = false;
-            AddCornerBrackets(difficultyBriefing, 12f, 2f, TerminalLine);
+            AddCornerBrackets(difficultyBriefing, 10f, 2f, TerminalLine);
 
-            difficultyHeading = MakeText(briefing.transform, "DifficultyHeading", "◆ NORMAL", 16, TextAnchor.MiddleLeft, TextDim, FontStyle.Bold);
-            FitText(difficultyHeading, 12, 16);
-            StretchTop(difficultyHeading.rectTransform, 18f, 18f, 14f, 26f);
+            // Heading on the left half, waves/lives right-aligned in the right half (they never touch), blurb below
+            difficultyHeading = MakeText(briefing.transform, "DifficultyHeading", "◆ NORMAL", 14, TextAnchor.MiddleLeft, TextDim, FontStyle.Bold);
+            FitText(difficultyHeading, 11, 14);
+            StretchTop(difficultyHeading.rectTransform, 18f, 18f, 16f, 22f);
+            difficultyHeading.rectTransform.anchorMax = new Vector2(0.36f, 1f);
 
-            difficultyBlurb = MakeText(briefing.transform, "DifficultyBlurb", "", 14, TextAnchor.UpperLeft, new Color(0.62f, 0.76f, 0.68f, 1f));
-            FitText(difficultyBlurb, 10, 14);
-            StretchTop(difficultyBlurb.rectTransform, 18f, 18f, 46f, 64f);
+            difficultyStats = MakeText(briefing.transform, "DifficultyStats", "", 12, TextAnchor.MiddleRight, TerminalText, FontStyle.Bold);
+            FitText(difficultyStats, 10, 12);
+            StretchTop(difficultyStats.rectTransform, 18f, 18f, 16f, 22f);
+            difficultyStats.rectTransform.anchorMin = new Vector2(0.36f, 1f);
 
-            difficultyStats = MakeText(briefing.transform, "DifficultyStats", "", 13, TextAnchor.MiddleLeft, TerminalText, FontStyle.Bold);
-            FitText(difficultyStats, 10, 13);
-            StretchBottom(difficultyStats.rectTransform, 18f, 18f, 14f, 26f);
+            difficultyBlurb = MakeText(briefing.transform, "DifficultyBlurb", "", 11, TextAnchor.MiddleLeft, new Color(0.62f, 0.76f, 0.68f, 0.85f));
+            FitText(difficultyBlurb, 9, 11);
+            StretchTop(difficultyBlurb.rectTransform, 18f, 18f, 46f, 20f);
         }
 
         /// <summary>Lets a Text shrink (down to minSize) instead of being cut off by its rect.</summary>
@@ -1830,53 +1832,133 @@ namespace TrashTD.UI
             text.resizeTextMaxSize = maxSize;
         }
 
-        private DifficultyCardView CreateDifficultyCard(Transform parent, StageDifficulty difficulty)
+        // Difficulty slider geometry (column pixels): the slide area is inset so the knob and the end labels stay
+        // inside the column; notches, labels and the knob all use the same 0 / 0.5 / 1 positions.
+        private const float DifficultySliderTop = DifficultyLabelTop + 30f;
+        private const float DifficultySliderInset = 46f;
+        private const float DifficultyTrackHeight = 10f;
+        private static readonly Color DifficultyTrackColor = new Color(0.020f, 0.050f, 0.034f, 1f);
+
+        /// <summary>
+        /// Stepped pixel slider: an outlined track with a fill in the selected colour, three square notches, a
+        /// blocky knob (outline, colour, highlight row) and the tier names under the notches. A Unity Slider
+        /// (whole numbers 0-2) drives it, with a transparent hit area over the whole row so a press anywhere jumps
+        /// to the nearest notch.
+        /// </summary>
+        private void BuildDifficultySlider(Transform parent)
         {
-            var view = new DifficultyCardView();
-            Color tint = GetDifficultyColor(difficulty);
-            int level = GetDifficultyLevel(difficulty);
+            var root = new GameObject("DifficultySlider", typeof(RectTransform), typeof(Image), typeof(Slider));
+            root.transform.SetParent(parent, false);
+            var rootRect = root.GetComponent<RectTransform>();
+            StretchTop(rootRect, 0f, 0f, DifficultySliderTop, 52f);
+            Image hitArea = root.GetComponent<Image>();
+            hitArea.color = new Color(0f, 0f, 0f, 0f);
+            hitArea.raycastTarget = true;
+            difficultySliderRoot = rootRect;
 
-            view.button = CreateButtonChild(parent, difficulty + "DifficultyButton", difficulty.ToString().ToUpperInvariant());
-            view.button.GetComponent<Image>().color = DifficultyCardColor;
-            AddCornerBrackets(view.button.GetComponent<RectTransform>(), 10f, 2f, new Color(tint.r, tint.g, tint.b, 0.55f));
+            // Track: dark channel with a 2 px outline
+            var trackOutline = CreateBlock(root.transform, "TrackOutline", new Color(TerminalLine.r, TerminalLine.g, TerminalLine.b, 0.45f));
+            StretchTop(trackOutline.rectTransform, DifficultySliderInset - 4f, DifficultySliderInset - 4f, 7f, DifficultyTrackHeight + 4f);
+            var track = CreateBlock(root.transform, "Track", DifficultyTrackColor);
+            StretchTop(track.rectTransform, DifficultySliderInset - 2f, DifficultySliderInset - 2f, 9f, DifficultyTrackHeight);
 
-            // Name (reuses the button label)
-            view.nameText = view.button.GetComponentInChildren<Text>();
-            view.nameText.fontSize = 20;
-            view.nameText.fontStyle = FontStyle.Bold;
-            view.nameText.raycastTarget = false;
-            FitText(view.nameText, 12, 20);
-            StretchTop(view.nameText.rectTransform, 6f, 6f, 22f, 32f);
+            // Fill and knob live in a slide area matching the notch positions
+            var slideArea = new GameObject("SlideArea", typeof(RectTransform));
+            slideArea.transform.SetParent(root.transform, false);
+            var slideRect = slideArea.GetComponent<RectTransform>();
+            StretchTop(slideRect, DifficultySliderInset, DifficultySliderInset, 9f, DifficultyTrackHeight);
 
-            // Tier bar across the top
-            var bar = new GameObject("TierBar", typeof(RectTransform), typeof(Image));
-            bar.transform.SetParent(view.button.transform, false);
-            StretchTop(bar.GetComponent<RectTransform>(), 0f, 0f, 0f, 4f);
-            view.tierBar = bar.GetComponent<Image>();
-            view.tierBar.raycastTarget = false;
+            difficultyFill = CreateBlock(slideArea.transform, "Fill", AccentColor);
+            difficultyFill.rectTransform.anchorMin = Vector2.zero;
+            difficultyFill.rectTransform.anchorMax = new Vector2(0f, 1f);
+            difficultyFill.rectTransform.offsetMin = new Vector2(0f, 2f);
+            difficultyFill.rectTransform.offsetMax = new Vector2(0f, -2f);
 
-            // Wave count
-            view.waveText = MakeText(view.button.transform, "WaveText", "", 13, TextAnchor.MiddleCenter, TextDim);
-            FitText(view.waveText, 10, 13);
-            StretchTop(view.waveText.rectTransform, 6f, 6f, 64f, 26f);
+            // Tier names sit in a strip with the same insets as the slide area, so they line up with the notches
+            var labelArea = new GameObject("LabelArea", typeof(RectTransform));
+            labelArea.transform.SetParent(root.transform, false);
+            var labelAreaRect = labelArea.GetComponent<RectTransform>();
+            StretchTop(labelAreaRect, DifficultySliderInset, DifficultySliderInset, 34f, 16f);
 
-            // Threat pips (1–3)
-            view.pips = new Image[3];
-            for (int i = 0; i < view.pips.Length; i++)
+            // Notches at 0 / 0.5 / 1
+            difficultyNotches = new Image[DifficultyOrder.Length];
+            difficultyNotchLabels = new Text[DifficultyOrder.Length];
+            for (int i = 0; i < DifficultyOrder.Length; i++)
             {
-                var pip = new GameObject("Pip" + (i + 1), typeof(RectTransform), typeof(Image));
-                pip.transform.SetParent(view.button.transform, false);
-                Place(pip.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2((i - 1) * 22f, 22f), new Vector2(16f, 8f));
-                view.pips[i] = pip.GetComponent<Image>();
-                view.pips[i].raycastTarget = false;
+                float fraction = DifficultyOrder.Length > 1 ? i / (float)(DifficultyOrder.Length - 1) : 0f;
+                Image notch = CreateBlock(slideArea.transform, "Notch" + i, Color.white);
+                notch.rectTransform.anchorMin = notch.rectTransform.anchorMax = new Vector2(fraction, 0.5f);
+                notch.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+                notch.rectTransform.sizeDelta = new Vector2(6f, 6f);
+                difficultyNotches[i] = notch;
+
+                Text label = MakeText(labelArea.transform, "NotchLabel" + i, DifficultyOrder[i].ToString().ToUpperInvariant(), 11,
+                    TextAnchor.MiddleCenter, TextDim, FontStyle.Bold);
+                label.horizontalOverflow = HorizontalWrapMode.Overflow;
+                RectTransform labelRect = label.rectTransform;
+                labelRect.anchorMin = labelRect.anchorMax = new Vector2(fraction, 0.5f);
+                labelRect.pivot = new Vector2(0.5f, 0.5f);
+                labelRect.anchoredPosition = Vector2.zero;
+                labelRect.sizeDelta = new Vector2(100f, 16f);
+                difficultyNotchLabels[i] = label;
             }
 
-            float pitch = 0.8f + 0.1f * level;
-            view.feedback = AttachFeedback(view.button, () => PlaySfx(clickClip, pitch), tint, 1.04f);
+            // Knob: outline block, colour block, highlight row, dark centre slit
+            var handleArea = new GameObject("HandleArea", typeof(RectTransform));
+            handleArea.transform.SetParent(root.transform, false);
+            var handleAreaRect = handleArea.GetComponent<RectTransform>();
+            StretchTop(handleAreaRect, DifficultySliderInset, DifficultySliderInset, 0f, 28f);
 
-            StageDifficulty captured = difficulty;
-            view.button.onClick.AddListener(() => SetDifficulty(captured));
-            return view;
+            Image knobOutline = CreateBlock(handleArea.transform, "Knob", new Color(0.02f, 0.05f, 0.03f, 1f));
+            knobOutline.rectTransform.sizeDelta = new Vector2(20f, 0f);
+            difficultyKnob = CreateBlock(knobOutline.transform, "KnobFace", AccentColor);
+            SetBlockInset(difficultyKnob.rectTransform, 2f);
+            difficultyKnobHighlight = CreateBlock(difficultyKnob.transform, "KnobHighlight", new Color(1f, 1f, 1f, 0.45f));
+            difficultyKnobHighlight.rectTransform.anchorMin = new Vector2(0f, 1f);
+            difficultyKnobHighlight.rectTransform.anchorMax = new Vector2(1f, 1f);
+            difficultyKnobHighlight.rectTransform.pivot = new Vector2(0.5f, 1f);
+            difficultyKnobHighlight.rectTransform.offsetMin = new Vector2(0f, -3f);
+            difficultyKnobHighlight.rectTransform.offsetMax = Vector2.zero;
+            Image slit = CreateBlock(difficultyKnob.transform, "KnobSlit", new Color(0f, 0f, 0f, 0.35f));
+            slit.rectTransform.anchorMin = new Vector2(0.5f, 0.2f);
+            slit.rectTransform.anchorMax = new Vector2(0.5f, 0.75f);
+            slit.rectTransform.sizeDelta = new Vector2(2f, 0f);
+
+            difficultySlider = root.GetComponent<Slider>();
+            difficultySlider.fillRect = difficultyFill.rectTransform;
+            difficultySlider.handleRect = knobOutline.rectTransform;
+            difficultySlider.targetGraphic = difficultyKnob;
+            difficultySlider.transition = Selectable.Transition.None;
+            difficultySlider.direction = Slider.Direction.LeftToRight;
+            difficultySlider.minValue = 0f;
+            difficultySlider.maxValue = DifficultyOrder.Length - 1;
+            difficultySlider.wholeNumbers = true;
+            difficultySlider.SetValueWithoutNotify(System.Array.IndexOf(DifficultyOrder, selectedDifficulty));
+            difficultySlider.onValueChanged.AddListener(value =>
+            {
+                int index = Mathf.Clamp(Mathf.RoundToInt(value), 0, DifficultyOrder.Length - 1);
+                if (DifficultyOrder[index] == selectedDifficulty) return;
+                PlaySfx(clickClip, 0.9f + 0.1f * index);
+                SetDifficulty(DifficultyOrder[index]);
+            });
+        }
+
+        private static Image CreateBlock(Transform parent, string name, Color color)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var image = go.GetComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        private static void SetBlockInset(RectTransform rect, float inset)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(inset, inset);
+            rect.offsetMax = new Vector2(-inset, -inset);
         }
 
         private void SetDifficulty(StageDifficulty difficulty)
@@ -1887,39 +1969,25 @@ namespace TrashTD.UI
 
         private void UpdateDifficultyDisplay()
         {
-            foreach (var difficulty in DifficultyOrder)
-            {
-                if (!difficultyCards.TryGetValue(difficulty, out DifficultyCardView view)) continue;
-
-                bool isSelected = selectedDifficulty == difficulty;
-                Color tint = GetDifficultyColor(difficulty);
-                int level = GetDifficultyLevel(difficulty);
-
-                view.feedback.SetBaseColor(isSelected ? Color.Lerp(DifficultyCardColor, tint, 0.22f) : DifficultyCardColor);
-                view.feedback.restScale = isSelected ? 1.05f : 1f;
-                view.feedback.glowAlways = isSelected;
-                view.feedback.glowColor = new Color(tint.r, tint.g, tint.b, 0.9f);
-
-                view.tierBar.color = isSelected ? tint : new Color(tint.r, tint.g, tint.b, 0.35f);
-
-                view.nameText.text = difficulty.ToString().ToUpperInvariant();
-                view.nameText.color = isSelected ? Color.white : new Color(0.55f, 0.60f, 0.68f, 1f);
-
-                int waveCount = GetSelectedStageWaveCount(difficulty);
-                view.waveText.text = waveCount > 0 ? $"{waveCount} WAVES" : "";
-                view.waveText.color = isSelected ? new Color(0.80f, 0.85f, 0.92f, 1f) : TextDim;
-
-                for (int i = 0; i < view.pips.Length; i++)
-                {
-                    bool filled = i < level;
-                    view.pips[i].color = filled
-                        ? (isSelected ? tint : new Color(tint.r, tint.g, tint.b, 0.45f))
-                        : new Color(1f, 1f, 1f, 0.10f);
-                }
-            }
-
             Color selectedTint = GetDifficultyColor(selectedDifficulty);
             modalAccentTarget = selectedTint;
+
+            if (difficultySlider != null)
+            {
+                int selectedIndex = System.Array.IndexOf(DifficultyOrder, selectedDifficulty);
+                difficultySlider.SetValueWithoutNotify(selectedIndex);
+                difficultyFill.color = new Color(selectedTint.r, selectedTint.g, selectedTint.b, 0.85f);
+                difficultyKnob.color = selectedTint;
+
+                for (int i = 0; i < DifficultyOrder.Length; i++)
+                {
+                    Color tint = GetDifficultyColor(DifficultyOrder[i]);
+                    bool reached = i <= selectedIndex;
+                    bool isSelected = i == selectedIndex;
+                    difficultyNotches[i].color = reached ? Color.Lerp(tint, Color.white, 0.35f) : new Color(1f, 1f, 1f, 0.18f);
+                    difficultyNotchLabels[i].color = isSelected ? tint : new Color(TextDim.r, TextDim.g, TextDim.b, 0.8f);
+                }
+            }
 
             if (difficultyHeading != null)
             {
@@ -1937,7 +2005,7 @@ namespace TrashTD.UI
                 int waves = GetSelectedStageWaveCount(selectedDifficulty);
                 int lives = selectedStage != null ? selectedStage.GetLifePoints(selectedDifficulty) : 0;
                 difficultyStats.text = selectedStage != null
-                    ? $"WAVES {(waves > 0 ? waves.ToString() : "?")}   //   LIVES {lives}"
+                    ? $"WAVES {(waves > 0 ? waves.ToString() : "?")} / LIVES {lives}"
                     : string.Empty;
             }
         }
@@ -2182,18 +2250,8 @@ namespace TrashTD.UI
             RegisterEntrance(detailsEntrance, stageDetailsStats, new Vector2(0f, 12f), 0.14f);
             RegisterEntrance(detailsEntrance, stagePreviewFrame, new Vector2(-24f, 0f), 0.02f);
             RegisterEntrance(detailsEntrance, difficultyLabel, new Vector2(0f, 12f), 0.16f);
-
-            int n = 0;
-            foreach (var difficulty in DifficultyOrder)
-            {
-                if (difficultyCards.TryGetValue(difficulty, out DifficultyCardView view))
-                {
-                    RegisterEntrance(detailsEntrance, view.button, Vector2.zero, 0.18f + n * 0.06f, 0.9f);
-                    n++;
-                }
-            }
-
-            RegisterEntrance(detailsEntrance, difficultyBriefing, new Vector2(0f, 12f), 0.36f);
+            RegisterEntrance(detailsEntrance, difficultySliderRoot, new Vector2(0f, 12f), 0.22f);
+            RegisterEntrance(detailsEntrance, difficultyBriefing, new Vector2(0f, 12f), 0.30f);
             RegisterEntrance(detailsEntrance, stageDetailsBackButton, new Vector2(0f, -12f), 0.38f);
             RegisterEntrance(detailsEntrance, playStageButton, new Vector2(0f, -12f), 0.42f);
         }

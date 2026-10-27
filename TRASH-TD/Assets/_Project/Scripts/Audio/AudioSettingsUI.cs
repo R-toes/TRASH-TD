@@ -256,9 +256,15 @@ namespace TrashTD.Audio
         {
             CreateRowLabel(label, centerY);
 
-            GameObject sliderObject = new GameObject(label + "Slider", typeof(RectTransform), typeof(Slider));
+            GameObject sliderObject = new GameObject(label + "Slider", typeof(RectTransform), typeof(Image), typeof(Slider));
             sliderObject.transform.SetParent(card, false);
             PlaceTopLeft(sliderObject.GetComponent<RectTransform>(), ControlX, centerY - 14f, ControlWidth, 28f);
+
+            // Invisible hit area over the whole row height, so pressing anywhere on the bar jumps the handle
+            // there (Slider moves to the pointer on press) and dragging continues from that point.
+            Image hitArea = sliderObject.GetComponent<Image>();
+            hitArea.color = new Color(0f, 0f, 0f, 0f);
+            hitArea.raycastTarget = true;
 
             // The slider only drives x anchors, so the y anchors set here give the track and fill their height
             Image track = CreateImage(sliderObject.transform, "Track", TrackColor);

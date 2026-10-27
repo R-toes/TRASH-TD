@@ -1019,7 +1019,9 @@ namespace TrashTD.UI
             {
                 EnemyData enemy = entry.Enemy;
                 x = AddChip(x, ArchetypeLabel(enemy.archetype), HostileBright, null);
-                x = AddChip(x, enemy.movementType == EnemyMovementType.Air ? "AIR" : "GROUND", LabelColor, null);
+                // Flyers' archetype chip already reads AIR, so only show movement when it adds something
+                string movement = enemy.movementType == EnemyMovementType.Air ? "AIR" : "GROUND";
+                if (movement != ArchetypeLabel(enemy.archetype)) x = AddChip(x, movement, LabelColor, null);
                 x = AddChip(x, DamageLabel(enemy.damageType), DamageColor(enemy.damageType), null);
                 if (enemy.isUnblockable) AddChip(x, "UNBLOCKABLE", AmberColor, null);
             }
