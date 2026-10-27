@@ -9,7 +9,7 @@ namespace TrashTD.UI
     /// <summary>
     /// Gameplay "surveillance feed" dressing over the stage view, in the style of the main menu's camera viewfinder.
     /// It covers the playable area between the HUD bars (top bar 90 px, deck bar 170 px at 1080):
-    ///   - viewfinder corner brackets, a faint centre reticle, a soft vignette and a slow rolling tracking band;
+    ///   - viewfinder corner brackets and a soft vignette;
     ///   - top-left: blinking REC + "CAM 03 // RAILYARD DRAIN";
     ///   - top-right: a live date/time stamp and the mission clock (T+ mm:ss);
     ///   - bottom-left: signal bars and the zoom level (from GameplayCameraController).
@@ -40,7 +40,6 @@ namespace TrashTD.UI
         private Text missionText;
         private Text zoomText;
         private Image[] signalBars;
-        private Image trackingBand;
         private RawImage[] tearBars;
         private string caption = string.Empty;
         private float interferenceTime = -1f;
@@ -91,16 +90,10 @@ namespace TrashTD.UI
             area.offsetMin = new Vector2(0f, BottomInset);
             area.offsetMax = new Vector2(0f, -TopInset);
 
-            // Soft vignette and the rolling tracking band
+            // Soft vignette
             Image vignette = CreateImage(area, "Vignette", new Color(0f, 0f, 0f, 0.35f));
             vignette.sprite = CreateVignetteSprite();
             Stretch(vignette.rectTransform);
-
-            trackingBand = CreateImage(area, "TrackingBand", new Color(1f, 1f, 1f, 0.035f));
-            trackingBand.rectTransform.anchorMin = new Vector2(0f, 1f);
-            trackingBand.rectTransform.anchorMax = new Vector2(1f, 1f);
-            trackingBand.rectTransform.pivot = new Vector2(0.5f, 1f);
-            trackingBand.rectTransform.sizeDelta = new Vector2(0f, 70f);
 
             // Noise tear bars (hidden until interference)
             tearBars = new RawImage[6];
@@ -123,19 +116,6 @@ namespace TrashTD.UI
             frame.offsetMin = new Vector2(Margin, Margin);
             frame.offsetMax = new Vector2(-Margin, -Margin);
             bracketBars = AddCornerBrackets(frame, 54f, 3f, LineGreen);
-
-            // Centre reticle
-            var reticle = CreateRect(area, "Reticle");
-            reticle.anchorMin = reticle.anchorMax = new Vector2(0.5f, 0.5f);
-            reticle.sizeDelta = new Vector2(40f, 40f);
-            Color reticleColor = new Color(LineGreen.r, LineGreen.g, LineGreen.b, 0.22f);
-            foreach (Vector2 dir in new[] { Vector2.up, Vector2.down, Vector2.left, Vector2.right })
-            {
-                Image tick = CreateImage(reticle, "Tick", reticleColor);
-                tick.rectTransform.anchorMin = tick.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-                tick.rectTransform.sizeDelta = dir.x != 0f ? new Vector2(10f, 2f) : new Vector2(2f, 10f);
-                tick.rectTransform.anchoredPosition = dir * 14f;
-            }
 
             // Top-left: REC + feed caption
             recDot = CreateImage(frame, "RecDot", RecRed);
@@ -187,11 +167,6 @@ namespace TrashTD.UI
             GameplayCameraController cameraController = GameplayCameraController.Instance;
             float zoom = cameraController != null ? cameraController.Zoom : 1f;
             zoomText.text = $"ZOOM {zoom:0.00}x   [SCROLL]";
-
-            // Tracking band rolls down the feed every 7 s
-            float areaHeight = area.rect.height;
-            float roll = Mathf.Repeat(time / 7f, 1f);
-            trackingBand.rectTransform.anchoredPosition = new Vector2(0f, -roll * (areaHeight + 70f) + 70f);
 
             UpdateInterference(dt);
         }

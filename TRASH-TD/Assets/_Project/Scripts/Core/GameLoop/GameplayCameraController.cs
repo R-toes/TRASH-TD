@@ -24,12 +24,14 @@ namespace TrashTD.Core.GameLoop
         private const float LookNudge = 0.035f;         // extra look range at home zoom, as a fraction of the view height
         private const float LookDeadZone = 0.2f;        // cursor distance from the centre (0..1) that keeps the camera still
         private const float FollowSharpness = 4.5f;
+        private const float ReturnSharpness = 1.6f;     // slower glide back to the centre (cursor on the HUD bars)
         private const float ZoomSharpness = 9f;
         private const float EdgeMargin = 0.3f;          // world units the view may go past the map art
 
         // HUD bars covering the view at the 1080 reference: top bar 90 px, deck bar 170 px
         private const float TopHudFraction = 90f / 1080f;
         private const float BottomHudFraction = 170f / 1080f;
+        private static readonly Vector2 SpeedPanelSize = new Vector2(410f, 331f);
 
         private Camera cam;
         private Vector2 homePosition;
@@ -40,6 +42,7 @@ namespace TrashTD.Core.GameLoop
         private float zoom = 1f;
         private float targetZoom = 1f;
         private Vector2 lookInput;          // -1..1 per axis, after dead zone and easing
+        private bool returningHome;         // cursor is on the top bar / deck bar: glide slowly back to centre
         private Vector2 offset;             // current camera offset from the home framing
         private float pinchDistance = -1f;
 
@@ -99,7 +102,8 @@ namespace TrashTD.Core.GameLoop
             float aspect = cam.aspect > 0f ? cam.aspect : 16f / 9f;
             Vector2 range = GetLookRange(size, aspect);
             Vector2 target = Vector2.Scale(lookInput, range);
-            offset = Vector2.Lerp(offset, target, 1f - Mathf.Exp(-FollowSharpness * dt));
+            float sharpness = returningHome ? ReturnSharpness : FollowSharpness;
+            offset = Vector2.Lerp(offset, target, 1f - Mathf.Exp(-sharpness * dt));
 
             // Shake decays quickly; scaled with the view so it reads the same at any zoom
             Vector2 shake = Vector2.zero;
@@ -186,8 +190,17 @@ namespace TrashTD.Core.GameLoop
             Vector2 picture = CrtDisplay.ScreenToPicture(pointer.Value);
             if (Screen.width <= 0 || Screen.height <= 0) return;
 
-            // Outside the window: ease back to centre
-            if (picture.x < 0f || picture.y < 0f || picture.x > Screen.width || picture.y > Screen.height)
+            // Outside the window, or on the top bar / deck bar: glide slowly back to the default centre view
+            bool outside = picture.x < 0f || picture.y < 0f || picture.x > Screen.width || picture.y > Screen.height;
+            float heightFraction = picture.y / Screen.height;
+            bool onHudBar = heightFraction < BottomHudFraction || heightFraction > 1f - TopHudFraction;
+
+            // The deck bar's bottom-right speed panel stands taller than the bar (410 x 331 at 1080). HUD canvas
+            // scale: ScaleWithScreenSize, 1920x1080 reference, width/height match 0.5.
+            float uiScale = Mathf.Pow(2f, Mathf.Lerp(Mathf.Log(Screen.width / 1920f, 2f), Mathf.Log(Screen.height / 1080f, 2f), 0.5f));
+            if (picture.x > Screen.width - SpeedPanelSize.x * uiScale && picture.y < SpeedPanelSize.y * uiScale) onHudBar = true;
+            returningHome = outside || onHudBar;
+            if (returningHome)
             {
                 lookInput = Vector2.zero;
                 return;
