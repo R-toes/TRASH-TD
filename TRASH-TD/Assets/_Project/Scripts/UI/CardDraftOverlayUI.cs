@@ -49,6 +49,9 @@ namespace TrashTD.UI
         private static readonly Color SKIP_COLOR = new Color(0.5f, 0.5f, 0.55f, 1f);
         private static readonly Color ACCENT_COLOR = new Color(0.18f, 0.82f, 0.45f, 1f);
         private static readonly Color ACCENT_BRIGHT = new Color(0.30f, 0.95f, 0.58f, 1f);
+        private static readonly Color WAVE_NEXT_COLOR = new Color(1f, 0.78f, 0.30f, 1f);
+        private static readonly Color WAVE_PENDING_COLOR = new Color(0.16f, 0.18f, 0.22f, 1f);
+        private static readonly Color WAVE_FINAL_COLOR = new Color(0.48f, 0.13f, 0.15f, 1f);
         private static readonly Color MELEE_COLOR = new Color(0.95f, 0.60f, 0.25f, 1f);
         private static readonly Color RANGED_COLOR = new Color(0.35f, 0.78f, 0.92f, 1f);
         private static readonly Color BACK_BG = new Color(0.045f, 0.06f, 0.09f, 1f);
@@ -69,7 +72,23 @@ namespace TrashTD.UI
         private const float ColumnCenterX = -285f;   // card column (left side)
         private const float PanelCenterX = 650f;     // detail panel (right side)
         private const float PanelWidth = 500f;
-        private const float ContentCenterY = 10f;
+        private const float ContentCenterY = 50f;    // cards/panel span y 170..810 from the top (1080 reference)
+
+        // Header (from the top edge): title plate, wave counter, wave progress bar
+        private const float HeaderPlateWidth = 720f;
+        private const float HeaderPlateHeight = 76f;
+        private const float HeaderPlateCenterY = -54f;   // y 16..92
+        private const float WaveCounterCenterY = -112f;  // y 98..126
+        private const float WaveBarCenterY = -138f;      // y 132..144
+        private const float WaveBarWidth = 560f;
+        private const float WaveBarHeight = 12f;
+
+        // Footer (from the bottom edge). MINIMIZE / RESUME sit in the HUD deck bar's free strip (y 65..113 at
+        // 1080), so the REROLL / SKIP / CONFIRM row is centred between that strip and the cards (bottom y 270).
+        private const float ActionRowCenterY = 190f;
+        private const float KeyHintCenterY = 30f;
+
+        private const string SkipCardAnimationKey = "TrashTD.SkipCardAnimation";
 
         // Range preview box (bottom-left of the detail panel)
         private const float RangeBoxWidth = 156f;
@@ -219,15 +238,34 @@ namespace TrashTD.UI
         private Text titleText;
         private Text deckCountText;
         private Text waveInfoText;
+        private RectTransform waveBarRect;
+        private readonly List<Image> waveSegments = new List<Image>();
+        private Image nextWaveSegment;
+        private Image skipAnimationCheck;
         private bool overlayVisible;
 
         // --- Minimize (view the map while drafting) ---
         private bool minimized;
         private GameObject restoreBar;
+        private RectTransform minimizeButtonRect;
         private bool pickConfirmed; // one card per draft; reset when the next draft opens
 
         /// <summary>True while the draft is minimized to the map & deck view, where operators can be deployed.</summary>
         public bool IsMinimized => minimized;
+
+        /// <summary>
+        /// Player option (checkbox on the draft screen, saved in PlayerPrefs, off by default): skip the shuffle,
+        /// deal and flip animations and deal every card face-up.
+        /// </summary>
+        public static bool SkipCardAnimation
+        {
+            get => PlayerPrefs.GetInt(SkipCardAnimationKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(SkipCardAnimationKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
 
         // --- Animation ---
         private RectTransform[] introRects;
@@ -317,13 +355,22 @@ namespace TrashTD.UI
 
             if (minimized)
             {
-                PositionRestoreButton();
+                if (restoreBar != null) PlaceOnDeckBarSlot((RectTransform)restoreBar.transform);
                 var keyboard = UnityEngine.InputSystem.Keyboard.current;
                 if (keyboard != null && keyboard.mKey.wasPressedThisFrame) SetMinimized(false);
                 return;
             }
 
             if (!overlayVisible) return;
+
+            // MINIMIZE sits exactly where RESUME appears, so the two act as one toggle in one place.
+            PlaceOnDeckBarSlot(minimizeButtonRect);
+
+            if (nextWaveSegment != null)
+            {
+                float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 4f);
+                nextWaveSegment.color = Color.Lerp(WAVE_NEXT_COLOR, Color.white, 0.35f * pulse);
+            }
 
             // Confirm button breathes while a card can be confirmed
             if (confirmFeedback != null && confirmButton != null)
@@ -774,12 +821,15 @@ namespace TrashTD.UI
                 dealRoutine = null;
             }
 
-            if (!isActiveAndEnabled)
+            bool skipAnimation = SkipCardAnimation;
+            if (!isActiveAndEnabled || skipAnimation)
             {
-                // Can't animate: fill the cards and leave them dealt face-down.
+                // Can't (or shouldn't) animate: fill the cards and leave them in their slots,
+                // face-up when the player skips card animations, otherwise face-down.
                 ApplyOfferToCards();
                 offerApplied = true;
                 freshDraft = false;
+                if (skipAnimation) RevealAllCardsInstantly();
                 SettleCards();
                 return;
             }
@@ -982,6 +1032,42 @@ namespace TrashTD.UI
 
             SetCardsInteractable(true);
             UpdateRerollButton();
+        }
+
+        /// <summary>Turns every dealt card face-up at once, with no flip (Skip card animation).</summary>
+        private void RevealAllCardsInstantly()
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                if (cardPanels[i] == null || !cardPanels[i].activeSelf) continue;
+                cardRevealed[i] = true;
+                cardFeedbacks[i].glowColor = RarityGlow(i);
+                SetFaceVisual(i, true);
+            }
+        }
+
+        private void ToggleSkipCardAnimation()
+        {
+            bool skip = !SkipCardAnimation;
+            SkipCardAnimation = skip;
+            RefreshSkipAnimationToggle();
+            PlayClick();
+
+            // Turning it on mid-draft finishes the current shuffle/deal/flips and shows the hand face-up.
+            if (!skip || !overlayVisible) return;
+            FinishAnimations();
+            if (!offerApplied) return;
+            RevealAllCardsInstantly();
+            SettleCards();
+        }
+
+        private void RefreshSkipAnimationToggle()
+        {
+            if (skipAnimationCheck == null) return;
+            bool skip = SkipCardAnimation;
+            Sprite sprite = LoadUiSprite(skip ? "UI/controls/checkbox_on" : "UI/controls/checkbox_off", Vector4.zero);
+            skipAnimationCheck.sprite = sprite;
+            skipAnimationCheck.color = sprite != null ? Color.white : (skip ? ACCENT_COLOR : new Color(1f, 1f, 1f, 0.25f));
         }
 
         private void RevealCard(int index)
@@ -1418,16 +1504,76 @@ namespace TrashTD.UI
             }
         }
 
+        /// <summary>Wave counter under the title ("NEXT WAVE 03 / 20") and the segmented wave bar under it.</summary>
         private void UpdateWaveInfo()
         {
-            if (waveInfoText != null && gameManager != null)
+            if (waveInfoText == null || gameManager == null) return;
+
+            var waveManager = FindAnyObjectByType<WaveManager>();
+            int total = waveManager != null ? waveManager.TotalWaves : 0;
+            int nextWave = gameManager.GetCurrentWaveIndex() + 1;
+            if (total > 0) nextWave = Mathf.Clamp(nextWave, 1, total);
+
+            if (total <= 0)
             {
-                var waveManager = FindAnyObjectByType<WaveManager>();
-                if (waveManager != null)
+                waveInfoText.text = $"<color=#8C96A3>NEXT WAVE</color>  {nextWave:00}";
+            }
+            else if (nextWave == total)
+            {
+                waveInfoText.text = $"<color=#FF6B6B>FINAL WAVE</color>  {nextWave:00} <color=#8C96A3>/ {total:00}</color>";
+            }
+            else
+            {
+                waveInfoText.text = $"<color=#8C96A3>NEXT WAVE</color>  {nextWave:00} <color=#8C96A3>/ {total:00}</color>";
+            }
+
+            UpdateWaveBar(total, nextWave);
+        }
+
+        /// <summary>One segment per wave: cleared (green), next (pulsing amber), still to come (dark), final (red).</summary>
+        private void UpdateWaveBar(int total, int nextWave)
+        {
+            if (waveBarRect == null) return;
+            waveBarRect.gameObject.SetActive(total > 0);
+            nextWaveSegment = null;
+            if (total <= 0) return;
+
+            if (waveSegments.Count != total)
+            {
+                foreach (Image segment in waveSegments)
                 {
-                    int nextWave = gameManager.GetCurrentWaveIndex() + 1;
-                    waveInfoText.text = $"NEXT: WAVE {nextWave} / {waveManager.TotalWaves}";
+                    if (segment != null) Destroy(segment.gameObject);
                 }
+                waveSegments.Clear();
+
+                float gap = total > 30 ? 2f : 4f;
+                float width = Mathf.Max(2f, Mathf.Floor((WaveBarWidth - gap * (total - 1)) / total));
+                float start = -(width * total + gap * (total - 1)) * 0.5f;
+                for (int i = 0; i < total; i++)
+                {
+                    var segmentObj = new GameObject("WaveSegment_" + (i + 1), typeof(RectTransform), typeof(Image));
+                    segmentObj.transform.SetParent(waveBarRect, false);
+                    var segment = segmentObj.GetComponent<Image>();
+                    segment.raycastTarget = false;
+                    PositionRT(segment, new Vector2(start + i * (width + gap) + width * 0.5f, 0f), new Vector2(0.5f, 0.5f),
+                        new Vector2(width, WaveBarHeight));
+                    waveSegments.Add(segment);
+                }
+            }
+
+            for (int i = 0; i < waveSegments.Count; i++)
+            {
+                int wave = i + 1;
+                Color color;
+                if (wave < nextWave) color = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.9f);
+                else if (wave == nextWave) color = WAVE_NEXT_COLOR;
+                else if (wave == total) color = WAVE_FINAL_COLOR;
+                else color = WAVE_PENDING_COLOR;
+
+                waveSegments[i].color = color;
+                waveSegments[i].rectTransform.sizeDelta = new Vector2(waveSegments[i].rectTransform.sizeDelta.x,
+                    wave == nextWave ? WaveBarHeight + 6f : WaveBarHeight);
+                if (wave == nextWave) nextWaveSegment = waveSegments[i];
             }
         }
 
@@ -1463,19 +1609,21 @@ namespace TrashTD.UI
             }
 
             if (restoreBar != null) restoreBar.SetActive(value);
-            if (value) PositionRestoreButton();
+            if (value && restoreBar != null) PlaceOnDeckBarSlot((RectTransform)restoreBar.transform);
+            else if (!value) PlaceOnDeckBarSlot(minimizeButtonRect);
             PlayClick();
         }
 
         /// <summary>
-        /// Puts RESUME in the free deck-bar strip between PREVIEW PATH and the bottom-right panel
-        /// (GameplayHUDUI.TryGetDeckBarFreeSlot). Runs every frame while minimized, because that strip
-        /// moves with the resolution. If the strip is too narrow (tall aspect ratios), the button sits just
-        /// above it. Without the HUD it keeps its default top-centre spot.
+        /// Puts MINIMIZE (draft open) and RESUME (draft minimized) in the same spot: the free deck-bar strip
+        /// between PREVIEW PATH and the bottom-right panel (GameplayHUDUI.TryGetDeckBarFreeSlot). Runs every
+        /// frame, because that strip moves with the resolution. If the strip is too narrow (tall aspect ratios),
+        /// the button sits just above it. Without the HUD each button keeps its default spot. Both buttons'
+        /// parents fill the canvas, so canvas-local positions apply to either.
         /// </summary>
-        private void PositionRestoreButton()
+        private void PlaceOnDeckBarSlot(RectTransform rt)
         {
-            if (restoreBar == null || canvas == null) return;
+            if (rt == null || canvas == null) return;
             if (gameplayHudUI == null) gameplayHudUI = FindAnyObjectByType<GameplayHUDUI>();
             if (gameplayHudUI == null || !gameplayHudUI.TryGetDeckBarFreeSlot(out Rect slot)) return;
 
@@ -1492,7 +1640,6 @@ namespace TrashTD.UI
                 return;
             }
 
-            var rt = (RectTransform)restoreBar.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
 
@@ -1760,40 +1907,73 @@ namespace TrashTD.UI
             stripeImage.color = ACCENT_COLOR;
             stripeImage.raycastTarget = false;
 
-            // Title (centered above the card column)
-            titleText = MakeText(overlayRoot.transform, "Title", "CHOOSE YOUR CARD", 36,
+            // ── Header, centred above the card column: title plate, wave counter, wave bar ──
+            var headerPlate = new GameObject("HeaderPlate", typeof(RectTransform), typeof(Image));
+            headerPlate.transform.SetParent(overlayRoot.transform, false);
+            var headerPlateImage = headerPlate.GetComponent<Image>();
+            headerPlateImage.raycastTarget = false;
+            GameplayHUDUI.ApplyPanelContainer(headerPlate, GameplayHUDUI.PanelContainerType.Metal);
+            PositionRT(headerPlateImage, new Vector2(ColumnCenterX, HeaderPlateCenterY), new Vector2(0.5f, 1f),
+                new Vector2(HeaderPlateWidth, HeaderPlateHeight));
+
+            var plateAccent = new GameObject("PlateAccent", typeof(RectTransform), typeof(Image));
+            plateAccent.transform.SetParent(headerPlate.transform, false);
+            var plateAccentImage = plateAccent.GetComponent<Image>();
+            plateAccentImage.color = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.85f);
+            plateAccentImage.raycastTarget = false;
+            var plateAccentRect = plateAccent.GetComponent<RectTransform>();
+            plateAccentRect.anchorMin = new Vector2(0.5f, 0f);
+            plateAccentRect.anchorMax = new Vector2(0.5f, 0f);
+            plateAccentRect.anchoredPosition = new Vector2(0f, 8f);
+            plateAccentRect.sizeDelta = new Vector2(HeaderPlateWidth - 120f, 3f);
+
+            titleText = MakeText(headerPlate.transform, "Title", "CHOOSE YOUR CARD", 36,
                 TextAnchor.MiddleCenter, Color.white);
             titleText.fontStyle = FontStyle.Bold;
-            PositionRT(titleText, new Vector2(ColumnCenterX, -48f), new Vector2(0.5f, 1f), new Vector2(700f, 60f));
+            StretchFill(titleText.rectTransform);
+            titleText.rectTransform.offsetMin = new Vector2(0f, 6f);
             var titleShadow = titleText.gameObject.AddComponent<Shadow>();
             titleShadow.effectColor = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.35f);
             titleShadow.effectDistance = new Vector2(0f, -4f);
 
-            // Wave info
-            waveInfoText = MakeText(overlayRoot.transform, "WaveInfo", "NEXT: WAVE 1 / ?", 18,
-                TextAnchor.MiddleCenter, STAT_LABEL_COLOR);
-            PositionRT(waveInfoText, new Vector2(ColumnCenterX, -104f), new Vector2(0.5f, 1f), new Vector2(500f, 40f));
+            // Wave counter: icon + "NEXT WAVE 03 / 20", centred as one group
+            var waveCounter = new GameObject("WaveCounter", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
+            waveCounter.transform.SetParent(overlayRoot.transform, false);
+            var waveCounterRect = waveCounter.GetComponent<RectTransform>();
+            PositionRT(waveCounterRect, new Vector2(ColumnCenterX, WaveCounterCenterY), new Vector2(0.5f, 1f), new Vector2(0f, 28f));
+            var waveCounterLayout = waveCounter.GetComponent<HorizontalLayoutGroup>();
+            waveCounterLayout.spacing = 12f;
+            waveCounterLayout.childAlignment = TextAnchor.MiddleCenter;
+            waveCounterLayout.childControlWidth = true;
+            waveCounterLayout.childControlHeight = true;
+            waveCounterLayout.childForceExpandWidth = false;
+            waveCounterLayout.childForceExpandHeight = false;
+            waveCounter.GetComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             var waveIconSprite = GameplayHUDUI.LoadIconSprite("icon_wave");
             if (waveIconSprite != null)
             {
-                var waveIconObj = new GameObject("WaveHeaderIcon", typeof(RectTransform), typeof(Image));
-                waveIconObj.transform.SetParent(overlayRoot.transform, false);
+                var waveIconObj = new GameObject("WaveIcon", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+                waveIconObj.transform.SetParent(waveCounter.transform, false);
                 var waveIconImg = waveIconObj.GetComponent<Image>();
                 waveIconImg.sprite = waveIconSprite;
-                waveIconImg.color = STAT_LABEL_COLOR;
+                waveIconImg.color = WAVE_NEXT_COLOR;
                 waveIconImg.preserveAspect = true;
                 waveIconImg.raycastTarget = false;
-                PositionRT(waveIconImg, new Vector2(ColumnCenterX - 130f, -104f), new Vector2(0.5f, 1f), new Vector2(22f, 22f));
+                var waveIconLayout = waveIconObj.GetComponent<LayoutElement>();
+                waveIconLayout.preferredWidth = 22f;
+                waveIconLayout.preferredHeight = 22f;
             }
 
-            // Divider under the header
-            var divider = new GameObject("HeaderDivider", typeof(RectTransform), typeof(Image));
-            divider.transform.SetParent(overlayRoot.transform, false);
-            var dividerImage = divider.GetComponent<Image>();
-            dividerImage.color = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.4f);
-            dividerImage.raycastTarget = false;
-            PositionRT(dividerImage, new Vector2(ColumnCenterX, -134f), new Vector2(0.5f, 1f), new Vector2(240f, 2f));
+            waveInfoText = MakeText(waveCounter.transform, "WaveInfo", "NEXT WAVE  01", 20,
+                TextAnchor.MiddleCenter, Color.white);
+            waveInfoText.horizontalOverflow = HorizontalWrapMode.Overflow;
+
+            // Wave bar: one segment per wave (built in UpdateWaveBar)
+            var waveBar = new GameObject("WaveBar", typeof(RectTransform));
+            waveBar.transform.SetParent(overlayRoot.transform, false);
+            waveBarRect = waveBar.GetComponent<RectTransform>();
+            PositionRT(waveBarRect, new Vector2(ColumnCenterX, WaveBarCenterY), new Vector2(0.5f, 1f), new Vector2(WaveBarWidth, WaveBarHeight + 6f));
 
             // Deck count
             deckCountText = MakeText(overlayRoot.transform, "DeckCount", "DECK 0/8", 16,
@@ -1817,6 +1997,9 @@ namespace TrashTD.UI
                 PositionRT(squadIconImg, new Vector2(-155f, -32f), new Vector2(1f, 1f), new Vector2(24f, 24f));
                 squadIconObj.GetComponent<RectTransform>().pivot = new Vector2(1f, 1f);
             }
+
+            // "Skip card animation" checkbox, under the deck count
+            RectTransform skipToggleRect = BuildSkipAnimationToggle(overlayRoot.transform);
 
             // Card container (left side of the screen). Cards are positioned manually
             // (not by a layout group) so the shuffle/deal animation can move them freely.
@@ -1843,12 +2026,8 @@ namespace TrashTD.UI
             var buttonsRect = buttonsContainer.GetComponent<RectTransform>();
             buttonsRect.anchorMin = new Vector2(0.5f, 0f);
             buttonsRect.anchorMax = new Vector2(0.5f, 0f);
-#if UNITY_EDITOR || DEBUG
-            buttonsRect.sizeDelta = new Vector2(640f, 64f);
-#else
             buttonsRect.sizeDelta = new Vector2(420f, 64f);
-#endif
-            buttonsRect.anchoredPosition = new Vector2(ColumnCenterX, 120f);
+            buttonsRect.anchoredPosition = new Vector2(ColumnCenterX, ActionRowCenterY);
 
             var btnHlg = buttonsContainer.AddComponent<HorizontalLayoutGroup>();
             btnHlg.spacing = 20f;
@@ -1884,7 +2063,7 @@ namespace TrashTD.UI
             // Confirm button (under the detail panel, where the decision is made)
             confirmButton = MakeButton(overlayRoot.transform, "ConfirmButton", "SELECT A CARD",
                 new Vector2(PanelWidth, 64f), GameplayHUDUI.ButtonContainerType.Dark, "icon_check");
-            PositionRT(confirmButton, new Vector2(PanelCenterX, 120f), new Vector2(0.5f, 0f), new Vector2(PanelWidth, 64f));
+            PositionRT(confirmButton, new Vector2(PanelCenterX, ActionRowCenterY), new Vector2(0.5f, 0f), new Vector2(PanelWidth, 64f));
             confirmButtonText = confirmButton.GetComponentInChildren<Text>();
             confirmButtonText.fontSize = 20;
             confirmButton.onClick.AddListener(OnConfirmClicked);
@@ -1892,20 +2071,21 @@ namespace TrashTD.UI
             confirmFeedback = AttachFeedback(confirmButton, ACCENT_BRIGHT, 1.03f);
 
             // View map & deck controls
-            BuildMinimizeControls(canvasObj.transform, buttonsContainer.transform);
+            BuildMinimizeControls(canvasObj.transform);
 
             // Keyboard hint
             var hintText = MakeText(overlayRoot.transform, "KeyHints", "1 2 3  FLIP / SELECT     ENTER  CONFIRM     R  REROLL     M  MINIMIZE", 12,
                 TextAnchor.MiddleCenter, new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.55f));
-            PositionRT(hintText, new Vector2(0f, 28f), new Vector2(0.5f, 0f), new Vector2(900f, 24f));
+            PositionRT(hintText, new Vector2(0f, KeyHintCenterY), new Vector2(0.5f, 0f), new Vector2(900f, 24f));
 
             // Header/footer/panel entrance data (positions captured after layout above)
             introRects = new[]
             {
-                titleText.rectTransform,
-                waveInfoText.rectTransform,
-                dividerImage.rectTransform,
+                headerPlateImage.rectTransform,
+                waveCounterRect,
+                waveBarRect,
                 deckCountText.rectTransform,
+                skipToggleRect,
                 detailsPanelRect,
                 buttonsRect,
                 confirmButton.GetComponent<RectTransform>(),
@@ -1915,29 +2095,66 @@ namespace TrashTD.UI
             for (int i = 0; i < introRects.Length; i++) introTargets[i] = introRects[i].anchoredPosition;
             introOffsets = new[]
             {
-                new Vector2(0f, 40f), new Vector2(0f, 40f), new Vector2(0f, 40f), new Vector2(0f, 40f),
+                new Vector2(0f, 40f), new Vector2(0f, 40f), new Vector2(0f, 40f), new Vector2(0f, 40f), new Vector2(0f, 40f),
                 new Vector2(90f, 0f), new Vector2(0f, -60f), new Vector2(0f, -60f), new Vector2(0f, -30f)
             };
-            introDelays = new[] { 0f, 0.06f, 0.1f, 0.1f, 0.15f, 0.25f, 0.3f, 0.35f };
+            introDelays = new[] { 0f, 0.06f, 0.1f, 0.1f, 0.12f, 0.15f, 0.25f, 0.3f, 0.35f };
+        }
+
+        /// <summary>Checkbox "SKIP CARD ANIMATION" under the deck count (top-right). See <see cref="SkipCardAnimation"/>.</summary>
+        private RectTransform BuildSkipAnimationToggle(Transform parent)
+        {
+            const float boxSize = 24f;
+            const int fontSize = 12;
+            const string label = "SKIP CARD ANIMATION";
+            float width = boxSize + 10f + label.Length * fontSize + 8f;
+
+            var toggleObj = new GameObject("SkipAnimationToggle", typeof(RectTransform), typeof(Image), typeof(Button));
+            toggleObj.transform.SetParent(parent, false);
+            var toggleImage = toggleObj.GetComponent<Image>();
+            toggleImage.color = new Color(0f, 0f, 0f, 0f); // invisible hit area over box + label
+            var toggleRect = toggleObj.GetComponent<RectTransform>();
+            PositionRT(toggleRect, new Vector2(-28f, -92f), new Vector2(1f, 1f), new Vector2(width, 32f));
+            toggleRect.pivot = new Vector2(1f, 1f);
+
+            var boxObj = new GameObject("Box", typeof(RectTransform), typeof(Image));
+            boxObj.transform.SetParent(toggleObj.transform, false);
+            skipAnimationCheck = boxObj.GetComponent<Image>();
+            skipAnimationCheck.raycastTarget = false;
+            skipAnimationCheck.preserveAspect = true;
+            var boxRect = boxObj.GetComponent<RectTransform>();
+            boxRect.anchorMin = boxRect.anchorMax = new Vector2(0f, 0.5f);
+            boxRect.pivot = new Vector2(0f, 0.5f);
+            boxRect.anchoredPosition = Vector2.zero;
+            boxRect.sizeDelta = new Vector2(boxSize, boxSize);
+
+            Text text = MakeText(toggleObj.transform, "Label", label, fontSize, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
+            var textRect = text.rectTransform;
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(boxSize + 10f, 0f);
+            textRect.offsetMax = Vector2.zero;
+
+            var button = toggleObj.GetComponent<Button>();
+            button.onClick.AddListener(ToggleSkipCardAnimation);
+            AttachFeedback(button, ACCENT_BRIGHT, 1.04f);
+            RefreshSkipAnimationToggle();
+            return toggleRect;
         }
 
         /// <summary>
         /// Minimize and restore controls for viewing the map and editing the deck while drafting.
         /// While minimized, the gameplay HUD's deck bar works as in Preparation: cards can be rearranged, discarded
         /// and deployed (StageBootstrapper.IsDeploymentAllowed), freeing deck slots for the card being picked.
+        /// MINIMIZE and RESUME are the same size and share one spot (PlaceOnDeckBarSlot).
         /// </summary>
-        private void BuildMinimizeControls(Transform canvasRoot, Transform buttonsContainer)
+        private void BuildMinimizeControls(Transform canvasRoot)
         {
-            Button minimize;
-#if UNITY_EDITOR || DEBUG
-            minimize = MakeButton(buttonsContainer, "MinimizeDraftButton", "MINIMIZE",
-                new Vector2(200f, 60f), GameplayHUDUI.ButtonContainerType.Dark, "icon_minus");
-#else
-            minimize = MakeButton(overlayRoot.transform, "MinimizeDraftButton", "MINIMIZE",
+            Button minimize = MakeButton(overlayRoot.transform, "MinimizeDraftButton", "MINIMIZE",
                 new Vector2(200f, 48f), GameplayHUDUI.ButtonContainerType.Dark, "icon_minus");
-            PositionRT(minimize, new Vector2(28f, -32f), new Vector2(0f, 1f), new Vector2(200f, 48f));
-            minimize.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
-#endif
+            // Default spot (the deck bar strip at 16:9) until PlaceOnDeckBarSlot finds the HUD
+            PositionRT(minimize, new Vector2(380f, 89f), new Vector2(0.5f, 0f), new Vector2(200f, 48f));
+            minimizeButtonRect = minimize.GetComponent<RectTransform>();
             minimize.onClick.AddListener(() => StartCoroutine(MinimizeAfterClick()));
             AttachFeedback(minimize, Color.white, 1.05f);
 
