@@ -223,6 +223,7 @@ namespace TrashTD.UI
         private RectTransform livesLiquidRect;
         private GameObject livesSurface;
         private Image dangerFlashImage;
+        private SurveillanceOverlayUI surveillanceOverlay;
         private Image topBarBgAnimImage;
         private Image deckBgAnimImage;
         private float topBarBgAnimTime;
@@ -371,6 +372,7 @@ namespace TrashTD.UI
                 enemyManager.OnEnemySpawned += HandleEnemyCountChanged;
                 enemyManager.OnEnemyDied += HandleEnemyCountChanged;
                 enemyManager.OnEnemyReachedExit += HandleEnemyCountChanged;
+                enemyManager.OnEnemyReachedExit += HandleEnemyBreachFx;
             }
 
             if (gameManager != null)
@@ -420,6 +422,7 @@ namespace TrashTD.UI
                 enemyManager.OnEnemySpawned -= HandleEnemyCountChanged;
                 enemyManager.OnEnemyDied -= HandleEnemyCountChanged;
                 enemyManager.OnEnemyReachedExit -= HandleEnemyCountChanged;
+                enemyManager.OnEnemyReachedExit -= HandleEnemyBreachFx;
             }
 
             if (gameManager != null)
@@ -451,6 +454,7 @@ namespace TrashTD.UI
             scaler.matchWidthOrHeight = 0.5f;
 
             var root = canvasObject.transform;
+            surveillanceOverlay = SurveillanceOverlayUI.Create(root); // first, so the rest of the HUD draws over it
             CreateDangerFlash(root);
             CreatePathPreviewOverlay(root);
             CreateTopBar(root);
@@ -3704,6 +3708,7 @@ namespace TrashTD.UI
         private void UpdatePhaseUI(bool announce)
         {
             if (gameManager == null) return;
+            if (surveillanceOverlay != null) surveillanceOverlay.SetStage(gameManager.CurrentStage);
 
             if (sandboxController != null)
             {
@@ -4296,6 +4301,22 @@ namespace TrashTD.UI
             lifeFlashTime = 0f;
             Punch(livesTubeRect);
             PlaySfx(lifeLostClip, 1f);
+
+            // Screen shake (harder on the last life) and feed interference on the surveillance overlay
+            bool lastLife = gameManager != null && gameManager.CurrentLifePoints <= 0;
+            GameplayCameraController.Instance?.Shake(lastLife ? 0.45f : 0.2f, lastLife ? 0.6f : 0.35f);
+            if (surveillanceOverlay != null) surveillanceOverlay.PlayInterference();
+        }
+
+        /// <summary>A red burst where an enemy breaches the exit.</summary>
+        private void HandleEnemyBreachFx(EnemyBase enemy)
+        {
+            if (enemy == null) return;
+            Vector2 position = enemy.transform.position;
+            var breachRed = new Color(1f, 0.25f, 0.2f, 1f);
+            TrashTD.Combat.CombatFx.Flash(position, breachRed, large: true);
+            TrashTD.Combat.CombatFx.Sparks(position, breachRed, 14, 3.5f, 0.35f);
+            TrashTD.Combat.CombatFx.Pop(position, breachRed);
         }
 
         private void RefreshCounters()

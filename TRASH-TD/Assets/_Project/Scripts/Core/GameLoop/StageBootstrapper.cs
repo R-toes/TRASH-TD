@@ -485,6 +485,8 @@ namespace TrashTD.Core.GameLoop
             // take the full visual height and vertical span into account so background visuals are fully visible and centered.
             float visualMinY = 0f;
             float visualMaxY = stageData.gridHeight * cellSize;
+            float visualMinX = 0f;
+            float visualMaxX = stageData.gridWidth * cellSize;
             if (stageData.mapVisualSprite != null)
             {
                 float pixelPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
@@ -493,6 +495,10 @@ namespace TrashTD.Core.GameLoop
                 float spriteTop = (spriteTilesY + stageData.visualTileOffset.y) * cellSize;
                 visualMinY = Mathf.Min(visualMinY, spriteBottom);
                 visualMaxY = Mathf.Max(visualMaxY, spriteTop);
+
+                float spriteTilesX = stageData.mapVisualSprite.rect.width / pixelPerTile;
+                visualMinX = Mathf.Min(visualMinX, stageData.visualTileOffset.x * cellSize);
+                visualMaxX = Mathf.Max(visualMaxX, (spriteTilesX + stageData.visualTileOffset.x) * cellSize);
             }
             float visualHeight = visualMaxY - visualMinY;
             float visualCenterY = (visualMinY + visualMaxY) * 0.5f;
@@ -510,6 +516,12 @@ namespace TrashTD.Core.GameLoop
             cam.transform.position = new Vector3(centerX, camY, -10f);
             cam.orthographic = true;
             cam.orthographicSize = orthoSize;
+
+            // Look-around, zoom and shake on top of this framing
+            var cameraController = cam.GetComponent<GameplayCameraController>();
+            if (cameraController == null) cameraController = cam.gameObject.AddComponent<GameplayCameraController>();
+            cameraController.Initialize(cam, new Vector2(centerX, camY), orthoSize,
+                Rect.MinMaxRect(visualMinX, visualMinY, visualMaxX, visualMaxY));
         }
 
         private void OnDestroy()

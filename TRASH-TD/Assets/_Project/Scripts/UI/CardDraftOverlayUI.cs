@@ -236,6 +236,9 @@ namespace TrashTD.UI
         /// <summary>True while the draft is minimized to the map & deck view, where operators can be deployed.</summary>
         public bool IsMinimized => minimized;
 
+        /// <summary>True while the draft screen covers the view (open and not minimized).</summary>
+        public bool IsShowing => overlayVisible && !minimized && overlayRoot != null && overlayRoot.activeSelf;
+
         /// <summary>
         /// Player option (checkbox on the draft screen, saved in PlayerPrefs, off by default): skip the shuffle,
         /// deal and flip animations and deal every card face-up.
