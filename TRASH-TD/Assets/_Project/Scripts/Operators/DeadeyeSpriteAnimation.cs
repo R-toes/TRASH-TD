@@ -3,12 +3,15 @@ using UnityEngine;
 namespace TrashTD.Operators
 {
     [RequireComponent(typeof(SpriteRenderer))]
-    public class DeadeyeSpriteAnimation : MonoBehaviour
+    public class DeadeyeSpriteAnimation : MonoBehaviour, IOperatorSpriteFrames
     {
         // 8-frame idle loop (1 s per cycle).
-        private const float FrameDuration = 0.125f;
+        private const float FrameInterval = 0.125f;
 
         [SerializeField] private Sprite[] frames;
+
+        public Sprite[] Frames => frames;
+        public float FrameDuration => FrameInterval;
 
         private SpriteRenderer spriteRenderer;
         private float frameTimer;
@@ -40,10 +43,10 @@ namespace TrashTD.Operators
         private void Update()
         {
             frameTimer += Time.deltaTime;
-            if (frameTimer < FrameDuration) return;
+            if (frameTimer < FrameInterval) return;
 
-            int elapsedFrames = Mathf.FloorToInt(frameTimer / FrameDuration);
-            frameTimer %= FrameDuration;
+            int elapsedFrames = Mathf.FloorToInt(frameTimer / FrameInterval);
+            frameTimer %= FrameInterval;
             currentFrame = (currentFrame + elapsedFrames) % frames.Length;
             spriteRenderer.sprite = frames[currentFrame];
         }

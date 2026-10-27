@@ -43,3 +43,6 @@ MonoBehaviour:
   visualOffset: {x: 0, y: 0, z: 0}
   enemyPrefab: {fileID: 4017071742725256548, guid: a1b2c3d4e5f60718293a4b5c6d7e8f21, type: 3}
 
+  abilityDescription: "Reduces its blocker's block count by 1. Immune to acid rain and acid tiles. On death, releases 2 Oculite Spawns."
+  intelQuote: "*many eyes open*"
+  intelLore: "A slow, heavy carrier with a brood of eyes nested inside it. Oculoid Carrier leans its weight on whatever blocks it, and when it finally breaks, its young keep walking."

@@ -99,6 +99,18 @@ namespace TrashTD.Data
         [Tooltip("Prefab to instantiate when spawning")]
         public GameObject enemyPrefab;
 
+        [Header("Reclaimers' Intel")]
+        [Tooltip("Short description of the enemy's abilities, shown in Reclaimers' Intel")]
+        [TextArea(2, 4)]
+        public string abilityDescription;
+
+        [Tooltip("One-line quote or sound the enemy makes, shown in Reclaimers' Intel")]
+        public string intelQuote;
+
+        [Tooltip("Field notes (lore, behaviour) shown in Reclaimers' Intel")]
+        [TextArea(3, 6)]
+        public string intelLore;
+
         /// <summary>
         /// Get stats scaled by difficulty level multiplier.
         /// Difficulty scaling per GDD 1.5: "Stats (HP/ATK) scale per level."

@@ -40,3 +40,6 @@ MonoBehaviour:
   visualScale: 1
   visualOffset: {x: 0, y: 0, z: 0}
   enemyPrefab: {fileID: 7123456789012345678, guid: 4bfa9a650e47489ebe6404925f436057, type: 3}
+  abilityDescription: "When blocked it duels: only its blocker can damage it. During the duel its DEF drops by 75% and its blocker's DEF drops by 50%."
+  intelQuote: "En garde. Just you and me."
+  intelLore: "A gentleman of green goo, decorated with flowers it grew itself. Gooelist challenges whoever blocks it to a one-on-one duel and ignores every other attack. Honourable, sticky, and very hard to scratch any other way."

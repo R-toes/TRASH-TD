@@ -28,3 +28,6 @@ MonoBehaviour:
   lifePointCost: 1
   sprite: {fileID: -4705057663721211982, guid: aff895bdd49e6c249b6888ca33a1a0c7, type: 3}
   enemyPrefab: {fileID: 4017071742725256548, guid: 872d7c9dd24e93e418eb40ce59b3629e, type: 3}
+  abilityDescription: "Slow and heavily armored, with very high HP."
+  intelQuote: "*grinding gears*"
+  intelLore: "A rolling container of compacted industrial waste. Pollution Tank has more HP than almost anything else in the zone and soaks up hits while smaller trash slips past."

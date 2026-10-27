@@ -28,3 +28,6 @@ MonoBehaviour:
   lifePointCost: 1
   sprite: {fileID: -7898312646210637631, guid: b70e07ea602c2134386eab3f3ad2994f, type: 3}
   enemyPrefab: {fileID: 8358608267878886893, guid: fe7cdba075a50ac4b811cf1bad17646d, type: 3}
+  abilityDescription: "No special abilities. Walks the path and attacks whatever blocks it."
+  intelQuote: "*squelch*"
+  intelLore: "A burst trash bag oozing green across the ground. Sludge Grunts are the most common thing in the Development Zone and the reason the Reclaimers exist. Alone, they're nothing. They are never alone."

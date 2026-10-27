@@ -102,6 +102,14 @@ namespace TrashTD.Data
         [Tooltip("Prefab to instantiate when deployed on the grid")]
         public GameObject operatorPrefab;
 
+        [Header("Reclaimers' Intel")]
+        [Tooltip("One-line quote in the operator's voice, shown in Reclaimers' Intel")]
+        public string intelQuote;
+
+        [Tooltip("Field notes (lore, personality) shown in Reclaimers' Intel")]
+        [TextArea(3, 6)]
+        public string intelLore;
+
         // TODO: Skill data — GDD mentions skills/abilities with cooldowns but
         // doesn't define specific skills per class. Awaiting design input from Raim.
 

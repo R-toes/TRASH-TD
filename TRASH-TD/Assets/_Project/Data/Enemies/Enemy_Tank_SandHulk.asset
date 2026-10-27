@@ -44,3 +44,6 @@ MonoBehaviour:
   visualScale: 2
   visualOffset: {x: 0.15, y: 0.2, z: 0}
   enemyPrefab: {fileID: 4017071742725256548, guid: 872d7c9dd24e93e418eb40ce59b3629e, type: 3}
+  abilityDescription: "Hits very hard. Operator attacks have a 20% chance to miss it."
+  intelQuote: "*the ground shakes*"
+  intelLore: "A mass of fused sand and broken glass that lumbers out of the storms around Railyard Drain. Sand Hulk slams anything in its way, and its swirling dust makes it hard to land a clean hit."

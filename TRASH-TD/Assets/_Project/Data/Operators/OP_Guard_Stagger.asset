@@ -42,3 +42,5 @@ MonoBehaviour:
   redeployCooldown: 60
   portrait: {fileID: -1433936279, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
   operatorPrefab: {fileID: 6120733290429841632, guid: c1d2e3f4a5b67890123456789abcdef0, type: 3}
+  intelQuote: "Six arms. All of them swinging."
+  intelLore: "A stag beetle with six limbs and the reflexes of a prize fighter. Stag-ger hits every blocked enemy in front of it at once, slips some of the blows coming back, and answers every dodge with a heavier punch. Sleeps with its gloves on."

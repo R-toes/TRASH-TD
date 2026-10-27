@@ -28,3 +28,6 @@ MonoBehaviour:
   lifePointCost: 1
   sprite: {fileID: 21300000, guid: b2222222222222222222222222222205, type: 3}
   enemyPrefab: {fileID: 9005451285246291142, guid: 7e1c5a9d3b4f48a6c2d0f8e6b4a1c9d8, type: 3}
+  abilityDescription: "Flying, unblockable and fast. Attacks from up to 2 tiles away. Very high RES."
+  intelQuote: "*whistling wind*"
+  intelLore: "A shard of glass and wire that rides the updrafts above the Development Zone. Skyshard is fast, shrugs off Arts attacks, and fires down on operators from range."

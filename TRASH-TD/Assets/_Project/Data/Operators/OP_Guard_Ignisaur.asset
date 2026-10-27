@@ -46,3 +46,5 @@ MonoBehaviour:
   redeployCooldown: 60
   portrait: {fileID: -1820305707, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
   operatorPrefab: {fileID: 8120733290429841632, guid: f9a8b7c6d5e432109876543210abcdef, type: 3}
+  intelQuote: "Close or far, you're getting burned."
+  intelLore: "A small fire lizard that hatched in the boilers of the NERC Works Plant. Ignisaur slashes whatever stands on its tile and spits flame down the lane at everything else, hitting harder when it has something to hold. Eats coal briquettes like candy."

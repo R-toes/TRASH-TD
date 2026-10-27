@@ -3,7 +3,7 @@ using UnityEngine;
 namespace TrashTD.Operators
 {
     [RequireComponent(typeof(SpriteRenderer))]
-    public class OperatorSpriteAnimation : MonoBehaviour
+    public class OperatorSpriteAnimation : MonoBehaviour, IOperatorSpriteFrames
     {
         [SerializeField] private Sprite[] frames;
         [Min(0.01f)]
@@ -50,18 +50,7 @@ namespace TrashTD.Operators
                     spriteRenderer.sprite = frames[0];
                 }
 
-                if (spriteRenderer.sprite != null && spriteRenderer.sprite.texture != null)
-                {
-                    string texName = spriteRenderer.sprite.texture.name.ToLowerInvariant();
-                    if (texName.Contains("castiel") && Mathf.Approximately(frameDuration, 0.25f))
-                    {
-                        frameDuration = 0.1f;
-                    }
-                    else if ((texName.Contains("stag-ger") || texName.Contains("stagger")) && Mathf.Approximately(frameDuration, 0.25f))
-                    {
-                        frameDuration = 0.125f;
-                    }
-                }
+                frameDuration = ResolveFrameDuration(spriteRenderer.sprite, frameDuration);
             }
 
             if (ShouldResolveFramesFromTexture())
@@ -199,12 +188,14 @@ namespace TrashTD.Operators
         private int GetExpectedFrameCount()
         {
             Sprite sample = GetSampleSprite();
-            if (sample == null || sample.texture == null)
-            {
-                return 2;
-            }
+            return sample != null && sample.texture != null ? GetSheetFrameCount(sample.texture) : 2;
+        }
 
-            Texture2D texture = sample.texture;
+        /// <summary>Frames in an operator sheet's top row (square frames), with the per-sheet overrides.</summary>
+        public static int GetSheetFrameCount(Texture2D texture)
+        {
+            if (texture == null) return 2;
+
             string texName = texture.name.ToLowerInvariant();
             if (texName.Contains("resicochet"))
             {
@@ -220,6 +211,45 @@ namespace TrashTD.Operators
             return Mathf.Max(2, frameCount);
         }
 
+        /// <summary>
+        /// Slices the top row of the sheet <paramref name="sample"/> comes from into its animation frames,
+        /// as gameplay does. Entries past the texture's edge stay null.
+        /// </summary>
+        public static Sprite[] SliceSheet(Sprite sample)
+        {
+            if (sample == null || sample.texture == null) return new Sprite[0];
+
+            Texture2D texture = sample.texture;
+            float ppu = sample.pixelsPerUnit > 0f ? sample.pixelsPerUnit : 32f;
+            Vector2 pivot = new Vector2(0.5f, 0.5f);
+
+            int frameCount = GetSheetFrameCount(texture);
+            float frameWidth = (texture.height > 0 && texture.height * frameCount <= texture.width)
+                ? texture.height
+                : (texture.width / (float)frameCount);
+            float frameHeight = Mathf.Min(texture.height, frameWidth > 0 ? frameWidth : texture.height);
+
+            var sliced = new Sprite[frameCount];
+            for (int i = 0; i < frameCount; i++)
+            {
+                float x = i * frameWidth;
+                if (x + frameWidth > texture.width || frameHeight > texture.height) break;
+                sliced[i] = Sprite.Create(texture, new Rect(x, texture.height - frameHeight, frameWidth, frameHeight), pivot, ppu);
+            }
+            return sliced;
+        }
+
+        /// <summary>Per-sheet playback speed overrides (Castiel, Stag-ger) applied to the default 0.25 s frame.</summary>
+        public static float ResolveFrameDuration(Sprite sample, float frameDuration)
+        {
+            if (sample == null || sample.texture == null || !Mathf.Approximately(frameDuration, 0.25f)) return frameDuration;
+
+            string texName = sample.texture.name.ToLowerInvariant();
+            if (texName.Contains("castiel")) return 0.1f;
+            if (texName.Contains("stag-ger") || texName.Contains("stagger")) return 0.125f;
+            return frameDuration;
+        }
+
         private void TryResolveFramesFromTexture()
         {
             Sprite sample = GetSampleSprite();
@@ -228,23 +258,7 @@ namespace TrashTD.Operators
                 return;
             }
 
-            Texture2D texture = sample.texture;
-            float ppu = sample.pixelsPerUnit > 0f ? sample.pixelsPerUnit : 32f;
-            Vector2 pivot = new Vector2(0.5f, 0.5f);
-
-            int frameCount = GetExpectedFrameCount();
-            float frameWidth = (texture.height > 0 && texture.height * frameCount <= texture.width)
-                ? texture.height
-                : (texture.width / (float)frameCount);
-            float frameHeight = Mathf.Min(texture.height, frameWidth > 0 ? frameWidth : texture.height);
-
-            frames = new Sprite[frameCount];
-            for (int i = 0; i < frameCount; i++)
-            {
-                float x = i * frameWidth;
-                if (x + frameWidth > texture.width || frameHeight > texture.height) break;
-                frames[i] = Sprite.Create(texture, new Rect(x, texture.height - frameHeight, frameWidth, frameHeight), pivot, ppu);
-            }
+            frames = SliceSheet(sample);
 
             if (spriteRenderer != null && (spriteRenderer.sprite == null || spriteRenderer.sprite == sample))
             {

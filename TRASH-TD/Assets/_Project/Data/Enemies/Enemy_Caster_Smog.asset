@@ -40,3 +40,6 @@ MonoBehaviour:
   - {fileID: 2114174982395838720, guid: fd3f97436d79570479553e74ba32344a, type: 3}
   animationFrameRate: 8
   enemyPrefab: {fileID: 3448856487277953290, guid: ae11688551e0f1248af04e0224187310, type: 3}
+  abilityDescription: "Ranged Arts attacker."
+  intelQuote: "*wheeze* ...breathe deep."
+  intelLore: "A bloated toad that lives inside a cloud of its own exhaust. Smog Caster lobs choking puffs at operators from a distance. Field teams report that the smell arrives several seconds before it does."

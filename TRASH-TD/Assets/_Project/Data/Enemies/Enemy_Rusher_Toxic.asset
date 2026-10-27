@@ -28,3 +28,6 @@ MonoBehaviour:
   lifePointCost: 1
   sprite: {fileID: -8498685561614227840, guid: a853538761042d34aa49bfec05a6901f, type: 3}
   enemyPrefab: {fileID: 2870086596166587791, guid: 98ac34069f697cc41b80a5e069c25a2b, type: 3}
+  abilityDescription: "Very fast, with low HP and DEF."
+  intelQuote: "Out of the way out of the way OUT OF THE WAY!"
+  intelLore: "A rat riding a leaking chemical drum like it stole it, because it did. Toxic Rusher barrels down the lane faster than anything else on the ground. Block it early or watch it go."

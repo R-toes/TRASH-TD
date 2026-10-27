@@ -47,3 +47,6 @@ MonoBehaviour:
   visualOffset: {x: 0, y: 0, z: 0}
   enemyPrefab: {fileID: 4017071742725256548, guid: 500eadbf86b446f6bc2ed9a18c924b4a, type: 3}
 
+  abilityDescription: "Every 5 seconds it stops and zaps the deployed operator with the lowest DEF, wherever it is. When an operator comes within 2 tiles, it plants itself and fires a ramping laser at the lowest-DEF target until that target dies, hides or leaves its reach."
+  intelQuote: "*bark* ...*BZZZT*"
+  intelLore: "A street dog from old Calder Basin with a NERC targeting laser bolted to its skull. Askalaser hunts the softest target on the field from anywhere, and once something gets close it locks on and doesn't let go. Somewhere under the hardware, it still wags."

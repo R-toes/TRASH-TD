@@ -47,3 +47,6 @@ MonoBehaviour:
   visualOffset: {x: 0, y: 0, z: 0}
   enemyPrefab: {fileID: 4017071742725256548, guid: 35bf92c72f2b45cea93d4e746f0f3ee0, type: 3}
 
+  abilityDescription: "Faded and untargetable by ranged operators until it binds. Binds the first operator that comes close for up to 15 seconds, dealing Arts damage every second. Afterwards it can be targeted by everyone and hits much harder."
+  intelQuote: "*crackle* Stay. Plugged. In."
+  intelLore: "A knot of extension cords that crawled out of a collapsed substation and kept growing. Hextension slips along the lane half unseen, then lashes a live wire around one operator and drains it. Stun it, freeze it or push it back to cut the wire."

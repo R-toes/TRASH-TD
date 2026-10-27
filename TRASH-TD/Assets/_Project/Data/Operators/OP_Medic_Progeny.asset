@@ -46,3 +46,5 @@ MonoBehaviour:
   redeployCooldown: 60
   portrait: {fileID: -1862473255, guid: acf5107dd3f8262468847691f1ecffb8, type: 3}
   operatorPrefab: {fileID: 5120733290429841632, guid: a1b2c3d4e5f67890123456789abcdef0, type: 3}
+  intelQuote: "Share it. There's enough."
+  intelLore: "A small, pale creature found curled up in a lab tank at an abandoned NERC research complex. Progeny's healing hops from one ally to the next, weaker on the second, as if it never learned to keep anything for itself. It hums while it works."

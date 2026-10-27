@@ -33,3 +33,5 @@ MonoBehaviour:
   redeployCooldown: 60
   portrait: {fileID: -705202181, guid: 98e7a721d66dd4c48acc4d1cf6e1541e, type: 3}
   operatorPrefab: {fileID: 4120733290429841632, guid: 76c65d7809ca45a9be8991dc10622e37, type: 3}
+  intelQuote: "Bonk first. Questions never."
+  intelLore: "A tiny pink brawler dragging a sledgehammer twice its size. Scrapper swings at whatever is in front of it and every so often rings a target so hard it forgets what it was doing. Its whole strategy fits in the quote above."

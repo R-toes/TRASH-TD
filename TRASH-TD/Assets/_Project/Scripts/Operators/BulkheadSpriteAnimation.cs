@@ -3,11 +3,14 @@ using UnityEngine;
 namespace TrashTD.Operators
 {
     [RequireComponent(typeof(SpriteRenderer))]
-    public class BulkheadSpriteAnimation : MonoBehaviour
+    public class BulkheadSpriteAnimation : MonoBehaviour, IOperatorSpriteFrames
     {
-        private const float FrameDuration = 0.25f;
+        private const float FrameInterval = 0.25f;
 
         [SerializeField] private Sprite[] frames;
+
+        public Sprite[] Frames => frames;
+        public float FrameDuration => FrameInterval;
 
         private SpriteRenderer spriteRenderer;
         private float frameTimer;
@@ -29,10 +32,10 @@ namespace TrashTD.Operators
         private void Update()
         {
             frameTimer += Time.deltaTime;
-            if (frameTimer < FrameDuration) return;
+            if (frameTimer < FrameInterval) return;
 
-            int elapsedFrames = Mathf.FloorToInt(frameTimer / FrameDuration);
-            frameTimer %= FrameDuration;
+            int elapsedFrames = Mathf.FloorToInt(frameTimer / FrameInterval);
+            frameTimer %= FrameInterval;
             currentFrame = (currentFrame + elapsedFrames) % frames.Length;
             spriteRenderer.sprite = frames[currentFrame];
         }

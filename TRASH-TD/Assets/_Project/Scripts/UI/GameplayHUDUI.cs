@@ -248,6 +248,7 @@ namespace TrashTD.UI
         private CanvasGroup pauseGroup;
         private RectTransform pauseCard;
         private AudioSettingsUI audioSettingsUI;
+        private ReclaimersIntelUI intelUI;
         private CardDraftOverlayUI draftOverlayUI;
         private int lastEscapeHandledFrame = -1;
         private Button previewPathButton;
@@ -332,6 +333,16 @@ namespace TrashTD.UI
                         },
                         // Square gear at the right end of row 2, next to Retry
                         rect => SetPosition(rect, PausePx(PauseSettingsX, PauseRow2Px), new Vector2(0.5f, 1f), new Vector2(PauseButtonHeight, PauseButtonHeight), new Vector2(0.5f, 0.5f)));
+                    intelUI = ReclaimersIntelUI.Create(
+                        canvas.transform,
+                        pauseCard,
+                        button =>
+                        {
+                            StyleButton(button, ButtonContainerType.Secondary, new Color(0.4f, 1f, 0.65f, 1f), 1.04f);
+                            ApplyPauseButtonLook(button, "INTEL", "icon_info");
+                        },
+                        // Full-width row 3, on the card's extra indicator row
+                        rect => SetPosition(rect, PausePx(0f, PauseRow3Px), new Vector2(0.5f, 1f), new Vector2(PauseRowWidth, PauseButtonHeight), new Vector2(0.5f, 0.5f)));
                 }
             }
         }
@@ -3147,22 +3158,14 @@ namespace TrashTD.UI
             pauseGroup = pausePanel.GetComponent<CanvasGroup>();
             pauseGroup.alpha = 0f;
 
-            // Centered card: the 256x256 pause menu panel art drawn at 2x. Its header screen spans
-            // y 37..101 (title), a divider sits at y 103, and the body screen spans y 104..217 (buttons),
-            // with three indicator rows (green / amber / red LED on the left, a slot on the right).
+            // Centered card: the 256x256 pause menu panel art drawn at 2x, grown by one indicator row (see
+            // BuildPauseCardArt). Its header screen spans y 37..101 (title), a divider sits at y 103, and the body
+            // screen spans y 104..251 (buttons), with four indicator rows (LED on the left, a slot on the right).
             var card = new GameObject("PauseCard", typeof(RectTransform), typeof(Image));
             card.transform.SetParent(pausePanel.transform, false);
             pauseCard = card.GetComponent<RectTransform>();
-            SetPosition(pauseCard, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(PauseCardPixels, PauseCardPixels) * PauseCardScale, new Vector2(0.5f, 0.5f));
-            Sprite pauseCardSprite = LoadWholeTextureSprite(PauseCardSpritePath);
-            if (pauseCardSprite != null)
-            {
-                Image cardImage = card.GetComponent<Image>();
-                cardImage.sprite = pauseCardSprite;
-                cardImage.type = Image.Type.Simple;
-                cardImage.color = Color.white;
-            }
-            else
+            SetPosition(pauseCard, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(PauseArtPixels, PauseCardHeightPx) * PauseCardScale, new Vector2(0.5f, 0.5f));
+            if (!BuildPauseCardArt(pauseCard))
             {
                 ApplyModalCard(card);
             }
@@ -3202,8 +3205,9 @@ namespace TrashTD.UI
                 -(PauseButtonHeight + PauseRowGap) * 0.5f, PauseRow2Px, PauseRowWidth - PauseButtonHeight - PauseRowGap);
             retryButton.onClick.AddListener(RetryStage);
 
+            // Row 3 is the Reclaimers' Intel button (added by ReclaimersIntelUI in Awake).
             var exitButton = CreatePauseButton(card.transform, "ExitButton", "EXIT TO MENU", "icon_exit",
-                ButtonContainerType.Danger, new Color(1f, 0.4f, 0.4f, 1f), 0f, PauseRow3Px, PauseRowWidth);
+                ButtonContainerType.Danger, new Color(1f, 0.4f, 0.4f, 1f), 0f, PauseRow4Px, PauseRowWidth);
             exitButton.onClick.AddListener(ExitToMenu);
 
             pausePanel.SetActive(false);
@@ -3271,16 +3275,23 @@ namespace TrashTD.UI
         }
 
         private const string PauseCardSpritePath = "UI/panels/pause menu panel bg";
-        private const float PauseCardPixels = 256f;
+        private const float PauseArtPixels = 256f;
         private const float PauseCardScale = 2f;
 
+        // The card repeats one 34 px band of the art (y 146..180, holding one LED and one slot) below itself,
+        // so the body screen gets a fourth indicator row: 256 + 34 = 290 art px tall.
+        private const float PauseBandTopPx = 146f;
+        private const float PauseBandBottomPx = 180f;
+        private const float PauseCardHeightPx = PauseArtPixels + PauseBandBottomPx - PauseBandTopPx;
+
         // Pause card layout. Rows are in art pixels from the top: the header block is centred in the header
-        // screen (y 37..101); the button rows sit on the body's indicator lights (y 129 / 163 / 197).
+        // screen (y 37..101); the button rows sit on the body's indicator lights (y 129 / 163 / 197 / 231).
         private const float PauseTitleRowPx = 58f;
         private const float PauseSubtitleRowPx = 86f;
         private const float PauseRow1Px = 129f;
         private const float PauseRow2Px = 163f;
         private const float PauseRow3Px = 197f;
+        private const float PauseRow4Px = 231f;
         private const float PauseRowWidth = 324f;     // canvas units: clears the LEDs (x 40) and slots (x 214) evenly
         private const float PauseButtonHeight = 48f;  // 24 art px
         private const float PauseRowGap = 12f;
@@ -3291,6 +3302,40 @@ namespace TrashTD.UI
         /// <paramref name="yFromTop"/> in pause-art pixels.
         /// </summary>
         private static Vector2 PausePx(float x, float yFromTop) => new Vector2(x, -yFromTop * PauseCardScale);
+
+        /// <summary>
+        /// Draws the pause art on the card in three strips: art y 0..180, the 146..180 band again, then 180..256.
+        /// Returns false when the texture is missing.
+        /// </summary>
+        private static bool BuildPauseCardArt(RectTransform card)
+        {
+            var texture = Resources.Load<Texture2D>(PauseCardSpritePath);
+            if (texture == null) return false;
+            texture.filterMode = FilterMode.Point;
+
+            card.GetComponent<Image>().color = Color.clear;
+            AddPauseArtStrip(card, texture, "PauseArtTop", 0f, PauseBandBottomPx, 0f);
+            AddPauseArtStrip(card, texture, "PauseArtBand", PauseBandTopPx, PauseBandBottomPx, PauseBandBottomPx);
+            AddPauseArtStrip(card, texture, "PauseArtBottom", PauseBandBottomPx, PauseArtPixels,
+                PauseBandBottomPx + PauseBandBottomPx - PauseBandTopPx);
+            return true;
+        }
+
+        /// <summary>Art rows <paramref name="fromPx"/>..<paramref name="toPx"/> (from the top), placed at <paramref name="cardYPx"/> on the card.</summary>
+        private static void AddPauseArtStrip(RectTransform card, Texture2D texture, string name, float fromPx, float toPx, float cardYPx)
+        {
+            float height = toPx - fromPx;
+            Sprite sprite = Sprite.Create(texture, new Rect(0f, texture.height - toPx, texture.width, height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect);
+
+            var strip = new GameObject(name, typeof(RectTransform), typeof(Image));
+            strip.transform.SetParent(card, false);
+            strip.transform.SetAsFirstSibling();
+            var image = strip.GetComponent<Image>();
+            image.sprite = sprite;
+            image.raycastTarget = false;
+            SetPosition(image.rectTransform, PausePx(0f, cardYPx), new Vector2(0.5f, 1f),
+                new Vector2(PauseArtPixels, height) * PauseCardScale, new Vector2(0.5f, 1f));
+        }
 
         // ============================
         // Phase Handling
@@ -3694,6 +3739,11 @@ namespace TrashTD.UI
             }
 #endif
 
+            if (intelUI != null && intelUI.HandleBack())
+            {
+                return;
+            }
+
             if (audioSettingsUI != null && audioSettingsUI.IsOpen)
             {
                 audioSettingsUI.Close();
@@ -3772,6 +3822,10 @@ namespace TrashTD.UI
             if (audioSettingsUI != null && audioSettingsUI.IsOpen)
             {
                 audioSettingsUI.Close();
+            }
+            if (intelUI != null && intelUI.IsOpen)
+            {
+                intelUI.Close();
             }
             gameManager.ResumeGame();
             AudioManager.Instance?.PlaySfx(SfxId.GameplayResume);

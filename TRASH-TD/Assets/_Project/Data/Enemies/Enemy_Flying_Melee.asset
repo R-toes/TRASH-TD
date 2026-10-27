@@ -28,3 +28,6 @@ MonoBehaviour:
   lifePointCost: 1
   sprite: {fileID: 21300000, guid: b2222222222222222222222222222205, type: 3}
   enemyPrefab: {fileID: 9005451285246291143, guid: 8f2d6b4a1c9e47a5b3d7e0f2c6a8d1b5, type: 3}
+  abilityDescription: "Flying and unblockable. Swoops at operators along its route, pausing briefly over each attack. High DEF and RES."
+  intelQuote: "*SCREEEECH*"
+  intelLore: "A rat that learned to glide on a stolen tarp and never came back down. Talon Rat is heavily plated and dives at operators from above. Field teams recommend looking up."

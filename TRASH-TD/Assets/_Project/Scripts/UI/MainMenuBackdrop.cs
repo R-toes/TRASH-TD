@@ -348,7 +348,7 @@ namespace TrashTD.UI
                     {
                         EnemyData data = entry?.enemyData;
                         if (data == null || !seen.Add(data)) continue;
-                        if (!TryGetEnemyAnimation(data, out Sprite[] frames, out float frameRate)) continue;
+                        if (!UnitSpriteFrames.TryGetEnemyAnimation(data, out Sprite[] frames, out float frameRate)) continue;
 
                         foreach (Sprite frame in frames) UsePointFilter(frame);
                         paradeEnemies.Add(new ParadeEnemy
@@ -361,46 +361,6 @@ namespace TrashTD.UI
                     }
                 }
             }
-        }
-
-        /// <summary>
-        /// The enemy's walk cycle as gameplay plays it: <see cref="EnemyData.animationFrames"/>, otherwise the
-        /// prefab's sheet animation (only when the prefab's sprite isn't overridden, as in EnemyManager).
-        /// Enemies without at least two frames (e.g. placeholder art) are left out of the parade.
-        /// </summary>
-        private static bool TryGetEnemyAnimation(EnemyData data, out Sprite[] frames, out float frameRate)
-        {
-            frames = CollectFrames(data.animationFrames);
-            frameRate = data.animationFrameRate > 0f ? data.animationFrameRate : 8f;
-            if (frames.Length >= 2) return true;
-
-            if (data.enemyPrefab != null)
-            {
-                IEnemySpriteFrames prefabAnimation = data.enemyPrefab.GetComponentInChildren<IEnemySpriteFrames>(true);
-                SpriteRenderer renderer = data.enemyPrefab.GetComponentInChildren<SpriteRenderer>(true);
-                bool spriteOverridden = data.sprite != null && renderer != null && renderer.sprite != data.sprite;
-                if (prefabAnimation != null && !spriteOverridden)
-                {
-                    frames = CollectFrames(prefabAnimation.Frames);
-                    frameRate = prefabAnimation.FrameDuration > 0f ? 1f / prefabAnimation.FrameDuration : 4f;
-                    if (frames.Length >= 2) return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static Sprite[] CollectFrames(Sprite[] source)
-        {
-            var frames = new List<Sprite>();
-            if (source != null)
-            {
-                foreach (Sprite frame in source)
-                {
-                    if (frame != null) frames.Add(frame);
-                }
-            }
-            return frames.ToArray();
         }
 
         private void UpdateParade(float dt)

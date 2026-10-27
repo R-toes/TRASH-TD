@@ -46,3 +46,5 @@ MonoBehaviour:
   redeployCooldown: 60
   portrait: {fileID: -6106041438205602732, guid: 5e115e17c5c350c4ea8d0eb47e7bcf67, type: 3}
   operatorPrefab: {fileID: 4120733290429841632, guid: d7c3b8a1e2f4509618a3b2c1d4e5f6a7, type: 3}
+  intelQuote: "Go on, hit me. It helps."
+  intelLore: "A walking patch of moss with antlers, grown from a flooded culvert in Railyard Drain. Mossmo never attacks, but enemies can't seem to stop swinging at it, and every blow makes it bloom and heal whoever is nearby. Unbothered by almost everything."

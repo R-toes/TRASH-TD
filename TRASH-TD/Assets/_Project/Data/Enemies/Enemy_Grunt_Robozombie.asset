@@ -30,3 +30,6 @@ MonoBehaviour:
   visualOffset: {x: 0, y: 0.2, z: 0}
   enemyPrefab: {fileID: 1234567890123456789, guid: b2d84973ff004955b3d9b59da2e810fb, type: 3}
 
+  abilityDescription: "25% chance on death to explode, dealing heavy true damage to operators on the 4 adjacent tiles."
+  intelQuote: "...REBOOTING... REBOOTING..."
+  intelLore: "A NERC maintenance bot that kept walking after everyone stopped giving it orders. Robozombie shambles down the lane like any other grunt, but its cracked power cell sometimes goes off when it finally drops."

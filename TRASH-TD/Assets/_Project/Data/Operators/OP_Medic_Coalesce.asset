@@ -46,3 +46,5 @@ MonoBehaviour:
   redeployCooldown: 60
   portrait: {fileID: 5782545627494194576, guid: f26a24a4ad79fce45af8f08f47304ae1, type: 3}
   operatorPrefab: {fileID: 6549728481407477408, guid: 0f7e6f41325b4fd8ac97245ace7d879b, type: 3}
+  intelQuote: "Stay close. I've got you."
+  intelLore: "A small, steady healer with a shell patched together from bottle caps. Coalesce stitches wounds shut with a slow green glow and works hardest when a teammate is about to fall. Usually the first operator a new Reclaimer meets, and often the last one still standing beside them."

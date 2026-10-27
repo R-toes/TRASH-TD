@@ -200,6 +200,7 @@ namespace TrashTD.UI
         private Text loadingLabel;
         private AudioSource sfxSource;
         private AudioSettingsUI audioSettingsUI;
+        private ReclaimersIntelUI intelUI;
 
         private sealed class EntranceItem
         {
@@ -309,11 +310,16 @@ namespace TrashTD.UI
             Canvas menuCanvas = mainMenuPanel != null ? mainMenuPanel.GetComponentInParent<Canvas>() : null;
             if (menuCanvas != null)
             {
+                intelUI = ReclaimersIntelUI.Create(
+                    menuCanvas.transform,
+                    mainMenuPanel.transform,
+                    button => StyleMainMenuButton(button, "INTEL", "02", false),
+                    rect => Place(rect, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(MenuColumnX, -144f), new Vector2(440f, 56f)));
                 audioSettingsUI = AudioSettingsUI.Create(
                     menuCanvas.transform,
                     mainMenuPanel.transform,
-                    button => StyleMainMenuButton(button, "SETTINGS", "02", false),
-                    rect => Place(rect, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(MenuColumnX, -144f), new Vector2(440f, 56f)));
+                    button => StyleMainMenuButton(button, "SETTINGS", "03", false),
+                    rect => Place(rect, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(MenuColumnX, -216f), new Vector2(440f, 56f)));
             }
             RegisterEntranceItems();
             UpdateDifficultyDisplay();
@@ -416,6 +422,11 @@ namespace TrashTD.UI
 
         private void HandleBack()
         {
+            if (intelUI != null && intelUI.HandleBack())
+            {
+                return;
+            }
+
             if (audioSettingsUI != null && audioSettingsUI.IsOpen)
             {
                 PlayBack();
@@ -911,7 +922,7 @@ namespace TrashTD.UI
                 dividerImage.color = HazardYellow;
             }
 
-            // ── Menu column (SETTINGS is row 02, added by AudioSettingsUI in Awake) ──
+            // ── Menu column (INTEL is row 02 and SETTINGS row 03, added by ReclaimersIntelUI / AudioSettingsUI in Awake) ──
             if (startButton == null)
             {
                 startButton = CreateButtonChild(panel, "StartButton", "PLAY");
@@ -923,12 +934,12 @@ namespace TrashTD.UI
             {
                 exitButton = CreateButtonChild(panel, "ExitButton", "EXIT");
             }
-            Place(exitButton.GetComponent<RectTransform>(), left, left, new Vector2(MenuColumnX, -216f), new Vector2(440f, 56f));
-            StyleMainMenuButton(exitButton, "EXIT", "03", false);
+            Place(exitButton.GetComponent<RectTransform>(), left, left, new Vector2(MenuColumnX, -288f), new Vector2(440f, 56f));
+            StyleMainMenuButton(exitButton, "EXIT", "04", false);
 
             menuHintText = MakeText(panel, "MenuHint", "[ARROWS] SELECT    [ENTER] CONFIRM", 11, TextAnchor.MiddleLeft,
                 new Color(TerminalText.r, TerminalText.g, TerminalText.b, 0.6f));
-            Place(menuHintText.rectTransform, left, left, new Vector2(MenuColumnX, -280f), new Vector2(600f, 20f));
+            Place(menuHintText.rectTransform, left, left, new Vector2(MenuColumnX, -352f), new Vector2(600f, 20f));
         }
 
         /// <summary>
@@ -2144,9 +2155,10 @@ namespace TrashTD.UI
             RegisterEntrance(mainEntrance, subtitleText, new Vector2(-50f, 0f), 0.12f);
             RegisterEntrance(mainEntrance, mainDivider, new Vector2(-50f, 0f), 0.16f);
             RegisterEntrance(mainEntrance, startButton, new Vector2(-70f, 0f), 0.22f);
-            RegisterEntrance(mainEntrance, audioSettingsUI != null ? audioSettingsUI.SettingsButton : null, new Vector2(-70f, 0f), 0.28f);
-            RegisterEntrance(mainEntrance, exitButton, new Vector2(-70f, 0f), 0.34f);
-            RegisterEntrance(mainEntrance, menuHintText, Vector2.zero, 0.42f);
+            RegisterEntrance(mainEntrance, intelUI != null ? intelUI.IntelButton : null, new Vector2(-70f, 0f), 0.28f);
+            RegisterEntrance(mainEntrance, audioSettingsUI != null ? audioSettingsUI.SettingsButton : null, new Vector2(-70f, 0f), 0.34f);
+            RegisterEntrance(mainEntrance, exitButton, new Vector2(-70f, 0f), 0.40f);
+            RegisterEntrance(mainEntrance, menuHintText, Vector2.zero, 0.48f);
             RegisterEntrance(mainEntrance, mainVersion, new Vector2(0f, 20f), 0.30f);
             RegisterEntrance(mainEntrance, menuFeedStatus, new Vector2(0f, 20f), 0.30f);
 

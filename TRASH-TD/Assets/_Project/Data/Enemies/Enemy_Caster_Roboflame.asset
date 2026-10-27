@@ -42,3 +42,6 @@ MonoBehaviour:
   visualScale: 1
   visualOffset: {x: 0, y: 0, z: 0}
   enemyPrefab: {fileID: 4017071742725256548, guid: 931450fc59c004e429d00ded43ad221a, type: 3}
+  abilityDescription: "Sprays a cone of fire ahead of it (its own tile, 1 tile ahead, and 3 tiles wide 2 tiles ahead) in sweeping bursts that hit every operator in the cone."
+  intelQuote: "IGNITION SEQUENCE: ALWAYS."
+  intelLore: "A NERC incinerator unit that never got its shutdown order. Roboflame rolls down the lane on treads and hoses everything in front of it with fire, creeping forward while it sprays. In the NERC Works Plant, its flames add heat to whatever they touch."

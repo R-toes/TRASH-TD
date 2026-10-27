@@ -46,3 +46,6 @@ MonoBehaviour:
   visualScale: 2
   visualOffset: {x: 0, y: 0.2, z: 0}
   enemyPrefab: {fileID: 4017071742725256548, guid: 533985cfcdac56c51a603e330fdaf29d, type: 3}
+  abilityDescription: "Takes 2 block slots and costs 2 lives. Smashes ground operators on or next to its tile (the first hit on each stuns for 2 seconds). Otherwise fires rockets at the weakest operator within 3 tiles; every 4th rocket is a heavy shell."
+  intelQuote: "TARGET ACQUIRED. TARGET ERASED."
+  intelLore: "A NERC demolition mech built to clear whole districts, still running its last work order. THE ERADICATOR walks slowly and fills the lane, crushing anything within arm's reach and shelling everything else. Do not let it reach the exit."

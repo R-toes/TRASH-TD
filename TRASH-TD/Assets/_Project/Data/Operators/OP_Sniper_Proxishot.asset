@@ -44,3 +44,5 @@ MonoBehaviour:
   redeployCooldown: 60
   portrait: {fileID: 4798833663072170488, guid: 323ca61e4bd2cd24199506d2ec39cad4, type: 3}
   operatorPrefab: {fileID: 685036189517171224, guid: 1c5dbf207ac74f76a39f2b7d8db4ad55, type: 3}
+  intelQuote: "Eight arms. Zero misses."
+  intelLore: "An octopus that crawled out of Railyard Drain wearing three salvaged headlamps. Proxishot's scattered shots never miss, sandstorm or not, and when something hits back it inks itself out of sight. Collects bottle caps and will not say why."

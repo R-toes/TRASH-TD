@@ -45,3 +45,5 @@ MonoBehaviour:
   portrait: {fileID: -2383767432185671046, guid: e47e00f265ee6fb43ae95c08488be5f9, type: 3}
   operatorPrefab: {fileID: 6120733290429841632, guid: e2f3a4b5c6d7890123456789abcdef02, type: 3}
 
+  intelQuote: "Pick a face. Any face."
+  intelLore: "A shadow in a picture frame, pulled from an abandoned office somewhere in the Development Zone. Framiliar copies another operator in the deck and fights in their shape, drained of colour. Nobody has seen what it looks like when it isn't pretending."

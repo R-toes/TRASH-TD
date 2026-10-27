@@ -41,3 +41,6 @@ MonoBehaviour:
   - {fileID: 1859343815307287720, guid: dbd6c6cbe4229bc4c8ac9e694ca534f8, type: 3}
   animationFrameRate: 8
   enemyPrefab: {fileID: 3448856487277953290, guid: ae11688551e0f1248af04e0224187310, type: 3}
+  abilityDescription: "Ranged Arts attacker. Operator attacks have a 20% chance to miss it."
+  intelQuote: "Dust in your eyes, amigo."
+  intelLore: "A drifter wrapped in a sand-caked poncho who walks out of the sandstorms around Railyard Drain. Sand Poncho flings stinging grit from a distance, and the haze around it makes it hard to pin down."
