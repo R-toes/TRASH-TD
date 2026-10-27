@@ -8,19 +8,17 @@ using TrashTD.Audio;
 using TrashTD.Core.GameLoop;
 using TrashTD.Data;
 using TrashTD.Enemies;
-using TrashTD.Operators;
 using TrashTD.Systems;
 
 namespace TrashTD.UI
 {
     /// <summary>
-    /// Stage results as a "mission debrief" card in the green terminal style (GDD 1.4.6 & 1.9).
+    /// Stage results as a "mission debrief" card in the terminal style (GDD 1.4.6 & 1.9).
     /// Victory: STAGE CLEARED, three stars that stamp in with their rule (CLEARED / LIVES 50%+ / NO LEAKS), a scan
     /// sweep and pixel sparks. Defeat: SIGNAL LOST in red with static and glitching, plus an after-action report
-    /// (wave reached, hostiles still in play, top leaker). Both show run stats that count up (time, lives, waves,
-    /// defeated, leaked, deployed) and offer NEXT STAGE (victory, when there is one) / RETRY / STAGE SELECT.
-    /// Built in code on its own canvas; runs on unscaled time (the game is stopped). Any click or key during the
-    /// intro skips to the end; ENTER presses the highlighted button, R retries.
+    /// (wave reached, hostiles still in play, top leaker). Buttons: NEXT STAGE (victory, when there is one) /
+    /// RETRY / STAGE SELECT. Built in code on its own canvas; runs on unscaled time (the game is stopped).
+    /// Any click or key during the intro skips to the end; ENTER presses the highlighted button, R retries.
     /// </summary>
     public class StageResultsUI : MonoBehaviour
     {
@@ -29,39 +27,38 @@ namespace TrashTD.UI
         private static readonly Color VictoryBright = new Color(0.32f, 1.00f, 0.64f, 1f);
         private static readonly Color VictoryCard = new Color(0.016f, 0.042f, 0.028f, 0.98f);
         private static readonly Color VictoryHeader = new Color(0.030f, 0.090f, 0.055f, 1f);
+        private static readonly Color VictoryPanel = new Color(0.010f, 0.028f, 0.018f, 1f);
         private static readonly Color VictoryButton = new Color(0.035f, 0.090f, 0.060f, 1f);
         private static readonly Color DefeatAccent = new Color(0.95f, 0.33f, 0.36f, 1f);
         private static readonly Color DefeatBright = new Color(1f, 0.55f, 0.50f, 1f);
         private static readonly Color DefeatCard = new Color(0.045f, 0.014f, 0.016f, 0.98f);
         private static readonly Color DefeatHeader = new Color(0.10f, 0.030f, 0.034f, 1f);
+        private static readonly Color DefeatPanel = new Color(0.030f, 0.008f, 0.010f, 1f);
         private static readonly Color DefeatButton = new Color(0.10f, 0.035f, 0.035f, 1f);
         private static readonly Color StarGold = new Color(1f, 0.82f, 0.30f, 1f);
-        private static readonly Color StarOff = new Color(1f, 1f, 1f, 0.16f);
+        private static readonly Color StarOff = new Color(1f, 1f, 1f, 0.14f);
         private static readonly Color LabelDim = new Color(0.62f, 0.68f, 0.72f, 1f);
         private static readonly Color BodyText = new Color(0.86f, 0.92f, 0.88f, 1f);
         private static readonly Color SelectedLabel = new Color(0.02f, 0.06f, 0.04f, 1f);
 
-        // Layout, in card pixels from the top-left (1920x1080 reference)
-        private const float CardWidth = 1100f;
-        private const float CardHeight = 680f;
-        private const float HeaderHeight = 64f;
-        private const float Padding = 40f;
-        private const float StatBoxHeight = 72f;
-        private const float StatGap = 20f;
-        private const float ButtonWidth = 260f;
-        private const float ButtonHeight = 60f;
+        // Layout, in card pixels from the top-left (1920x1080 reference). Everything below the header lines up
+        // on the content column (ContentX .. CardWidth - ContentX); vertical gaps are 24-32 px.
+        private const float CardWidth = 960f;
+        private const float CardHeight = 548f;
+        private const float HeaderHeight = 60f;
+        private const float ContentX = 48f;
+        private const float ContentWidth = CardWidth - 2f * ContentX;   // 864
+        private const float TitleCenterY = 118f;                        // y 85..151
+        private const float SubtitleCenterY = 174f;                     // y 162..186
+        private const float RuleY = 204f;
+        private const float PanelTop = 228f;
+        private const float PanelHeight = 168f;                         // y 228..396
+        private const float ButtonsTop = 424f;
+        private const float ButtonHeight = 60f;                         // y 424..484
+        private const float ButtonGap = 24f;
+        private const float HintCenterY = 514f;
 
         private static readonly string[] StarRules = { "CLEARED", "LIVES 50%+", "NO LEAKS" };
-
-        private sealed class StatBox
-        {
-            public Image Box;
-            public Text Label;
-            public Text Value;
-            public int Target;
-            public string Suffix;
-            public bool IsTime;
-        }
 
         private sealed class Spark
         {
@@ -81,22 +78,26 @@ namespace TrashTD.UI
         private Outline cardOutline;
         private Image headerImage;
         private Image headerLine;
+        private Image headerDot;
         private readonly List<Image> brackets = new List<Image>();
         private Text headerTitle;
         private Text headerStage;
         private Text titleText;
         private Text titleGhost;
         private Text subtitleText;
+        private Image ruleImage;
         private RawImage noiseImage;
         private Image sweepImage;
+        private Image panelImage;
+        private Outline panelOutline;
         private RectTransform starsRoot;
         private readonly Image[] starImages = new Image[3];
+        private readonly Image[] starPills = new Image[3];
+        private readonly Outline[] starPillOutlines = new Outline[3];
         private readonly Text[] starLabels = new Text[3];
         private RectTransform insightRoot;
         private Text insightHeader;
         private Text insightText;
-        private readonly List<StatBox> statBoxes = new List<StatBox>();
-        private Image divider;
         private Button nextButton;
         private Button retryButton;
         private Button selectButton;
@@ -106,13 +107,9 @@ namespace TrashTD.UI
         private RectTransform sparksRoot;
         private readonly List<Spark> sparks = new List<Spark>();
 
-        // --- Run stats (counted while the stage runs) ---
-        private int enemiesDefeated;
-        private int enemiesLeaked;
-        private int operatorsDeployed;
+        // --- Leaks per enemy type (for the defeat report), counted while the stage runs ---
         private readonly Dictionary<string, int> leaksByEnemy = new Dictionary<string, int>();
         private EnemyManager trackedEnemyManager;
-        private OperatorManager trackedOperatorManager;
 
         // --- Result state ---
         private bool isVictory;
@@ -140,14 +137,7 @@ namespace TrashTD.UI
             }
 
             trackedEnemyManager = EnemyManager.Instance;
-            if (trackedEnemyManager != null)
-            {
-                trackedEnemyManager.OnEnemyDied += HandleEnemyDied;
-                trackedEnemyManager.OnEnemyReachedExit += HandleEnemyLeaked;
-            }
-
-            trackedOperatorManager = OperatorManager.Instance;
-            if (trackedOperatorManager != null) trackedOperatorManager.OnOperatorDeployed += HandleOperatorDeployed;
+            if (trackedEnemyManager != null) trackedEnemyManager.OnEnemyReachedExit += HandleEnemyLeaked;
         }
 
         private void OnDestroy()
@@ -158,26 +148,15 @@ namespace TrashTD.UI
                 GameManager.Instance.OnStageDefeat -= ShowDefeat;
             }
 
-            if (trackedEnemyManager != null)
-            {
-                trackedEnemyManager.OnEnemyDied -= HandleEnemyDied;
-                trackedEnemyManager.OnEnemyReachedExit -= HandleEnemyLeaked;
-            }
-
-            if (trackedOperatorManager != null) trackedOperatorManager.OnOperatorDeployed -= HandleOperatorDeployed;
+            if (trackedEnemyManager != null) trackedEnemyManager.OnEnemyReachedExit -= HandleEnemyLeaked;
         }
-
-        private void HandleEnemyDied(EnemyBase enemy) => enemiesDefeated++;
 
         private void HandleEnemyLeaked(EnemyBase enemy)
         {
-            enemiesLeaked++;
             string enemyName = enemy != null && enemy.Data != null ? enemy.Data.enemyName : "UNKNOWN";
             leaksByEnemy.TryGetValue(enemyName, out int count);
             leaksByEnemy[enemyName] = count + 1;
         }
-
-        private void HandleOperatorDeployed(OperatorBase op) => operatorsDeployed++;
 
         // ─────────────────────────────────────────────────────
         //  Show
@@ -213,7 +192,7 @@ namespace TrashTD.UI
                 && manager.ElapsedTime >= stage.timeLimit && manager.CurrentLifePoints > 0;
             subtitleText.text = victory ? $"{mapName} SECURED" : timedOut ? "MISSION FAILED  -  TIME LIMIT REACHED" : "MISSION FAILED  -  ALL LIVES LOST";
 
-            // Stars (victory) or after-action report (defeat)
+            // Stars (victory) or after-action report (defeat), in the same framed panel
             starsRoot.gameObject.SetActive(victory);
             insightRoot.gameObject.SetActive(!victory);
             for (int i = 0; i < 3; i++)
@@ -221,12 +200,14 @@ namespace TrashTD.UI
                 starStamped[i] = false;
                 starImages[i].color = new Color(1f, 1f, 1f, 0f);
                 starLabels[i].color = new Color(LabelDim.r, LabelDim.g, LabelDim.b, 0f);
+                starPills[i].color = new Color(0f, 0f, 0f, 0f);
+                starPillOutlines[i].effectColor = new Color(0f, 0f, 0f, 0f);
             }
 
-            int totalWaves = waveManager != null ? waveManager.TotalWaves : 0;
-            int waveIndex = manager != null ? manager.GetCurrentWaveIndex() : 0;
             if (!victory)
             {
+                int totalWaves = waveManager != null ? waveManager.TotalWaves : 0;
+                int waveIndex = manager != null ? manager.GetCurrentWaveIndex() : 0;
                 int reached = totalWaves > 0 ? Mathf.Clamp(waveIndex + 1, 1, totalWaves) : waveIndex + 1;
                 int inPlay = (EnemyManager.Instance != null ? EnemyManager.Instance.ActiveEnemyCount : 0)
                     + (waveManager != null ? waveManager.PendingSpawnCount : 0);
@@ -236,17 +217,6 @@ namespace TrashTD.UI
                     $"> {inPlay} HOSTILES STILL IN PLAY\n" +
                     (topLeaks > 0 ? $"> MOST LEAKS: {topLeaker.ToUpperInvariant()} ({topLeaks})" : "> NO LEAKS RECORDED");
             }
-
-            // Stats
-            int lives = manager != null ? manager.CurrentLifePoints : 0;
-            int maxLives = manager != null ? manager.MaxLifePoints : 0;
-            int wavesCleared = victory ? totalWaves : Mathf.Clamp(waveIndex, 0, Mathf.Max(0, totalWaves));
-            SetStat(0, "TIME", manager != null ? Mathf.FloorToInt(manager.ElapsedTime) : 0, string.Empty, isTime: true);
-            SetStat(1, "LIVES", lives, maxLives > 0 ? "/" + maxLives : string.Empty);
-            SetStat(2, "WAVES", wavesCleared, totalWaves > 0 ? "/" + totalWaves : string.Empty);
-            SetStat(3, "DEFEATED", enemiesDefeated, string.Empty);
-            SetStat(4, "LEAKED", enemiesLeaked, string.Empty);
-            SetStat(5, "DEPLOYED", operatorsDeployed, string.Empty);
 
             // Buttons: NEXT STAGE (victory, if any) / RETRY / STAGE SELECT
             nextStage = victory ? FindNextStage(stage) : null;
@@ -273,51 +243,35 @@ namespace TrashTD.UI
             return "STAGE SELECT";
         }
 
+        private Color Accent => isVictory ? VictoryAccent : DefeatAccent;
+        private Color Bright => isVictory ? VictoryBright : DefeatBright;
+
         private void ApplyTheme()
         {
-            Color accent = isVictory ? VictoryAccent : DefeatAccent;
-            Color bright = isVictory ? VictoryBright : DefeatBright;
+            Color accent = Accent;
+            Color bright = Bright;
 
             cardImage.color = isVictory ? VictoryCard : DefeatCard;
             cardOutline.effectColor = new Color(accent.r, accent.g, accent.b, 0.55f);
             headerImage.color = isVictory ? VictoryHeader : DefeatHeader;
             headerLine.color = new Color(accent.r, accent.g, accent.b, 0.55f);
+            headerDot.color = bright;
             foreach (Image bracket in brackets) bracket.color = bright;
             headerTitle.color = bright;
             titleText.color = bright;
-            divider.color = new Color(accent.r, accent.g, accent.b, 0.3f);
+            ruleImage.color = new Color(accent.r, accent.g, accent.b, 0.7f);
+            panelImage.color = isVictory ? VictoryPanel : DefeatPanel;
+            panelOutline.effectColor = new Color(accent.r, accent.g, accent.b, 0.3f);
             insightHeader.color = accent;
             noiseImage.gameObject.SetActive(!isVictory);
             sweepImage.gameObject.SetActive(isVictory);
             sweepImage.color = new Color(bright.r, bright.g, bright.b, 0f);
-
-            foreach (StatBox stat in statBoxes)
-            {
-                stat.Box.color = isVictory ? VictoryButton : DefeatButton;
-                stat.Value.color = bright;
-            }
 
             foreach (Button button in new[] { nextButton, retryButton, selectButton })
             {
                 MenuButtonFeedback feedback = button.GetComponent<MenuButtonFeedback>();
                 feedback.glowColor = new Color(bright.r, bright.g, bright.b, 0.9f);
             }
-        }
-
-        private void SetStat(int index, string label, int value, string suffix, bool isTime = false)
-        {
-            StatBox stat = statBoxes[index];
-            stat.Label.text = label;
-            stat.Target = value;
-            stat.Suffix = suffix;
-            stat.IsTime = isTime;
-            stat.Value.text = FormatStat(stat, 0);
-        }
-
-        private static string FormatStat(StatBox stat, int value)
-        {
-            if (stat.IsTime) return $"{value / 60:00}:{value % 60:00}";
-            return value + stat.Suffix;
         }
 
         private string GetTopLeaker(out int leaks)
@@ -354,9 +308,9 @@ namespace TrashTD.UI
         //  Animation (unscaled time; a click or key skips to the end)
         // ─────────────────────────────────────────────────────
 
-        private float EndTime => isVictory ? 2.8f : 2.5f;
-        private float StatsStart => isVictory ? 2.0f : 1.2f;
-        private float ButtonsStart => isVictory ? 2.3f : 1.9f;
+        private float PanelStart => isVictory ? 1.0f : 0.95f;
+        private float ButtonsStart => isVictory ? 2.05f : 1.45f;
+        private float EndTime => ButtonsStart + 0.45f;
 
         private IEnumerator ShowRoutine()
         {
@@ -399,8 +353,13 @@ namespace TrashTD.UI
                 if (chars > 0 && chars < fullTitle.Length) PlaySfx(SfxId.UiHover, 0.35f, 1.4f);
             }
 
-            float subK = Mathf.Clamp01((t - 0.85f) / 0.3f);
+            float subK = Mathf.Clamp01((t - 0.8f) / 0.3f);
             subtitleText.color = new Color(BodyText.r, BodyText.g, BodyText.b, subK);
+            ruleImage.rectTransform.sizeDelta = new Vector2(Mathf.Lerp(0f, 160f, EaseOutCubic(subK)), 2f);
+
+            // Panel fades in
+            float panelK = Mathf.Clamp01((t - PanelStart * 0.85f) / 0.3f);
+            panelImage.color = new Color(panelImage.color.r, panelImage.color.g, panelImage.color.b, panelK);
 
             if (isVictory)
             {
@@ -411,17 +370,21 @@ namespace TrashTD.UI
                 s.a = sweepK > 0f && sweepK < 1f ? 0.55f : 0f;
                 sweepImage.color = s;
 
-                // Stars stamp in one by one
+                // Stars stamp in one by one, each with its rule pill
                 for (int i = 0; i < 3; i++)
                 {
-                    float start = 1.05f + i * 0.32f;
+                    float start = PanelStart + 0.1f + i * 0.3f;
                     float k = Mathf.Clamp01((t - start) / 0.25f);
                     bool met = i < starCount;
                     Color starColor = met ? StarGold : StarOff;
                     starImages[i].color = new Color(starColor.r, starColor.g, starColor.b, starColor.a * k);
                     starImages[i].rectTransform.localScale = Vector3.one * Mathf.Lerp(2.4f, 1f, EaseOutBack(k));
+
+                    Color pillLine = met ? StarGold : LabelDim;
+                    starPills[i].color = new Color(0f, 0f, 0f, 0.35f * k);
+                    starPillOutlines[i].effectColor = new Color(pillLine.r, pillLine.g, pillLine.b, (met ? 0.8f : 0.25f) * k);
                     Color labelColor = met ? StarGold : LabelDim;
-                    starLabels[i].color = new Color(labelColor.r, labelColor.g, labelColor.b, (met ? 1f : 0.45f) * k);
+                    starLabels[i].color = new Color(labelColor.r, labelColor.g, labelColor.b, (met ? 1f : 0.5f) * k);
 
                     if (k > 0f && !starStamped[i])
                     {
@@ -437,30 +400,22 @@ namespace TrashTD.UI
             else
             {
                 // Static floods in, then settles to a faint crawl (Update keeps it moving)
-                float noise = t < 0.15f ? Mathf.Lerp(0.6f, 0.6f, t) : Mathf.Lerp(0.6f, 0.1f, Mathf.Clamp01((t - 0.15f) / 0.9f));
+                float noise = Mathf.Lerp(0.6f, 0.1f, Mathf.Clamp01((t - 0.15f) / 0.9f));
                 noiseImage.color = new Color(1f, 1f, 1f, noise);
 
-                float insightK = Mathf.Clamp01((t - 1.0f) / 0.35f);
+                float insightK = Mathf.Clamp01((t - PanelStart) / 0.35f);
                 insightText.color = new Color(BodyText.r, BodyText.g, BodyText.b, insightK);
-                insightHeader.color = new Color(insightHeader.color.r, insightHeader.color.g, insightHeader.color.b, insightK);
-            }
-
-            // Stats count up
-            float statsK = Mathf.Clamp01((t - StatsStart) / 0.7f);
-            float eased = 1f - (1f - statsK) * (1f - statsK);
-            foreach (StatBox stat in statBoxes)
-            {
-                stat.Value.text = FormatStat(stat, Mathf.RoundToInt(stat.Target * eased));
+                Color accent = Accent;
+                insightHeader.color = new Color(accent.r, accent.g, accent.b, insightK);
             }
 
             // Buttons rise in
             float buttonsK = EaseOutCubic(Mathf.Clamp01((t - ButtonsStart) / 0.4f));
             for (int i = 0; i < activeButtons.Count; i++)
             {
-                CanvasGroup group = activeButtons[i].GetComponent<CanvasGroup>();
-                group.alpha = buttonsK;
+                activeButtons[i].GetComponent<CanvasGroup>().alpha = buttonsK;
                 RectTransform rect = activeButtons[i].GetComponent<RectTransform>();
-                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, -(568f + (1f - buttonsK) * 30f));
+                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, -(ButtonsTop + (1f - buttonsK) * 24f));
             }
             hintText.color = new Color(LabelDim.r, LabelDim.g, LabelDim.b, 0.7f * buttonsK);
         }
@@ -473,6 +428,10 @@ namespace TrashTD.UI
             HandleInput();
             UpdateSparks(dt);
 
+            // Header status dot blinks
+            Color bright = Bright;
+            headerDot.color = new Color(bright.r, bright.g, bright.b, Mathf.Repeat(Time.unscaledTime * 1.5f, 1f) < 0.6f ? 1f : 0.25f);
+
             if (!isVictory)
             {
                 // Static crawl and recurring glitch bursts on the title
@@ -480,30 +439,27 @@ namespace TrashTD.UI
                 uv.x = Random.value;
                 uv.y = Random.value;
                 noiseImage.uvRect = uv;
-                if (introDone)
-                {
-                    noiseImage.color = new Color(1f, 1f, 1f, 0.08f + Random.value * 0.05f);
-                }
+                if (introDone) noiseImage.color = new Color(1f, 1f, 1f, 0.08f + Random.value * 0.05f);
 
                 glitchTimer -= dt;
                 bool burst = glitchTimer < 0.12f;
                 if (glitchTimer <= 0f) glitchTimer = Random.Range(1.4f, 3.2f);
                 bool glitching = burst || !introDone;
                 Vector2 jitter = glitching ? new Vector2(Random.Range(-7f, 7f), Random.Range(-2f, 2f)) : Vector2.zero;
-                titleText.rectTransform.anchoredPosition = new Vector2(jitter.x * 0.4f, -96f + jitter.y);
-                titleGhost.rectTransform.anchoredPosition = new Vector2(-jitter.x - 4f, -96f + 2f);
+                titleText.rectTransform.anchoredPosition = new Vector2(jitter.x * 0.4f, -TitleCenterY + jitter.y);
+                titleGhost.rectTransform.anchoredPosition = new Vector2(-jitter.x - 4f, -TitleCenterY + 2f);
                 titleGhost.color = new Color(0.3f, 0.95f, 1f, glitching ? 0.6f : 0.18f);
             }
             else
             {
-                titleText.rectTransform.anchoredPosition = new Vector2(0f, -96f);
+                titleText.rectTransform.anchoredPosition = new Vector2(0f, -TitleCenterY);
                 titleGhost.color = new Color(0f, 0f, 0f, 0f);
             }
 
             if (primaryButton != null && introDone)
             {
                 MenuButtonFeedback feedback = primaryButton.GetComponent<MenuButtonFeedback>();
-                feedback.restScale = 1f + 0.025f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 3f));
+                feedback.restScale = 1f + 0.02f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 3f));
             }
         }
 
@@ -536,8 +492,7 @@ namespace TrashTD.UI
             foreach (Button button in activeButtons)
             {
                 button.interactable = value;
-                CanvasGroup group = button.GetComponent<CanvasGroup>();
-                group.blocksRaycasts = value;
+                button.GetComponent<CanvasGroup>().blocksRaycasts = value;
             }
         }
 
@@ -683,113 +638,99 @@ namespace TrashTD.UI
             sweepGlow.effectColor = new Color(VictoryBright.r, VictoryBright.g, VictoryBright.b, 0.25f);
             sweepGlow.effectDistance = new Vector2(0f, 6f);
 
-            // Header
+            // Header: blinking status dot + MISSION DEBRIEF on the left, stage line on the right
             headerImage = CreateImage(card, "Header", VictoryHeader);
             PlaceTopLeft(headerImage.rectTransform, 0f, 0f, CardWidth, HeaderHeight);
             headerLine = CreateImage(card, "HeaderLine", VictoryAccent);
             PlaceTopLeft(headerLine.rectTransform, 0f, HeaderHeight, CardWidth, 2f);
-            headerTitle = CreateText(headerImage.rectTransform, "MISSION DEBRIEF", 18, TextAnchor.MiddleLeft, VictoryBright);
-            PlaceTopLeft(headerTitle.rectTransform, Padding - 8f, 0f, 400f, HeaderHeight);
+            headerDot = CreateImage(headerImage.rectTransform, "StatusDot", VictoryBright);
+            PlaceTopLeft(headerDot.rectTransform, ContentX, (HeaderHeight - 10f) * 0.5f, 10f, 10f);
+            headerTitle = CreateText(headerImage.rectTransform, "MISSION DEBRIEF", 16, TextAnchor.MiddleLeft, VictoryBright);
+            PlaceTopLeft(headerTitle.rectTransform, ContentX + 22f, 0f, 320f, HeaderHeight);
             headerStage = CreateText(headerImage.rectTransform, string.Empty, 12, TextAnchor.MiddleRight, LabelDim);
-            PlaceTopLeft(headerStage.rectTransform, CardWidth - Padding + 8f - 640f, 0f, 640f, HeaderHeight);
+            PlaceTopLeft(headerStage.rectTransform, CardWidth - ContentX - 520f, 0f, 520f, HeaderHeight);
 
-            // Title (+ cyan ghost for the defeat glitch) and subtitle
+            // Title (+ cyan ghost for the defeat glitch), subtitle and a short accent rule
             titleGhost = CreateText(card, string.Empty, 52, TextAnchor.MiddleCenter, Color.clear);
-            PlaceCentered(titleGhost.rectTransform, -96f, CardWidth, 66f);
+            PlaceCentered(titleGhost.rectTransform, TitleCenterY, CardWidth, 66f);
             titleText = CreateText(card, string.Empty, 52, TextAnchor.MiddleCenter, VictoryBright);
-            PlaceCentered(titleText.rectTransform, -96f, CardWidth, 66f);
+            PlaceCentered(titleText.rectTransform, TitleCenterY, CardWidth, 66f);
             var titleShadow = titleText.gameObject.AddComponent<Shadow>();
             titleShadow.effectColor = new Color(0f, 0f, 0f, 0.7f);
             titleShadow.effectDistance = new Vector2(0f, -4f);
             subtitleText = CreateText(card, string.Empty, 14, TextAnchor.MiddleCenter, BodyText);
-            PlaceCentered(subtitleText.rectTransform, -168f, CardWidth, 24f);
+            PlaceCentered(subtitleText.rectTransform, SubtitleCenterY, ContentWidth, 24f);
+            ruleImage = CreateImage(card, "Rule", VictoryAccent);
+            PlaceCentered(ruleImage.rectTransform, RuleY, 160f, 2f);
 
-            // Stars (victory)
-            starsRoot = CreateRect(card, "Stars");
-            PlaceTopLeft(starsRoot, 0f, 206f, CardWidth, 124f);
+            // Framed panel shared by the stars (victory) and the after-action report (defeat)
+            panelImage = CreateImage(card, "ResultPanel", VictoryPanel);
+            PlaceTopLeft(panelImage.rectTransform, ContentX, PanelTop, ContentWidth, PanelHeight);
+            panelOutline = panelImage.gameObject.AddComponent<Outline>();
+            panelOutline.effectDistance = new Vector2(1f, -1f);
+
+            starsRoot = CreateRect(panelImage.rectTransform, "Stars");
+            SetStretch(starsRoot);
             Sprite starSprite = GameplayHUDUI.LoadIconSprite("icon_star");
             if (starSprite != null && starSprite.texture != null) starSprite.texture.filterMode = FilterMode.Point;
+            float columnWidth = ContentWidth / 3f;
             for (int i = 0; i < 3; i++)
             {
-                float x = (i - 1) * 240f;
+                float centerX = columnWidth * (i + 0.5f);
+
                 Image star = CreateImage(starsRoot, "Star" + (i + 1), Color.white);
                 star.sprite = starSprite;
                 star.preserveAspect = true;
-                star.rectTransform.anchorMin = star.rectTransform.anchorMax = new Vector2(0.5f, 1f);
-                star.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-                star.rectTransform.anchoredPosition = new Vector2(x, -42f);
-                star.rectTransform.sizeDelta = new Vector2(76f, 76f);
+                PlaceFromTopLeftCentered(star.rectTransform, centerX, 64f, 80f, 80f);
                 starImages[i] = star;
 
-                Text label = CreateText(starsRoot, StarRules[i], 12, TextAnchor.MiddleCenter, LabelDim);
-                label.rectTransform.anchorMin = label.rectTransform.anchorMax = new Vector2(0.5f, 1f);
-                label.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-                label.rectTransform.anchoredPosition = new Vector2(x, -104f);
-                label.rectTransform.sizeDelta = new Vector2(220f, 20f);
+                Image pill = CreateImage(starsRoot, "RulePill" + (i + 1), Color.clear);
+                PlaceFromTopLeftCentered(pill.rectTransform, centerX, 132f, 200f, 30f);
+                starPills[i] = pill;
+                starPillOutlines[i] = pill.gameObject.AddComponent<Outline>();
+                starPillOutlines[i].effectDistance = new Vector2(1.5f, -1.5f);
+
+                Text label = CreateText(pill.rectTransform, StarRules[i], 12, TextAnchor.MiddleCenter, LabelDim);
+                SetStretch(label.rectTransform);
                 starLabels[i] = label;
             }
 
-            // After-action report (defeat)
-            insightRoot = CreateRect(card, "AfterAction");
-            PlaceTopLeft(insightRoot, Padding + 120f, 206f, CardWidth - 2f * (Padding + 120f), 124f);
-            Image insightBack = CreateImage(insightRoot, "Back", new Color(0f, 0f, 0f, 0.25f));
-            SetStretch(insightBack.rectTransform);
+            insightRoot = CreateRect(panelImage.rectTransform, "AfterAction");
+            SetStretch(insightRoot);
             insightHeader = CreateText(insightRoot, "// AFTER-ACTION REPORT", 12, TextAnchor.MiddleLeft, DefeatAccent);
-            PlaceTopLeft(insightHeader.rectTransform, 20f, 10f, 600f, 22f);
-            insightText = CreateText(insightRoot, string.Empty, 13, TextAnchor.UpperLeft, BodyText);
-            insightText.lineSpacing = 1.5f;
+            PlaceTopLeft(insightHeader.rectTransform, 32f, 22f, ContentWidth - 64f, 22f);
+            insightText = CreateText(insightRoot, string.Empty, 14, TextAnchor.UpperLeft, BodyText);
+            insightText.lineSpacing = 1.6f;
             insightText.verticalOverflow = VerticalWrapMode.Overflow;
-            PlaceTopLeft(insightText.rectTransform, 20f, 40f, CardWidth - 2f * (Padding + 120f) - 40f, 80f);
+            PlaceTopLeft(insightText.rectTransform, 32f, 60f, ContentWidth - 64f, PanelHeight - 76f);
 
-            // Stats: 2 rows of 3
-            float boxWidth = (CardWidth - 2f * Padding - 2f * StatGap) / 3f;
-            for (int i = 0; i < 6; i++)
-            {
-                int column = i % 3;
-                int row = i / 3;
-                Image box = CreateImage(card, "Stat" + i, VictoryButton);
-                PlaceTopLeft(box.rectTransform, Padding + column * (boxWidth + StatGap), 352f + row * (StatBoxHeight + 16f), boxWidth, StatBoxHeight);
-                Outline boxOutline = box.gameObject.AddComponent<Outline>();
-                boxOutline.effectColor = new Color(1f, 1f, 1f, 0.08f);
-                boxOutline.effectDistance = new Vector2(1f, -1f);
-
-                Text label = CreateText(box.rectTransform, string.Empty, 10, TextAnchor.MiddleLeft, LabelDim);
-                PlaceTopLeft(label.rectTransform, 18f, 0f, boxWidth * 0.5f, StatBoxHeight);
-                Text value = CreateText(box.rectTransform, "0", 24, TextAnchor.MiddleRight, VictoryBright);
-                PlaceTopLeft(value.rectTransform, boxWidth * 0.4f, 0f, boxWidth * 0.6f - 18f, StatBoxHeight);
-                statBoxes.Add(new StatBox { Box = box, Label = label, Value = value });
-            }
-
-            divider = CreateImage(card, "Divider", VictoryAccent);
-            PlaceTopLeft(divider.rectTransform, Padding, 542f, CardWidth - 2f * Padding, 2f);
-
-            // Buttons (laid out per result in LayoutButtons)
+            // Buttons (laid out per result in LayoutButtons) and the key hint
             nextButton = CreateButton(card, "NextStageButton", "NEXT STAGE", OnNextClicked);
             retryButton = CreateButton(card, "RetryButton", "RETRY", OnRetryClicked);
             selectButton = CreateButton(card, "StageSelectButton", "STAGE SELECT", OnStageSelectClicked);
 
             hintText = CreateText(card, string.Empty, 10, TextAnchor.MiddleCenter, LabelDim);
-            PlaceCentered(hintText.rectTransform, -650f, CardWidth, 20f);
+            PlaceCentered(hintText.rectTransform, HintCenterY, ContentWidth, 20f);
 
             sparksRoot = CreateRect(root.transform, "Sparks");
             SetStretch(sparksRoot);
         }
 
-        /// <summary>Centres the active buttons on one row; the primary one is filled with the accent colour.</summary>
+        /// <summary>
+        /// Splits the content column evenly between the active buttons (24 px gaps), so the row lines up with
+        /// the panel above. The primary button is filled with the accent colour.
+        /// </summary>
         private void LayoutButtons()
         {
-            Color accent = isVictory ? VictoryAccent : DefeatAccent;
+            Color accent = Accent;
             Color idle = isVictory ? VictoryButton : DefeatButton;
-            const float gap = 24f;
-            float total = activeButtons.Count * ButtonWidth + (activeButtons.Count - 1) * gap;
-            for (int i = 0; i < activeButtons.Count; i++)
+            int count = activeButtons.Count;
+            float width = (ContentWidth - ButtonGap * (count - 1)) / count;
+            for (int i = 0; i < count; i++)
             {
                 Button button = activeButtons[i];
                 RectTransform rect = button.GetComponent<RectTransform>();
-                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
-                rect.pivot = new Vector2(0.5f, 1f);
-                rect.sizeDelta = new Vector2(ButtonWidth, ButtonHeight);
-                rect.anchoredPosition = new Vector2(-total * 0.5f + ButtonWidth * 0.5f + i * (ButtonWidth + gap), -568f);
+                PlaceTopLeft(rect, ContentX + i * (width + ButtonGap), ButtonsTop, width, ButtonHeight);
 
                 bool primary = button == primaryButton;
                 MenuButtonFeedback feedback = button.GetComponent<MenuButtonFeedback>();
@@ -816,7 +757,7 @@ namespace TrashTD.UI
             button.onClick.AddListener(onClick);
 
             MenuButtonFeedback feedback = buttonObject.AddComponent<MenuButtonFeedback>();
-            feedback.hoverScale = 1.05f;
+            feedback.hoverScale = 1.04f;
             feedback.respondToFocus = false;
             feedback.Hovered = () => PlaySfx(SfxId.UiHover, 0.7f, Random.Range(0.97f, 1.03f));
             feedback.Clicked = () => PlaySfx(SfxId.UiConfirm, 1f, 1f);
@@ -931,12 +872,22 @@ namespace TrashTD.UI
             rect.sizeDelta = new Vector2(width, height);
         }
 
+        /// <summary>Centre at (x, y) measured from the parent's top-left corner.</summary>
+        private static void PlaceFromTopLeftCentered(RectTransform rect, float x, float y, float width, float height)
+        {
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(x, -y);
+            rect.sizeDelta = new Vector2(width, height);
+        }
+
         /// <summary>Horizontally centred in the card, with its centre <paramref name="y"/> below the top edge.</summary>
         private static void PlaceCentered(RectTransform rect, float y, float width, float height)
         {
             rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = new Vector2(0f, y);
+            rect.anchoredPosition = new Vector2(0f, -y);
             rect.sizeDelta = new Vector2(width, height);
         }
 

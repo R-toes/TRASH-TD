@@ -4564,9 +4564,9 @@ namespace TrashTD.UI
         }
 
         /// <summary>
-        /// Wave start: "WAVE 07 / 20" (or "FINAL WAVE" in red, with glitch), "38 HOSTILES INBOUND", and the
-        /// wave's enemy types with counts. Sirens flash on both ends. Called as the wave phase begins, before
-        /// WaveManager advances, so PeekNextWave is the wave about to start.
+        /// Wave start: "INVADING", "38 HOSTILES INBOUND", and the wave's enemy types with counts. Sirens flash on
+        /// both ends. The final wave is red with a glitch and "FINAL WAVE - 38 HOSTILES INBOUND". Called as the wave
+        /// phase begins, before WaveManager advances, so PeekNextWave is the wave about to start.
         /// </summary>
         private void ShowWaveBanner()
         {
@@ -4574,18 +4574,16 @@ namespace TrashTD.UI
 
             int total = waveManager != null ? waveManager.TotalWaves : 0;
             int number = gameManager != null ? gameManager.GetCurrentWaveIndex() + 1 : 1;
-            if (total > 0) number = Mathf.Clamp(number, 1, total);
             bool final = total > 0 && number >= total;
             WaveData wave = waveManager != null ? waveManager.PeekNextWave() : null;
             int hostiles = WaveManager.CountEnemies(wave);
 
-            string title = final ? "FINAL WAVE" : total > 0 ? $"WAVE {number:00} / {total:00}" : $"WAVE {number:00}";
             string subtitle = hostiles > 0 ? $"{hostiles} HOSTILES INBOUND" : "HOSTILES INBOUND";
-            if (final) subtitle += "  -  HOLD THE LINE";
+            if (final) subtitle = "FINAL WAVE  -  " + subtitle;
 
             ClearPhaseBannerIcons();
             BuildPhaseBannerIcons(wave);
-            PlayPhaseBanner(title, subtitle, final ? LifeColor : WaveColor, alarm: true, glitch: final);
+            PlayPhaseBanner("INVADING", subtitle, final ? LifeColor : WaveColor, alarm: true, glitch: final);
         }
 
         private void PlayPhaseBanner(string title, string subtitle, Color color, bool alarm, bool glitch)
@@ -4683,7 +4681,8 @@ namespace TrashTD.UI
 
         /// <summary>
         /// The band snaps open (height 0 → full), the title punches in, holds while the stripes march and the
-        /// sirens flash, then the band collapses. Unscaled time.
+        /// sirens flash, then the band collapses. Unscaled time scaled by the game speed (1x / 2x / 3x), so at
+        /// higher speeds the banner plays and clears faster; it doesn't freeze while paused.
         /// </summary>
         private IEnumerator PhaseBannerRoutine()
         {
@@ -4695,7 +4694,8 @@ namespace TrashTD.UI
             float t = 0f;
             while (t < total)
             {
-                float dt = Time.unscaledDeltaTime;
+                float speed = gameManager != null ? Mathf.Max(1f, gameManager.GameSpeed) : 1f;
+                float dt = Time.unscaledDeltaTime * speed;
                 t += dt;
 
                 float open;
