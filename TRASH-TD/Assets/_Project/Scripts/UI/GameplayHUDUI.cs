@@ -27,8 +27,6 @@ namespace TrashTD.UI
     {
         private const int DeckSlotCount = 8;
         private static Sprite cooldownClockSprite;
-        private static Sprite waveMarkSprite;
-        private static Sprite enemySkullSprite;
         private static Sprite trashIconSprite;
         private static Sprite pauseIconSprite;
         private static Sprite exitIconSprite;
@@ -92,11 +90,17 @@ namespace TrashTD.UI
         private GameObject pausePanel;
         private GameObject stageInfoPanel;
         private Text phaseHeaderText;
+        private Image phaseLed;
+        private Text waveLabelText;
         private Text waveText;
-        private Image waveIconImage;
+        private Text enemyLabelText;
         private Text enemyText;
-        private Image enemyIconImage;
+        private Text enemyIncomingText;
         private Text lpText;
+        private readonly List<Image> topScreenGlows = new List<Image>();
+        private GameObject nextWavePreview;
+        private Text nextWaveLabel;
+        private readonly List<GameObject> nextWavePreviewItems = new List<GameObject>();
         private Text phaseText;
         private Text squadCountText;
         private GameObject selectedOperatorLabelRoot;
@@ -1156,9 +1160,9 @@ namespace TrashTD.UI
             }
             topBarRect = barRect;
 
-            // Pause button (top-left)
+            // Pause button on the art's small left screen (art x 3..20)
             var pauseButton = CreateButton(stageInfoPanel.transform, "PauseButton", string.Empty, new Vector2(50f, 50f), ButtonContainerType.IconDark);
-            SetPosition(pauseButton.GetComponent<RectTransform>(), new Vector2(10f, -41f), new Vector2(0f, 1f), new Vector2(50f, 50f), new Vector2(0f, 0.5f));
+            SetPosition(pauseButton.GetComponent<RectTransform>(), new Vector2(0f, -41f), new Vector2(12f / TopArtWidth, 1f), new Vector2(50f, 50f), new Vector2(0.5f, 0.5f));
             pauseButton.onClick.AddListener(PauseGame);
             StyleButton(pauseButton, ButtonContainerType.IconDark, Color.white, 1.08f);
 
@@ -1173,38 +1177,334 @@ namespace TrashTD.UI
                 if (label != null) label.text = "||";
             }
 
-            phaseHeaderText = CreateText(stageInfoPanel.transform, "PhaseHeaderText", "PHASE", 18, TextAnchor.MiddleLeft);
-            SetPosition(phaseHeaderText.GetComponent<RectTransform>(), new Vector2(95f, -28f), new Vector2(0f, 1f), new Vector2(220f, 32f), new Vector2(0f, 0.5f));
+            // Readouts sit on the art's four dark screens as labelled terminal readouts: a small dim label and a
+            // bright value, with scanlines and a faint glow in the phase colour. Each screen is anchored as a
+            // fraction of the bar, so it stays on its screen however the art is stretched (any aspect ratio).
+            RectTransform phaseScreen = CreateTopScreen("PhaseScreen", 26f, 77f, 4f, 24f);
+            RectTransform waveScreen = CreateTopScreen("WaveScreen", 113f, 168f, 6f, 23f);
+            RectTransform hostileScreen = CreateTopScreen("HostileScreen", 300f, 334f, 6f, 23f);
+            RectTransform livesScreen = CreateTopScreen("LivesScreen", 591f, 636f, 6f, 23f);
 
-            // Phase text remains directly below the wave title.
-            phaseText = CreateText(stageInfoPanel.transform, "PhaseText", "PREPARATION", 12, TextAnchor.MiddleLeft);
+            // ── Phase: PHASE / CARD PICK, PREPARATION, INVADING, with a status light ──
+            phaseHeaderText = CreateScreenLabel(phaseScreen, "PHASE", TextAnchor.MiddleLeft, 6f);
+            phaseLed = CreateTopImage(phaseScreen, "StatusLight", PrepColor);
+            phaseLed.rectTransform.anchorMin = phaseLed.rectTransform.anchorMax = new Vector2(1f, 1f);
+            phaseLed.rectTransform.pivot = new Vector2(1f, 1f);
+            phaseLed.rectTransform.anchoredPosition = new Vector2(-8f, -8f);
+            phaseLed.rectTransform.sizeDelta = new Vector2(8f, 8f);
+
+            phaseText = CreateText(phaseScreen, "PhaseText", "PREPARATION", 15, TextAnchor.MiddleLeft);
             phaseText.color = PrepColor;
-            SetPosition(phaseText.GetComponent<RectTransform>(), new Vector2(95f, -60f), new Vector2(0f, 1f), new Vector2(220f, 26f), new Vector2(0f, 0.5f));
+            UseBestFit(phaseText, 9, 15);
+            PlaceScreenRow(phaseText.rectTransform, 24f, 32f);
 
-            // The wave counter sits on the Top Panel BG's second screen (x 336..510, y -15..-75 at 3x),
-            // with the wave progress bar under it.
-            waveIconImage = CreateIconImage(stageInfoPanel.transform, "WaveIcon", GetWaveMarkSprite(), WaveColor, new Vector2(348f, -32f), new Vector2(0f, 1f), new Vector2(30f, 29f), new Vector2(0f, 0.5f));
-            waveText = CreateText(stageInfoPanel.transform, "WaveText", "1/1", 22, TextAnchor.MiddleLeft);
-            SetPosition(waveText.GetComponent<RectTransform>(), new Vector2(384f, -32f), new Vector2(0f, 1f), new Vector2(120f, 32f), new Vector2(0f, 0.5f));
-            CreateWaveProgressBar(stageInfoPanel.transform);
+            // ── Wave: WAVE (or NEXT between waves) + "07/20" on one row, the progress bar under it ──
+            waveLabelText = CreateScreenLabel(waveScreen, "WAVE", TextAnchor.MiddleLeft, 9f);
+            waveText = CreateText(waveScreen, "WaveText", "01/01", 18, TextAnchor.MiddleRight);
+            UseBestFit(waveText, 10, 18);
+            PlaceScreenRow(waveText.rectTransform, 2f, 26f, 60f);
+            CreateWaveProgressBar(waveScreen);
 
-            // Enemy count (center) uses a skull icon and a numeric count.
-            enemyIconImage = CreateIconImage(stageInfoPanel.transform, "EnemyIcon", GetEnemySkullSprite(), Color.white, new Vector2(-35f, -45f), new Vector2(0.5f, 1f), new Vector2(36f, 36f), new Vector2(0.5f, 0.5f));
-            enemyText = CreateText(stageInfoPanel.transform, "EnemyText", "0", 24, TextAnchor.MiddleLeft);
-            SetPosition(enemyText.GetComponent<RectTransform>(), new Vector2(8f, -45f), new Vector2(0.5f, 1f), new Vector2(100f, 40f), new Vector2(0f, 0.5f));
+            // ── Hostiles: on the field (+ still to spawn); between waves, the next wave's size ──
+            enemyLabelText = CreateScreenLabel(hostileScreen, "HOSTILES", TextAnchor.MiddleCenter, 5f);
+            enemyText = CreateText(hostileScreen, "EnemyText", "0", 20, TextAnchor.MiddleCenter);
+            UseBestFit(enemyText, 10, 20);
+            enemyIncomingText = CreateText(hostileScreen, "EnemyIncomingText", string.Empty, 11, TextAnchor.MiddleLeft);
+            enemyIncomingText.color = DraftColor;
+            UseBestFit(enemyIncomingText, 8, 11);
+            SetHostileReadoutSplit(false);
 
-            // Lives: a horizontal tube on the right-hand screen. The text only shows "LIVES LOCKED" in the sandbox.
-            CreateLivesTube(stageInfoPanel.transform);
-            lpText = CreateText(stageInfoPanel.transform, "LivesText", string.Empty, 24, TextAnchor.MiddleRight);
-            lpText.color = LifeColor;
-            SetPosition(lpText.GetComponent<RectTransform>(), new Vector2(-25f, -45f), new Vector2(1f, 1f), new Vector2(280f, 45f), new Vector2(1f, 0.5f));
+            // ── Lives: the tube, with the count on top of it. Sandbox shows "LIVES LOCKED" instead. ──
+            CreateLivesTube(livesScreen);
+            lpText = CreateText(livesScreen, "LivesText", string.Empty, 16, TextAnchor.MiddleCenter);
+            UseBestFit(lpText, 9, 16);
+            Stretch(lpText.rectTransform);
+            var livesOutline = lpText.gameObject.AddComponent<Outline>();
+            livesOutline.effectColor = new Color(0f, 0f, 0f, 0.9f);
+            livesOutline.effectDistance = new Vector2(2f, -2f);
 
-            // Texts and progress strip should never eat clicks
-            phaseHeaderText.raycastTarget = false;
-            waveText.raycastTarget = false;
-            phaseText.raycastTarget = false;
-            enemyText.raycastTarget = false;
-            lpText.raycastTarget = false;
+            CreateNextWavePreview();
+
+            // Texts should never eat clicks
+            foreach (Text text in stageInfoPanel.GetComponentsInChildren<Text>(true)) text.raycastTarget = false;
+        }
+
+        // Top Panel BG frame size in art pixels; it is drawn across the full bar width, 3x at 1920x90.
+        private const float TopArtWidth = 640f;
+        private const float TopArtHeight = 30f;
+
+        /// <summary>
+        /// A readout area over one of the art's dark screens (art pixels, inclusive). Anchored as a fraction of
+        /// the bar, so it follows the art when the bar is stretched. Adds scanlines and a phase-colour glow.
+        /// </summary>
+        private RectTransform CreateTopScreen(string objectName, float artX0, float artX1, float artY0, float artY1)
+        {
+            var screen = new GameObject(objectName, typeof(RectTransform));
+            screen.transform.SetParent(stageInfoPanel.transform, false);
+            var rect = screen.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(artX0 / TopArtWidth, 1f - (artY1 + 1f) / TopArtHeight);
+            rect.anchorMax = new Vector2((artX1 + 1f) / TopArtWidth, 1f - artY0 / TopArtHeight);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            Image glow = CreateTopImage(rect, "Glow", new Color(PrepColor.r, PrepColor.g, PrepColor.b, TopScreenGlowAlpha));
+            Stretch(glow.rectTransform);
+            topScreenGlows.Add(glow);
+
+            Image scanlines = CreateTopImage(rect, "Scanlines", Color.white);
+            scanlines.sprite = GetScanlineSprite();
+            scanlines.type = Image.Type.Tiled;
+            Stretch(scanlines.rectTransform);
+            return rect;
+        }
+
+        private const float TopScreenGlowAlpha = 0.07f;
+
+        private static Image CreateTopImage(Transform parent, string objectName, Color color)
+        {
+            var go = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var image = go.GetComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        /// <summary>Small dim caps label on a screen's top row.</summary>
+        private static Text CreateScreenLabel(RectTransform screen, string label, TextAnchor alignment, float top)
+        {
+            Text text = CreateText(screen, label + "Label", label, 9, alignment);
+            text.fontStyle = FontStyle.Normal;
+            text.color = TextDim;
+            UseBestFit(text, 7, 9);
+            PlaceScreenRow(text.rectTransform, top, 12f);
+            return text;
+        }
+
+        /// <summary>Stretches a rect across its screen (8 px side insets) at a fixed row from the top.</summary>
+        private static void PlaceScreenRow(RectTransform rect, float top, float height, float leftInset = 8f, float rightInset = 8f)
+        {
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.offsetMin = new Vector2(leftInset, -(top + height));
+            rect.offsetMax = new Vector2(-rightInset, -top);
+        }
+
+        private static void UseBestFit(Text text, int min, int max)
+        {
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = min;
+            text.resizeTextMaxSize = max;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+        }
+
+        /// <summary>
+        /// Hostiles screen value row: one centred number, or (during a wave with spawns still to come)
+        /// the on-field count on the left and "+N" incoming on the right.
+        /// </summary>
+        private void SetHostileReadoutSplit(bool split)
+        {
+            if (enemyText == null || enemyIncomingText == null) return;
+            RectTransform main = enemyText.rectTransform;
+            PlaceScreenRow(main, 20f, 28f, 4f, 4f);
+            if (split)
+            {
+                main.anchorMax = new Vector2(0.58f, 1f);
+                enemyText.alignment = TextAnchor.MiddleRight;
+                PlaceScreenRow(enemyIncomingText.rectTransform, 22f, 26f, 4f, 4f);
+                enemyIncomingText.rectTransform.anchorMin = new Vector2(0.62f, 1f);
+            }
+            else
+            {
+                enemyText.alignment = TextAnchor.MiddleCenter;
+            }
+            enemyIncomingText.gameObject.SetActive(split);
+        }
+
+        private static Sprite scanlineSprite;
+
+        /// <summary>1 dark line every 3 px (one art pixel row at 3x), tiled over a screen.</summary>
+        private static Sprite GetScanlineSprite()
+        {
+            if (scanlineSprite != null) return scanlineSprite;
+            var texture = new Texture2D(1, 3, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Repeat
+            };
+            texture.SetPixels32(new[]
+            {
+                new Color32(0, 0, 0, 70),
+                new Color32(0, 0, 0, 0),
+                new Color32(0, 0, 0, 0)
+            });
+            texture.Apply();
+            scanlineSprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 3f), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect);
+            return scanlineSprite;
+        }
+
+        /// <summary>
+        /// "NEXT WAVE 08" tab hanging under the bar (centred under the hostiles screen) between waves:
+        /// each enemy type in the next wave with its count (first sprite frame + "x8").
+        /// </summary>
+        private void CreateNextWavePreview()
+        {
+            nextWavePreview = new GameObject("NextWavePreview", typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
+            nextWavePreview.transform.SetParent(stageInfoPanel.transform, false);
+            var rect = nextWavePreview.GetComponent<RectTransform>();
+            float centerX = (300f + 335f) * 0.5f / TopArtWidth;
+            SetPosition(rect, new Vector2(0f, 2f), new Vector2(centerX, 0f), new Vector2(0f, 46f), new Vector2(0.5f, 1f));
+            ApplyPanelContainer(nextWavePreview, PanelContainerType.Dark);
+            nextWavePreview.GetComponent<Image>().raycastTarget = false;
+
+            var layout = nextWavePreview.GetComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(14, 14, 6, 6);
+            layout.spacing = 14f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            nextWavePreview.GetComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            nextWaveLabel = CreateText(nextWavePreview.transform, "NextWaveLabel", "NEXT WAVE", 10, TextAnchor.MiddleLeft);
+            nextWaveLabel.color = DraftColor;
+            nextWaveLabel.raycastTarget = false;
+            nextWavePreview.SetActive(false);
+        }
+
+        private const int NextWavePreviewMaxTypes = 6;
+
+        private void RefreshNextWavePreview()
+        {
+            if (nextWavePreview == null) return;
+
+            WaveData next = null;
+            bool show = sandboxController == null && gameManager != null && waveManager != null
+                && gameManager.CurrentPhase != StagePhase.WaveActive;
+            if (show) next = waveManager.PeekNextWave();
+            show = show && WaveManager.CountEnemies(next) > 0;
+            nextWavePreview.SetActive(show);
+            if (!show) return;
+
+            foreach (GameObject item in nextWavePreviewItems)
+            {
+                if (item != null) Destroy(item);
+            }
+            nextWavePreviewItems.Clear();
+
+            int total = waveManager.TotalWaves;
+            int number = gameManager.GetCurrentWaveIndex() + 1;
+            bool final = total > 0 && number >= total;
+            nextWaveLabel.text = final ? "FINAL WAVE" : $"NEXT WAVE {number:00}";
+            nextWaveLabel.color = final ? LifeColor : DraftColor;
+
+            // Enemy types in spawn-list order, with their total counts
+            var order = new List<EnemyData>();
+            var counts = new Dictionary<EnemyData, int>();
+            foreach (WaveEntry entry in next.entries)
+            {
+                if (entry == null || entry.enemyData == null || entry.count <= 0) continue;
+                if (!counts.ContainsKey(entry.enemyData))
+                {
+                    counts[entry.enemyData] = 0;
+                    order.Add(entry.enemyData);
+                }
+                counts[entry.enemyData] += entry.count;
+            }
+
+            for (int i = 0; i < order.Count && i < NextWavePreviewMaxTypes; i++)
+            {
+                nextWavePreviewItems.Add(CreateNextWaveItem(order[i], counts[order[i]]));
+            }
+
+            if (order.Count > NextWavePreviewMaxTypes)
+            {
+                Text more = CreateText(nextWavePreview.transform, "More", "+" + (order.Count - NextWavePreviewMaxTypes), 11, TextAnchor.MiddleLeft);
+                more.color = TextDim;
+                more.raycastTarget = false;
+                nextWavePreviewItems.Add(more.gameObject);
+            }
+        }
+
+        private GameObject CreateNextWaveItem(EnemyData enemy, int count)
+        {
+            var item = new GameObject("Next_" + enemy.enemyName, typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            item.transform.SetParent(nextWavePreview.transform, false);
+            var layout = item.GetComponent<HorizontalLayoutGroup>();
+            layout.spacing = 4f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            Sprite[] frames = UnitSpriteFrames.GetEnemyFrames(enemy, out _);
+            Sprite icon = frames.Length > 0 ? frames[0] : null;
+            if (icon != null && icon.texture != null) icon.texture.filterMode = FilterMode.Point;
+
+            var iconObj = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            iconObj.transform.SetParent(item.transform, false);
+            var iconImage = iconObj.GetComponent<Image>();
+            iconImage.sprite = icon;
+            iconImage.enabled = icon != null;
+            iconImage.preserveAspect = true;
+            iconImage.raycastTarget = false;
+            var iconLayout = iconObj.GetComponent<LayoutElement>();
+            iconLayout.preferredWidth = 32f;
+            iconLayout.preferredHeight = 32f;
+
+            Text countText = CreateText(item.transform, "Count", "x" + count, 11, TextAnchor.MiddleLeft);
+            countText.raycastTarget = false;
+            return item;
+        }
+
+        /// <summary>WAVE label + "07/20" during a wave; NEXT + the upcoming wave between waves.</summary>
+        private void UpdateWaveReadout()
+        {
+            if (waveText == null || waveManager == null) return;
+
+            if (sandboxController != null)
+            {
+                if (waveLabelText != null) waveLabelText.text = "WAVE";
+                waveText.text = Mathf.Max(1, waveManager.SandboxWaveNumber).ToString("00");
+                return;
+            }
+
+            int total = waveManager.TotalWaves;
+            if (total <= 0) return;
+
+            bool betweenWaves = gameManager != null && gameManager.CurrentPhase != StagePhase.WaveActive;
+            int number = betweenWaves && gameManager != null
+                ? Mathf.Clamp(gameManager.GetCurrentWaveIndex() + 1, 1, total)
+                : Mathf.Clamp(waveManager.CurrentWaveNumber, 1, total);
+            if (waveLabelText != null) waveLabelText.text = betweenWaves ? "NEXT" : "WAVE";
+            waveText.text = $"{number:00}/{total:00}";
+        }
+
+        /// <summary>HOSTILES: on the field (+ still to spawn). Between waves: INCOMING with the next wave's size.</summary>
+        private void UpdateHostileReadout()
+        {
+            if (enemyText == null || enemyManager == null) return;
+
+            bool betweenWaves = sandboxController == null && gameManager != null && gameManager.CurrentPhase != StagePhase.WaveActive;
+            int nextWaveSize = betweenWaves && waveManager != null ? WaveManager.CountEnemies(waveManager.PeekNextWave()) : 0;
+            if (betweenWaves && enemyManager.ActiveEnemyCount == 0 && nextWaveSize > 0)
+            {
+                if (enemyLabelText != null) enemyLabelText.text = "INCOMING";
+                enemyText.text = nextWaveSize.ToString();
+                SetHostileReadoutSplit(false);
+                return;
+            }
+
+            int pending = waveManager != null ? waveManager.PendingSpawnCount : 0;
+            if (enemyLabelText != null) enemyLabelText.text = "HOSTILES";
+            enemyText.text = enemyManager.ActiveEnemyCount.ToString();
+            bool split = pending > 0;
+            if (split) enemyIncomingText.text = "+" + pending;
+            SetHostileReadoutSplit(split);
         }
 
         // UI/bars sprites are drawn at 2x. bar_frame is 24x10 with its inner channel at x 2..21, y 2..7;
@@ -1217,10 +1517,10 @@ namespace TrashTD.UI
 
         private void CreateWaveProgressBar(Transform parent)
         {
-            // Framed bar under the wave counter; the fill sprite follows the phase (see SetWaveProgressFillSprite)
+            // Framed bar on the wave screen's bottom row; the fill sprite follows the phase (see SetWaveProgressFillSprite)
             var frame = new GameObject("WaveProgressBar", typeof(RectTransform), typeof(Image));
             frame.transform.SetParent(parent, false);
-            SetPosition(frame.GetComponent<RectTransform>(), new Vector2(346f, -60f), new Vector2(0f, 1f), new Vector2(154f, 10f * BarPixelScale), new Vector2(0f, 0.5f));
+            PlaceScreenRow(frame.GetComponent<RectTransform>(), 30f, 10f * BarPixelScale, 6f, 6f);
             Image frameImage = frame.GetComponent<Image>();
             frameImage.raycastTarget = false;
             Sprite frameSprite = LoadWholeTextureSprite("UI/bars/bar_frame", new Vector4(4f, 4f, 4f, 4f));
@@ -1293,8 +1593,8 @@ namespace TrashTD.UI
             var root = new GameObject("LivesTube", typeof(RectTransform), typeof(Image));
             root.transform.SetParent(parent, false);
             livesTubeRect = root.GetComponent<RectTransform>();
-            // Centred on the Top Panel BG's right-hand screen (frame x 590..637 at 3x)
-            SetPosition(livesTubeRect, new Vector2(-78f, -45f), new Vector2(1f, 1f), new Vector2(22f, 64f) * BarPixelScale, new Vector2(0.5f, 0.5f));
+            // Centred on the lives screen (the Top Panel BG's right-hand screen)
+            SetPosition(livesTubeRect, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(22f, 64f) * BarPixelScale, new Vector2(0.5f, 0.5f));
             livesTubeRect.localRotation = Quaternion.Euler(0f, 0f, -90f);
 
             livesTubeFrame = root.GetComponent<Image>();
@@ -3360,6 +3660,9 @@ namespace TrashTD.UI
 
             StagePhase phase = gameManager.CurrentPhase;
             SetWaveProgressFillSprite(phase);
+            UpdateWaveReadout();
+            UpdateHostileReadout();
+            RefreshNextWavePreview();
 
             switch (phase)
             {
@@ -3384,7 +3687,7 @@ namespace TrashTD.UI
                     break;
 
                 case StagePhase.WaveActive:
-                    if (phaseText != null) phaseText.text = "Invading";
+                    if (phaseText != null) phaseText.text = "INVADING";
                     phaseColorTarget = WaveColor;
                     startWaveButton.interactable = false;
                     if (startWaveButtonText != null) startWaveButtonText.text = "WAVE\nACTIVE";
@@ -3895,11 +4198,9 @@ namespace TrashTD.UI
         private void HandleWaveStarted(int current, int total)
         {
             HideFramiliarCopyMenu();
-            if (waveText != null)
-            {
-                waveText.text = total > 0 ? $"{current}/{total}" : current.ToString();
-                Punch(waveText);
-            }
+            UpdateWaveReadout();
+            UpdateHostileReadout();
+            if (waveText != null) Punch(waveText);
         }
 
         private void HandleEnemyCountChanged(EnemyBase enemy)
@@ -3922,6 +4223,11 @@ namespace TrashTD.UI
 
             int total = max > 0 ? max : 3;
             livesTarget = Mathf.Clamp01((float)current / total);
+            if (lpText != null)
+            {
+                lpText.text = $"{current}/{total}";
+                lpText.color = livesTarget > 0.5f ? Color.white : livesTarget > 0.25f ? DraftColor : LifeColor;
+            }
             if (livesDisplayed < 0f)
             {
                 livesDisplayed = livesTarget;
@@ -3939,21 +4245,17 @@ namespace TrashTD.UI
 
         private void RefreshCounters()
         {
-            if (enemyText != null && enemyManager != null)
-            {
-                enemyText.text = enemyManager.ActiveEnemyCount.ToString();
-            }
+            UpdateHostileReadout();
+            UpdateWaveReadout();
 
             if (sandboxController != null)
             {
                 // Sandbox has no wave count, squad cap or life loss; avoid "x/2147483647" style overflow.
-                if (waveText != null && waveManager != null)
-                {
-                    int currentWave = Mathf.Max(1, waveManager.SandboxWaveNumber);
-                    waveText.text = currentWave.ToString();
-                }
                 if (lpText != null)
+                {
                     lpText.text = "LIVES LOCKED";
+                    lpText.color = TextDim;
+                }
                 if (livesTubeRect != null)
                     livesTubeRect.gameObject.SetActive(false);
                 if (squadCountText != null && operatorManager != null)
@@ -3962,12 +4264,6 @@ namespace TrashTD.UI
                     squadCountText.color = Color.white;
                 }
                 return;
-            }
-
-            if (waveText != null && waveManager != null && waveManager.TotalWaves > 0)
-            {
-                int currentWave = Mathf.Max(1, waveManager.CurrentWaveNumber);
-                waveText.text = $"{currentWave}/{waveManager.TotalWaves}";
             }
 
             if (gameManager != null)
@@ -4066,8 +4362,21 @@ namespace TrashTD.UI
                 }
             }
 
-            // Phase color follows the current phase (the progress bar swaps its fill sprite instead)
+            // Phase color follows the current phase (the progress bar swaps its fill sprite instead).
+            // The screens glow faintly in it, and the status light blinks (faster during a wave).
             if (phaseText != null) phaseText.color = Color.Lerp(phaseText.color, phaseColorTarget, k);
+            Color glowTarget = new Color(phaseColorTarget.r, phaseColorTarget.g, phaseColorTarget.b, TopScreenGlowAlpha);
+            for (int i = 0; i < topScreenGlows.Count; i++)
+            {
+                if (topScreenGlows[i] != null) topScreenGlows[i].color = Color.Lerp(topScreenGlows[i].color, glowTarget, k);
+            }
+            if (phaseLed != null)
+            {
+                bool waveActive = gameManager != null && gameManager.CurrentPhase == StagePhase.WaveActive && sandboxController == null;
+                float blinkRate = waveActive ? 4f : 1.2f;
+                bool on = Mathf.Repeat(time * blinkRate, 1f) < 0.6f;
+                phaseLed.color = new Color(phaseColorTarget.r, phaseColorTarget.g, phaseColorTarget.b, on ? 1f : 0.25f);
+            }
 
             // Wave progress
             if (waveProgressFillRect != null)
@@ -4693,87 +5002,6 @@ namespace TrashTD.UI
             if (exitIconSprite != null) return exitIconSprite;
             exitIconSprite = LoadIconSprite("icon_exit");
             return exitIconSprite;
-        }
-
-        private static Sprite GetWaveMarkSprite()
-        {
-            if (waveMarkSprite != null) return waveMarkSprite;
-
-            waveMarkSprite = LoadIconSprite("icon_wave");
-            if (waveMarkSprite != null) return waveMarkSprite;
-
-            const int size = 48;
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            texture.filterMode = FilterMode.Bilinear;
-            texture.wrapMode = TextureWrapMode.Clamp;
-            var pixels = new Color[size * size];
-
-            for (int x = 0; x < size; x++)
-            {
-                float t = x / (size - 1f);
-                float centerY = size * 0.5f + Mathf.Sin(t * Mathf.PI * 2f) * size * 0.18f;
-                for (int y = 0; y < size; y++)
-                {
-                    if (x >= 4 && x < size - 4 && Mathf.Abs(y - centerY) <= 2.5f)
-                        pixels[y * size + x] = Color.white;
-                }
-            }
-
-            texture.SetPixels(pixels);
-            texture.Apply();
-            waveMarkSprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), size);
-            return waveMarkSprite;
-        }
-
-        private static Sprite GetEnemySkullSprite()
-        {
-            if (enemySkullSprite != null) return enemySkullSprite;
-
-            enemySkullSprite = LoadIconSprite("icon_skull");
-            if (enemySkullSprite != null) return enemySkullSprite;
-
-            const int size = 64;
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            texture.filterMode = FilterMode.Bilinear;
-            texture.wrapMode = TextureWrapMode.Clamp;
-            var pixels = new Color[size * size];
-
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    float nx = (x + 0.5f) / size;
-                    float ny = (y + 0.5f) / size;
-                    float headX = (nx - 0.5f) / 0.35f;
-                    float headY = (ny - 0.63f) / 0.32f;
-                    float jawX = (nx - 0.5f) / 0.23f;
-                    float jawY = (ny - 0.35f) / 0.15f;
-                    bool skull = headX * headX + headY * headY <= 1f ||
-                                 (nx >= 0.29f && nx <= 0.71f && ny >= 0.25f && ny <= 0.43f) ||
-                                 jawX * jawX + jawY * jawY <= 1f;
-
-                    if (!skull) continue;
-
-                    float leftEyeX = (nx - 0.37f) / 0.075f;
-                    float rightEyeX = (nx - 0.63f) / 0.075f;
-                    float eyeY = (ny - 0.59f) / 0.09f;
-                    bool eyeSocket = leftEyeX * leftEyeX + eyeY * eyeY <= 1f ||
-                                     rightEyeX * rightEyeX + eyeY * eyeY <= 1f;
-                    float noseWidth = Mathf.Lerp(0.07f, 0.01f, Mathf.Clamp01((ny - 0.43f) / 0.08f));
-                    bool nose = ny >= 0.43f && ny <= 0.51f && Mathf.Abs(nx - 0.5f) <= noseWidth;
-                    bool teethGap = ny >= 0.22f && ny <= 0.31f &&
-                                    (Mathf.Abs(nx - 0.44f) <= 0.012f ||
-                                     Mathf.Abs(nx - 0.50f) <= 0.012f ||
-                                     Mathf.Abs(nx - 0.56f) <= 0.012f);
-
-                    pixels[y * size + x] = eyeSocket || nose || teethGap ? Color.clear : Color.white;
-                }
-            }
-
-            texture.SetPixels(pixels);
-            texture.Apply();
-            enemySkullSprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), size);
-            return enemySkullSprite;
         }
 
         private static Sprite CreateTrashIconSprite()

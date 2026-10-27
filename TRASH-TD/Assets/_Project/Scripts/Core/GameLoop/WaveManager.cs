@@ -43,6 +43,28 @@ namespace TrashTD.Core.GameLoop
         public bool IsActive { get; private set; } = false;
         public bool IsWaveInProgress { get; private set; } = false;
 
+        /// <summary>Enemies of the running wave that haven't spawned yet (0 between waves). Shown on the HUD top bar.</summary>
+        public int PendingSpawnCount { get; private set; }
+
+        /// <summary>The wave <see cref="StartNextWave"/> will run next, or null when none is left.</summary>
+        public WaveData PeekNextWave()
+        {
+            int next = currentWaveIndex + 1;
+            return waves != null && next >= 0 && next < waves.Length ? waves[next] : null;
+        }
+
+        /// <summary>Total enemies a wave spawns (entries with no enemy data are skipped, as when spawning).</summary>
+        public static int CountEnemies(WaveData wave)
+        {
+            int total = 0;
+            if (wave?.entries == null) return total;
+            foreach (WaveEntry entry in wave.entries)
+            {
+                if (entry != null && entry.enemyData != null) total += Mathf.Max(0, entry.count);
+            }
+            return total;
+        }
+
         public event Action<int, int> OnWaveStarted;    // (currentWave, totalWaves)
         public event Action<int> OnWaveCompleted;        // (waveIndex)
         public event Action OnAllWavesCleared;
@@ -266,11 +288,13 @@ namespace TrashTD.Core.GameLoop
                     yield return new WaitForSeconds(currentWave.preWaveDelay);
                 }
 
+                PendingSpawnCount = CountEnemies(currentWave);
                 OnWaveStarted?.Invoke(CurrentWaveNumber, TotalWaves);
             OperatorManager.Instance?.MarkAllDeployedOperatorsAsFought();
 
                 // Spawn all entries in wave
                 yield return StartCoroutine(SpawnWaveEntriesRoutine(currentWave));
+                PendingSpawnCount = 0;
 
                 OnWaveCompleted?.Invoke(currentWaveIndex);
             }
@@ -307,11 +331,13 @@ namespace TrashTD.Core.GameLoop
                 yield return new WaitForSeconds(currentWave.preWaveDelay);
             }
 
+            PendingSpawnCount = CountEnemies(currentWave);
             OnWaveStarted?.Invoke(CurrentWaveNumber, TotalWaves);
             OperatorManager.Instance?.MarkAllDeployedOperatorsAsFought();
 
             // Spawn all entries in wave
             yield return StartCoroutine(SpawnWaveEntriesRoutine(currentWave));
+            PendingSpawnCount = 0;
 
             OnWaveCompleted?.Invoke(waveIndex);
 
@@ -373,11 +399,14 @@ namespace TrashTD.Core.GameLoop
             string pathKey = GetPathKey(entry.spawnPointIndex);
             if (!pathCache.TryGetValue(pathKey, out var path) || path == null || path.Count == 0)
             {
+                PendingSpawnCount = Mathf.Max(0, PendingSpawnCount - Mathf.Max(0, entry.count));
                 yield break;
             }
 
             for (int i = 0; i < entry.count; i++)
             {
+                // Counted down before the spawn, so the HUD reads the new total when the spawn event fires
+                PendingSpawnCount = Mathf.Max(0, PendingSpawnCount - 1);
                 if (enemyManager != null)
                 {
                     enemyManager.SpawnEnemy(entry.enemyData, path, EnemyLevel);
@@ -394,6 +423,7 @@ namespace TrashTD.Core.GameLoop
         {
             StopAllCoroutines();
             IsActive = false;
+            PendingSpawnCount = 0;
         }
     }
 }
