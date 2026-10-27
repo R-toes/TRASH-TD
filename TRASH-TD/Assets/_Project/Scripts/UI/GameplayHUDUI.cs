@@ -240,10 +240,18 @@ namespace TrashTD.UI
         private int bottomRightBgAnimFrame = -1;
         private int currentSpeedSelectionIndex = -1;
         private CanvasGroup phaseBannerGroup;
+        private RectTransform phaseBannerRect;
         private RectTransform phaseBannerContent;
         private Text phaseBannerTitle;
+        private Text phaseBannerTitleGhost;
         private Text phaseBannerSubtitle;
-        private Image[] phaseBannerLines;
+        private RawImage[] phaseBannerStripes;
+        private Image[] phaseBannerLights;
+        private RectTransform phaseBannerIcons;
+        private readonly List<GameObject> phaseBannerIconItems = new List<GameObject>();
+        private Color phaseBannerColor = Color.white;
+        private bool phaseBannerAlarm;
+        private bool phaseBannerGlitch;
         private RectTransform cooldownToastRect;
         private CanvasGroup cooldownToastGroup;
         private Text cooldownToastTitle;
@@ -2994,16 +3002,24 @@ namespace TrashTD.UI
             return badge;
         }
 
+        /// <summary>
+        /// Phase / wave-start alert band across the screen: dark band, marching diagonal stripes top and bottom
+        /// (tinted per announcement), siren lights at both ends, title (+ glitch ghost), subtitle and an enemy
+        /// icon row. See ShowPhaseBanner / ShowWaveBanner. Never takes clicks.
+        /// </summary>
         private void CreatePhaseBanner(Transform root)
         {
+            const float bandHeight = 176f;
+            const float stripeHeight = 12f;
+
             var bannerRoot = new GameObject("PhaseBanner", typeof(RectTransform), typeof(CanvasGroup));
             bannerRoot.transform.SetParent(root, false);
-            var bannerRect = bannerRoot.GetComponent<RectTransform>();
-            bannerRect.anchorMin = new Vector2(0f, 0.62f);
-            bannerRect.anchorMax = new Vector2(1f, 0.62f);
-            bannerRect.pivot = new Vector2(0.5f, 0.5f);
-            bannerRect.sizeDelta = new Vector2(0f, 130f);
-            bannerRect.anchoredPosition = Vector2.zero;
+            phaseBannerRect = bannerRoot.GetComponent<RectTransform>();
+            phaseBannerRect.anchorMin = new Vector2(0f, 0.62f);
+            phaseBannerRect.anchorMax = new Vector2(1f, 0.62f);
+            phaseBannerRect.pivot = new Vector2(0.5f, 0.5f);
+            phaseBannerRect.sizeDelta = new Vector2(0f, bandHeight);
+            phaseBannerRect.anchoredPosition = Vector2.zero;
 
             phaseBannerGroup = bannerRoot.GetComponent<CanvasGroup>();
             phaseBannerGroup.alpha = 0f;
@@ -3014,22 +3030,26 @@ namespace TrashTD.UI
             band.transform.SetParent(bannerRoot.transform, false);
             Stretch(band.GetComponent<RectTransform>());
             var bandImage = band.GetComponent<Image>();
-            bandImage.color = new Color(0.02f, 0.03f, 0.05f, 0.78f);
+            bandImage.color = new Color(0.02f, 0.025f, 0.04f, 0.88f);
             bandImage.raycastTarget = false;
 
-            phaseBannerLines = new Image[2];
+            phaseBannerStripes = new RawImage[2];
             for (int i = 0; i < 2; i++)
             {
-                var line = new GameObject(i == 0 ? "TopLine" : "BottomLine", typeof(RectTransform), typeof(Image));
-                line.transform.SetParent(bannerRoot.transform, false);
-                var lineRect = line.GetComponent<RectTransform>();
-                lineRect.anchorMin = new Vector2(0f, i == 0 ? 1f : 0f);
-                lineRect.anchorMax = new Vector2(1f, i == 0 ? 1f : 0f);
-                lineRect.pivot = new Vector2(0.5f, i == 0 ? 1f : 0f);
-                lineRect.sizeDelta = new Vector2(0f, 3f);
-                lineRect.anchoredPosition = Vector2.zero;
-                phaseBannerLines[i] = line.GetComponent<Image>();
-                phaseBannerLines[i].raycastTarget = false;
+                var stripe = new GameObject(i == 0 ? "TopStripes" : "BottomStripes", typeof(RectTransform), typeof(RawImage));
+                stripe.transform.SetParent(bannerRoot.transform, false);
+                var stripeRect = stripe.GetComponent<RectTransform>();
+                stripeRect.anchorMin = new Vector2(0f, i == 0 ? 1f : 0f);
+                stripeRect.anchorMax = new Vector2(1f, i == 0 ? 1f : 0f);
+                stripeRect.pivot = new Vector2(0.5f, i == 0 ? 1f : 0f);
+                stripeRect.sizeDelta = new Vector2(0f, stripeHeight);
+                stripeRect.anchoredPosition = Vector2.zero;
+                RawImage raw = stripe.GetComponent<RawImage>();
+                raw.texture = GetBannerStripeTexture();
+                // One 16-texel stripe period per 24 canvas units, scrolled in PhaseBannerRoutine
+                raw.uvRect = new Rect(0f, 0f, 1920f / 24f, stripeHeight / 24f);
+                raw.raycastTarget = false;
+                phaseBannerStripes[i] = raw;
             }
 
             var content = new GameObject("Content", typeof(RectTransform));
@@ -3037,14 +3057,49 @@ namespace TrashTD.UI
             phaseBannerContent = content.GetComponent<RectTransform>();
             Stretch(phaseBannerContent);
 
-            phaseBannerTitle = CreateText(content.transform, "BannerTitle", "", 56, TextAnchor.MiddleCenter);
-            SetPosition(phaseBannerTitle.GetComponent<RectTransform>(), new Vector2(0f, 16f), new Vector2(0.5f, 0.5f), new Vector2(1200f, 70f), new Vector2(0.5f, 0.5f));
-            phaseBannerTitle.raycastTarget = false;
+            // Siren lights at both ends of the title row
+            Sprite warning = LoadIconSprite("icon_warning");
+            phaseBannerLights = new Image[2];
+            for (int i = 0; i < 2; i++)
+            {
+                float side = i == 0 ? -1f : 1f;
+                phaseBannerLights[i] = CreateIconImage(content.transform, i == 0 ? "SirenLeft" : "SirenRight", warning, Color.white,
+                    new Vector2(side * 520f, 18f), new Vector2(0.5f, 0.5f), new Vector2(48f, 48f), new Vector2(0.5f, 0.5f));
+                phaseBannerLights[i].raycastTarget = false;
+                phaseBannerLights[i].preserveAspect = true;
+                phaseBannerLights[i].gameObject.SetActive(false);
+            }
 
-            phaseBannerSubtitle = CreateText(content.transform, "BannerSubtitle", "", 20, TextAnchor.MiddleCenter);
-            phaseBannerSubtitle.color = TextDim;
-            SetPosition(phaseBannerSubtitle.GetComponent<RectTransform>(), new Vector2(0f, -36f), new Vector2(0.5f, 0.5f), new Vector2(1200f, 30f), new Vector2(0.5f, 0.5f));
+            phaseBannerTitleGhost = CreateText(content.transform, "BannerTitleGhost", "", 56, TextAnchor.MiddleCenter);
+            SetPosition(phaseBannerTitleGhost.GetComponent<RectTransform>(), new Vector2(-3f, 18f), new Vector2(0.5f, 0.5f), new Vector2(1200f, 70f), new Vector2(0.5f, 0.5f));
+            phaseBannerTitleGhost.raycastTarget = false;
+            phaseBannerTitleGhost.gameObject.SetActive(false);
+
+            phaseBannerTitle = CreateText(content.transform, "BannerTitle", "", 56, TextAnchor.MiddleCenter);
+            SetPosition(phaseBannerTitle.GetComponent<RectTransform>(), new Vector2(0f, 18f), new Vector2(0.5f, 0.5f), new Vector2(1200f, 70f), new Vector2(0.5f, 0.5f));
+            phaseBannerTitle.raycastTarget = false;
+            var titleShadow = phaseBannerTitle.gameObject.AddComponent<Shadow>();
+            titleShadow.effectColor = new Color(0f, 0f, 0f, 0.8f);
+            titleShadow.effectDistance = new Vector2(0f, -4f);
+
+            phaseBannerSubtitle = CreateText(content.transform, "BannerSubtitle", "", 18, TextAnchor.MiddleCenter);
+            phaseBannerSubtitle.color = new Color(0.85f, 0.88f, 0.92f, 1f);
+            SetPosition(phaseBannerSubtitle.GetComponent<RectTransform>(), new Vector2(0f, -30f), new Vector2(0.5f, 0.5f), new Vector2(1200f, 28f), new Vector2(0.5f, 0.5f));
             phaseBannerSubtitle.raycastTarget = false;
+
+            var icons = new GameObject("EnemyIcons", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
+            icons.transform.SetParent(content.transform, false);
+            phaseBannerIcons = icons.GetComponent<RectTransform>();
+            SetPosition(phaseBannerIcons, new Vector2(0f, -48f), new Vector2(0.5f, 0.5f), new Vector2(0f, 34f), new Vector2(0.5f, 0.5f));
+            var iconsLayout = icons.GetComponent<HorizontalLayoutGroup>();
+            iconsLayout.spacing = 22f;
+            iconsLayout.childAlignment = TextAnchor.MiddleCenter;
+            iconsLayout.childControlWidth = true;
+            iconsLayout.childControlHeight = true;
+            iconsLayout.childForceExpandWidth = false;
+            iconsLayout.childForceExpandHeight = false;
+            icons.GetComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            icons.SetActive(false);
         }
 
         private void CreateEnvironmentBriefing(Transform root)
@@ -3709,11 +3764,11 @@ namespace TrashTD.UI
                 {
                     if (phase == StagePhase.Preparation)
                     {
-                        ShowPhaseBanner("PREPARATION", "Deploy your squad", PrepColor);
+                        ShowPhaseBanner("PREPARATION", "DEPLOY YOUR SQUAD", PrepColor);
                     }
                     else if (phase == StagePhase.WaveActive)
                     {
-                        ShowPhaseBanner("Invading", "Hold the line", WaveColor);
+                        ShowWaveBanner();
                         PlaySfx(waveStartClip, 1f);
                     }
                 }
@@ -4500,58 +4555,224 @@ namespace TrashTD.UI
             punches.Add(new PunchState { target = t, time = 0f });
         }
 
+        /// <summary>Plain phase announcement (Preparation): title + subtitle on the alert band, no alarm.</summary>
         private void ShowPhaseBanner(string title, string subtitle, Color color)
         {
             if (phaseBannerGroup == null) return;
+            ClearPhaseBannerIcons();
+            PlayPhaseBanner(title, subtitle, color, alarm: false, glitch: false);
+        }
+
+        /// <summary>
+        /// Wave start: "WAVE 07 / 20" (or "FINAL WAVE" in red, with glitch), "38 HOSTILES INBOUND", and the
+        /// wave's enemy types with counts. Sirens flash on both ends. Called as the wave phase begins, before
+        /// WaveManager advances, so PeekNextWave is the wave about to start.
+        /// </summary>
+        private void ShowWaveBanner()
+        {
+            if (phaseBannerGroup == null) return;
+
+            int total = waveManager != null ? waveManager.TotalWaves : 0;
+            int number = gameManager != null ? gameManager.GetCurrentWaveIndex() + 1 : 1;
+            if (total > 0) number = Mathf.Clamp(number, 1, total);
+            bool final = total > 0 && number >= total;
+            WaveData wave = waveManager != null ? waveManager.PeekNextWave() : null;
+            int hostiles = WaveManager.CountEnemies(wave);
+
+            string title = final ? "FINAL WAVE" : total > 0 ? $"WAVE {number:00} / {total:00}" : $"WAVE {number:00}";
+            string subtitle = hostiles > 0 ? $"{hostiles} HOSTILES INBOUND" : "HOSTILES INBOUND";
+            if (final) subtitle += "  -  HOLD THE LINE";
+
+            ClearPhaseBannerIcons();
+            BuildPhaseBannerIcons(wave);
+            PlayPhaseBanner(title, subtitle, final ? LifeColor : WaveColor, alarm: true, glitch: final);
+        }
+
+        private void PlayPhaseBanner(string title, string subtitle, Color color, bool alarm, bool glitch)
+        {
+            phaseBannerColor = color;
+            phaseBannerAlarm = alarm;
+            phaseBannerGlitch = glitch;
 
             phaseBannerTitle.text = title;
             phaseBannerTitle.color = color;
+            phaseBannerTitleGhost.text = title;
+            phaseBannerTitleGhost.gameObject.SetActive(glitch);
             phaseBannerSubtitle.text = subtitle;
-            for (int i = 0; i < phaseBannerLines.Length; i++) phaseBannerLines[i].color = color;
+            foreach (RawImage stripe in phaseBannerStripes) stripe.color = new Color(color.r, color.g, color.b, 0.9f);
+            foreach (Image light in phaseBannerLights) light.gameObject.SetActive(alarm);
+
+            // Subtitle sits lower when the enemy icon row is shown
+            bool hasIcons = phaseBannerIconItems.Count > 0;
+            phaseBannerSubtitle.rectTransform.anchoredPosition = new Vector2(0f, hasIcons ? -10f : -30f);
+            phaseBannerTitle.rectTransform.anchoredPosition = new Vector2(0f, hasIcons ? 36f : 18f);
+            phaseBannerIcons.gameObject.SetActive(hasIcons);
 
             if (bannerRoutine != null) StopCoroutine(bannerRoutine);
             bannerRoutine = StartCoroutine(PhaseBannerRoutine());
         }
 
+        private void ClearPhaseBannerIcons()
+        {
+            foreach (GameObject item in phaseBannerIconItems)
+            {
+                if (item != null) Destroy(item);
+            }
+            phaseBannerIconItems.Clear();
+        }
+
+        /// <summary>The wave's enemy types (first sprite frame + "x8"), in spawn-list order, up to 6.</summary>
+        private void BuildPhaseBannerIcons(WaveData wave)
+        {
+            if (wave?.entries == null) return;
+
+            var order = new List<EnemyData>();
+            var counts = new Dictionary<EnemyData, int>();
+            foreach (WaveEntry entry in wave.entries)
+            {
+                if (entry == null || entry.enemyData == null || entry.count <= 0) continue;
+                if (!counts.ContainsKey(entry.enemyData))
+                {
+                    counts[entry.enemyData] = 0;
+                    order.Add(entry.enemyData);
+                }
+                counts[entry.enemyData] += entry.count;
+            }
+
+            for (int i = 0; i < order.Count && i < 6; i++)
+            {
+                EnemyData enemy = order[i];
+                var item = new GameObject("Banner_" + enemy.enemyName, typeof(RectTransform), typeof(HorizontalLayoutGroup));
+                item.transform.SetParent(phaseBannerIcons, false);
+                var layout = item.GetComponent<HorizontalLayoutGroup>();
+                layout.spacing = 4f;
+                layout.childAlignment = TextAnchor.MiddleLeft;
+                layout.childControlWidth = true;
+                layout.childControlHeight = true;
+                layout.childForceExpandWidth = false;
+                layout.childForceExpandHeight = false;
+
+                Sprite[] frames = UnitSpriteFrames.GetEnemyFrames(enemy, out _);
+                Sprite icon = frames.Length > 0 ? frames[0] : null;
+                if (icon != null && icon.texture != null) icon.texture.filterMode = FilterMode.Point;
+
+                var iconObj = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+                iconObj.transform.SetParent(item.transform, false);
+                var iconImage = iconObj.GetComponent<Image>();
+                iconImage.sprite = icon;
+                iconImage.enabled = icon != null;
+                iconImage.preserveAspect = true;
+                iconImage.raycastTarget = false;
+                var iconLayout = iconObj.GetComponent<LayoutElement>();
+                iconLayout.preferredWidth = 32f;
+                iconLayout.preferredHeight = 32f;
+
+                Text count = CreateText(item.transform, "Count", "x" + counts[enemy], 13, TextAnchor.MiddleLeft);
+                count.raycastTarget = false;
+                phaseBannerIconItems.Add(item);
+            }
+
+            if (order.Count > 6)
+            {
+                Text more = CreateText(phaseBannerIcons, "More", "+" + (order.Count - 6), 13, TextAnchor.MiddleLeft);
+                more.color = TextDim;
+                more.raycastTarget = false;
+                phaseBannerIconItems.Add(more.gameObject);
+            }
+        }
+
+        /// <summary>
+        /// The band snaps open (height 0 → full), the title punches in, holds while the stripes march and the
+        /// sirens flash, then the band collapses. Unscaled time.
+        /// </summary>
         private IEnumerator PhaseBannerRoutine()
         {
-            const float inTime = 0.25f;
-            const float hold = 1.0f;
-            const float outTime = 0.35f;
-            const float total = inTime + hold + outTime;
+            const float openTime = 0.22f;
+            const float hold = 1.7f;
+            const float closeTime = 0.25f;
+            const float total = openTime + hold + closeTime;
 
             float t = 0f;
             while (t < total)
             {
-                t += Time.unscaledDeltaTime;
+                float dt = Time.unscaledDeltaTime;
+                t += dt;
 
-                float alpha;
-                float slide;
-                if (t < inTime)
+                float open;
+                if (t < openTime) open = EaseOutCubic(t / openTime);
+                else if (t < openTime + hold) open = 1f;
+                else open = 1f - EaseOutCubic((t - openTime - hold) / closeTime);
+
+                phaseBannerGroup.alpha = Mathf.Clamp01(open * 1.5f);
+                phaseBannerRect.localScale = new Vector3(1f, Mathf.Max(0.001f, open), 1f);
+
+                // Title punches in, then settles
+                float punch = t < openTime + 0.25f ? Mathf.Lerp(1.35f, 1f, EaseOutBack(Mathf.Clamp01((t - openTime * 0.5f) / 0.3f))) : 1f;
+                phaseBannerTitle.rectTransform.localScale = Vector3.one * punch;
+
+                // Marching stripes (opposite directions top / bottom)
+                for (int i = 0; i < phaseBannerStripes.Length; i++)
                 {
-                    float k = t / inTime;
-                    alpha = k;
-                    slide = -(1f - EaseOutCubic(k)) * 140f;
+                    Rect uv = phaseBannerStripes[i].uvRect;
+                    uv.x += (i == 0 ? 1f : -1f) * dt * 1.6f;
+                    phaseBannerStripes[i].uvRect = uv;
                 }
-                else if (t < inTime + hold)
+
+                // Sirens
+                if (phaseBannerAlarm)
                 {
-                    alpha = 1f;
-                    slide = 0f;
+                    bool on = Mathf.Repeat(t * 3f, 1f) < 0.5f;
+                    foreach (Image light in phaseBannerLights)
+                    {
+                        light.color = new Color(phaseBannerColor.r, phaseBannerColor.g, phaseBannerColor.b, on ? 1f : 0.2f);
+                        light.rectTransform.localScale = Vector3.one * (on ? 1.15f : 1f);
+                    }
+                }
+
+                // Final-wave glitch: the title and a red/cyan ghost jitter in short bursts
+                if (phaseBannerGlitch)
+                {
+                    bool burst = Mathf.Repeat(t, 0.6f) < 0.12f;
+                    Vector2 jitter = burst ? new Vector2(UnityEngine.Random.Range(-8f, 8f), UnityEngine.Random.Range(-2f, 2f)) : Vector2.zero;
+                    Vector2 basePos = phaseBannerTitle.rectTransform.anchoredPosition;
+                    phaseBannerContent.anchoredPosition = jitter * 0.5f;
+                    phaseBannerTitleGhost.rectTransform.anchoredPosition = basePos + (burst ? new Vector2(-jitter.x - 4f, 2f) : new Vector2(-3f, 0f));
+                    phaseBannerTitleGhost.color = new Color(0.3f, 0.95f, 1f, burst ? 0.75f : 0.25f);
+                    phaseBannerTitleGhost.rectTransform.localScale = phaseBannerTitle.rectTransform.localScale;
                 }
                 else
                 {
-                    float k = (t - inTime - hold) / outTime;
-                    alpha = 1f - k;
-                    slide = k * 140f;
+                    phaseBannerContent.anchoredPosition = Vector2.zero;
                 }
 
-                phaseBannerGroup.alpha = Mathf.Clamp01(alpha);
-                phaseBannerContent.anchoredPosition = new Vector2(slide, 0f);
                 yield return null;
             }
 
             phaseBannerGroup.alpha = 0f;
+            phaseBannerRect.localScale = Vector3.one;
             phaseBannerContent.anchoredPosition = Vector2.zero;
+            bannerRoutine = null;
+        }
+
+        private static Texture2D bannerStripeTexture;
+
+        /// <summary>White diagonal stripes on transparent (tinted per banner), wrap-repeat for scrolling.</summary>
+        private static Texture2D GetBannerStripeTexture()
+        {
+            if (bannerStripeTexture != null) return bannerStripeTexture;
+            const int size = 16;
+            bannerStripeTexture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Repeat
+            };
+            var pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                    pixels[y * size + x] = (x + y) % size < size / 2 ? new Color32(255, 255, 255, 255) : new Color32(0, 0, 0, 0);
+            bannerStripeTexture.SetPixels32(pixels);
+            bannerStripeTexture.Apply();
+            return bannerStripeTexture;
         }
 
         private IEnumerator IntroRoutine()
