@@ -285,6 +285,35 @@ namespace TrashTD.Editor
             return prefab;
         }
 
+        private static GameObject CreateOrGetGooelistPrefab(string prefabName, Sprite[] frames)
+        {
+            string path = $"{EnemyPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            var go = new GameObject(prefabName);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
+            sr.sortingOrder = 4;
+
+            var gooelistComp = go.AddComponent<TrashTD.Enemies.GooelistEnemy>();
+            gooelistComp.SelfDefReductionPercent = 0.75f;
+            gooelistComp.OperatorDefReductionPercent = 0.50f;
+            var anim = go.AddComponent<TrashTD.Enemies.GooelistSpriteAnimation>();
+            if (frames != null && frames.Length > 0)
+            {
+                var framesField = typeof(TrashTD.Enemies.GooelistSpriteAnimation).GetField("frames", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (framesField != null)
+                {
+                    framesField.SetValue(anim, frames);
+                }
+            }
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
         private static void GenerateOperators()
         {
             // 1. Guard (Scrapper)
@@ -1188,6 +1217,23 @@ namespace TrashTD.Editor
                 sandHulk.visualScale = 2f;
                 sandHulk.visualOffset = new Vector3(0.15f, 0.2f, 0f);
                 EditorUtility.SetDirty(sandHulk);
+            }
+
+            var gooelistFrames = LoadSpriteFrames("Gooelist Sheet.png", "Gooelist Sheet", 8);
+            bool hasAllGooelistFrames = true;
+            for (int i = 0; i < gooelistFrames.Length; i++)
+                hasAllGooelistFrames &= gooelistFrames[i] != null;
+
+            if (hasAllGooelistFrames)
+            {
+                var gooelistPrefab = CreateOrGetGooelistPrefab("Prefab_Enemy_Gooelist", gooelistFrames);
+                var gooelist = CreateEnemy("Enemy_Tank_Gooelist", "Gooelist", EnemyArchetype.Tank,
+                    EnemyMovementType.Ground, hp: 650, atk: 45, def: 120, res: 0, speed: 0.9f,
+                    isUnblockable: false, gooelistFrames[0], gooelistPrefab);
+                gooelist.damageType = DamageType.Physical;
+                gooelist.animationFrames = gooelistFrames;
+                gooelist.animationFrameRate = 8f;
+                EditorUtility.SetDirty(gooelist);
             }
 
             var smogCasterFrames = LoadSpriteFrames("smog caster sheet.png", "smog caster sheet", 8);

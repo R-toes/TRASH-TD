@@ -54,7 +54,26 @@ namespace TrashTD.Operators
         public int CurrentHP => currentHP;
         public int MaxHP => maxHP;
         public virtual int CurrentATK => currentATK;
-        public virtual int CurrentDEF => currentDEF;
+        public virtual int CurrentDEF
+        {
+            get
+            {
+                int def = currentDEF;
+                if (blockedEnemies != null && blockedEnemies.Count > 0)
+                {
+                    for (int i = 0; i < blockedEnemies.Count; i++)
+                    {
+                        var enemy = blockedEnemies[i];
+                        if (enemy != null && enemy.IsBlocked && enemy is Enemies.GooelistEnemy gooelist)
+                        {
+                            def = Mathf.RoundToInt(def * (1f - gooelist.OperatorDefReductionPercent));
+                            break;
+                        }
+                    }
+                }
+                return Mathf.Max(0, def);
+            }
+        }
         public int CurrentRES => currentRES;
         public OperatorRarity CurrentRarity => currentRarity;
         public OperatorFacing Facing => facing;
@@ -600,6 +619,7 @@ namespace TrashTD.Operators
         {
             if (isStunned || isBound || target == null || target.IsDead || target.IsInsideHole) return false;
             if (data != null && !target.CanBeTargetedBy(data.position)) return false;
+            if (!target.CanReceiveDamageFrom(this)) return false;
             return target.MovementType != EnemyMovementType.Air || CanHitAir;
         }
 

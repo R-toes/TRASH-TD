@@ -102,7 +102,7 @@ namespace TrashTD.Enemies
         public int CurrentHP => currentHP;
         public int MaxHP => maxHP;
         public int CurrentATK => currentATK;
-        public int CurrentDEF => currentDEF;
+        public virtual int CurrentDEF => currentDEF;
         public int CurrentRES => currentRES;
         public float CurrentMoveSpeed => currentMoveSpeed;
         public bool IsBlocked => isBlocked;
@@ -1095,9 +1095,24 @@ namespace TrashTD.Enemies
             TakeDamage(damage, DamageType.True);
         }
 
-        public bool TryTakeAttackDamage(int damage, DamageType damageType, OperatorBase attacker = null, bool canHitAir = false)
+        /// <summary>
+        /// Check if this enemy can receive damage from the specified attacker.
+        /// Overridden by specialized enemies like Gooelist (only receives damage from its blocker when blocked).
+        /// </summary>
+        public virtual bool CanReceiveDamageFrom(OperatorBase attacker)
+        {
+            return true;
+        }
+
+        public virtual bool TryTakeAttackDamage(int damage, DamageType damageType, OperatorBase attacker = null, bool canHitAir = false)
         {
             if (isDead || isInsideHole) return false;
+
+            if (!CanReceiveDamageFrom(attacker))
+            {
+                FloatingCombatNumber.ShowText(VisualPosition, "DUEL!", new Color(1f, 0.85f, 0.3f));
+                return false;
+            }
             bool bypassAirImmunity = canHitAir || (attacker != null && attacker.CanHitAir);
             if (!bypassAirImmunity &&
                 attacker != null && attacker.Data != null &&
