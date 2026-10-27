@@ -206,7 +206,8 @@ namespace TrashTD.Core.GameLoop
             furnaceUnderglowRenderer = underglowObj.AddComponent<SpriteRenderer>();
             furnaceUnderglowRenderer.sprite = GetVerticalThermalGradientSprite();
             furnaceUnderglowRenderer.color = new Color(1f, 0.44f, 0.10f, 0.18f);
-            furnaceUnderglowRenderer.sortingOrder = 2; // Above map artwork (1), below units (10+)
+            GridSorting.PlaceOnGround(furnaceUnderglowRenderer);
+            furnaceUnderglowRenderer.sortingOrder = 2; // Above map artwork (1), below units
 
             // Ensure base map artwork is 100% natural pure color
             var mapArtworkObj = GameObject.Find("MapArtwork");

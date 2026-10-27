@@ -212,7 +212,8 @@ namespace TrashTD.Combat
                 StartColor = new Color(0.08f, 0.05f, 0.04f, 0.6f),
                 EndColor = new Color(0.08f, 0.05f, 0.04f, 0f),
                 Sprite = CombatFxArt.Scorch(Mathf.RoundToInt(radiusPx * 0.75f)),
-                SortingOrder = 3
+                SortingOrder = 3,
+                OnGround = true
             });
         }
 

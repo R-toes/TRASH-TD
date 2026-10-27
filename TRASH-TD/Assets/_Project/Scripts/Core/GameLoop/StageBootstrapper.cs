@@ -203,6 +203,9 @@ namespace TrashTD.Core.GameLoop
 
             // 2. Render visual tiles
             SpawnVisualGridTiles();
+            var spriteSorter = GetComponent<GridSpriteSorter>();
+            if (spriteSorter == null) spriteSorter = gameObject.AddComponent<GridSpriteSorter>();
+            spriteSorter.Initialize(gridManager);
 
             // 3. Center Camera
             CenterCameraOnGrid();
@@ -339,7 +342,7 @@ namespace TrashTD.Core.GameLoop
             Sprite fgSprite = stageData.foregroundVisualSprite;
             if (fgSprite != null)
             {
-                DrawMapArtworkLayer(gridContainer.transform, fgSprite, "ForegroundArtwork", 10, targetBottomLeft, false);
+                DrawMapArtworkLayer(gridContainer.transform, fgSprite, "ForegroundArtwork", 10, targetBottomLeft, false, onGround: false);
             }
 
             for (int y = 0; y < stageData.gridHeight; y++)
@@ -357,6 +360,7 @@ namespace TrashTD.Core.GameLoop
                     {
                         var sr = tileObj.AddComponent<SpriteRenderer>();
                         sr.sprite = GetSpriteForTile(type);
+                        sr.sortingLayerID = GridSorting.GroundLayerId;
                         sr.sortingOrder = 0;
                     }
 
@@ -374,7 +378,8 @@ namespace TrashTD.Core.GameLoop
             int sortingOrder,
             Vector3 targetBottomLeft,
             bool alignToSourceRect,
-            bool animateAsSpriteSheet = false)
+            bool animateAsSpriteSheet = false,
+            bool onGround = true)
         {
             if (sprite == null) return;
 
@@ -383,6 +388,7 @@ namespace TrashTD.Core.GameLoop
 
             var spriteRenderer = artworkObject.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = sprite;
+            if (onGround) GridSorting.PlaceOnGround(spriteRenderer);
             spriteRenderer.sortingOrder = sortingOrder;
 
             if (animateAsSpriteSheet)

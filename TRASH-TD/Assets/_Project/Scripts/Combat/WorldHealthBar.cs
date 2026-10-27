@@ -1,4 +1,5 @@
 using UnityEngine;
+using TrashTD.Core.Grid;
 using TrashTD.Enemies;
 
 namespace TrashTD.Combat
@@ -61,6 +62,8 @@ namespace TrashTD.Combat
             background = CreateLine("HealthBarBackground", new Color(0.035f, 0.045f, 0.05f, 0.95f), BarThickness);
             fill = CreateLine("HealthBarFill", Color.green, BarThickness * 0.62f);
             fill.sortingOrder = sortingOrder + 1;
+            GridSorting.SortAboveUnits(background.gameObject, sortingOrder);
+            GridSorting.SortAboveUnits(fill.gameObject, sortingOrder + 1);
         }
 
         private void LateUpdate()

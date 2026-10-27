@@ -20,7 +20,7 @@ namespace TrashTD.Core.GameLoop
     public sealed class Stage3SandstormVisuals : MonoBehaviour
     {
         private const int HazeSortingOrder = 2;       // Map artwork is 1
-        private const int GroundSortingOrder = 3;     // Ground units are 4-5, air shadows 6
+        private const int GroundSortingOrder = 3;     // On the Ground sorting layer, beneath every unit
         private const int FrontDustSortingOrder = 11; // Above ground units and foreground art (10), below air units (12)
         private const int StreakSortingOrder = 24;    // Above units, below projectiles (40)
 
@@ -320,6 +320,7 @@ namespace TrashTD.Core.GameLoop
 
             haze = hazeObject.AddComponent<SpriteRenderer>();
             haze.sprite = GetWhiteSprite();
+            GridSorting.PlaceOnGround(haze);
             haze.sortingOrder = HazeSortingOrder;
             haze.color = Color.clear;
         }
@@ -341,6 +342,7 @@ namespace TrashTD.Core.GameLoop
                     cloudObject.transform.localScale = Vector3.one * cellSize;
 
                     var renderer = cloudObject.AddComponent<SpriteRenderer>();
+                    if (layer.SortingOrder == GroundSortingOrder) GridSorting.PlaceOnGround(renderer);
                     renderer.sortingOrder = layer.SortingOrder;
                     renderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
 
@@ -407,6 +409,7 @@ namespace TrashTD.Core.GameLoop
 
                 var renderer = grainObject.AddComponent<SpriteRenderer>();
                 renderer.sprite = sprite;
+                GridSorting.PlaceOnGround(renderer);
                 renderer.sortingOrder = GroundSortingOrder;
                 renderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
                 grainObject.SetActive(false);

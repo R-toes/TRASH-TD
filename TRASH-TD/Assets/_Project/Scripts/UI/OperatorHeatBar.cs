@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TrashTD.Core.Grid;
 using TrashTD.Operators;
 
 namespace TrashTD.UI
@@ -77,6 +78,7 @@ namespace TrashTD.UI
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.overrideSorting = true;
             canvas.sortingOrder = 55;
+            GridSorting.SortAboveUnits(gameObject, 55);
 
             var scaler = gameObject.AddComponent<CanvasScaler>();
             scaler.dynamicPixelsPerUnit = 32f;

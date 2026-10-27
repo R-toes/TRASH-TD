@@ -147,7 +147,7 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 
 ---
 
-## 7. Current Implementation Notes (as of 2026-10-26)
+## 7. Current Implementation Notes (as of 2026-10-27)
 
 ### 7.1 Roster
 
@@ -156,11 +156,11 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 | Class | Operators |
 |---|---|
 | Guard | Chi Paw (1★), Scrapper (1★), Echosquire (2★), Ignisaur (2★), Stag-ger (2★), Shadeslice (3★) |
-| Defender | Bulkhead (1★), Drawgoo (1★), Thornchin (2★), Mossmo (3★) |
+| Defender | Bulkhead (1★), Thornchin (2★), Mossmo (3★) |
 | Sniper | Deadeye (1★), Proxishot (2★), Basurocket (3★) |
 | Caster | Chillpath (1★), Pyrolite (1★), Castiel (2★), Resicochet (3★) |
 | Medic | Coalesce (1★), Progeny (2★), Bubblets (3★) |
-| Specialist | Framiliar (2★) |
+| Specialist | Drawgoo (1★), Framiliar (2★) |
 
 Each asset's `skillDescription` is the authoritative description of that operator's kit. Recent changes:
 - **Ignisaur** (Guard): Physical melee on its own tile / blocked enemies, Arts projectiles on forward range tiles, can hit air. *Protean*: faster attacks when not blocking, +25% ATK when blocking.
@@ -168,7 +168,7 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - **Chillpath** (Caster): chill → slow → freeze; faster attacks after freezing; every 4th attack hits one extra target (or the same one again).
 - **Shadeslice** (Guard, reworked into `ShadesliceOperator`): 2.0× damage when no ally stands in its talent pattern (12-tile diamond, `OperatorData.ShadesliceTalentPattern`). After 5 s without being attacked, it regenerates 2.5% max HP per second.
 - **Stag-ger** (Guard): hits every blocked enemy on its tile and in range ahead, including enemies blocked by allies. With nothing blocked, it hits one target. 20% dodge; a successful dodge gives +50% ATK on the next attack.
-- **Drawgoo** (Defender): on death, draws 2 random cards. An upgraded Drawgoo instead draws 3★ cards: 1 card (60%) or 2 (40%) (`CardDraftSystem.DrawRandomCardsToDeck(count, targetRarity)`).
+- **Drawgoo** (Specialist since 2026-10-26, `OP_Specialist_Drawgoo.asset`, `SpecialistOperator`; it used to be `OP_Guard_Drawgoo`): on death, draws 2 random cards. An upgraded Drawgoo instead draws 3★ cards: 1 card (60%) or 2 (40%) (`CardDraftSystem.DrawRandomCardsToDeck(count, targetRarity)`).
 - **Mossmo** (Defender): doesn't attack. It **taunts** (`HasTaunt`): ranged enemies on a surrounding tile target it first. When it takes damage, it heals up to 2 operators in range, itself included.
 - **Castiel** (Caster, `CastielOperator`): continuous light laser locked on one target (`LightLaserVisual`, `LaserPalette.Holy`: white core, pale yellow body, gold glow). Ticks every 0.375 s; damage ramps every 1.5 s: 5 → 15 → 30 → 80 → 100 → 150. Its halo animation speeds up (frame 0.10 s → 0.04 s) as the beam ramps.
 - **Resicochet** (Caster, `ResicochetOperator`): high DEF, low RES. Stores a charge every 5 s (max 3, starts with 1). Each attack fires 1 projectile per charge, 0.5 s apart. Each projectile deals Arts damage and bounces to up to 4 targets in total, losing 25% per bounce. Every hit applies **Sluggish**. The sprite row follows the charge count (`Resicochet_0–11`, 4 frames per row).
@@ -182,8 +182,8 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - **Deadeye** (Sniper): `DeadeyeSpriteAnimation` plays the 8-frame `Deadeye-Sheet` at 0.125 s per frame. The prefab lists all 8 frames; the component accepts any count of 2 or more.
 - **Basurocket** (Sniper): its rocket blasts a circle of `BasurocketOperator.BlastRadiusTiles` (1.75 tiles, a bit bigger than the 1.5-tile caster splash) around where the rocket lands. It used to blast the 3×3 tiles around the target cell. The circle drawn is the area hit. The blast is yellow-orange (`AoeStyle.JunkRocket`), so it never looks like THE ERADICATOR's crimson blast.
 
-**Enemies (18):** Grunt (Sludge, Sand Plastic, Oculite Spawn, Robozombie), Rusher (Toxic, Exploding Bug), Tank (Pollution, Sand Hulk, Oculoid Carrier, THE ERADICATOR), Caster (Sand Poncho, Smog, Askalaser, Hextension, Roboflame), Air (Flying Melee, Flying Ranged, Acid Flyer).
-- **Not in any wave yet:** Acid Flyer, Smog Caster, Askalaser, Oculoid Carrier, Exploding Bug, Robozombie, Hextension, Roboflame and THE ERADICATOR. In the Editor the sandbox lists every enemy asset, so all of them can be spawned there. Oculite Spawn is only spawned by Oculoid Carrier. Confirm a unit is fully configured before adding it to waves.
+**Enemies (19):** Grunt (Sludge, Sand Plastic, Oculite Spawn, Robozombie), Rusher (Toxic, Exploding Bug), Tank (Pollution, Sand Hulk, Oculoid Carrier, THE ERADICATOR, Gooelist), Caster (Sand Poncho, Smog, Askalaser, Hextension, Roboflame), Air (Flying Melee, Flying Ranged, Acid Flyer).
+- **Not in any wave yet:** Acid Flyer, Smog Caster, Askalaser, Oculoid Carrier, Exploding Bug, Robozombie, Hextension, Roboflame, THE ERADICATOR and Gooelist. In the Editor the sandbox lists every enemy asset, so all of them can be spawned there. Oculite Spawn is only spawned by Oculoid Carrier. Confirm a unit is fully configured before adding it to waves.
 - **Casters are blockable** (block weight 1). This overrides GDD 1.4.4 / 1.5, which made them immune; the team changed it on 2026-10-26. Every caster asset has `isUnblockable: 0`.
   - **While blocked**, a caster stops in front of its blocker and keeps using its own attacks on its usual targets. It never melees the blocker: `EnemyBase.AttackBlocker` skips casters, and `UpdateRangedBehavior` holds the blocked position.
   - **Per caster:** Askalaser keeps its State 1 / State 2 attacks, Hextension binds and then shoots, and Roboflame holds and flames instead of creeping on.
@@ -212,6 +212,9 @@ Each asset's `skillDescription` is the authoritative description of that operato
   - **After the bind** (whether it finished or broke), Hextension can be targeted by everyone, gets ATK ×1.6 and fights as a normal ranged caster for the rest of its life.
 - **Oculoid Carrier** (`OculoidCarrierEnemy`): high DEF, low RES. Immune to Stage 6 acid rain and acid/trap tiles. While blocked, it reduces its blocker's block count by 1. On death it spawns 2 **Oculite Spawns** (`OculiteSpawnEnemy`: same DEF/RES profile and immunities), which continue to the exit.
 - **Exploding Bug** (`ExplodingBugEnemy`, a Rusher with Toxic Rusher stats): on death it deals its ATK as physical damage to operators on the 4 adjacent tiles.
+- **Gooelist** (`GooelistEnemy`, Tank, `Enemy_Tank_Gooelist.asset`): physical damage, 650 HP, 45 ATK, DEF 120 / RES 0, speed 0.9, block weight 1. 8-frame sheet (`Gooelist Sheet.png`) played through `EnemyData.animationFrames` (`GooelistSpriteAnimation` only runs as a fallback when the data has no frames).
+  - **Duel:** while blocked, only its blocker can damage it (`CanReceiveDamageFrom`). Other operators skip it through `CanAttackTarget`, and splash/AoE hits from them are deflected with a "DUEL!" popup. Stage hazards call `TakeDamage` directly and still hit it.
+  - **Armor shred:** while blocked, its DEF drops 75% and the blocker's DEF drops 50% (`SelfDefReductionPercent` / `OperatorDefReductionPercent`, applied in the `CurrentDEF` getters). Bulkhead's frenzy `CurrentDEF` override skips the blocker shred.
 - **Robozombie** (`RobozombieEnemy`, a Grunt with Sludge Grunt stats): has a 25% chance on death to detonate like an Exploding Bug, dealing 3× ATK true damage to operators on the 4 adjacent tiles.
 
 **Stages:** STAGE_01 Blackwater Facilities, STAGE_02 Milestone 9, STAGE_03 Railyard Drain, STAGE_04 NERC Works Plant, STAGE_05 New Calder Basin, STAGE_06 The Pale. The stages were renamed to the team's lore on 2026-10-24; the old names were Landfill Outskirts, Scrapyard Junction, Railyard Crossing, Industrial Factory, Boulevard and Meltdown. There is also STAGE_SANDBOX, a development sandbox with multiple maps, where cards can be deployed mid-wave and the squad limit is lifted.
@@ -309,9 +312,17 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - **Block weight:** each blocked enemy takes `EnemyData.blockWeight` slots (THE ERADICATOR takes 2). `GetCurrentBlockCount()` returns the slots in use, not the number of enemies, and `OperatorBase.GetBlockWeight(enemy)` gives one enemy's weight.
 - **Bind:** `OperatorBase.ApplyBind(duration, source)` / `RemoveBind()`. Bind is a separate status from Stun, with its own timer: it releases blocked enemies, makes `GetBlockCount()` return 0, and stops attacks, blocking and abilities (charges, heals, Mossmo's reactive heal). The operator is tinted purple and shows "BOUND!".
   - Any operator with its own `Update`, attack or ability code must check `isBound` as well as `isStunned`. `BlockingSystem.CanBlock` already checks it.
-- **Enemy targetability:** `EnemyBase.CanBeTargetedBy(OperatorPosition)` is virtual and returns true by default (Hextension overrides it).
+- **Enemy targetability:** `EnemyBase.CanBeTargetedBy(OperatorPosition)` is virtual and returns true by default (Hextension overrides it). `EnemyBase.CanReceiveDamageFrom(OperatorBase)` is also virtual (Gooelist overrides it). `CanAttackTarget` and `TryTakeAttackDamage` both check it.
+- **DEF reads:** `EnemyBase.CurrentDEF` and `OperatorBase.CurrentDEF` are virtual. Damage code must read `CurrentDEF`, not the `currentDEF` field, so modifiers such as the Gooelist shred apply. Subclass overrides should build on `base.CurrentDEF`.
   - `OperatorBase.CanAttackTarget` (now public) and `EnemyManager.GetEnemiesInCells` / `GetEnemiesInRadius` (the overloads that take an `OperatorPosition`) respect it.
   - Custom targeting loops should filter their candidates through `CanAttackTarget`, as Sniper and Caster do.
+- **Sprite layering (all stages):** sorting layers, back to front: `Ground` (map art, tiles, ground weather, scorch marks), `Units` (operators and enemies), `Default` (everything else). Names and helpers are in `GridSorting`.
+  - `GridSpriteSorter` (added by `StageBootstrapper`) puts a `SortingGroup` on every deployed operator and active enemy and sets its order each frame. Tiles are counted from the top-left tile (0, 0), x rightward and y downward (grid y is flipped: row = `Height - 1 - gridY`). Depth = x + y, and deeper tiles draw on top. Units on the same tile draw in arrival order, the first to arrive on top (`SlotsPerTile` = 16).
+  - An enemy's tile switches when its `transform.position` crosses into the next tile. Off-grid positions clamp to the edge.
+  - Flyers use the same rule in their own band (`AirBandStart` = 10000), above every ground unit. Their shadow is a child sprite, so it draws with the flyer.
+  - Child sprites of a unit (enemy visual, Guard aura, burn/acid flashes, bubble, bind wraps) move with the unit's group. Overlays parented to a unit that must stay above all units (health bar, heat bar, upgrade badge) call `GridSorting.SortAboveUnits`.
+  - Anything new drawn beneath units must use `GridSorting.PlaceOnGround` (or `PixelParticle.OnGround`). A Default-layer renderer at a low order now draws above every unit.
+  - Stage 5 cars, Stage 2 falling items, the foreground art strip, FX and floating text stay on `Default`, above all units.
 - **Enemy animation:** `EnemyBase.UpdateSpriteAnimation` / `ApplyAnimationFrame` / `UpdateFacing` are `protected virtual`, so an enemy with several animation rows (Askalaser) can swap frame sets.
 - **Custom enemy behaviour:** an enemy with its own `Update` should start with `if (!TickStatusEffects(Time.deltaTime)) return;`. That runs the hole stay, animation, trap damage, chill/stun timers and pushback, and returns false when the enemy can't act.
   - Then use `HoldBlockedPosition`, `GetPathForwardDirection`, `MoveAlongPath` (or `MoveAlongPathBy(distance)` for a custom pace) and `CurrentGrid` as needed. Roboflame and THE ERADICATOR put their per-frame logic in a public `Step(deltaTime)` so EditMode tests can drive it.
@@ -338,6 +349,7 @@ Each asset's `skillDescription` is the authoritative description of that operato
 ### 7.5 UI Kit
 
 - Pixel-art UI sprites live in `Assets/Resources/UI/` by category: `panels`, `buttons`, `icons`, `bars`, `cards`, `controls`, `decor`, `minis`. `ui_kit_atlas.json` lists each sprite's rect and category. No code reads it; it is reference only.
+- **Class icons:** `GameplayHUDUI.GetClassIconSprite(OperatorClass)` loads the 6-slice sheet `class-icons.png` (`class-icons_0`–`5` = Sniper, Medic, Caster, Defender, Guard, Specialist). Builds load `Resources/UI/icons/class-icons`; the Editor prefers the copy in `_Project/Art/`. Keep the two copies identical. Icons are drawn white on a clear badge (no class-colored background) in the deck, draft cards, Framiliar copy menu and detail panels. In the detail panels the icon sits left of the class / position / damage chips.
 - UI is still built in code (uGUI). Style it through the helpers in `GameplayHUDUI`, not flat `Image.color` fills:
   - `ApplyButtonContainer(button, ButtonContainerType)`: Primary, Secondary, Dark, Danger, Warning, and the `Icon*` variants (`UI/buttons/btn_<type>_normal`).
   - `ApplyPanelContainer(go, PanelContainerType, tint?)`: Dark, Metal, Glass, Modal, Rust, Teal, Tooltip (`UI/panels/panel_<type>`). Modal = Metal panel plus hazard-stripe decor.

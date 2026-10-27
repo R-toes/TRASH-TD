@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TrashTD.Core.Grid;
 using TrashTD.Operators;
 
 namespace TrashTD.UI
@@ -34,6 +35,7 @@ namespace TrashTD.UI
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.overrideSorting = true;
             canvas.sortingOrder = 60;
+            GridSorting.SortAboveUnits(badgeObject, 60);
 
             RectTransform badgeRect = badgeObject.GetComponent<RectTransform>();
             badgeRect.sizeDelta = new Vector2(38f, 24f);

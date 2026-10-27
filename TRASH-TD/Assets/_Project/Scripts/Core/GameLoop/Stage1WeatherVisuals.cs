@@ -20,7 +20,7 @@ namespace TrashTD.Core.GameLoop
     public sealed class Stage1WeatherVisuals : MonoBehaviour
     {
         private const int RainTintSortingOrder = 2; // Map artwork is 1
-        private const int GroundSortingOrder = 3;   // Ground units are 4-5, air shadows 6
+        private const int GroundSortingOrder = 3;   // On the Ground sorting layer, beneath every unit
         private const int FrontMistSortingOrder = 11; // Above ground units and foreground art (10), below air units (12)
         private const int RainSortingOrder = 24;    // Above units, below projectiles (40)
 
@@ -306,6 +306,7 @@ namespace TrashTD.Core.GameLoop
 
             rainTint = tintObject.AddComponent<SpriteRenderer>();
             rainTint.sprite = GetWhiteSprite();
+            GridSorting.PlaceOnGround(rainTint);
             rainTint.sortingOrder = RainTintSortingOrder;
             rainTint.color = Color.clear;
         }
@@ -348,6 +349,7 @@ namespace TrashTD.Core.GameLoop
 
                     var renderer = puffObject.AddComponent<SpriteRenderer>();
                     renderer.sprite = sprites[i % sprites.Length];
+                    if (layer.SortingOrder == GroundSortingOrder) GridSorting.PlaceOnGround(renderer);
                     renderer.sortingOrder = layer.SortingOrder;
                     renderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
 
@@ -527,6 +529,7 @@ namespace TrashTD.Core.GameLoop
             float lengthPixels = Mathf.Round(Mathf.Lerp(3f, 5f, rainIntensity));
             drop.Transform.localScale = new Vector3(pixelSize, pixelSize * lengthPixels, 1f);
             drop.Transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(rainVelocity.x, -rainVelocity.y) * Mathf.Rad2Deg);
+            drop.Renderer.sortingLayerID = GridSorting.DefaultLayerId;
             drop.Renderer.sortingOrder = RainSortingOrder;
             drop.Renderer.color = RainColor;
         }
@@ -540,6 +543,7 @@ namespace TrashTD.Core.GameLoop
             drop.Transform.position = position;
             drop.Transform.rotation = Quaternion.identity;
             drop.Transform.localScale = new Vector3(pixelSize * 3f, pixelSize, 1f);
+            GridSorting.PlaceOnGround(drop.Renderer);
             drop.Renderer.sortingOrder = GroundSortingOrder;
             drop.Renderer.color = SplashColor;
         }

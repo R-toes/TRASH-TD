@@ -1,4 +1,5 @@
 using UnityEngine;
+using TrashTD.Core.Grid;
 
 namespace TrashTD.Combat
 {
@@ -19,6 +20,7 @@ namespace TrashTD.Combat
         public Sprite[] Frames;    // Optional flipbook played once over the life (overrides Sprite)
         public float Rotation;     // Degrees
         public int SortingOrder;
+        public bool OnGround;      // Draw on the Ground sorting layer, beneath every unit
     }
 
     /// <summary>
@@ -64,6 +66,7 @@ namespace TrashTD.Combat
 
             SpriteRenderer renderer = slot.Renderer;
             renderer.sprite = particle.Frames != null && particle.Frames.Length > 0 ? particle.Frames[0] : particle.Sprite;
+            renderer.sortingLayerID = particle.OnGround ? GridSorting.GroundLayerId : GridSorting.DefaultLayerId;
             renderer.sortingOrder = particle.SortingOrder;
             renderer.transform.rotation = Quaternion.Euler(0f, 0f, particle.Rotation);
             renderer.enabled = false;
