@@ -178,6 +178,8 @@ namespace TrashTD.Systems
                     enemyComp = enemyObj.AddComponent<Enemies.AskalaserEnemy>();
                 else if (enemyData != null && enemyData.enemyName == "Hextension")
                     enemyComp = enemyObj.AddComponent<Enemies.HextensionEnemy>();
+                else if (enemyData != null && (enemyData.enemyName == "Occulorm" || enemyData.enemyName == "Oculorm"))
+                    enemyComp = enemyObj.AddComponent<Enemies.OcculormEnemy>();
                 else
                     enemyComp = AddArchetypeComponent(enemyObj, enemyData.archetype);
             }

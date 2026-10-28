@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f34436990ad48f4d90f0736ce7dcdd3, type: 3}
+  m_Name: Enemy_Caster_Occulorm
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.EnemyData
+  enemyName: Occulorm
+  archetype: 3
+  movementType: 0
+  baseHP: 180
+  baseATK: 35
+  baseDEF: 15
+  baseRES: 25
+  moveSpeed: 0.8
+  damageType: 1
+  attackProjectileColor: {r: 1, g: 0.15, b: 0.15, a: 1}
+  usesSandProjectileVisual: 0
+  attackInterval: 2
+  attackRange: 0
+  frontAreaAttackTiles: 0
+  isUnblockable: 0
+  operatorAttackMissChance: 0
+  blockWeight: 1
+  isAcidRainImmune: 1
+  isAcidTileImmune: 1
+  lifePointCost: 1
+  sprite: {fileID: 2228210878405771908, guid: 671305f24948bd641952dd0eb457e308, type: 3}
+  animationFrames:
+  - {fileID: 2228210878405771908, guid: 671305f24948bd641952dd0eb457e308, type: 3}
+  - {fileID: 7438271327278571326, guid: 671305f24948bd641952dd0eb457e308, type: 3}
+  - {fileID: -3993721544060642529, guid: 671305f24948bd641952dd0eb457e308, type: 3}
+  - {fileID: -305307812686457039, guid: 671305f24948bd641952dd0eb457e308, type: 3}
+  - {fileID: -2627213184473461407, guid: 671305f24948bd641952dd0eb457e308, type: 3}
+  - {fileID: 3786498437342191600, guid: 671305f24948bd641952dd0eb457e308, type: 3}
+  - {fileID: -367520863276571133, guid: 671305f24948bd641952dd0eb457e308, type: 3}
+  - {fileID: 3577107978245403477, guid: 671305f24948bd641952dd0eb457e308, type: 3}
+  animationFrameRate: 8
+  visualScale: 1
+  visualOffset: {x: 0, y: 0, z: 0}
+  enemyPrefab: {fileID: 5123456789012345678, guid: 8617c8bd7d5043b7afc5c58c85780dc4, type: 3}
+  abilityDescription: "Enemy Caster. Immune to acid rain and pools. Pauses on the first tile outside the spawn point for 10 seconds. Summons 2 Oculite Spawns every 5 seconds, and 2 upon death."
+  intelQuote: "*chittering from the darkness*"
+  intelLore: "A worm-like caster entity swarming with eyes. It halts just after emerging to summon waves of oculite spawns while hurling crimson arts bolts at any operator within range."

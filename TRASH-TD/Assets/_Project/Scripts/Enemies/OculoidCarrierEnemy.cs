@@ -131,9 +131,10 @@ namespace TrashTD.Enemies
                 remainingPath.Add(transform.position + Vector3.right * 0.1f);
             }
 
-            // Spawn 2 Oculite Spawns with slight spatial offsets
-            Vector3 offsetA = new Vector3(-0.16f, 0.08f, 0f);
-            Vector3 offsetB = new Vector3(0.16f, -0.08f, 0f);
+            // Spawn 3 Oculite Spawns with slight spatial offsets
+            Vector3 offsetA = new Vector3(-0.18f, 0.08f, 0f);
+            Vector3 offsetB = new Vector3(0.18f, -0.08f, 0f);
+            Vector3 offsetC = new Vector3(0f, 0.14f, 0f);
 
             var pathA = new List<Vector3>(remainingPath);
             pathA[0] = transform.position + offsetA;
@@ -141,11 +142,15 @@ namespace TrashTD.Enemies
             var pathB = new List<Vector3>(remainingPath);
             pathB[0] = transform.position + offsetB;
 
+            var pathC = new List<Vector3>(remainingPath);
+            pathC[0] = transform.position + offsetC;
+
             EnemyManager em = EnemyManager.Instance ?? FindAnyObjectByType<EnemyManager>();
             if (em != null)
             {
                 em.SpawnEnemy(childData, pathA, difficultyLevel);
                 em.SpawnEnemy(childData, pathB, difficultyLevel);
+                em.SpawnEnemy(childData, pathC, difficultyLevel);
             }
         }
     }

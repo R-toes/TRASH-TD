@@ -17,7 +17,7 @@ MonoBehaviour:
   movementType: 0
   baseHP: 220
   baseATK: 25
-  baseDEF: 30
+  baseDEF: 15
   baseRES: 0
   moveSpeed: 0.85
   damageType: 0
