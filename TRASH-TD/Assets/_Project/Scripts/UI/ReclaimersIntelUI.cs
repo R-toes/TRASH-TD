@@ -399,6 +399,7 @@ namespace TrashTD.UI
             foreach (StageData stage in Resources.LoadAll<StageData>("Stages"))
             {
                 if (stage == null || (stage.stageId != null && stage.stageId.ToUpperInvariant().Contains("SANDBOX"))) continue;
+                if (stage.stageId == TrashTD.Core.GameLoop.TutorialDirector.TutorialStageId) continue; // Training drill, not a sighting
                 string stageName = string.IsNullOrEmpty(stage.mapName) ? stage.stageId : stage.mapName;
 
                 foreach (WaveData[] waves in new[] { stage.wavesEasy, stage.wavesNormal, stage.wavesHard })

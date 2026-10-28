@@ -66,6 +66,10 @@ namespace TrashTD.UI
         private GridManager gridManager;
         private StageData stageData;
 
+        // Under-units mode (the tutorial's lit route): Ground layer just above the floor, no dim or grid
+        private bool drawUnderUnits;
+        private const int UnderUnitsOrderOffset = -40; // 43..52 -> 3..12, above the floor tiles (0..2)
+
         private GameObject visualRoot;
         private readonly List<RouteVisual> routes = new List<RouteVisual>();
         private readonly List<MarkerVisual> markers = new List<MarkerVisual>();
@@ -90,6 +94,20 @@ namespace TrashTD.UI
             go.transform.rotation = Quaternion.identity;
             go.transform.localScale = Vector3.one;
             var overlay = go.AddComponent<GameplayPathPreviewOverlay>();
+            overlay.Initialize(grid, stage);
+            go.SetActive(false);
+            return overlay;
+        }
+
+        /// <summary>
+        /// A route overlay drawn on the Ground layer under every unit, without the dim and tile grid: the
+        /// tutorial's floor shows the route lit permanently. Call SetVisible(true) to draw it in.
+        /// </summary>
+        public static GameplayPathPreviewOverlay CreateUnderUnits(GridManager grid, StageData stage)
+        {
+            var go = new GameObject("TutorialRouteOverlay");
+            var overlay = go.AddComponent<GameplayPathPreviewOverlay>();
+            overlay.drawUnderUnits = true;
             overlay.Initialize(grid, stage);
             go.SetActive(false);
             return overlay;
@@ -215,7 +233,7 @@ namespace TrashTD.UI
             float pixelsPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
             artPixel = cellSize / pixelsPerTile;
 
-            BuildDimAndGrid();
+            if (!drawUnderUnits) BuildDimAndGrid();
 
             List<(int spawn, List<Vector2Int> cells)> cellRoutes = StageMapPreview.ComputeRoutes(stageData);
             int routeCount = cellRoutes.Count;
@@ -356,7 +374,7 @@ namespace TrashTD.UI
             line.numCornerVertices = 0;
             line.textureMode = LineTextureMode.Tile;
             line.material = material;
-            line.sortingOrder = sortingOrder;
+            ApplySorting(line, sortingOrder);
             return line;
         }
 
@@ -424,7 +442,7 @@ namespace TrashTD.UI
 
             var meshRenderer = textGo.GetComponent<MeshRenderer>();
             if (font != null) meshRenderer.sharedMaterial = font.material;
-            meshRenderer.sortingOrder = MarkerSortingOrder + 4;
+            ApplySorting(meshRenderer, MarkerSortingOrder + 4);
 
             // The pixel font is monospaced with square glyphs, so the width follows the character count
             Vector2 textSize = new Vector2(text.Length * textHeight, textHeight);
@@ -461,15 +479,28 @@ namespace TrashTD.UI
             return renderer;
         }
 
-        private static SpriteRenderer CreateSprite(string objectName, Transform parent, Sprite sprite, Color color, int sortingOrder)
+        private SpriteRenderer CreateSprite(string objectName, Transform parent, Sprite sprite, Color color, int sortingOrder)
         {
             var go = new GameObject(objectName);
             go.transform.SetParent(parent, false);
             var renderer = go.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite;
             renderer.color = color;
-            renderer.sortingOrder = sortingOrder;
+            ApplySorting(renderer, sortingOrder);
             return renderer;
+        }
+
+        private void ApplySorting(Renderer renderer, int sortingOrder)
+        {
+            if (drawUnderUnits)
+            {
+                GridSorting.PlaceOnGround(renderer);
+                renderer.sortingOrder = sortingOrder + UnderUnitsOrderOffset;
+            }
+            else
+            {
+                renderer.sortingOrder = sortingOrder;
+            }
         }
 
         private void Update()

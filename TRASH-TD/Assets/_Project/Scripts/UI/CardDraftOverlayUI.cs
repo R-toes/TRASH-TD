@@ -139,6 +139,7 @@ namespace TrashTD.UI
         private bool waitingForEnvironmentBriefing;
 
         // --- Card UI ---
+        private Button minimizeButton;
         private GameObject[] cardPanels = new GameObject[3];
         private RectTransform[] cardRects = new RectTransform[3];
         private Button[] cardButtonsArr = new Button[3];
@@ -238,6 +239,29 @@ namespace TrashTD.UI
 
         /// <summary>True while the draft screen covers the view (open and not minimized).</summary>
         public bool IsShowing => overlayVisible && !minimized && overlayRoot != null && overlayRoot.activeSelf;
+
+        /// <summary>The tutorial deals fixed hands: no reroll, skip or minimize (TutorialDirector).</summary>
+        private static bool IsTutorialDraft => TutorialDirector.Instance != null;
+
+        /// <summary>
+        /// Shows a draft that was held back (by an environment briefing or the tutorial) once the hold is lifted.
+        /// </summary>
+        public void ReleaseHeldDraft()
+        {
+            HandleEnvironmentBriefingDismissed();
+        }
+
+        /// <summary>The card showing this operator in the current offer, for the tutorial's highlight.</summary>
+        public RectTransform GetOfferedCardRect(OperatorData operatorData)
+        {
+            if (draftSystem == null || operatorData == null || !IsShowing) return null;
+            IReadOnlyList<DraftCard> offer = draftSystem.CurrentOfferedCards;
+            for (int i = 0; i < offer.Count && i < cardRects.Length; i++)
+            {
+                if (offer[i] != null && offer[i].operatorData == operatorData) return cardRects[i];
+            }
+            return null;
+        }
 
         /// <summary>
         /// Player option (checkbox on the draft screen, saved in PlayerPrefs, off by default): skip the shuffle,
@@ -524,6 +548,14 @@ namespace TrashTD.UI
             UpdateConfirmButton();
             UpdateDeckCount();
             UpdateWaveInfo();
+
+            bool extras = !IsTutorialDraft;
+            if (rerollButton != null) rerollButton.gameObject.SetActive(extras);
+            if (skipButton != null) skipButton.gameObject.SetActive(extras);
+            if (minimizeButton != null) minimizeButton.gameObject.SetActive(extras);
+#if UNITY_EDITOR || DEBUG
+            if (developerPickButton != null) developerPickButton.gameObject.SetActive(extras);
+#endif
         }
 
         private bool IsGamePaused()
@@ -1348,6 +1380,12 @@ namespace TrashTD.UI
             if (selectedCardIndex < 0 || draftSystem == null || playerDeck == null)
                 return;
 
+            if (IsTutorialDraft && !TutorialDirector.Instance.CanPickCard(GetSelectedOfferedCard()))
+            {
+                AudioManager.Instance?.PlaySfx(SfxId.UiDenied);
+                return;
+            }
+
             if (!playerDeck.CanAcceptCard(GetSelectedOfferedCard()))
             {
                 Debug.LogWarning("PlayerDeck: Deck is full! Cannot add more cards.");
@@ -1379,7 +1417,7 @@ namespace TrashTD.UI
         {
             ClearUiSelection();
 
-            if (draftSystem == null || !IsActiveGameplayCardPick()) return;
+            if (draftSystem == null || !IsActiveGameplayCardPick() || IsTutorialDraft) return;
 
             // Wait for the current shuffle to finish before shuffling again.
             if (isShuffling) return;
@@ -1400,7 +1438,7 @@ namespace TrashTD.UI
         private void OnSkipClicked()
         {
             ClearUiSelection();
-            if (!IsActiveGameplayCardPick()) return;
+            if (!IsActiveGameplayCardPick() || IsTutorialDraft) return;
 
             // Skip card pick and go straight to preparation
             if (gameManager != null)
@@ -1505,7 +1543,7 @@ namespace TrashTD.UI
         private void SetMinimized(bool value)
         {
             if (overlayRoot == null || minimized == value) return;
-            if (value && !overlayVisible) return;
+            if (value && (!overlayVisible || IsTutorialDraft)) return;
             if (IsGamePaused()) return;
 
             ClearUiSelection();
@@ -2023,6 +2061,7 @@ namespace TrashTD.UI
             PositionRT(minimize, new Vector2(28f, -32f), new Vector2(0f, 1f), new Vector2(200f, 48f));
             minimize.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
 #endif
+            minimizeButton = minimize;
             minimize.onClick.AddListener(() => StartCoroutine(MinimizeAfterClick()));
             AttachFeedback(minimize, Color.white, 1.05f);
 

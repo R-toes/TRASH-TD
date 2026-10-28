@@ -42,6 +42,7 @@ SFX/
 | `CardFlip` | A draft card flips face-up. *Fallback: ButtonHover.* |
 | `Reroll` | Draft reroll button. *Fallback: ButtonClick.* |
 | `CardDiscard` | A deck card is discarded (after confirming). |
+| `TutorialVoice` | Coalesce's talking blip in the tutorial, played for each typed character (pitch varies slightly). Keep it very short (≈40 ms). Until this file exists, a soft synth blip is generated in code. |
 
 ### `Gameplay/`
 

@@ -199,6 +199,8 @@ namespace TrashTD.UI
         {
             get
             {
+                // The tutorial deals each hand when Coalesce is ready (CardDraftOverlayUI.ReleaseHeldDraft)
+                if (TutorialDirector.Instance != null) return TutorialDirector.Instance.HoldsDraft;
                 if (environmentBriefingDismissed || gameManager == null || gameManager.CurrentStage == null) return false;
                 string stageId = stageBootstrapper != null ? stageBootstrapper.EnvironmentStageId : gameManager.CurrentStage.stageId;
                 return stageId == "STAGE_02" || stageId == "STAGE_03" || stageId == "STAGE_04" || stageId == "STAGE_05" || stageId == "STAGE_06";
@@ -4151,6 +4153,11 @@ namespace TrashTD.UI
             }
             if (gameManager == null || waveManager == null) return;
             if (gameManager.CurrentPhase != StagePhase.Preparation) return;
+            if (TutorialDirector.Instance != null && !TutorialDirector.Instance.AllowsWaveStart)
+            {
+                AudioManager.Instance?.PlaySfx(SfxId.UiDenied);
+                return;
+            }
 
             // Enter wave phase
             gameManager.EnterWavePhase();
@@ -4187,6 +4194,26 @@ namespace TrashTD.UI
         }
 
         public bool IsPaused => (pausePanel != null && pausePanel.activeSelf) || (gameManager != null && gameManager.CurrentState == GamePlayState.Paused);
+        public bool IsPauseMenuOpen => pausePanel != null && pausePanel.activeSelf;
+
+        // Highlight targets for the tutorial (TutorialDialogueUI)
+        public RectTransform StartWaveButtonRect => startWaveButton != null ? startWaveButton.GetComponent<RectTransform>() : null;
+        public RectTransform LivesRect => livesTubeRect != null ? livesTubeRect.parent as RectTransform : null;
+        public RectTransform RetreatButtonRect =>
+            retreatOperatorButton != null && retreatOperatorButton.gameObject.activeInHierarchy ? retreatOperatorButton.GetComponent<RectTransform>() : null;
+
+        /// <summary>The deck slot holding a card of this operator (any rarity; ready ones only by default), or null.</summary>
+        public RectTransform GetDeckSlotRect(OperatorData operatorData, bool readyOnly = true)
+        {
+            if (playerDeck == null || deckButtons == null || operatorData == null) return null;
+            var deck = playerDeck.DeckSlots;
+            for (int i = 0; i < deck.Count && i < deckButtons.Length; i++)
+            {
+                if (deck[i] != null && deck[i].operatorData == operatorData && (!readyOnly || deck[i].cooldownRoundsRemaining <= 0) && deckButtons[i] != null)
+                    return deckButtons[i].GetComponent<RectTransform>();
+            }
+            return null;
+        }
         public bool HasConsumedEscapeThisFrame => Time.frameCount == lastEscapeHandledFrame;
 
         public void ConsumeEscapeKey()

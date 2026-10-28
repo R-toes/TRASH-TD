@@ -171,6 +171,9 @@ namespace TrashTD.UI
             isVictory = victory;
             starCount = stars;
             GameManager manager = GameManager.Instance;
+            // The tutorial's results wait for Coalesce's outro; TutorialDirector shows them when it's over
+            if (manager != null && manager.IsTutorial && TutorialDirector.Instance != null && !TutorialDirector.Instance.IsFinished) return;
+
             WaveManager waveManager = FindAnyObjectByType<WaveManager>();
             StageData stage = manager != null ? manager.CurrentStage : null;
 
@@ -182,7 +185,10 @@ namespace TrashTD.UI
             string difficulty = manager != null ? manager.CurrentDifficulty.ToString().ToUpperInvariant() : "NORMAL";
             string difficultyColor = manager == null || manager.CurrentDifficulty == StageDifficulty.Normal ? "#FAC747"
                 : manager.CurrentDifficulty == StageDifficulty.Easy ? "#4DDB94" : "#F2545C";
-            headerStage.text = (stageNumber > 0 ? $"STAGE {stageNumber:00} // " : string.Empty) + $"{mapName} // <color={difficultyColor}>{difficulty}</color>";
+            bool tutorial = manager != null && manager.IsTutorial;
+            headerStage.text = tutorial
+                ? $"STAGE 00 // {mapName}"
+                : (stageNumber > 0 ? $"STAGE {stageNumber:00} // " : string.Empty) + $"{mapName} // <color={difficultyColor}>{difficulty}</color>";
 
             // Title + subtitle
             fullTitle = victory ? "STAGE CLEARED" : "SIGNAL LOST";
@@ -296,9 +302,10 @@ namespace TrashTD.UI
             return underscore >= 0 && int.TryParse(stage.stageId.Substring(underscore + 1), out int number) ? number : 0;
         }
 
-        /// <summary>The following numbered stage in Resources/Stages (STAGE_03 → STAGE_04), or null.</summary>
+        /// <summary>The following numbered stage in Resources/Stages (STAGE_03 → STAGE_04; the tutorial → STAGE_01), or null.</summary>
         private static StageData FindNextStage(StageData stage)
         {
+            if (stage != null && stage.stageId == TutorialDirector.TutorialStageId) return Resources.Load<StageData>("Stages/STAGE_01");
             int number = GetStageNumber(stage);
             if (number <= 0) return null;
             return Resources.Load<StageData>($"Stages/STAGE_{number + 1:00}");

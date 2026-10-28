@@ -27,6 +27,7 @@ namespace TrashTD.Audio
         UiCardFlip,
         UiReroll,
         UiCardDiscard,
+        TutorialVoice,  // Coalesce's talking blip, per typed character (a synth blip plays until a file exists)
 
         // Gameplay flow
         GameplayDeploy,
@@ -109,6 +110,7 @@ namespace TrashTD.Audio
             { SfxId.UiCardFlip, "UI/CardFlip" },
             { SfxId.UiReroll, "UI/Reroll" },
             { SfxId.UiCardDiscard, "UI/CardDiscard" },
+            { SfxId.TutorialVoice, "UI/TutorialVoice" },
 
             { SfxId.GameplayDeploy, "Gameplay/Deploy" },
             { SfxId.GameplayRetreat, "Gameplay/Retreat" },

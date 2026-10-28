@@ -46,7 +46,7 @@ Final Damage = max(ATK - DEF, ATK * 0.05)
 - Card draft only offers **1★, 2★, or 3★** base creatures
 - 4★ and 5★ are reached **only** via upgrading
 - **3 duplicate copies** of a creature → upgrades rarity by one tier
-- **Upgrades merge cards in the deck only.** Deployed operators are never upgraded on the field — recall an operator to return its card to the deck, where it can merge. The upgraded card keeps the recall cooldown (at least 1 round when a recall triggered it, Guards included). A recall may merge into a full deck.
+- **Upgrades merge cards in the deck only.** Deployed operators are never upgraded on the field — recall an operator to return its card to the deck, where it can merge. The upgraded card keeps the longest recall cooldown among the merged copies (`RarityUpgradeSystem.TryMergeOnce`), so a recalled Guard or Specialist (cooldown 0) merges into a card that is ready at once. A recall may merge into a full deck.
 - Each round offers **3 card choices**; **no two cards share the same class**
 
 ---
@@ -150,7 +150,7 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 
 ---
 
-## 7. Current Implementation Notes (as of 2026-10-28)
+## 7. Current Implementation Notes (as of 2026-10-29)
 
 ### 7.1 Roster
 
@@ -492,7 +492,7 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
   - It only uses art referenced by `Resources/Stages`, so it works in builds. Operator art isn't reachable from Resources, so operators aren't shown.
   - A camera viewfinder (corner brackets) frames the screen, with the version top-left and a blinking REC light plus `CAM NN // MAP NAME` caption top-right.
   - The title is a small hazard-yellow "TINY" over a large "RECLAIMERS" (two-step extruded shadow, occasional RGB-split glitch), with a tilted hazard-yellow "TD" sticker. Above the title, a boot line types out the number of playable stages.
-  - Menu rows PLAY 01 / INTEL 02 / SETTINGS 03 / EXIT 04 are styled by `StyleMainMenuButton`: a caret and bracket frame show while a row is selected (`MenuButtonFeedback.IsHot`). **Hovering selects the row**, so mouse and keyboard share one highlight. INTEL is created by `ReclaimersIntelUI.Create` and SETTINGS by `AudioSettingsUI.Create`.
+  - Menu rows PLAY 01 / INTEL 02 / SETTINGS 03 / EXIT 04 are styled by `StyleMainMenuButton`: a caret and bracket frame show while a row is selected (`MenuButtonFeedback.IsHot`). **Hovering selects the row**, so mouse and keyboard share one highlight. INTEL is created by `ReclaimersIntelUI.Create` and SETTINGS by `AudioSettingsUI.Create`. Until the tutorial has been finished or skipped, Coalesce guides the stage map and only STAGE 00 opens (§7.8).
 - Stage select is a Pip-Boy style map, built in code by `MainMenuController.BuildStageButtons`. It replaced the old stage grid. The background is `Art/Levels/Stage Selector Map.png`. Clicking a dot opens the stage details modal (difficulty selector, then play). A locked dot wobbles and plays the denied sound.
   - **Radar overlay** (`StageMapAnimOverlay`): a 12-frame sonar pulse (`Art/Levels/StageMap_Anim_Overlay.png`, `Animations/StageMap_Anim_Overlay.*`) stretched over the map art.
   - **Lore card:** hovering the title block shows `StageZoneLore` in a card under the title plate (`StageHeaderLoreHover` / `StageHeaderLoreChildTrigger`, in `MainMenuController.cs`).
@@ -525,7 +525,7 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
   - **Scroll wheel** (the ridged strip above the joystick, art x 72–96, rows 218–324 from the top): a 4-row ridge repeat taken from the art (`WheelPattern`). It is redrawn over the art as a 1×4 Repeat texture on a RawImage, and its uvRect rolls by whole art pixels: about 24 px per unit of ln(zoom), so one ridge per mouse-wheel notch. The ridges move up when zooming in and down when zooming out. It follows the smoothed zoom, so it eases to a stop. It is display only. If the art's wheel colours or position change, update `WheelRidges` / `WheelPattern`.
   - The panel slides in with the stage-select entrance. Apart from the dial, it doesn't catch the pointer, so dragging over it still pans the map.
   - Left-side stage-select UI clears the panel: the title block starts at `StageLeftEdge` (280) and the Back button at `StageBackButtonX` (150, clear of the slanted bottom). Keep new left-side elements right of the panel.
-- **Locking is not progression.** A node is locked only if `IsStagePlayable(stageId)` is false (a hard-coded list of stage IDs). "X / 6 UNLOCKED" counts that list, not cleared stages. Don't add unlock-on-clear progression without asking Raim (see "Persistence model", §4).
+- **Locking is not progression.** A node is locked only if `IsStagePlayable(stageId)` is false (a hard-coded list of stage IDs, including `TUTORIAL`). "X / 6 UNLOCKED" counts the six numbered stages, not cleared stages. Don't add unlock-on-clear progression without asking Raim (see "Persistence model", §4).
 - **Terminal styling** (stage selector and dossier): the `Terminal*` colours in `MainMenuController`, `AddCornerBrackets` for L-shaped corner frames, and `StyleTerminalButton`. `MenuButtonFeedback` owns each button's `Outline` as its hover glow, so resting borders are brackets, not outlines. The selector has a title plate, a blinking cursor, and a status ticker that types out the hovered stage (`StageMapNode.HoverChanged`).
 - **Stage dossier** (the details modal, 1300×720): an animated `StageMapPreview` on the left, and stage info, stats, the difficulty picker, Back and Play on the right.
   - **Difficulty picker** (`BuildDifficultySelector` / `BuildDifficultySlider`): "> DIFFICULTY", then a stepped pixel slider made of flat blocks (outlined track, fill, three square notches, a blocky knob with a highlight row) with EASY / NORMAL / HARD under the notches. Fill, knob, notches and the selected label take the difficulty colour.
@@ -555,3 +555,56 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
 - `StageMapScanlines` (now unused by the menu; superseded by the CRT shader) is the old CRT overlay: scanlines, a rolling refresh band, a vignette and a faint flicker, all tunable in the Inspector. It builds its layers at runtime and runs on unscaled time.
 - The map scripts' file names don't match their class names (`Stagemapnode.cs` → `StageMapNode`, `Stagemaplayout.cs` → `StageMapLayout`, `Stagemapscanlines.cs` → `StageMapScanlines`). That works because they are only added with `AddComponent`. Rename the files before attaching any of them in the Inspector.
 - `MapSelectUI` (an older stage-select component that also uses `StageMapNode`) isn't used in any scene. Its `IsStageUnlocked` always returns true.
+
+### 7.8 Tutorial (STAGE 00 "Orientation")
+
+Coalesce teaches the basics on a guided stage. Added 2026-10-29 on branch `tutorial-trial`.
+
+- **Stage map intro** (`MapTutorialGuide`, created by `ShowStageSelectionInternal` while PlayerPrefs `TrashTD.TutorialDone` / `TutorialDirector.IsTutorialDone` is unset): PLAY always opens the stage map.
+  - **Lines:** Coalesce pops up bottom right (`TutorialDialogueLayout.StageMap`, above the QA SANDBOX button) and plays `TutorialScript.mapIntro`. It introduces themself, the map controls and the markers, pointing at STAGE 01 and then STAGE 00 (`StageNode` highlight + `stageNumber`).
+  - **Request:** the last step (`OpenTutorialStage`) asks for STAGE 00. The pointer follows the STAGE 00 marker, then PLAY once its dossier is open.
+  - **Requirement:** until the tutorial is done, `SelectStage` refuses every other stage (wobble + denied sound), the sandbox included. Map pan and zoom are blocked while Coalesce is mid-line.
+  - **Skip:** SKIP TUTORIAL works here too; it marks the tutorial done and removes Coalesce.
+  - **Repeat visits:** the intro plays once per session (`introHeard`); later map visits go straight to the STAGE 00 request. Quitting the tutorial halfway doesn't count as done.
+  - **Not progression:** this is a first-visit gate, not unlock progression (see "Locking is not progression", §7.7).
+- **Map node:** STAGE 00 by the lake on the map's west side (`TutorialNodePosition`, 0.275 / 0.345). It is always playable and replays the full tutorial. It's appended to `availableStages` after the sandbox, so Stage *i*+1 and the sandbox keep their indices. Node lookups go through `FindStageNode(stage)`, never `stageMapNodes[stageIndex]`. Node intros are staggered by `StageNumber`, so STAGE 00 comes first. The title backdrop and the Intel's "Sighted at" lists skip it.
+- **Dossier:** for the tutorial only the preview, name, brief and Back / Play show. The stats line, divider, difficulty label, slider and info strip are hidden (`SetDetailsBlockVisible`). The preview's bare-grid fallback leaves Blocked tiles empty (void).
+- **Stage data:** `Resources/Stages/STAGE_TUTORIAL.asset` (`stageId` `TUTORIAL`, `TutorialDirector.TutorialStageId`).
+  - A 13x5 grid with no art. Row 2 is a straight lane from the spawn (0,2) to the exit (9,2), with high ground above and below it.
+  - Rows 0 and 4 and columns 10-12 are Blocked void. At 16:9 the empty right columns sit under Coalesce and the speech bubble, so neither covers the lane.
+  - 6 waves, the same on every difficulty: Sludge Grunt, Toxic Rusher, Pollution Tank and Skyshard.
+  - 10 lives. **It can't be lost** (`GameManager.IsTutorial`): leaks cost lives but never the last one, and `TriggerDefeat` does nothing.
+  - **Results:** after Coalesce's outro, the usual victory screen shows (`StageResultsUI` waits for `TutorialDirector.IsFinished`). Its header reads `STAGE 00 // ORIENTATION` (no difficulty), and NEXT STAGE goes to STAGE_01.
+- **Floor** (`TutorialStageVisuals`, created by the director; `StageBootstrapper` skips its default tile sprites for the tutorial): a black void and dark phosphor-green tiles (high ground darker, with a lit top edge) under faint grid lines, all on the Ground layer.
+  - When Coalesce reveals the route, a `GameplayPathPreviewOverlay.CreateUnderUnits` copy of the path preview draws in and stays lit under the units: Ground layer, orders 3-12, no dim or grid.
+  - Pulsing hazard-yellow tile highlights (order 13) show where to deploy.
+- **Script** (`Resources/Tutorial/TutorialScript.asset`, `TutorialScript` / `TutorialStep`): Coalesce's lines and steps, editable without code. Actions:
+  - `Say`: talk; the game freezes.
+  - `RevealPath`: talk, and the route lights up.
+  - `Draft`: deals the step's `cards` through `CardDraftSystem.SetScriptedOffer`. Only `operatorData` can be confirmed (any card when it's empty).
+  - `Deploy`: waits until that operator is deployed. It is skipped if no ready card of it is left.
+  - `StartWave`, `WaitForWaveEnd`.
+  - `WaitForEnemy`: once that hostile spawns, the wave runs 1.4 s more of game time (`EnemyIntroDelay`), so it is seen walking before Coalesce freezes the wave to introduce it.
+  - `GiftCards`: adds copies to the deck.
+  - `Retreat`: waits until that operator is retreated.
+  - `Finish`: the last line; a click ends the tutorial and shows the results.
+  - `OpenTutorialStage`: stage-map intro only (see above).
+
+  `highlight` adds a pointer: lives, a deck card, START WAVE, a draft card, path, high ground or spawn/exit tiles, or an operator's tile.
+- **Lesson order:** Chi Paw (draft, deploy, facing, blocking) → Deadeye (high ground; Toxic Rusher) → Pyrolite (Arts vs DEF; Pollution Tank) → Coalesce (healing; Skyshard flies over blockers) → Bulkhead, then the upgrade lesson → a free pick and the final mixed wave.
+  - **Upgrade lesson:** two gifted Chi Paw cards plus retreating the deployed one make 3 copies, which merge into a 2★ card. Guards have no recall cooldown, so it is redeployed at once; Coalesce then lists the other classes' cooldowns.
+  - **Opening lines:** the stage's intro works for first-timers and for returning players.
+- **Director** (`TutorialDirector`, added by `StageBootstrapper` before `StartStage` so the first draft is already held):
+  - **Draft hold:** holds each draft (`GameplayHUDUI.ShouldBlockDraftOverlay` → `HoldsDraft`) until its Draft step releases it (`CardDraftOverlayUI.ReleaseHeldDraft`).
+  - **Gates:** START WAVE works only during a StartWave step (`AllowsWaveStart`). The draft hides Reroll, Skip and Minimize.
+  - **Freeze:** while a talk line or the skip prompt is up, it sets time scale 0. The pause menu still works on top.
+  - **End:** finishing marks the tutorial done and shows the results screen. Skipping marks it done and loads the main menu at the stage map.
+  - **No script asset:** the stage just plays freely.
+- **Coalesce** (`TutorialDialogueUI`, its own canvas at sorting order 250: above the HUD (100) and the draft (200), under the results (300)):
+  - **Sprite and bubble:** 256 px, standing on the HUD's bottom-right panel, with a terminal speech bubble above. Text types at 42 characters/s with a voice blip. The sheet animates only while text is typing, 1.25x faster than its idle frame time (`SpeakingFrameSpeedup`).
+  - **Talk lines:** they dim the screen and catch every click. A click (or Space) finishes the line, the next click advances.
+  - **Task lines:** they show a yellow ▶ TASK tag and leave the game clickable.
+  - **During draft tasks:** it switches to a compact bottom-left layout, under the card column.
+  - **Pointer:** pulsing brackets frame any UI element on any canvas.
+  - **Skip:** SKIP TUTORIAL ▶▶ asks for confirmation.
+- **Voice:** `SfxId.TutorialVoice` (`SFX/UI/TutorialVoice`). It is played as a clip (the shared repeat throttle would drop most blips). Until a file exists, a code-generated 45 ms blip plays instead.

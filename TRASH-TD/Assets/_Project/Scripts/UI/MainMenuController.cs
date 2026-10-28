@@ -24,6 +24,7 @@ namespace TrashTD.UI
         private const string FifthPlayableStageId = "STAGE_05";
         private const string SixthPlayableStageId = "STAGE_06";
         private const string SandboxStageId = "SANDBOX";
+        private const string TutorialStageId = TrashTD.Core.GameLoop.TutorialDirector.TutorialStageId;
         private const string GameplaySceneName = "GameplayTest";
         private const float EntranceDuration = 0.45f;
 
@@ -35,7 +36,8 @@ namespace TrashTD.UI
                 || stageId == FourthPlayableStageId
                 || stageId == FifthPlayableStageId
                 || stageId == SixthPlayableStageId
-                || stageId == SandboxStageId;
+                || stageId == SandboxStageId
+                || stageId == TutorialStageId;
         }
 
         // ── Palette ──────────────────────────────────────────
@@ -183,6 +185,8 @@ namespace TrashTD.UI
         private StageMapPreview stagePreview;
         private Text stagePreviewInfo;
         private Text stageDetailsStats;
+        private Transform stageDetailsDivider;
+        private MapTutorialGuide mapGuide;
 
         // State
         private bool menuInitialized;
@@ -1022,6 +1026,7 @@ namespace TrashTD.UI
             int online = 0;
             foreach (StageData stage in availableStages)
             {
+                if (IsTutorialStage(stage)) continue; // No map art to pan across, and not a numbered stage
                 bool playableStage = stage != null && stage.stageId != SandboxStageId && IsStagePlayable(stage.stageId);
                 showcase.Add(playableStage ? stage : null); // keep index i = Stage i+1 for the caption
                 if (playableStage) online++;
@@ -1117,6 +1122,37 @@ namespace TrashTD.UI
             ShowStageSelectionInternal();
         }
 
+        // ── Coalesce's stage-map intro (MapTutorialGuide), until the tutorial is finished or skipped ──
+
+        public bool IsStageSelectionOpen => stageSelectionOpen && !isLoadingStage;
+        public bool IsTutorialDossierOpen => detailsOpen && IsTutorialStage(selectedStage);
+        public RectTransform PlayStageButtonRect => playStageButton != null ? playStageButton.GetComponent<RectTransform>() : null;
+
+        /// <summary>The map marker with this stage number (0 = the tutorial), for Coalesce's pointer.</summary>
+        public RectTransform GetStageNodeRect(int stageNumber)
+        {
+            foreach (StageMapNode node in stageMapNodes)
+            {
+                if (node != null && node.StageNumber == stageNumber) return node.GetComponent<RectTransform>();
+            }
+            return null;
+        }
+
+        private bool GuideRequiresTutorialStage => mapGuide != null && mapGuide.RequiresTutorialStage;
+
+        /// <summary>The map marker showing this stage, or null.</summary>
+        private StageMapNode FindStageNode(StageData stage)
+        {
+            if (stage == null) return null;
+            foreach (StageMapNode node in stageMapNodes)
+            {
+                if (node != null && node.Stage == stage) return node;
+            }
+            return null;
+        }
+
+        private static bool IsTutorialStage(StageData stage) => stage != null && stage.stageId == TutorialStageId;
+
         private void ShowStageSelectionInternal()
         {
             CardDraftOverlayUI.HideAllForMenuTransition();
@@ -1140,10 +1176,16 @@ namespace TrashTD.UI
             PlayEntrance(stageEntrance, ref stageEntranceRoutine);
             PlayStageNodeIntros();
 
-            int focusIndex = selectedStageIndex >= 0 ? selectedStageIndex : 0;
-            if (focusIndex < stageMapNodes.Count && stageMapNodes[focusIndex] != null)
+            // First visits: Coalesce introduces the map and asks for STAGE 00 (or a skip)
+            if (mapGuide == null && !TrashTD.Core.GameLoop.TutorialDirector.IsTutorialDone)
             {
-                FocusUi(stageMapNodes[focusIndex].gameObject);
+                mapGuide = MapTutorialGuide.Create(this);
+            }
+
+            StageMapNode focusNode = FindStageNode(selectedStage) ?? (stageMapNodes.Count > 0 ? stageMapNodes[0] : null);
+            if (focusNode != null)
+            {
+                FocusUi(focusNode.gameObject);
             }
         }
 
@@ -1155,9 +1197,10 @@ namespace TrashTD.UI
             SetBackgroundInteractable(true);
             SetPanelVisible(stageDetailsPanel, false, false, stageDetailsModal);
 
-            if (selectedStageIndex >= 0 && selectedStageIndex < stageMapNodes.Count && stageMapNodes[selectedStageIndex] != null)
+            StageMapNode selectedNode = FindStageNode(selectedStage);
+            if (selectedNode != null)
             {
-                FocusUi(stageMapNodes[selectedStageIndex].gameObject);
+                FocusUi(selectedNode.gameObject);
             }
         }
 
@@ -1190,6 +1233,9 @@ namespace TrashTD.UI
             new Vector2(0.820f, 0.670f),  // Stage 5 (placed where stage 6 previously was)
             new Vector2(0.820f, 0.350f),  // Stage 6 (straight up above stage 5)
         };
+
+        // STAGE 00, the tutorial: the small outpost by the lake on the map's west side
+        private static readonly Vector2 TutorialNodePosition = new Vector2(0.275f, 0.345f);
 
         private void BuildStageButtons()
         {
@@ -1230,6 +1276,10 @@ namespace TrashTD.UI
                 availableStages.Add(stage);
             }
 
+            // The tutorial comes after the sandbox, so Stage i+1 and the sandbox keep their indices
+            StageData tutorialStage = Resources.Load<StageData>(TrashTD.Core.GameLoop.TutorialDirector.TutorialStageResourcePath);
+            if (tutorialStage != null) availableStages.Add(tutorialStage);
+
             if (stageListRoot == null)
             {
                 return;
@@ -1258,6 +1308,14 @@ namespace TrashTD.UI
                 // Nodes run their own boot-in (PlayStageNodeIntros), not the generic entrance
                 var nodeFeedback = node.GetComponent<MenuButtonFeedback>();
                 if (nodeFeedback != null) stageCards.Add(nodeFeedback);
+            }
+
+            if (tutorialStage != null)
+            {
+                var tutorialNode = CreateStageMapNode(tutorialStage, 0, true, TutorialNodePosition);
+                stageMapNodes.Add(tutorialNode);
+                var tutorialFeedback = tutorialNode.GetComponent<MenuButtonFeedback>();
+                if (tutorialFeedback != null) stageCards.Add(tutorialFeedback);
             }
 
             // Re-apply the layout to position everything
@@ -1310,7 +1368,8 @@ namespace TrashTD.UI
             if (stageListRoot == null || stageSelectionPanel == null || mapNavigator != null) return;
 
             mapNavigator = stageListRoot.gameObject.AddComponent<StageMapNavigator>();
-            mapNavigator.InputBlocked = () => detailsOpen || isLoadingStage || (audioSettingsUI != null && audioSettingsUI.IsOpen);
+            mapNavigator.InputBlocked = () => detailsOpen || isLoadingStage || (audioSettingsUI != null && audioSettingsUI.IsOpen)
+                || (mapGuide != null && mapGuide.IsTalking);
             mapNavigator.Initialize(
                 stageSelectionPanel.GetComponent<RectTransform>(),
                 stageMapLayout,
@@ -1341,7 +1400,7 @@ namespace TrashTD.UI
         {
             for (int i = 0; i < stageMapNodes.Count; i++)
             {
-                if (stageMapNodes[i] != null) stageMapNodes[i].PlayIntro(0.25f + i * 0.12f);
+                if (stageMapNodes[i] != null) stageMapNodes[i].PlayIntro(0.25f + stageMapNodes[i].StageNumber * 0.12f);
             }
         }
 
@@ -1520,12 +1579,22 @@ namespace TrashTD.UI
                 return;
             }
 
+            // Until the tutorial is done or skipped, Coalesce only lets STAGE 00 open
+            if (GuideRequiresTutorialStage && !IsTutorialStage(availableStages[stageIndex]))
+            {
+                StageMapNode waitingNode = FindStageNode(availableStages[stageIndex]);
+                if (waitingNode != null) waitingNode.GetComponent<MenuButtonFeedback>()?.Wobble();
+                PlayDenied();
+                return;
+            }
+
             if (!IsStagePlayable(availableStages[stageIndex].stageId))
             {
                 // Wobble the node's feedback if it exists
-                if (stageIndex < stageMapNodes.Count && stageMapNodes[stageIndex] != null)
+                StageMapNode lockedNode = FindStageNode(availableStages[stageIndex]);
+                if (lockedNode != null)
                 {
-                    var fb = stageMapNodes[stageIndex].GetComponent<MenuButtonFeedback>();
+                    var fb = lockedNode.GetComponent<MenuButtonFeedback>();
                     if (fb != null) fb.Wobble();
                 }
                 return;
@@ -1535,18 +1604,27 @@ namespace TrashTD.UI
             selectedStage = availableStages[stageIndex];
             stageDetailsTitle.text = selectedStage.mapName;
             stageDetailsDescription.text = selectedStage.shortDescription;
-            if (stageDetailsTag != null) stageDetailsTag.text = "STAGE " + (stageIndex + 1).ToString("00");
-            if (stageDetailsNumber != null) stageDetailsNumber.text = (stageIndex + 1).ToString("00");
+            bool tutorial = IsTutorialStage(selectedStage);
+            int stageNumber = tutorial ? 0 : stageIndex + 1;
+            if (stageDetailsTag != null) stageDetailsTag.text = "STAGE " + stageNumber.ToString("00");
+            if (stageDetailsNumber != null) stageDetailsNumber.text = stageNumber.ToString("00");
             if (stageDetailsStats != null)
             {
                 stageDetailsStats.text = $"GRID {selectedStage.gridWidth}x{selectedStage.gridHeight}   //   SQUAD {selectedStage.squadSizeLimit}";
             }
             UpdateDifficultyDisplay();
 
+            // The tutorial's dossier is just the preview, name, brief and Back / Play
+            SetDetailsBlockVisible(stageDetailsStats, !tutorial);
+            SetDetailsBlockVisible(stageDetailsDivider, !tutorial);
+            SetDetailsBlockVisible(difficultyLabel, !tutorial);
+            SetDetailsBlockVisible(difficultySliderRoot, !tutorial);
+            SetDetailsBlockVisible(difficultyBriefing, !tutorial);
+
             // Highlight the selected node, dim others
-            for (int i = 0; i < stageMapNodes.Count; i++)
+            foreach (StageMapNode node in stageMapNodes)
             {
-                if (stageMapNodes[i] != null) stageMapNodes[i].SetSelected(i == stageIndex);
+                if (node != null) node.SetSelected(node.Stage == selectedStage);
             }
 
             detailsOpen = true;
@@ -1577,6 +1655,11 @@ namespace TrashTD.UI
         // ─────────────────────────────────────────────────────
         //  Stage details modal + difficulty picker
         // ─────────────────────────────────────────────────────
+
+        private static void SetDetailsBlockVisible(Component block, bool visible)
+        {
+            if (block != null && block.gameObject.activeSelf != visible) block.gameObject.SetActive(visible);
+        }
 
         private void BuildStageDetailsUi()
         {
@@ -1698,6 +1781,7 @@ namespace TrashTD.UI
 
             var divider = new GameObject("DetailsDivider", typeof(RectTransform), typeof(Image));
             divider.transform.SetParent(column.transform, false);
+            stageDetailsDivider = divider.transform;
             StretchTop(divider.GetComponent<RectTransform>(), 0f, 0f, DetailsStatsTop + 30f, 2f);
             var dividerImage = divider.GetComponent<Image>();
             dividerImage.color = new Color(TerminalLine.r, TerminalLine.g, TerminalLine.b, 0.25f);

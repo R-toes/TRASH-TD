@@ -124,6 +124,7 @@ namespace TrashTD.Core.GameLoop
         }
 
         public bool IsSandbox => stageData != null && stageData.stageId == "SANDBOX";
+        public bool IsTutorial => stageData != null && stageData.stageId == TutorialDirector.TutorialStageId;
 
         /// <summary>
         /// Operators can be placed in the sandbox, in Preparation, and during Card Pick while the draft is
@@ -278,6 +279,12 @@ namespace TrashTD.Core.GameLoop
             // 5. Initialize Wave Manager
             waveManager.Initialize(stageData, difficulty);
 
+            // The tutorial has to hold the first draft, so its director exists before the stage starts
+            if (IsTutorial)
+            {
+                gameObject.AddComponent<TutorialDirector>().Initialize(this, stageData, gridManager);
+            }
+
             // 6. Start Stage (enters CardPick phase, which shows the CardDraftOverlayUI)
             gameManager.StartStage(stageData, difficulty);
 
@@ -356,7 +363,8 @@ namespace TrashTD.Core.GameLoop
                     tileObj.transform.position = worldPos;
                     tileObj.transform.SetParent(gridContainer.transform);
 
-                    if (mapSprite == null)
+                    // The tutorial draws its own floor (TutorialStageVisuals)
+                    if (mapSprite == null && !IsTutorial)
                     {
                         var sr = tileObj.AddComponent<SpriteRenderer>();
                         sr.sprite = GetSpriteForTile(type);
