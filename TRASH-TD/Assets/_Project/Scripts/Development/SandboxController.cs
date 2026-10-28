@@ -39,6 +39,9 @@ namespace TrashTD.Development
         private readonly List<OperatorData> operatorData = new List<OperatorData>();
         private readonly List<StageData> mapStages = new List<StageData>();
 
+        public IReadOnlyList<EnemyData> AvailableEnemies => availableEnemies;
+        public IReadOnlyList<OperatorData> OperatorDataList => operatorData;
+
         private StageBootstrapper bootstrapper;
         private WaveManager waveManager;
         private GameManager gameManager;
@@ -101,8 +104,24 @@ namespace TrashTD.Development
             if (operatorData.Count == 0 && bootstrapper != null && bootstrapper.operatorPool != null)
                 operatorData.AddRange(bootstrapper.operatorPool);
 
-            operatorData.RemoveAll(op => op == null);
-            operatorData.Sort((a, b) => string.Compare(a.operatorName, b.operatorName, System.StringComparison.OrdinalIgnoreCase));
+            SortOperators(operatorData);
+        }
+
+        public static void SortOperators(List<OperatorData> list)
+        {
+            if (list == null) return;
+            list.RemoveAll(op => op == null);
+            list.Sort((a, b) =>
+            {
+                if (ReferenceEquals(a, b)) return 0;
+                if (a == null) return 1;
+                if (b == null) return -1;
+                int byClass = a.operatorClass.CompareTo(b.operatorClass);
+                if (byClass != 0) return byClass;
+                int byRarity = ((int)a.baseRarity).CompareTo((int)b.baseRarity);
+                if (byRarity != 0) return byRarity;
+                return string.Compare(a.operatorName, b.operatorName, System.StringComparison.OrdinalIgnoreCase);
+            });
         }
 
         private void LoadEnemyData()
@@ -124,11 +143,22 @@ namespace TrashTD.Development
                 AddEnemiesFromWaves(bootstrapper.stageData.wavesHard);
             }
 
-            // Ground enemies first, then air, alphabetical within each group.
-            availableEnemies.Sort((a, b) =>
+            SortEnemies(availableEnemies);
+        }
+
+        public static void SortEnemies(List<EnemyData> list)
+        {
+            if (list == null) return;
+            list.RemoveAll(enemy => enemy == null);
+            // Enemies sorted by class (archetype), then alphabetical within each class.
+            list.Sort((a, b) =>
             {
-                int byType = a.movementType.CompareTo(b.movementType);
-                return byType != 0 ? byType : string.Compare(a.enemyName, b.enemyName, System.StringComparison.OrdinalIgnoreCase);
+                if (ReferenceEquals(a, b)) return 0;
+                if (a == null) return 1;
+                if (b == null) return -1;
+                int byClass = a.archetype.CompareTo(b.archetype);
+                if (byClass != 0) return byClass;
+                return string.Compare(a.enemyName, b.enemyName, System.StringComparison.OrdinalIgnoreCase);
             });
         }
 
