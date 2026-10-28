@@ -16,7 +16,8 @@ namespace TrashTD.Data
         GiftCards,        // Say, and `count` copies of `operatorData` go into the deck
         Retreat,          // Task: wait until `operatorData` is retreated
         Finish,           // Say; a click ends the tutorial and shows the stage's results screen
-        OpenTutorialStage // Map intro only. Task: open STAGE 00 and press PLAY
+        OpenTutorialStage,// Map intro only. Task: open STAGE 00 and press PLAY
+        DefeatChoice      // Defeat only. TRY AGAIN (restart the tutorial) or SKIP TUTORIAL (to the stage map)
     }
 
     /// <summary>What Coalesce points at while a step is shown.</summary>
@@ -64,7 +65,8 @@ namespace TrashTD.Data
     /// <summary>
     /// Coalesce's tutorial, at Resources/Tutorial/TutorialScript so builds can load it; edit the lines and steps
     /// freely. <see cref="mapIntro"/> plays on the stage map until the tutorial is done (MapTutorialGuide);
-    /// <see cref="steps"/> play on STAGE_TUTORIAL itself (TutorialDirector), for first-timers and returning players.
+    /// <see cref="steps"/> play on STAGE_TUTORIAL itself (TutorialDirector), for first-timers and returning players;
+    /// <see cref="onDefeat"/> plays over the defeat screen if the tutorial is lost.
     /// </summary>
     [CreateAssetMenu(fileName = "TutorialScript", menuName = "TRASH TD/Tutorial Script")]
     public class TutorialScript : ScriptableObject
@@ -80,5 +82,8 @@ namespace TrashTD.Data
 
         [Tooltip("The tutorial stage")]
         public TutorialStep[] steps;
+
+        [Tooltip("Over the defeat screen: Say steps, ending with DefeatChoice")]
+        public TutorialStep[] onDefeat;
     }
 }

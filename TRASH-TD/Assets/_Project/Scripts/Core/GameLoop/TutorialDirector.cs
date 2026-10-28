@@ -16,9 +16,10 @@ namespace TrashTD.Core.GameLoop
     /// CardPick → Preparation → WaveActive loop. It deals scripted hands (CardDraftSystem.SetScriptedOffer), holds
     /// the draft until Coalesce is ready (GameplayHUDUI.ShouldBlockDraftOverlay), only lets the wave start when a
     /// step asks for it, freezes the game (time scale 0) while Coalesce talks, and points at what to click.
-    /// The stage can't be lost (GameManager.IsTutorial). Finishing shows the usual results screen; finishing or
-    /// skipping marks the tutorial done (PlayerPrefs), which ends Coalesce's stage-map intro (MapTutorialGuide).
-    /// It stays replayable from STAGE 00 on the map.
+    /// Recalling stays hidden until the Retreat step teaches it, so nobody empties the field by accident.
+    /// Finishing shows the usual results screen. Losing shows the defeat screen with Coalesce over it, offering
+    /// TRY AGAIN or SKIP TUTORIAL. Finishing or skipping marks the tutorial done (PlayerPrefs), which ends
+    /// Coalesce's stage-map intro (MapTutorialGuide). It stays replayable from STAGE 00 on the map.
     /// </summary>
     public sealed class TutorialDirector : MonoBehaviour
     {
@@ -29,11 +30,16 @@ namespace TrashTD.Core.GameLoop
         private const string MainMenuScene = "MainMenu";
         // Let a new hostile walk on screen for a moment before Coalesce freezes the wave to introduce it
         private const float EnemyIntroDelay = 1.4f;
+        // Let the defeat screen finish animating in before Coalesce talks over it
+        private const float DefeatTalkDelay = 1.9f;
 
         public static TutorialDirector Instance { get; private set; }
 
         /// <summary>The tutorial was finished or skipped on this install.</summary>
         public static bool IsTutorialDone => PlayerPrefs.GetInt(TutorialDoneKey, 0) == 1;
+
+        /// <summary>Recall (retreat) is available: always outside the tutorial; in it, once Coalesce has taught it.</summary>
+        public static bool IsRecallAllowed => Instance == null || Instance.freePlay || Instance.finished || Instance.recallTaught;
 
         public static void MarkTutorialDone()
         {
@@ -61,6 +67,8 @@ namespace TrashTD.Core.GameLoop
         private bool frozen;
         private bool ending;   // Skipped: leaving for the stage map
         private bool finished; // Script done: results screen (or free play if the waves aren't over)
+        private bool defeated;
+        private bool recallTaught;
         private int starsEarned = 3;
         private bool freePlay; // No script: the stage just plays normally
         private readonly HashSet<EnemyData> seenEnemies = new HashSet<EnemyData>();
@@ -90,7 +98,11 @@ namespace TrashTD.Core.GameLoop
         {
             if (Instance == this) Instance = null;
             if (EnemyManager.Instance != null) EnemyManager.Instance.OnEnemySpawned -= HandleEnemySpawned;
-            if (gameManager != null) gameManager.OnStageVictory -= HandleStageVictory;
+            if (gameManager != null)
+            {
+                gameManager.OnStageVictory -= HandleStageVictory;
+                gameManager.OnStageDefeat -= HandleStageDefeat;
+            }
             if (dialogue != null)
             {
                 dialogue.Advanced -= HandleAdvanced;
@@ -128,14 +140,18 @@ namespace TrashTD.Core.GameLoop
             hud = FindAnyObjectByType<GameplayHUDUI>();
             draftOverlay = FindAnyObjectByType<CardDraftOverlayUI>();
             if (EnemyManager.Instance != null) EnemyManager.Instance.OnEnemySpawned += HandleEnemySpawned;
-            if (gameManager != null) gameManager.OnStageVictory += HandleStageVictory;
+            if (gameManager != null)
+            {
+                gameManager.OnStageVictory += HandleStageVictory;
+                gameManager.OnStageDefeat += HandleStageDefeat;
+            }
 
             StartCoroutine(RunScript());
         }
 
         private void Update()
         {
-            if (dialogue == null || gameManager == null || freePlay || finished) return;
+            if (dialogue == null || gameManager == null || freePlay || finished || defeated) return;
 
             // Stay out of the way of the pause menu (it pauses the game itself)
             bool pauseMenu = hud != null && hud.IsPauseMenuOpen;
@@ -155,6 +171,54 @@ namespace TrashTD.Core.GameLoop
         private void HandleAdvanced() => advanced = true;
 
         private void HandleStageVictory(int stars) => starsEarned = stars;
+
+        private void HandleStageDefeat()
+        {
+            if (defeated || finished || ending || freePlay) return;
+            defeated = true;
+            StopAllCoroutines();
+            waveStartAllowed = false;
+            ClearPointers();
+            dialogue.HideBubble();
+            dialogue.SetShown(true);
+            StartCoroutine(DefeatRoutine());
+        }
+
+        /// <summary>Coalesce over the defeat screen: a few kind words, then TRY AGAIN or SKIP TUTORIAL.</summary>
+        private IEnumerator DefeatRoutine()
+        {
+            yield return new WaitForSecondsRealtime(DefeatTalkDelay);
+            if (script == null || script.onDefeat == null) yield break;
+
+            dialogue.BringAboveResults();
+            dialogue.SetLayout(TutorialDialogueLayout.Gameplay);
+            foreach (TutorialStep step in script.onDefeat)
+            {
+                if (step == null) continue;
+                if (step.action == TutorialAction.DefeatChoice)
+                {
+                    dialogue.Say(step.text, true);
+                    dialogue.ShowChoices("TRY AGAIN", RetryTutorial, "SKIP TUTORIAL", EndTutorial);
+                    yield break;
+                }
+
+                advanced = false;
+                dialogue.Say(step.text, false);
+                while (!advanced && !ending) yield return null;
+                if (ending) yield break;
+            }
+        }
+
+        /// <summary>Restarts the tutorial from the top, the same way the results screen's Retry does.</summary>
+        private void RetryTutorial()
+        {
+            if (ending) return;
+            ending = true;
+            MainMenuController.SetPendingStage(gameManager.CurrentStage);
+            MainMenuController.SetPendingStageDifficulty(gameManager.CurrentDifficulty);
+            Time.timeScale = 1f;
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
 
         private void HandleEnemySpawned(EnemyBase enemy)
         {
@@ -324,6 +388,7 @@ namespace TrashTD.Core.GameLoop
 
         private IEnumerator RetreatStep(TutorialStep step)
         {
+            recallTaught = true; // The RETREAT button appears from here on
             dialogue.SetLayout(TutorialDialogueLayout.Gameplay);
             dialogue.Say(step.text, true);
             OperatorBase target;

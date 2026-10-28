@@ -171,8 +171,8 @@ namespace TrashTD.UI
             isVictory = victory;
             starCount = stars;
             GameManager manager = GameManager.Instance;
-            // The tutorial's results wait for Coalesce's outro; TutorialDirector shows them when it's over
-            if (manager != null && manager.IsTutorial && TutorialDirector.Instance != null && !TutorialDirector.Instance.IsFinished) return;
+            // The tutorial's victory waits for Coalesce's outro; TutorialDirector shows it when it's over
+            if (victory && manager != null && manager.IsTutorial && TutorialDirector.Instance != null && !TutorialDirector.Instance.IsFinished) return;
 
             WaveManager waveManager = FindAnyObjectByType<WaveManager>();
             StageData stage = manager != null ? manager.CurrentStage : null;

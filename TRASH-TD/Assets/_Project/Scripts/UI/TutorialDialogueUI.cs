@@ -27,6 +27,7 @@ namespace TrashTD.UI
     public sealed class TutorialDialogueUI : MonoBehaviour
     {
         private const int CanvasSortingOrder = 250; // Above the HUD (100) and the draft (200), under results (300)
+        private const int AboveResultsSortingOrder = 310; // Talking over the defeat screen
         private const float CharsPerSecond = 42f;
         private const int BlipEveryChars = 2;
         private const float BlipVolume = 0.35f;
@@ -69,6 +70,11 @@ namespace TrashTD.UI
         private Text promptText;
         private RectTransform tail;
         private Button skipButton;
+        private RectTransform choiceRow;
+        private Button primaryChoice;
+        private Button secondaryChoice;
+        private Action primaryAction;
+        private Action secondaryAction;
         private RectTransform pointer;
         private readonly List<Image> pointerParts = new List<Image>();
         private GameObject skipConfirm;
@@ -120,12 +126,42 @@ namespace TrashTD.UI
             bubbleVisible = !string.IsNullOrEmpty(fullText);
 
             bubble.gameObject.SetActive(bubbleVisible);
+            HideChoices();
             bodyText.text = string.Empty;
             promptText.text = string.Empty;
             tagText.text = task ? "▶ TASK" : "// COMMS";
             tagText.color = task ? HazardInk : PhosphorDim;
             tagPlate.color = task ? HazardYellow : Color.clear;
             ApplyBlocking();
+        }
+
+        /// <summary>
+        /// Two buttons under the current line (e.g. TRY AGAIN / SKIP TUTORIAL), shown once it has typed out. The
+        /// SKIP TUTORIAL tag hides meanwhile; the next Say clears them.
+        /// </summary>
+        public void ShowChoices(string primaryLabel, Action onPrimary, string secondaryLabel, Action onSecondary)
+        {
+            primaryAction = onPrimary;
+            secondaryAction = onSecondary;
+            primaryChoice.GetComponentInChildren<Text>().text = primaryLabel;
+            secondaryChoice.GetComponentInChildren<Text>().text = secondaryLabel;
+            skipButton.gameObject.SetActive(false);
+            bodyText.rectTransform.offsetMin = new Vector2(18f, 66f);
+        }
+
+        private void HideChoices()
+        {
+            primaryAction = null;
+            secondaryAction = null;
+            choiceRow.gameObject.SetActive(false);
+            skipButton.gameObject.SetActive(true);
+            bodyText.rectTransform.offsetMin = new Vector2(18f, 30f);
+        }
+
+        /// <summary>Draws Coalesce above the results screen (the tutorial's defeat).</summary>
+        public void BringAboveResults()
+        {
+            canvas.sortingOrder = AboveResultsSortingOrder;
         }
 
         /// <summary>Hides the bubble; Coalesce stays, idle (e.g. while a wave runs).</summary>
@@ -180,6 +216,8 @@ namespace TrashTD.UI
             else if (bubbleVisible)
             {
                 bodyText.text = fullText;
+                bool hasChoices = primaryAction != null || secondaryAction != null;
+                if (hasChoices != choiceRow.gameObject.activeSelf) choiceRow.gameObject.SetActive(hasChoices);
                 bool blink = Mathf.Repeat(Time.unscaledTime, 0.9f) < 0.6f;
                 promptText.text = !isTask && blink ? "▼" : string.Empty;
             }
@@ -371,6 +409,7 @@ namespace TrashTD.UI
 
             ApplyLayout();
             HideBubble();
+            HideChoices();
             PointAt(null);
         }
 
@@ -424,6 +463,39 @@ namespace TrashTD.UI
 
             promptText = CreateText(bubble, "Prompt", string.Empty, 13, TextAnchor.LowerRight, Phosphor);
             Stretch(promptText.rectTransform, 18f, 12f, 18f, 8f);
+
+            // Choice row along the bubble's bottom edge
+            choiceRow = CreateRect("Choices", bubble);
+            choiceRow.anchorMin = new Vector2(0f, 0f);
+            choiceRow.anchorMax = new Vector2(1f, 0f);
+            choiceRow.pivot = new Vector2(0.5f, 0f);
+            choiceRow.offsetMin = new Vector2(18f, 14f);
+            choiceRow.offsetMax = new Vector2(-18f, 56f);
+
+            primaryChoice = CreateButton(choiceRow, "PrimaryChoice", string.Empty, HazardInk, HazardYellow);
+            RectTransform primaryRect = primaryChoice.GetComponent<RectTransform>();
+            primaryRect.anchorMin = new Vector2(0f, 0f);
+            primaryRect.anchorMax = new Vector2(0.5f, 1f);
+            primaryRect.offsetMin = Vector2.zero;
+            primaryRect.offsetMax = new Vector2(-6f, 0f);
+            primaryChoice.onClick.AddListener(() => Choose(primaryAction));
+
+            secondaryChoice = CreateButton(choiceRow, "SecondaryChoice", string.Empty, Phosphor, HeaderColor);
+            RectTransform secondaryRect = secondaryChoice.GetComponent<RectTransform>();
+            secondaryRect.anchorMin = new Vector2(0.5f, 0f);
+            secondaryRect.anchorMax = new Vector2(1f, 1f);
+            secondaryRect.offsetMin = new Vector2(6f, 0f);
+            secondaryRect.offsetMax = Vector2.zero;
+            secondaryChoice.onClick.AddListener(() => Choose(secondaryAction));
+        }
+
+        private void Choose(Action action)
+        {
+            if (action == null) return;
+            AudioManager.Instance?.PlaySfx(SfxId.UiConfirm);
+            Action chosen = action;
+            HideChoices();
+            chosen();
         }
 
         private void BuildSkip()

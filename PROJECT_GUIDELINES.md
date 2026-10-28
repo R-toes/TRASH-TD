@@ -573,7 +573,8 @@ Coalesce teaches the basics on a guided stage. Added 2026-10-29 on branch `tutor
   - A 13x5 grid with no art. Row 2 is a straight lane from the spawn (0,2) to the exit (9,2), with high ground above and below it.
   - Rows 0 and 4 and columns 10-12 are Blocked void. At 16:9 the empty right columns sit under Coalesce and the speech bubble, so neither covers the lane.
   - 6 waves, the same on every difficulty: Sludge Grunt, Toxic Rusher, Pollution Tank and Skyshard.
-  - 10 lives. **It can't be lost** (`GameManager.IsTutorial`): leaks cost lives but never the last one, and `TriggerDefeat` does nothing.
+  - 10 lives, and **it can be lost** like any stage.
+  - **Defeat:** the normal defeat screen shows. After 1.9 s (`DefeatTalkDelay`) Coalesce talks over it (`BringAboveResults`, sorting order 310) with `TutorialScript.onDefeat`. It ends with `DefeatChoice`, two buttons in the bubble: TRY AGAIN (encouraged, hazard yellow; restarts the tutorial like Retry) and SKIP TUTORIAL (marks it done and loads the stage map). The defeat screen's own buttons keep working.
   - **Results:** after Coalesce's outro, the usual victory screen shows (`StageResultsUI` waits for `TutorialDirector.IsFinished`). Its header reads `STAGE 00 // ORIENTATION` (no difficulty), and NEXT STAGE goes to STAGE_01.
 - **Floor** (`TutorialStageVisuals`, created by the director; `StageBootstrapper` skips its default tile sprites for the tutorial): a black void and dark phosphor-green tiles (high ground darker, with a lit top edge) under faint grid lines, all on the Ground layer.
   - When Coalesce reveals the route, a `GameplayPathPreviewOverlay.CreateUnderUnits` copy of the path preview draws in and stays lit under the units: Ground layer, orders 3-12, no dim or grid.
@@ -597,8 +598,9 @@ Coalesce teaches the basics on a guided stage. Added 2026-10-29 on branch `tutor
 - **Director** (`TutorialDirector`, added by `StageBootstrapper` before `StartStage` so the first draft is already held):
   - **Draft hold:** holds each draft (`GameplayHUDUI.ShouldBlockDraftOverlay` → `HoldsDraft`) until its Draft step releases it (`CardDraftOverlayUI.ReleaseHeldDraft`).
   - **Gates:** START WAVE works only during a StartWave step (`AllowsWaveStart`). The draft hides Reroll, Skip and Minimize.
+  - **Recall:** recalling is hidden until the Retreat step teaches it (`TutorialDirector.IsRecallAllowed`), so players can't empty the field by accident and lose. This covers the RETREAT button next to a selected operator, right-click on a selected operator, and `UnitInfoPanelUI`. Outside the tutorial it is always allowed.
   - **Freeze:** while a talk line or the skip prompt is up, it sets time scale 0. The pause menu still works on top.
-  - **End:** finishing marks the tutorial done and shows the results screen. Skipping marks it done and loads the main menu at the stage map.
+  - **End:** finishing marks the tutorial done and shows the results screen. Skipping marks it done and loads the main menu at the stage map. Losing stops the script and hands over to the defeat lines.
   - **No script asset:** the stage just plays freely.
 - **Coalesce** (`TutorialDialogueUI`, its own canvas at sorting order 250: above the HUD (100) and the draft (200), under the results (300)):
   - **Sprite and bubble:** 256 px, standing on the HUD's bottom-right panel, with a terminal speech bubble above. Text types at 42 characters/s with a voice blip. The sheet animates only while text is typing, 1.25x faster than its idle frame time (`SpeakingFrameSpeedup`).

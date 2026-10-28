@@ -945,7 +945,7 @@ namespace TrashTD.UI
                 float retreatX = localPosition.x + halfW + 28f;
                 float retreatY = localPosition.y + panelH - 53f;
                 retreatRect.anchoredPosition = new Vector2(retreatX, retreatY);
-                retreatOperatorButton.gameObject.SetActive(true);
+                retreatOperatorButton.gameObject.SetActive(TutorialDirector.IsRecallAllowed);
 
                 if (!selectedLabelShown)
                 {
@@ -3914,7 +3914,7 @@ namespace TrashTD.UI
         private void RetreatSelectedOperator()
         {
             OperatorBase selectedOperator = operatorManager != null ? operatorManager.SelectedOperator : null;
-            if (selectedOperator != null)
+            if (selectedOperator != null && TutorialDirector.IsRecallAllowed)
             {
                 operatorManager.RetreatOperator(selectedOperator);
             }

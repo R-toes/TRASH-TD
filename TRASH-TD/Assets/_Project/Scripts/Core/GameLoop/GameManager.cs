@@ -56,7 +56,7 @@ namespace TrashTD.Core.GameLoop
         public float GameSpeed { get; private set; } = 1f;
         /// <summary>QA sandbox stage: leaks never cost lives and the stage can't be lost.</summary>
         public bool IsSandbox => currentStage != null && currentStage.stageId == "SANDBOX";
-        /// <summary>Tutorial stage (Coalesce's orientation): leaks cost lives but never the last one, so it can't be lost.</summary>
+        /// <summary>Tutorial stage (Coalesce's orientation, STAGE 00). It plays and can be lost like any stage.</summary>
         public bool IsTutorial => currentStage != null && currentStage.stageId == TutorialDirector.TutorialStageId;
 
         // --- Phase ---
@@ -218,7 +218,7 @@ namespace TrashTD.Core.GameLoop
 
             leakedAnyEnemy = true;
             int cost = (enemy != null && enemy.Data != null) ? enemy.Data.lifePointCost : 1;
-            currentLifePoints = Mathf.Max(IsTutorial ? 1 : 0, currentLifePoints - cost);
+            currentLifePoints = Mathf.Max(0, currentLifePoints - cost);
             OnLifePointsChanged?.Invoke(currentLifePoints, maxLifePoints);
 
             if (currentLifePoints <= 0)
@@ -229,7 +229,7 @@ namespace TrashTD.Core.GameLoop
 
         public void TriggerDefeat()
         {
-            if (IsSandbox || IsTutorial) return;
+            if (IsSandbox) return;
             if (currentState == GamePlayState.Defeat || currentState == GamePlayState.Victory) return;
 
             SetState(GamePlayState.Defeat);

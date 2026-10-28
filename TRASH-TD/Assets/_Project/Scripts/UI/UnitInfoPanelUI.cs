@@ -63,7 +63,7 @@ namespace TrashTD.UI
 
         private void OnRetreatClicked()
         {
-            if (selectedOperator != null && OperatorManager.Instance != null)
+            if (selectedOperator != null && OperatorManager.Instance != null && TrashTD.Core.GameLoop.TutorialDirector.IsRecallAllowed)
             {
                 OperatorManager.Instance.RetreatOperator(selectedOperator);
                 ClosePanel();
