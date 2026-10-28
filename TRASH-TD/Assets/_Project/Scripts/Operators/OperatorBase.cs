@@ -293,7 +293,7 @@ namespace TrashTD.Operators
             if (target == null || target.IsDead) return;
 
             int damage = Combat.DamageCalculator.CalculateDamage(CurrentATK, GetTargetMitigation(target));
-            if (target.TryTakeAttackDamage(damage, data.damageType)) PlayImpactSound();
+            if (target.TryTakeAttackDamage(damage, data.damageType, this)) PlayImpactSound();
         }
 
         /// <summary>Attack sound: the operator's own Attack clip, else the shared one for its damage type.</summary>

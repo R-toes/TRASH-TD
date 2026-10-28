@@ -314,6 +314,33 @@ namespace TrashTD.Editor
             return prefab;
         }
 
+        private static GameObject CreateOrGetSpoilcupinePrefab(string prefabName, Sprite[] frames)
+        {
+            string path = $"{EnemyPrefabFolder}/{prefabName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            var go = new GameObject(prefabName);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
+            sr.sortingOrder = 4;
+
+            go.AddComponent<TrashTD.Enemies.SpoilcupineEnemy>();
+            var anim = go.AddComponent<TrashTD.Enemies.SpoilcupineSpriteAnimation>();
+            if (frames != null && frames.Length > 0)
+            {
+                var framesField = typeof(TrashTD.Enemies.SpoilcupineSpriteAnimation).GetField("frames", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (framesField != null)
+                {
+                    framesField.SetValue(anim, frames);
+                }
+            }
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
         private static void GenerateOperators()
         {
             // 1. Guard (Scrapper)
@@ -1185,6 +1212,23 @@ namespace TrashTD.Editor
                     isUnblockable: false, robozombieFrames[0], robozombiePrefab);
                 robozombie.visualOffset = new Vector3(0f, 0.2f, 0f);
                 EditorUtility.SetDirty(robozombie);
+            }
+
+            var spoilcupineFrames = LoadSpriteFrames("Spoilcupine Sheet.png", "Spoilcupine Sheet", 8);
+            bool hasAllSpoilcupineFrames = true;
+            for (int i = 0; i < spoilcupineFrames.Length; i++)
+                hasAllSpoilcupineFrames &= spoilcupineFrames[i] != null;
+
+            if (hasAllSpoilcupineFrames)
+            {
+                var spoilcupinePrefab = CreateOrGetSpoilcupinePrefab("Prefab_Enemy_Spoilcupine", spoilcupineFrames);
+                var spoilcupine = CreateEnemy("Enemy_Grunt_Spoilcupine", "Spoilcupine", EnemyArchetype.Grunt,
+                    EnemyMovementType.Ground, hp: 320, atk: 25, def: 5, res: 0, speed: 1.0f,
+                    isUnblockable: false, spoilcupineFrames[0], spoilcupinePrefab);
+                spoilcupine.damageType = DamageType.Physical;
+                spoilcupine.animationFrames = spoilcupineFrames;
+                spoilcupine.animationFrameRate = 8f;
+                EditorUtility.SetDirty(spoilcupine);
             }
 
             var rusherSprite = LoadSprite("tex_enemy_rusher.png");

@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f34436990ad48f4d90f0736ce7dcdd3, type: 3}
+  m_Name: Enemy_Grunt_Spoilcupine
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.EnemyData
+  enemyName: Spoilcupine
+  archetype: 0
+  movementType: 0
+  baseHP: 320
+  baseATK: 25
+  baseDEF: 5
+  baseRES: 0
+  moveSpeed: 1
+  damageType: 0
+  attackInterval: 1.5
+  attackRange: 0
+  isUnblockable: 0
+  blockWeight: 1
+  lifePointCost: 1
+  sprite: {fileID: -7741064636222304088, guid: e1860971e6de6e8499ee1b0d926710e9, type: 3}
+  animationFrames:
+  - {fileID: -7741064636222304088, guid: e1860971e6de6e8499ee1b0d926710e9, type: 3}
+  - {fileID: 5021352708924142741, guid: e1860971e6de6e8499ee1b0d926710e9, type: 3}
+  - {fileID: -2314640328736631899, guid: e1860971e6de6e8499ee1b0d926710e9, type: 3}
+  - {fileID: -7595067943801791368, guid: e1860971e6de6e8499ee1b0d926710e9, type: 3}
+  - {fileID: 6457302493960889640, guid: e1860971e6de6e8499ee1b0d926710e9, type: 3}
+  - {fileID: -7178839952809368497, guid: e1860971e6de6e8499ee1b0d926710e9, type: 3}
+  - {fileID: 4371600869773357797, guid: e1860971e6de6e8499ee1b0d926710e9, type: 3}
+  - {fileID: -1964073409, guid: e1860971e6de6e8499ee1b0d926710e9, type: 3}
+  animationFrameRate: 8
+  visualScale: 1
+  visualOffset: {x: 0, y: 0, z: 0}
+  enemyPrefab: {fileID: 7123456789012345678, guid: 8c91a320573e449dbd1624b5e28a9b21, type: 3}
+
