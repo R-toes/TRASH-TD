@@ -13,18 +13,27 @@ namespace TrashTD.Combat
 
     public static class WireColorPalette
     {
-        // Sampled from Hextension pixel art and user reference:
-        // Red wire: vibrant red-orange with dark red-black outline
-        public static readonly Color RedCore = new Color(1.0f, 0.235f, 0.01f, 1f);       // #FF3C01
-        public static readonly Color RedOutline = new Color(0.28f, 0.04f, 0.01f, 1f);
+        // Solid black outline for all wire types as requested
+        public static readonly Color BlackOutline = Color.black;
 
-        // Blue wire: electric cobalt blue with dark navy outline
-        public static readonly Color BlueCore = new Color(0.027f, 0.537f, 0.796f, 1f);    // #0789CB
-        public static readonly Color BlueOutline = new Color(0.01f, 0.17f, 0.26f, 1f);
+        // Sampled directly from Hextension pixel art (Assets/_Project/Art/Enemies/Hextension Sheet.png):
+        // Red wire: vibrant red-orange highlight (#F53D07), rich crimson core (#A31403), deep dark red shade (#811006)
+        public static readonly Color RedHighlight = new Color(245f / 255f, 61f / 255f, 7f / 255f, 1f);
+        public static readonly Color RedCore = new Color(163f / 255f, 20f / 255f, 3f / 255f, 1f);
+        public static readonly Color RedShade = new Color(129f / 255f, 16f / 255f, 6f / 255f, 1f);
+        public static readonly Color RedOutline = BlackOutline;
 
-        // Yellow wire: electrical gold-yellow with dark bronze outline
-        public static readonly Color YellowCore = new Color(0.95f, 0.68f, 0.05f, 1f);    // #FFB703
-        public static readonly Color YellowOutline = new Color(0.28f, 0.20f, 0.01f, 1f);
+        // Blue wire: electric blue highlight (#0789CB), cobalt blue core (#056A9F), deep navy shade (#0A4972)
+        public static readonly Color BlueHighlight = new Color(7f / 255f, 137f / 255f, 203f / 255f, 1f);
+        public static readonly Color BlueCore = new Color(5f / 255f, 106f / 255f, 159f / 255f, 1f);
+        public static readonly Color BlueShade = new Color(10f / 255f, 73f / 255f, 114f / 255f, 1f);
+        public static readonly Color BlueOutline = BlackOutline;
+
+        // Yellow wire: electrical gold highlight (#CF930F), deep amber/gold core (#9E6805), dark bronze shade (#7A4605)
+        public static readonly Color YellowHighlight = new Color(207f / 255f, 147f / 255f, 15f / 255f, 1f);
+        public static readonly Color YellowCore = new Color(158f / 255f, 104f / 255f, 5f / 255f, 1f);
+        public static readonly Color YellowShade = new Color(122f / 255f, 70f / 255f, 5f / 255f, 1f);
+        public static readonly Color YellowOutline = BlackOutline;
 
         public static Color GetCoreColor(WireColorType type)
         {
@@ -36,14 +45,35 @@ namespace TrashTD.Combat
             }
         }
 
-        public static Color GetOutlineColor(WireColorType type)
+        public static Color GetHighlightColor(WireColorType type)
         {
             switch (type)
             {
-                case WireColorType.Blue: return BlueOutline;
-                case WireColorType.Yellow: return YellowOutline;
-                default: return RedOutline;
+                case WireColorType.Blue: return BlueHighlight;
+                case WireColorType.Yellow: return YellowHighlight;
+                default: return RedHighlight;
             }
+        }
+
+        public static Color GetShadeColor(WireColorType type)
+        {
+            switch (type)
+            {
+                case WireColorType.Blue: return BlueShade;
+                case WireColorType.Yellow: return YellowShade;
+                default: return RedShade;
+            }
+        }
+
+        public static Color GetOutlineColor(WireColorType type)
+        {
+            return BlackOutline;
+        }
+
+        public static Color GetPulseColor(WireColorType type)
+        {
+            Color hl = GetHighlightColor(type);
+            return Color.Lerp(hl, Color.white, 0.40f);
         }
 
         public static WireColorType GetRandomWireColor()
@@ -163,10 +193,10 @@ namespace TrashTD.Combat
             visual.target = target;
             visual.wireColorType = type;
             visual.coreColor = WireColorPalette.GetCoreColor(type);
+            visual.highlightColor = WireColorPalette.GetHighlightColor(type);
+            visual.shadeColor = WireColorPalette.GetShadeColor(type);
             visual.outlineColor = WireColorPalette.GetOutlineColor(type);
-            visual.highlightColor = Color.Lerp(visual.coreColor, Color.white, 0.45f);
-            visual.shadeColor = Color.Lerp(visual.coreColor, visual.outlineColor, 0.45f);
-            visual.pulseColor = Color.Lerp(visual.coreColor, Color.white, 0.8f);
+            visual.pulseColor = WireColorPalette.GetPulseColor(type);
 
             visual.tetherMesh = CreateMeshObject(rootObj.transform, "Tether", TetherSortingOrder, out _);
             visual.SetupOperatorWraps();
@@ -334,7 +364,7 @@ namespace TrashTD.Combat
                 path.Add(plug + new Vector2Int(plugSide, 0));
             }
 
-            Color coilFlash = Color.Lerp(coreColor, Color.white, 0.6f * flash);
+            Color coilFlash = Color.Lerp(highlightColor, Color.white, 0.45f * flash);
             BuildDilated(path, (cell, index) => darkIndices.Contains(index) ? shadeColor : flash > 0f ? coilFlash : (Color?)null);
 
             // Local mesh: pixel grid relative to the operator's centre
@@ -413,9 +443,25 @@ namespace TrashTD.Combat
             {
                 Vector2Int cell = pair.Key;
                 Color color;
-                if (!core.ContainsKey(cell + Vector2Int.up)) color = highlightColor;
-                else if (!core.ContainsKey(cell + Vector2Int.down)) color = shadeColor;
-                else color = coreColor;
+                bool hasUp = core.ContainsKey(cell + Vector2Int.up);
+                bool hasDown = core.ContainsKey(cell + Vector2Int.down);
+                bool hasLeft = core.ContainsKey(cell + Vector2Int.left);
+
+                if (!hasUp || (!hasLeft && hasDown))
+                {
+                    // Top or left edge gets light highlight
+                    color = highlightColor;
+                }
+                else if (!hasDown && core.ContainsKey(cell + 2 * Vector2Int.up))
+                {
+                    // Bottom edge of 3+ px thick segments gets deep shade
+                    color = shadeColor;
+                }
+                else
+                {
+                    // Main body gets authentic core color
+                    color = coreColor;
+                }
 
                 Color? custom = overrideColor?.Invoke(cell, pair.Value);
                 if (custom.HasValue) color = custom.Value;
