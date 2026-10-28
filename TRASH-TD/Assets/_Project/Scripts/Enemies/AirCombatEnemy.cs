@@ -28,6 +28,7 @@ namespace TrashTD.Enemies
         // The ground shadow draws over operators/ground enemies so the flyer visibly passes above them.
         private const int ShadowSortingOrder = 6;
         private const float ShadowDrop = 0.34f;
+        private static readonly Color GlassColor = new Color(0.72f, 0.93f, 1f, 1f);
 
         private static Sprite shadowSprite;
 
@@ -211,26 +212,26 @@ namespace TrashTD.Enemies
 
         protected void PlayAirMeleeAttack(OperatorBase target)
         {
-            MeleeSwipeVisual.Play(transform.position, target.transform.position, new Color(1f, 0.3f, 0.18f, 1f));
+            MeleeSwipeVisual.Play(ProjectileOrigin, target.transform.position, new Color(1f, 0.3f, 0.18f, 1f));
             target.TryTakeAttackDamage(CurrentATK, Data.damageType, this);
         }
 
         /// <summary>
-        /// Projectile that hits the target for full damage and splashes operators within
-        /// <paramref name="blastRadiusInTiles"/> of it for <paramref name="collateralRatio"/> of ATK.
+        /// A glass shard thrown from the sprite that shatters on the target, hitting it for full damage and
+        /// splashing operators within <paramref name="blastRadiusInTiles"/> of it for <paramref name="collateralRatio"/> of ATK.
         /// </summary>
         protected void PlayAirRangedAttack(OperatorBase target, float blastRadiusInTiles, float collateralRatio)
         {
             CombatProjectileVisual.Fire(
-                transform.position,
+                ProjectileOrigin,
                 target.transform.position,
-                new Color(0.75f, 0.45f, 1f, 1f),
+                GlassColor,
                 9f,
                 0.12f,
                 0.08f,
                 false,
                 () => ApplyRangedImpact(target, blastRadiusInTiles, collateralRatio),
-                ProjectileStyle.Sludge);
+                ProjectileStyle.Glass);
         }
 
         private void ApplyRangedImpact(OperatorBase target, float blastRadiusInTiles, float collateralRatio)
@@ -241,7 +242,7 @@ namespace TrashTD.Enemies
             float radius = CellSize * blastRadiusInTiles;
             PlayImpactSound();
             target.TryTakeAttackDamage(CurrentATK, Data.damageType, this);
-            AoeBlastVisual.PlayCircle(impactPoint, radius, new Color(0.7f, 0.4f, 1f, 0.35f), AoeStyle.Acid);
+            AoeBlastVisual.PlayCircle(impactPoint, radius, GlassColor, AoeStyle.Glass);
 
             if (OperatorManager.Instance == null) return;
 
@@ -269,8 +270,14 @@ namespace TrashTD.Enemies
             SpriteRenderer renderer = GetComponent<SpriteRenderer>();
             if (renderer == null) return;
 
-            renderer.sortingOrder = AirSortingOrder;
-            renderer.color = GetAirColor();
+            // A flyer with a visualOffset draws through its "EnemyVisual" child (the root renderer is hidden),
+            // so the air sorting order and tint go on every sprite but the shadow.
+            foreach (SpriteRenderer sprite in GetComponentsInChildren<SpriteRenderer>(true))
+            {
+                if (sprite.gameObject.name == "AirShadow") continue;
+                sprite.sortingOrder = AirSortingOrder;
+                sprite.color = GetAirColor();
+            }
 
             if (shadowRenderer != null) return;
 

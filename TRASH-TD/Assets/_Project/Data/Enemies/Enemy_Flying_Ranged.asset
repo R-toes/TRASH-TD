@@ -39,6 +39,7 @@ MonoBehaviour:
   animationFrameRate: 8
   visualScale: 1
   visualOffset: {x: 0, y: 0.75, z: 0}
+  projectileOrigin: {x: 0.09, y: 0.0}
   enemyPrefab: {fileID: 9005451285246291142, guid: 7e1c5a9d3b4f48a6c2d0f8e6b4a1c9d8, type: 3}
   abilityDescription: "Flying, unblockable and fast. Attacks from up to 2 tiles away. Very high RES."
   intelQuote: "*whistling wind*"

@@ -55,7 +55,7 @@ namespace TrashTD.Operators
             {
                 // Ranged attacker retaliation: shoot an urchin quill projectile
                 CombatProjectileVisual.Fire(
-                    startPos,
+                    ProjectileOrigin,
                     target,
                     SpineColor,
                     14f,

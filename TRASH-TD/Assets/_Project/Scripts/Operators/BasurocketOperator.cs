@@ -35,7 +35,7 @@ namespace TrashTD.Operators
 
             PlayAttackSound();
             CombatProjectileVisual.Fire(
-                transform.position,
+                ProjectileOrigin,
                 target,
                 BlastColor,
                 14f,

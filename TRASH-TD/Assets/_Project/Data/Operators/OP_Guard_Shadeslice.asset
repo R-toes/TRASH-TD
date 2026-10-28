@@ -42,5 +42,6 @@ MonoBehaviour:
   redeployCooldown: 60
   portrait: {fileID: 2426505987633283266, guid: 40492eeb02783134cbc4e16243dc8a13, type: 3}
   operatorPrefab: {fileID: 4120733290429841632, guid: e1f7e3b66aa5452bb562337107704521, type: 3}
+  projectileOrigin: {x: -0.34, y: 0.28}
   intelQuote: "Give me room. I don't share."
   intelLore: "A blade-armed mantis that fights best with nobody around to watch. Shadeslice hits twice as hard when no ally stands near it, and quietly knits itself back together once the fighting lets up. Prefers the night shift."

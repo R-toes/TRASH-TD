@@ -331,7 +331,7 @@ namespace TrashTD.Operators
         {
             if (target == null) return;
 
-            Vector3 startPos = transform.position;
+            Vector3 startPos = ProjectileOrigin;
             EnemyBase primaryTarget = target;
 
             CombatProjectileVisual.Fire(

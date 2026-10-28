@@ -70,7 +70,7 @@ SpriteRenderer:
   m_ScaleInLightmap: 1
   m_ReceiveGI: 1
   m_PreserveUVs: 0
-  m_IgnoreNormalsForCharting: 0
+  m_IgnoreNormalsForChartDetection: 0
   m_ImportantGI: 0
   m_StitchLightmapSeams: 1
   m_SelectedEditorRenderState: 0
@@ -78,7 +78,9 @@ SpriteRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
+  m_SortingLayer: 0
   m_SortingOrder: 5
   m_MaskInteraction: 0
   m_Sprite: {fileID: 7841794329617421502, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
@@ -102,7 +104,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3e142510cf7b4c2ea1a80b03af748e41, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.EchosquireOperator
   data: {fileID: 0}
 --- !u!114 &7058294136912038841
@@ -115,8 +117,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 15730cd9b1a04c21b3c152b454d2f53a, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
   frames:
   - {fileID: 7841794329617421502, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
   - {fileID: 523648466364858218, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
+  - {fileID: -837147388, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
+  - {fileID: 1142371386, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
+  - {fileID: -1415482300, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
+  - {fileID: -1355444340, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
+  - {fileID: 1609194568, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
+  - {fileID: -1068655876, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
+  frameDuration: 0.125

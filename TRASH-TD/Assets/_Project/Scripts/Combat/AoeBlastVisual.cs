@@ -13,7 +13,8 @@ namespace TrashTD.Combat
         HeavyOrdnance, // THE ERADICATOR: crimson fireball, shrapnel, black smoke column, scorch mark
         Heal,      // Rising heal crosses
         Bubble,    // Water droplets and pops
-        Acid       // Corrosive splash: drips and fumes
+        Acid,      // Corrosive splash: drips and fumes
+        Glass      // Skyshard: shattering glass, glinting fragments
     }
 
     /// <summary>
@@ -197,6 +198,10 @@ namespace TrashTD.Combat
                     CombatFx.Droplets(center, color, Mathf.Clamp(Mathf.RoundToInt(radius * 14f), 6, 18), radius * 4.5f);
                     CombatFx.Smoke(center, new Color(color.r * 0.7f, color.g * 0.7f, color.b * 0.7f, 0.55f),
                         Mathf.Clamp(Mathf.RoundToInt(radius * 4f), 2, 6), radius * 0.5f, 0.7f, 0.3f);
+                    break;
+
+                case AoeStyle.Glass:
+                    CombatFx.GlassShatter(center, radius, color);
                     break;
 
                 default:

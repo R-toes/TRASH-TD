@@ -194,6 +194,21 @@ namespace TrashTD.Operators
             ApplyFacingVisuals();
         }
 
+        /// <summary>
+        /// Where this operator's shots leave its sprite: <see cref="OperatorData.projectileOrigin"/> from the sprite
+        /// centre, mirrored like the sprite (the art faces left and is flipped only when facing right).
+        /// </summary>
+        public Vector3 ProjectileOrigin
+        {
+            get
+            {
+                Vector2 offset = data != null ? data.projectileOrigin : Vector2.zero;
+                if (facing == OperatorFacing.Right) offset.x = -offset.x;
+                Vector3 scale = transform.lossyScale;
+                return transform.position + new Vector3(offset.x * scale.x, offset.y * scale.y, 0f);
+            }
+        }
+
         public virtual void ApplyFacingVisuals()
         {
             bool mirrorHorizontally = facing == OperatorFacing.Right;
@@ -278,7 +293,7 @@ namespace TrashTD.Operators
 
             PlayAttackSound();
             CombatProjectileVisual.Fire(
-                transform.position,
+                ProjectileOrigin,
                 target,
                 new Color(1f, 0.9f, 0.35f),
                 12f,

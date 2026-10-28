@@ -26,7 +26,20 @@ MonoBehaviour:
   isUnblockable: 1
   blockWeight: 1
   lifePointCost: 1
-  sprite: {fileID: 21300000, guid: b2222222222222222222222222222205, type: 3}
+  sprite: {fileID: -2138393494417482310, guid: 28d9f1c701a054641a6caa8e8100ccc1, type: 3}
+  animationFrames:
+  - {fileID: -2138393494417482310, guid: 28d9f1c701a054641a6caa8e8100ccc1, type: 3}
+  - {fileID: 1000586475972366533, guid: 28d9f1c701a054641a6caa8e8100ccc1, type: 3}
+  - {fileID: -3702377788913934259, guid: 28d9f1c701a054641a6caa8e8100ccc1, type: 3}
+  - {fileID: 5073867890319412570, guid: 28d9f1c701a054641a6caa8e8100ccc1, type: 3}
+  - {fileID: 8427186019043381604, guid: 28d9f1c701a054641a6caa8e8100ccc1, type: 3}
+  - {fileID: -2348858296575741278, guid: 28d9f1c701a054641a6caa8e8100ccc1, type: 3}
+  - {fileID: -1673997841367115838, guid: 28d9f1c701a054641a6caa8e8100ccc1, type: 3}
+  - {fileID: 4183945089840679344, guid: 28d9f1c701a054641a6caa8e8100ccc1, type: 3}
+  animationFrameRate: 8
+  visualScale: 1
+  visualOffset: {x: 0, y: 0.75, z: 0}
+  projectileOrigin: {x: -0.03, y: -0.31}
   enemyPrefab: {fileID: 9005451285246291143, guid: 8f2d6b4a1c9e47a5b3d7e0f2c6a8d1b5, type: 3}
   abilityDescription: "Flying and unblockable. Swoops at operators along its route, pausing briefly over each attack. High DEF and RES."
   intelQuote: "*SCREEEECH*"

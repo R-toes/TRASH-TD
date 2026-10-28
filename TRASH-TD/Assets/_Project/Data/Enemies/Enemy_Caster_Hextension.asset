@@ -45,6 +45,7 @@ MonoBehaviour:
   animationFrameRate: 8
   visualScale: 1
   visualOffset: {x: 0, y: 0, z: 0}
+  projectileOrigin: {x: 0.03, y: 0.16}
   enemyPrefab: {fileID: 4017071742725256548, guid: 35bf92c72f2b45cea93d4e746f0f3ee0, type: 3}
 
   abilityDescription: "Faded and untargetable by ranged operators until it binds. Binds the first operator that comes close for up to 15 seconds, dealing Arts damage every second. Afterwards it can be targeted by everyone and hits much harder."

@@ -45,8 +45,8 @@ SpriteRenderer:
   m_Materials:
   - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
   m_SortingOrder: 8
-  m_Sprite: {fileID: 21300000, guid: b2222222222222222222222222222205, type: 3}
-  m_Color: {r: 1, g: 0.55, b: 0.45, a: 1}
+  m_Sprite: {fileID: -2138393494417482310, guid: 28d9f1c701a054641a6caa8e8100ccc1, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0

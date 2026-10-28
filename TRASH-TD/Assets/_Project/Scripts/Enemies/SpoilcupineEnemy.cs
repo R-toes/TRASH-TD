@@ -89,7 +89,7 @@ namespace TrashTD.Enemies
                 else
                 {
                     CombatProjectileVisual.Fire(
-                        startPos,
+                        ProjectileOrigin,
                         targetPos,
                         quillColor,
                         14f,

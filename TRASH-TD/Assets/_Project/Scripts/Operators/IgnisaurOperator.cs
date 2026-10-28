@@ -59,7 +59,7 @@ namespace TrashTD.Operators
                 // Arts ranged projectile on all range tiles (yellow front tile and green tiles)
                 PlayAttackSound(SfxId.GameplayMagicAttack);
                 CombatProjectileVisual.Fire(
-                    transform.position,
+                    ProjectileOrigin,
                     target,
                     ArtsProjectileColor,
                     10f,

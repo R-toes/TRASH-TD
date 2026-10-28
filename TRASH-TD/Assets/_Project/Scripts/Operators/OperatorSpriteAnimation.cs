@@ -191,7 +191,10 @@ namespace TrashTD.Operators
             return sample != null && sample.texture != null ? GetSheetFrameCount(sample.texture) : 2;
         }
 
-        /// <summary>Frames in an operator sheet's top row (square frames), with the per-sheet overrides.</summary>
+        /// <summary>
+        /// Frames in an operator sheet's top row: one per square frame, so every frame the sheet has is played.
+        /// Resicochet's sheet stacks one 4-frame row per charge count.
+        /// </summary>
         public static int GetSheetFrameCount(Texture2D texture)
         {
             if (texture == null) return 2;
@@ -203,11 +206,6 @@ namespace TrashTD.Operators
             }
 
             int frameCount = Mathf.RoundToInt((float)texture.width / texture.height);
-            if (texName.Contains("basurocket") || texName.Contains("progeny") || texName.Contains("thornchin") || texName.Contains("coalesce") || texName.Contains("ignisaur"))
-            {
-                frameCount = 4;
-            }
-
             return Mathf.Max(2, frameCount);
         }
 

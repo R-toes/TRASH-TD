@@ -42,5 +42,6 @@ MonoBehaviour:
   redeployCooldown: 60
   portrait: {fileID: 7841794329617421502, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
   operatorPrefab: {fileID: 4120733290429841632, guid: 48933fd514214022a8d3a5712d7c24d5, type: 3}
+  projectileOrigin: {x: -0.34, y: 0.22}
   intelQuote: "Every cut comes back to me."
   intelLore: "A long-eared knight in a tattered cape who learned to fight by sparring with its own echo. Echosquire draws strength back from every physical blow it lands and refuses outside healing on principle. Its armor squeaks. It does not find this funny."

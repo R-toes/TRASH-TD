@@ -104,7 +104,7 @@ namespace TrashTD.Operators
             Color projectileColor = isAir ? new Color(1f, 0.5f, 0.1f) : new Color(1f, 0.82f, 0.32f);
 
             CombatProjectileVisual.Fire(
-                transform.position,
+                ProjectileOrigin,
                 target,
                 projectileColor,
                 14f,

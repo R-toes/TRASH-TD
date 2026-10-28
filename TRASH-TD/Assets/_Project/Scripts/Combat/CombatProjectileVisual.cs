@@ -20,7 +20,8 @@ namespace TrashTD.Combat
         Heal,     // Healing cross lobbed to an ally
         Bubble,   // Wobbling bubble lobbed to an ally, pops on arrival
         Sludge,   // Lobbed toxic glob that splats (enemy shots; purple for acid)
-        Sand      // Lobbed clod of sand that bursts into dust
+        Sand,     // Lobbed clod of sand that bursts into dust
+        Glass     // Skyshard's glass shard: glints in flight; the shatter is drawn by the AoE
     }
 
     /// <summary>
@@ -202,6 +203,7 @@ namespace TrashTD.Combat
                 ProjectileStyle.Bubble => CombatFxArt.Bubble(color),
                 ProjectileStyle.Sludge => CombatFxArt.Glob(color),
                 ProjectileStyle.Sand => CombatFxArt.SandClod(),
+                ProjectileStyle.Glass => CombatFxArt.GlassShard(color),
                 _ => CombatFxArt.Bolt(color)
             };
         }
@@ -222,7 +224,8 @@ namespace TrashTD.Combat
         private static bool IsOriented(ProjectileStyle style)
         {
             return style == ProjectileStyle.Bolt || style == ProjectileStyle.Bullet || style == ProjectileStyle.Frost ||
-                   style == ProjectileStyle.Rocket || style == ProjectileStyle.HeavyRocket || style == ProjectileStyle.Quill;
+                   style == ProjectileStyle.Rocket || style == ProjectileStyle.HeavyRocket || style == ProjectileStyle.Quill ||
+                   style == ProjectileStyle.Glass;
         }
 
         private void ApplyOrientation(Vector2 direction)
@@ -257,6 +260,9 @@ namespace TrashTD.Combat
                     break;
                 case ProjectileStyle.Bolt:
                     CombatFx.Flash(muzzle, color);
+                    break;
+                case ProjectileStyle.Glass:
+                    CombatFx.Flash(muzzle, Color.Lerp(color, Color.white, 0.6f));
                     break;
             }
         }
@@ -342,6 +348,7 @@ namespace TrashTD.Combat
                 ProjectileStyle.Bubble => 7f,
                 ProjectileStyle.Sludge => 5f,
                 ProjectileStyle.Quill => 0f,
+                ProjectileStyle.Glass => 4f,
                 _ => 3f
             };
         }
@@ -515,6 +522,19 @@ namespace TrashTD.Combat
                     });
                     break;
 
+                case ProjectileStyle.Glass:
+                    PixelParticles.Emit(new PixelParticle
+                    {
+                        Position = position + Random.insideUnitCircle * CombatFxArt.Pixel * 2f,
+                        Velocity = Random.insideUnitCircle * 0.15f,
+                        Life = Random.Range(0.18f, 0.3f),
+                        StartColor = Color.white,
+                        EndColor = faded,
+                        Sprite = Random.value < 0.3f ? CombatFxArt.Plus3() : CombatFxArt.Dot1(),
+                        SortingOrder = CombatFx.TrailSortingOrder
+                    });
+                    break;
+
                 case ProjectileStyle.Sand:
                     PixelParticles.Emit(new PixelParticle
                     {
@@ -568,6 +588,9 @@ namespace TrashTD.Combat
                     break;
                 case ProjectileStyle.Rocket:
                     CombatFx.Flash(position, new Color(1f, 0.6f, 0.2f), true);
+                    break;
+                case ProjectileStyle.Glass:
+                    CombatFx.Flash(position, Color.white);
                     break;
                 case ProjectileStyle.HeavyRocket:
                     CombatFx.Flash(position, color, true);

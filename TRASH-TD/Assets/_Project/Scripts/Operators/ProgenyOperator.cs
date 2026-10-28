@@ -31,7 +31,7 @@ namespace TrashTD.Operators
 
             // Projectile visual from Progeny to primary heal recipient
             CombatProjectileVisual.Fire(
-                transform.position,
+                ProjectileOrigin,
                 target.transform.position,
                 PrimaryHealColor,
                 14f,

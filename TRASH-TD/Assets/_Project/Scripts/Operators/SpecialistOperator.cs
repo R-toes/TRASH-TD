@@ -66,7 +66,7 @@ namespace TrashTD.Operators
             if (data != null && (data.position == OperatorPosition.Ranged || data.attackRange > 1))
             {
                 CombatProjectileVisual.Fire(
-                    transform.position,
+                    ProjectileOrigin,
                     target,
                     new Color(0.2f, 0.85f, 0.75f, 1f),
                     14f,

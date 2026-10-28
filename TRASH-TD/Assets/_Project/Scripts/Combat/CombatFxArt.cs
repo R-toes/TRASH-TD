@@ -56,6 +56,15 @@ namespace TrashTD.Combat
             "..ODCLLO.",
             "....OO...");
 
+        // Jagged pane of glass: see-through body, bright edge highlights, sharp point forward
+        public static Sprite GlassShard(Color color) => Shaded("glassshard", color,
+            "..OO.....",
+            ".OWLOO...",
+            "OLbbLWOO.",
+            ".OLbbbLWO",
+            "..ODbDOO.",
+            "...OO....");
+
         public static Sprite Quill(Color color) => Shaded("quill", color,
             "DD.......",
             "DCCCCLLWW",
@@ -158,6 +167,8 @@ namespace TrashTD.Combat
         public static Sprite Dot2() => White("dot2", "WW", "WW");
 
         public static Sprite Plus3() => White("plus3", ".W.", "WWW", ".W.");
+
+        public static Sprite GlassFragment() => White("glassfrag", "WW.", ".WW");
 
         public static Sprite Plus5() => White("plus5",
             "..W..",

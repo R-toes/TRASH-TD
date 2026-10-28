@@ -157,7 +157,7 @@ namespace TrashTD.Operators
             maxLateralOffset += gridManager.CellSize * 0.5f;
 
             CombatProjectileVisual.FireShotgunSpread(
-                transform.position,
+                ProjectileOrigin,
                 facingDirection,
                 rangeDistance,
                 minLateralOffset,

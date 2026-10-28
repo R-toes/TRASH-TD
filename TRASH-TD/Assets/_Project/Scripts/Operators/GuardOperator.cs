@@ -56,7 +56,7 @@ namespace TrashTD.Operators
                     PlayAttackSound();
                     int attackPower = Mathf.RoundToInt(currentATK * Mathf.Max(1f, data.isolatedAttackMultiplier));
                     CombatProjectileVisual.Fire(
-                        transform.position,
+                        ProjectileOrigin,
                         target,
                         new Color(1f, 0.2f, 0.15f),
                         12f,

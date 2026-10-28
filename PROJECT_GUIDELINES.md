@@ -85,7 +85,7 @@ Per GDD section 1.10 and the course's software-reuse objective:
 - **Adding a new creature or enemy must not require modifying existing code** — only creating a new data asset and (optionally) a new prefab
 - Architecture patterns (inheritance, interfaces, composition) are part of the assignment deliverable — favor reusable, extensible patterns over one-off implementations
 - **Stage data lives in `Assets/Resources/Stages/*.asset`** — the single source of stage data.
-- **Known deviation:** operators with a unique kit (e.g. Ignisaur, Proxishot, Chillpath, Shadeslice, Resicochet, Castiel, Echosquire, Framiliar) currently need a subclass *and* a name check in `OperatorManager` (`ShouldReplaceWithSpecializedComponent` / `AddClassComponent`); 4-frame sprite sheets need a name check in `OperatorSpriteAnimation`; `OperatorData.GetTalentRangePattern` also checks for `"Shadeslice"` by name. On the enemy side, `EnemyManager` checks for `"Askalaser"` and `"Hextension"` by name. Plain operators still need only a data asset + prefab. Prefer moving these name checks into `OperatorData` fields over adding more of them.
+- **Known deviation:** operators with a unique kit (e.g. Ignisaur, Proxishot, Chillpath, Shadeslice, Resicochet, Castiel, Echosquire, Framiliar) currently need a subclass *and* a name check in `OperatorManager` (`ShouldReplaceWithSpecializedComponent` / `AddClassComponent`); `OperatorSpriteAnimation` still special-cases Resicochet's multi-row sheet by name; `OperatorData.GetTalentRangePattern` also checks for `"Shadeslice"` by name. On the enemy side, `EnemyManager` checks for `"Askalaser"` and `"Hextension"` by name. Plain operators still need only a data asset + prefab. Prefer moving these name checks into `OperatorData` fields over adding more of them.
   - The checks compare `operatorName`, not the file name. The `"QiFu"` check never matches: `OP_Guard_QiFu.asset` is named **Chi Paw**, so Chi Paw relies on its prefab already having `QiFuOperator`.
 - **Draft pool:** `StageBootstrapper` fills `operatorPool` from `Assets/_Project/Data/Operators` **in the Editor only**. A player build only offers operators serialized in the scene's `operatorPool` — add new operators there before building.
 
@@ -149,7 +149,7 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 
 ---
 
-## 7. Current Implementation Notes (as of 2026-10-27)
+## 7. Current Implementation Notes (as of 2026-10-28)
 
 ### 7.1 Roster
 
@@ -184,7 +184,9 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - **Deadeye** (Sniper): `DeadeyeSpriteAnimation` plays the 8-frame `Deadeye-Sheet` at 0.125 s per frame. The prefab lists all 8 frames; the component accepts any count of 2 or more.
 - **Basurocket** (Sniper): its rocket blasts a circle of `BasurocketOperator.BlastRadiusTiles` (1.75 tiles, a bit bigger than the 1.5-tile caster splash) around where the rocket lands. It used to blast the 3×3 tiles around the target cell. The circle drawn is the area hit. The blast is yellow-orange (`AoeStyle.JunkRocket`), so it never looks like THE ERADICATOR's crimson blast.
 
-**Enemies (19):** Grunt (Sludge, Sand Plastic, Oculite Spawn, Robozombie), Rusher (Toxic, Exploding Bug), Tank (Pollution, Sand Hulk, Oculoid Carrier, THE ERADICATOR, Gooelist), Caster (Sand Poncho, Smog, Askalaser, Hextension, Roboflame), Air (Flying Melee, Flying Ranged, Acid Flyer).
+**Enemies (20):** Grunt (Sludge, Sand Plastic, Oculite Spawn, Robozombie, Spoilcupine), Rusher (Toxic, Exploding Bug), Tank (Pollution, Sand Hulk, Oculoid Carrier, THE ERADICATOR, Gooelist), Caster (Sand Poncho, Smog, Askalaser, Hextension, Roboflame), Air (Talon Rat = `Enemy_Flying_Melee`, Skyshard = `Enemy_Flying_Ranged`, Acid Flyer).
+- **Sprite animations play every frame of their sheet.** Operator sheets are one row of square frames; `OperatorSpriteAnimation.GetSheetFrameCount` = width ÷ height (Basurocket 5, Pyrolite 4, Chillpath / Echosquire / Proxishot 8...), and the prefab `frames` lists hold the same count so the UI previews (`UnitSpriteFrames`) match gameplay. Resicochet is the exception: 4 frames per charge row. Enemy `animationFrames` / prefab frame lists also hold the whole sheet. A sheet must be sliced in its `.meta` into one sprite per frame (Proxishot's was re-sliced from 2 to 8).
+- **Talon Rat** (`MeleeFlyingEnemy`) and **Skyshard** (`RangedFlyingEnemy`): 8-frame sheets (`Talon Rat Sheet.png`, `Skyshard Sheet.png`) through `EnemyData.animationFrames` at 8 fps, drawn 0.75 above their path (`visualOffset`) with no tint. Air units draw at sorting order 12 (above the foreground art); `AirCombatEnemy.CreateAirborneVisuals` applies that to the visible `EnemyVisual` child too. Talon Rat swipes from its talons. Skyshard throws a glass shard (`ProjectileStyle.Glass`) that shatters on impact (`AoeStyle.Glass`); the blast radius (1.05 tiles, half ATK to others) is unchanged.
 - **Not in any wave yet:** Acid Flyer, Smog Caster, Askalaser, Oculoid Carrier, Exploding Bug, Robozombie, Hextension, Roboflame, THE ERADICATOR and Gooelist. In the Editor the sandbox lists every enemy asset, so all of them can be spawned there. Oculite Spawn is only spawned by Oculoid Carrier. Confirm a unit is fully configured before adding it to waves.
 - **Casters are blockable** (block weight 1). This overrides GDD 1.4.4 / 1.5, which made them immune; the team changed it on 2026-10-26. Every caster asset has `isUnblockable: 0`.
   - **While blocked**, a caster stops in front of its blocker and keeps using its own attacks on its usual targets. It never melees the blocker: `EnemyBase.AttackBlocker` skips casters, and `UpdateRangedBehavior` holds the blocked position.
@@ -261,6 +263,11 @@ Each asset's `skillDescription` is the authoritative description of that operato
 ### 7.3 Combat Hooks (`OperatorBase` / `EnemyBase`)
 
 - `EnemyBase.VisualPosition` — centre of the visible sprite. Aim visuals (projectiles, swipes, damage numbers, health bars) at it, not `transform.position`; game logic (range, grid cells) still uses `transform.position`.
+- **Projectile origins:** shots start at the unit's `ProjectileOrigin` (`OperatorBase` / `EnemyBase`), never at `transform.position` (the tile centre).
+  - It reads `OperatorData.projectileOrigin` / `EnemyData.projectileOrigin`: an offset in world units from the sprite's centre, measured on the art as drawn, and mirrored with the sprite. Operator art faces **left** (flipped only when facing Right). Enemy art faces **right** (flipped when walking left). For enemies the centre is the visible `EnemyVisual`, so flyers raised by `visualOffset` shoot from their body, not the ground below. Zero = sprite centre.
+  - Current points: Basurocket's launcher front, Deadeye's eyes, Proxishot's leading eye-light, Pyrolite's head flame, Resicochet's floating charge orb, Progeny's leading heart, Bubblets' front mouth, Ignisaur's mouth, Echosquire's sword, Shadeslice's raised blade, Sand Poncho's sleeve cannon, Hextension's head, Skyshard's glass body, Talon Rat's talons (its swipe).
+  - Units with their own muzzles keep them: Askalaser (`muzzleOffset`), THE ERADICATOR (`launcherOffset`), Roboflame (`flameOriginOffset`), Hextension's wire (`wireOriginOffset`). Castiel's laser starts at its crystal (the sprite centre).
+  - A new shooting unit sets `projectileOrigin` on its data asset; no code change.
 - `CombatProjectileVisual.Fire(start, EnemyBase target, ...)` follows a moving target — prefer it over the fixed-position overload.
 - **Combat effects are pixel art** at the stage-art scale (32 texels per unit, point-filtered, positions snapped to that pixel grid).
   - `CombatFxArt` generates the sprites, shaded from one colour.
@@ -280,7 +287,8 @@ Each asset's `skillDescription` is the authoritative description of that operato
   | Quill | Thornchin |
   | Heal | Progeny |
   | Bubble | Bubblets |
-  | Sludge | enemy shots and the flyers' purple acid |
+  | Sludge | enemy shots |
+  | Glass | Skyshard: a see-through glass shard that glints in flight (`CombatFxArt.GlassShard`); the shatter is the AoE |
   | Sand | `FireSand` |
   | Bolt | everything else |
 
@@ -295,7 +303,8 @@ Each asset's `skillDescription` is the authoritative description of that operato
   | Arts | caster splash |
   | Heal | Mossmo |
   | Bubble | Bubblets' shield pop and splash |
-  | Acid | flyer blast |
+  | Glass | Skyshard's blast: white flash, glinting glass fragments thrown out and falling, sparkles (`CombatFx.GlassShatter`) |
+  | Acid | corrosive splash (no current user) |
   | Pulse | default |
 
   - The area fill's alpha is capped at 0.75 so units stay readable.

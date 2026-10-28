@@ -45,5 +45,6 @@ MonoBehaviour:
   redeployCooldown: 60
   portrait: {fileID: -6978141465280609473, guid: 171a50e7bc1c9834483e15cfe93a2b60, type: 3}
   operatorPrefab: {fileID: 1724151342938439338, guid: 2e0e2a0e55ea4091b99560f17bad7f7c, type: 3}
+  projectileOrigin: {x: 0.03, y: 0.31}
   intelQuote: "More of you? Good. More fuel."
   intelLore: "A lump of slag that caught fire and decided to keep going. Pyrolite throws bursts of violet flame that land on whole groups, and burns hotter the more enemies crowd into its range. Warm to sit next to. Terrible at board games."

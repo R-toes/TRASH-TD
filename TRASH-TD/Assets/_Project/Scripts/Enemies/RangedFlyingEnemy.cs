@@ -5,7 +5,7 @@ using TrashTD.Operators;
 namespace TrashTD.Enemies
 {
     /// <summary>
-    /// Ranged air enemy: Arts bolt with a very small blast. Hunts Casters, then Snipers,
+    /// Ranged air enemy (Skyshard): throws a glass shard that shatters in a very small blast. Hunts Casters, then Snipers,
     /// then Guards; ignores Defenders and Medics.
     /// Stats (high RES, no DEF, fast) live on Enemy_Flying_Ranged.asset.
     /// </summary>
@@ -40,11 +40,6 @@ namespace TrashTD.Enemies
         protected override void PerformAirAttack(OperatorBase target)
         {
             PlayAirRangedAttack(target, BlastRadiusInTiles, CollateralRatio);
-        }
-
-        protected override Color GetAirColor()
-        {
-            return new Color(0.55f, 0.9f, 1f, 1f);
         }
     }
 }

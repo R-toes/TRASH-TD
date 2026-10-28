@@ -78,6 +78,7 @@ SpriteRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 5
@@ -108,6 +109,7 @@ MonoBehaviour:
   data: {fileID: 0}
   splashRadius: 1.5
   splashDamageRatio: 0.75
+  armorDamageBonusRatio: 0.5
 --- !u!114 &7058294136912038844
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -123,3 +125,10 @@ MonoBehaviour:
   frames:
   - {fileID: -8846849301509126494, guid: 594cd36f94a25cc4981b40f2404f7b5e, type: 3}
   - {fileID: 7170179702107838426, guid: 594cd36f94a25cc4981b40f2404f7b5e, type: 3}
+  - {fileID: -579858959, guid: 594cd36f94a25cc4981b40f2404f7b5e, type: 3}
+  - {fileID: -1236852352, guid: 594cd36f94a25cc4981b40f2404f7b5e, type: 3}
+  - {fileID: -1598639950, guid: 594cd36f94a25cc4981b40f2404f7b5e, type: 3}
+  - {fileID: 811515974, guid: 594cd36f94a25cc4981b40f2404f7b5e, type: 3}
+  - {fileID: 1066745819, guid: 594cd36f94a25cc4981b40f2404f7b5e, type: 3}
+  - {fileID: 1260103088, guid: 594cd36f94a25cc4981b40f2404f7b5e, type: 3}
+  frameDuration: 0.15

@@ -30,6 +30,7 @@ MonoBehaviour:
   blockWeight: 1
   lifePointCost: 1
   sprite: {fileID: -561033689589369215, guid: dbd6c6cbe4229bc4c8ac9e694ca534f8, type: 3}
+  projectileOrigin: {x: 0.38, y: -0.03}
   animationFrames:
   - {fileID: -561033689589369215, guid: dbd6c6cbe4229bc4c8ac9e694ca534f8, type: 3}
   - {fileID: 5187327798844838018, guid: dbd6c6cbe4229bc4c8ac9e694ca534f8, type: 3}

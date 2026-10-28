@@ -32,10 +32,5 @@ namespace TrashTD.Enemies
         {
             PlayAirMeleeAttack(target);
         }
-
-        protected override Color GetAirColor()
-        {
-            return new Color(1f, 0.55f, 0.45f, 1f);
-        }
     }
 }

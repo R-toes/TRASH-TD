@@ -48,6 +48,7 @@ MonoBehaviour:
   redeployCooldown: 60
   portrait: {fileID: 2980719167767112441, guid: 5ab48ae432237224bbd8440a926669c8, type: 3}
   operatorPrefab: {fileID: 4120733290429841632, guid: d7e8f9a0b1c234567890abcdef123456, type: 3}
+  projectileOrigin: {x: -0.41, y: 0.11}
 
   intelQuote: "Wait for it... wait for it..."
   intelLore: "A living ember that stores charge between shots like a capacitor. Resicochet lets its sparks build, then lets loose bolts that ricochet from enemy to enemy and leave them sluggish. Patience is the whole trick, and it is very proud of its patience."

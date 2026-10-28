@@ -123,6 +123,50 @@ namespace TrashTD.Combat
         /// Basurocket's junk rocket: one bright yellow-orange fireball with a burst of colourful scrap (can and
         /// bottle bits) flung out and tumbling down. Clean and bright, no smoke column.
         /// </summary>
+        /// <summary>
+        /// Skyshard's glass breaking: a white flash, glinting fragments thrown out that fall and fade, and
+        /// sparkles left hanging where the glass burst. Scales with the blast radius.
+        /// </summary>
+        public static void GlassShatter(Vector2 position, float radius, Color glass)
+        {
+            glass.a = 1f;
+            Flash(position, Color.white, true);
+
+            int fragments = Mathf.Clamp(Mathf.RoundToInt(radius * 12f), 8, 16);
+            for (int i = 0; i < fragments; i++)
+            {
+                Vector2 dir = new Vector2(Random.Range(-1f, 1f), Random.Range(-0.2f, 1f)).normalized;
+                Color tint = i % 3 == 0 ? Color.white : glass;
+                PixelParticles.Emit(new PixelParticle
+                {
+                    Position = position,
+                    Velocity = dir * radius * Random.Range(2.5f, 4.5f),
+                    Life = Random.Range(0.4f, 0.65f),
+                    Gravity = 8f,
+                    Drag = 1.5f,
+                    StartColor = tint,
+                    EndColor = Fade(tint),
+                    Sprite = i % 2 == 0 ? CombatFxArt.GlassFragment() : CombatFxArt.Dot2(),
+                    Rotation = Random.Range(0, 4) * 90f, // right angles keep the pixels crisp
+                    SortingOrder = ImpactSortingOrder
+                });
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                PixelParticles.Emit(new PixelParticle
+                {
+                    Position = position + Random.insideUnitCircle * radius * 0.6f,
+                    Delay = Random.Range(0f, 0.15f),
+                    Life = Random.Range(0.2f, 0.35f),
+                    StartColor = Color.white,
+                    EndColor = Fade(glass),
+                    Sprite = CombatFxArt.Plus3(),
+                    SortingOrder = ImpactSortingOrder
+                });
+            }
+        }
+
         public static void JunkRocketBlast(Vector2 position, float radius)
         {
             Explosion(position, radius * 0.85f);

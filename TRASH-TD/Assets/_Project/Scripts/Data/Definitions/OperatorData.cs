@@ -102,6 +102,10 @@ namespace TrashTD.Data
         [Tooltip("Prefab to instantiate when deployed on the grid")]
         public GameObject operatorPrefab;
 
+        [Tooltip("Where shots leave the sprite (launcher tip, mouth, orb...), in world units from the sprite centre " +
+                 "with the art facing left as drawn; mirrored when the operator faces right. Zero = sprite centre.")]
+        public Vector2 projectileOrigin;
+
         [Header("Reclaimers' Intel")]
         [Tooltip("One-line quote in the operator's voice, shown in Reclaimers' Intel")]
         public string intelQuote;

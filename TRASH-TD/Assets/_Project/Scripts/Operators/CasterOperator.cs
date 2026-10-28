@@ -88,7 +88,7 @@ namespace TrashTD.Operators
         {
             if (target == null) return;
 
-            Vector3 startPos = transform.position + startOffset;
+            Vector3 startPos = ProjectileOrigin + startOffset;
 
             if (data != null && data.chillPerHit > 0f)
             {

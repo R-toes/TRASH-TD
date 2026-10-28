@@ -120,6 +120,24 @@ namespace TrashTD.Enemies
         public float SluggishAttackIntervalMultiplier => sluggishAttackIntervalMultiplier;
         public bool IsInsideHole => isInsideHole;
         public virtual bool CanBeTargetedBy(OperatorPosition opPosition) => true;
+
+        /// <summary>
+        /// Where this enemy's shots and strikes leave its sprite: <see cref="EnemyData.projectileOrigin"/> from the
+        /// visible sprite's centre (raised by visualOffset for flyers), mirrored like the sprite (the art faces right).
+        /// </summary>
+        public Vector3 ProjectileOrigin
+        {
+            get
+            {
+                Transform visual = transform.Find("EnemyVisual");
+                Vector3 center = visual != null ? visual.position : transform.position;
+                Vector2 offset = data != null ? data.projectileOrigin : Vector2.zero;
+                if (isFacingLeft) offset.x = -offset.x;
+                Vector3 scale = transform.lossyScale;
+                return center + new Vector3(offset.x * scale.x, offset.y * scale.y, 0f);
+            }
+        }
+
         public Vector3 VisualPosition
         {
             get
@@ -587,12 +605,12 @@ namespace TrashTD.Enemies
 
             for (int i = 0; i < animationRenderers.Length; i++)
             {
-                if (animationRenderers[i] != null)
+                // The flyer's ground shadow keeps its own ellipse sprite.
+                if (animationRenderers[i] != null && animationRenderers[i].gameObject.name != "AirShadow")
+                {
                     animationRenderers[i].sprite = data.animationFrames[animationFrameIndex];
-                    if (animationRenderers[i].gameObject.name != "AirShadow")
-                    {
-                        animationRenderers[i].flipX = isFacingLeft;
-                    }
+                    animationRenderers[i].flipX = isFacingLeft;
+                }
             }
         }
 
@@ -700,7 +718,7 @@ namespace TrashTD.Enemies
             if (data != null && data.usesSandProjectileVisual)
             {
                 CombatProjectileVisual.FireSand(
-                    transform.position,
+                    ProjectileOrigin,
                     target.transform.position,
                     projectileColor,
                     8f,
@@ -709,7 +727,7 @@ namespace TrashTD.Enemies
             }
 
             CombatProjectileVisual.Fire(
-                transform.position,
+                ProjectileOrigin,
                 target.transform.position,
                 projectileColor,
                 8f,

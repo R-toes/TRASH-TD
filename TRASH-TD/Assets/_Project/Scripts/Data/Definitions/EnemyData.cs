@@ -96,6 +96,10 @@ namespace TrashTD.Data
         [Tooltip("Local offset for the enemy sprite without changing its path position")]
         public Vector3 visualOffset;
 
+        [Tooltip("Where shots and strikes leave the sprite (gun, mouth, talons...), in world units from the visible " +
+                 "sprite's centre with the art facing right as drawn; mirrored when it faces left. Zero = sprite centre.")]
+        public Vector2 projectileOrigin;
+
         [Tooltip("Prefab to instantiate when spawning")]
         public GameObject enemyPrefab;
 
