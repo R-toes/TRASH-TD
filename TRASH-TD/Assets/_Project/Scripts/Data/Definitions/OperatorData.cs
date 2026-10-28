@@ -88,13 +88,6 @@ namespace TrashTD.Data
         [Tooltip("Freeze duration in seconds")]
         public float chillFreezeDuration = 1.5f;
 
-        [Header("Deployment")]
-        [Tooltip("Deployment Point cost to place this operator")]
-        public int dpCost = 10;
-
-        [Tooltip("Cooldown (seconds) before this operator can be redeployed after retreating")]
-        public float redeployCooldown = 60f;
-
         [Header("Visuals")]
         [Tooltip("Sprite for card-draft UI and info panels")]
         public Sprite portrait;

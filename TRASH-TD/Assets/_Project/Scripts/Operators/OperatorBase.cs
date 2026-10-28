@@ -278,8 +278,6 @@ namespace TrashTD.Operators
             OnRetreated();
         }
 
-        public int GetDPCost() => data.dpCost;
-
         // ========================
         // IAttacker Implementation
         // ========================

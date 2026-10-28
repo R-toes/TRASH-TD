@@ -112,6 +112,7 @@ namespace TrashTD.UI
 
         private sealed class FactBox
         {
+            public RectTransform Root;
             public Text Label;
             public Text Value;
         }
@@ -652,8 +653,8 @@ namespace TrashTD.UI
             string[] statNames = { "HP", "ATK", "DEF", "RES" };
             for (int i = 0; i < statNames.Length; i++) statRows.Add(CreateStatRow(statsPanel.rectTransform, statNames[i], 56f + i * 34f));
 
-            float factWidth = (StatsWidth - 32f - 3f * 8f) / 4f;
-            for (int i = 0; i < 4; i++) factBoxes.Add(CreateFactBox(statsPanel.rectTransform, 16f + i * (factWidth + 8f), 200f, factWidth));
+            for (int i = 0; i < 4; i++) factBoxes.Add(CreateFactBox(statsPanel.rectTransform, 0f, 200f, 0f));
+            LayoutFacts(4);
 
             // ── Range ──
             Image rangePanel = CreateImage(galleryCard, "RangePanel", new Color(0f, 0f, 0f, 0.22f));
@@ -777,7 +778,23 @@ namespace TrashTD.UI
             PlaceTopLeft(label.rectTransform, 0f, 8f, width, 16f);
             Text value = CreateText(box.rectTransform, string.Empty, 13, TextAnchor.MiddleCenter, AccentBright);
             PlaceTopLeft(value.rectTransform, 0f, 26f, width, 22f);
-            return new FactBox { Label = label, Value = value };
+            return new FactBox { Root = box.rectTransform, Label = label, Value = value };
+        }
+
+        // Spreads the first `count` fact boxes evenly across the stats panel and hides the rest.
+        private void LayoutFacts(int count)
+        {
+            float factWidth = (StatsWidth - 32f - (count - 1) * 8f) / count;
+            for (int i = 0; i < factBoxes.Count; i++)
+            {
+                FactBox fact = factBoxes[i];
+                bool shown = i < count;
+                fact.Root.gameObject.SetActive(shown);
+                if (!shown) continue;
+                PlaceTopLeft(fact.Root, 16f + i * (factWidth + 8f), 200f, factWidth, 56f);
+                PlaceTopLeft(fact.Label.rectTransform, 0f, 8f, factWidth, 16f);
+                PlaceTopLeft(fact.Value.rectTransform, 0f, 26f, factWidth, 22f);
+            }
         }
 
         // ─────────────────────────────────────────────────────
@@ -1099,10 +1116,10 @@ namespace TrashTD.UI
                 values = new[] { op.GetScaledHP(rarity), op.GetScaledATK(rarity), op.GetScaledDEF(rarity), op.GetScaledRES(rarity) };
                 max = operatorStatMax;
 
+                LayoutFacts(3);
                 SetFact(0, "BLOCK", op.blockCount.ToString());
                 SetFact(1, "ATK SPD", FormatSeconds(op.attackInterval));
-                SetFact(2, "DP COST", op.dpCost.ToString());
-                SetFact(3, "REDEPLOY", FormatSeconds(op.redeployCooldown));
+                SetFact(2, "REDEPLOY", FormatWaves(TrashTD.Systems.OperatorManager.GetRetreatCooldownRounds(op.operatorClass)));
 
                 statusText.text = string.Empty;
                 BuildRarityStars((int)rarity, tierIndex > 0);
@@ -1114,6 +1131,7 @@ namespace TrashTD.UI
                 values = new[] { enemy.GetScaledHP(level), enemy.GetScaledATK(level), enemy.GetScaledDEF(level), enemy.baseRES };
                 max = enemyStatMax;
 
+                LayoutFacts(4);
                 SetFact(0, "SPEED", enemy.moveSpeed.ToString("0.##"));
                 SetFact(1, "ATK SPD", FormatSeconds(enemy.attackInterval));
                 SetFact(2, "BLOCK WT", enemy.isUnblockable ? "-" : enemy.blockWeight.ToString());
@@ -1341,6 +1359,8 @@ namespace TrashTD.UI
         };
 
         private static string FormatSeconds(float seconds) => seconds.ToString("0.##") + "S";
+
+        private static string FormatWaves(int waves) => waves <= 0 ? "NONE" : waves == 1 ? "1 WAVE" : waves + " WAVES";
 
         // ─────────────────────────────────────────────────────
         //  Widgets

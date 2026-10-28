@@ -47,8 +47,6 @@ MonoBehaviour:
   chillSlowDuration: 2.5
   chillFreezeThreshold: 100
   chillFreezeDuration: 1.5
-  dpCost: 12
-  redeployCooldown: 60
   portrait: {fileID: -1872746053690042025, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}
   operatorPrefab: {fileID: 1724151342938439340, guid: 7e1c5a9d3b4f48a6c2e0d8f7b5a1c9e6, type: 3}
   intelQuote: "Hold still. It only hurts more if you run."

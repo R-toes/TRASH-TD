@@ -42,8 +42,6 @@ MonoBehaviour:
   chillSlowDuration: 2.5
   chillFreezeThreshold: 100
   chillFreezeDuration: 1.5
-  dpCost: 12
-  redeployCooldown: 60
   portrait: {fileID: 5782545627494194576, guid: f26a24a4ad79fce45af8f08f47304ae1, type: 3}
   operatorPrefab: {fileID: 6549728481407477408, guid: 0f7e6f41325b4fd8ac97245ace7d879b, type: 3}
   intelQuote: "Stay close. I've got you."

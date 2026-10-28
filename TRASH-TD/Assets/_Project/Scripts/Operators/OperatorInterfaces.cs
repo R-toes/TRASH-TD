@@ -15,9 +15,6 @@ namespace TrashTD.Operators
         /// <summary>Retreat/remove this entity from the grid.</summary>
         void Retreat();
 
-        /// <summary>Get the Deployment Point cost.</summary>
-        int GetDPCost();
-
         /// <summary>Whether this entity is currently deployed.</summary>
         bool IsDeployed { get; }
 

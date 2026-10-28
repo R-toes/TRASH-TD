@@ -351,7 +351,7 @@ namespace TrashTD.Editor
             var scrapperFrames = scrapperFrame1 != null ? new[] { scrapperFrame0, scrapperFrame1 } : new[] { scrapperFrame0 };
             var guardPrefab = CreateScrapperPrefab(scrapperFrames);
             var scrapper = CreateOperator("OP_Guard_Scrapper", "Scrapper", OperatorClass.Guard, OperatorPosition.Melee, OperatorRarity.Star1,
-                hp: 140, atk: 85, def: 20, res: 0, blockCount: 1, range: 2, interval: 1.1f, dp: 10,
+                hp: 140, atk: 85, def: 20, res: 0, blockCount: 1, range: 2, interval: 1.1f,
                 new[] { new Vector2Int(1, 0), new Vector2Int(2, 0) },
                 scrapperFrame0, guardPrefab);
             scrapper.skillDescription = "When attacking, has a 20% chance to Stun the target for 2 seconds.";
@@ -379,7 +379,6 @@ namespace TrashTD.Editor
                     blockCount: 2,
                     range: 1,
                     interval: 1.2f,
-                    dp: 13,
                     new[] { new Vector2Int(1, 0) },
                     echosquireFrameOne,
                     echosquirePrefab);
@@ -417,7 +416,6 @@ namespace TrashTD.Editor
                     blockCount: 2,
                     range: 1,
                     interval: 1.1f,
-                    dp: 10,
                     new[] { new Vector2Int(1, 0) },
                     qiFuFrames[0],
                     qiFuPrefab);
@@ -455,7 +453,6 @@ namespace TrashTD.Editor
                     blockCount: 2,
                     range: 1,
                     interval: 1.2f,
-                    dp: 12,
                     new[] { new Vector2Int(1, 0) },
                     staggerFrame0,
                     staggerPrefab);
@@ -488,7 +485,6 @@ namespace TrashTD.Editor
                     blockCount: 1,
                     range: 2,
                     interval: 1.2f,
-                    dp: 11,
                     new[]
                     {
                         new Vector2Int(1, 0),
@@ -509,7 +505,7 @@ namespace TrashTD.Editor
             var defenderSprite = LoadSprite("tex_op_defender.png");
             var defenderPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Bulkhead", defenderSprite, OperatorClass.Defender);
             var bulkhead = CreateOperator("OP_Defender_Bulkhead", "Bulkhead", OperatorClass.Defender, OperatorPosition.Melee, OperatorRarity.Star1,
-                hp: 280, atk: 35, def: 45, res: 10, blockCount: 3, range: 1, interval: 1.4f, dp: 14,
+                hp: 280, atk: 35, def: 45, res: 10, blockCount: 3, range: 1, interval: 1.4f,
                 new[] { new Vector2Int(0, 0), new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1) },
                 defenderSprite, defenderPrefab);
             bulkhead.skillDescription = "When blocking 3 enemies, increases ATK by 20% but decreases DEF by 20%.";
@@ -522,7 +518,7 @@ namespace TrashTD.Editor
             {
                 var mossmoPrefab = CreateMossmoPrefab(mossmoFrameOne, mossmoFrameTwo);
                 var mossmo = CreateOperator("OP_Defender_Mossmo", "Mossmo", OperatorClass.Defender, OperatorPosition.Melee, OperatorRarity.Star3,
-                    hp: 160, atk: 10, def: 30, res: 5, blockCount: 3, range: 1, interval: 1.4f, dp: 15,
+                    hp: 160, atk: 10, def: 30, res: 5, blockCount: 3, range: 1, interval: 1.4f,
                     new[]
                     {
                         new Vector2Int(0, 0),
@@ -546,7 +542,7 @@ namespace TrashTD.Editor
                 var thornchinFrames = new[] { thornchinFrame0, thornchinFrame1, thornchinFrame2, thornchinFrame3 };
                 var thornchinPrefab = CreateThornchinPrefab(thornchinFrames);
                 var thornchin = CreateOperator("OP_Defender_Thornchin", "Thornchin", OperatorClass.Defender, OperatorPosition.Melee, OperatorRarity.Star2,
-                    hp: 150, atk: 40, def: 36, res: 5, blockCount: 3, range: 0, interval: 1.4f, dp: 13,
+                    hp: 150, atk: 40, def: 36, res: 5, blockCount: 3, range: 0, interval: 1.4f,
                     new[] { new Vector2Int(0, 0) },
                     thornchinFrame0, thornchinPrefab);
                 thornchin.roleTags = new[] { "Defense", "Retaliation" };
@@ -559,7 +555,7 @@ namespace TrashTD.Editor
             var sniperSprite = LoadSprite("Deadeye-Sheet.png", "Deadeye-Sheet_0") ?? LoadSprite("tex_op_sniper.png");
             var sniperPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Deadeye", sniperSprite, OperatorClass.Sniper);
             var deadeye = CreateOperator("OP_Sniper_Deadeye", "Deadeye", OperatorClass.Sniper, OperatorPosition.Ranged, OperatorRarity.Star1,
-                hp: 85, atk: 90, def: 8, res: 0, blockCount: 0, range: 3, interval: 1.0f, dp: 11,
+                hp: 85, atk: 90, def: 8, res: 0, blockCount: 0, range: 3, interval: 1.0f,
                 new[]
                 {
                     new Vector2Int(1, 0), new Vector2Int(2, 0), new Vector2Int(3, 0),
@@ -576,7 +572,7 @@ namespace TrashTD.Editor
             {
                 var pompothPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Pompoth", pompothFrame0, OperatorClass.Sniper);
                 var pompoth = CreateOperator("OP_Sniper_Pompoth", "Pompoth", OperatorClass.Sniper, OperatorPosition.Ranged, OperatorRarity.Star1,
-                    hp: 85, atk: 95, def: 8, res: 0, blockCount: 0, range: 3, interval: 0.6f, dp: 11,
+                    hp: 85, atk: 95, def: 8, res: 0, blockCount: 0, range: 3, interval: 0.6f,
                     new[]
                     {
                         new Vector2Int(1, 0), new Vector2Int(2, 0), new Vector2Int(3, 0),
@@ -599,7 +595,7 @@ namespace TrashTD.Editor
                 var basuFrames = new[] { basuFrame0, basuFrame1, basuFrame2, basuFrame3 };
                 var basuPrefab = CreateBasurocketPrefab(basuFrames);
                 var basurocket = CreateOperator("OP_Sniper_Basurocket", "Basurocket", OperatorClass.Sniper, OperatorPosition.Ranged, OperatorRarity.Star3,
-                    hp: 50, atk: 175, def: 5, res: 0, blockCount: 0, range: 7, interval: 2.8f, dp: 16,
+                    hp: 50, atk: 175, def: 5, res: 0, blockCount: 0, range: 7, interval: 2.8f,
                     new[]
                     {
                         new Vector2Int(2, 0), new Vector2Int(3, 0), new Vector2Int(4, 0),
@@ -624,7 +620,7 @@ namespace TrashTD.Editor
             var casterSprite = LoadSprite("Pyrolite-Sheet.png", "Pyrolite-Sheet_0") ?? LoadSprite("tex_op_caster.png");
             var casterPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Pyrolite", casterSprite, OperatorClass.Caster);
             var caster = CreateOperator("OP_Caster_Pyrolite", "Pyrolite", OperatorClass.Caster, OperatorPosition.Ranged, OperatorRarity.Star1,
-                hp: 95, atk: 80, def: 10, res: 20, blockCount: 0, range: 2, interval: 1.6f, dp: 15,
+                hp: 95, atk: 80, def: 10, res: 20, blockCount: 0, range: 2, interval: 1.6f,
                 new[]
                 {
                     new Vector2Int(1, 0), new Vector2Int(2, 0),
@@ -656,7 +652,7 @@ namespace TrashTD.Editor
 
             var resicochetPrefab = CreateResicochetPrefab(resicochetC1, resicochetC2, resicochetC3);
             var resicochet = CreateOperator("OP_Caster_Resicochet", "Resicochet", OperatorClass.Caster, OperatorPosition.Ranged, OperatorRarity.Star3,
-                hp: 90, atk: 150, def: 40, res: 0, blockCount: 0, range: 2, interval: 1.5f, dp: 14,
+                hp: 90, atk: 150, def: 40, res: 0, blockCount: 0, range: 2, interval: 1.5f,
                 new[]
                 {
                     new Vector2Int(1, 0), new Vector2Int(2, 0),
@@ -679,7 +675,7 @@ namespace TrashTD.Editor
                 : (coalesceFrame0 != null ? new[] { coalesceFrame0 } : null);
             var coalescePrefab = CreateCoalescePrefab(coalesceFrames);
             var coalesce = CreateOperator("OP_Medic_Coalesce", "Coalesce", OperatorClass.Medic, OperatorPosition.Ranged, OperatorRarity.Star1,
-                hp: 90, atk: 55, def: 12, res: 15, blockCount: 0, range: 2, interval: 1.8f, dp: 12,
+                hp: 90, atk: 55, def: 12, res: 15, blockCount: 0, range: 2, interval: 1.8f,
                 new[]
                 {
                     new Vector2Int(0, 0),
@@ -698,7 +694,7 @@ namespace TrashTD.Editor
             {
                 var bubbletsPrefab = CreateBubbletsPrefab(bubbletsFrameOne, bubbletsFrameTwo);
                 var bubblets = CreateOperator("OP_Medic_Bubblets", "Bubblets", OperatorClass.Medic, OperatorPosition.Ranged, OperatorRarity.Star3,
-                    hp: 85, atk: 45, def: 10, res: 10, blockCount: 0, range: 1, interval: 2.0f, dp: 13,
+                    hp: 85, atk: 45, def: 10, res: 10, blockCount: 0, range: 1, interval: 2.0f,
                     new[]
                     {
                         new Vector2Int(0, 0),
@@ -725,7 +721,7 @@ namespace TrashTD.Editor
                 var progenyFrames = new[] { progenyFrame0, progenyFrame1, progenyFrame2, progenyFrame3 };
                 var progenyPrefab = CreateProgenyPrefab(progenyFrames);
                 var progeny = CreateOperator("OP_Medic_Progeny", "Progeny", OperatorClass.Medic, OperatorPosition.Ranged, OperatorRarity.Star2,
-                    hp: 95, atk: 35, def: 12, res: 12, blockCount: 0, range: 1, interval: 1.8f, dp: 12,
+                    hp: 95, atk: 35, def: 12, res: 12, blockCount: 0, range: 1, interval: 1.8f,
                     new[]
                     {
                         new Vector2Int(0, 0),
@@ -750,7 +746,7 @@ namespace TrashTD.Editor
 
             var framiliarPrefab = CreateFramiliarPrefab(framiliarFrames);
             var framiliar = CreateOperator("OP_Specialist_Framiliar", "Framiliar", OperatorClass.Specialist, OperatorPosition.Any, OperatorRarity.Star2,
-                hp: 100, atk: 50, def: 10, res: 0, blockCount: 1, range: 1, interval: 1.2f, dp: 10,
+                hp: 100, atk: 50, def: 10, res: 0, blockCount: 1, range: 1, interval: 1.2f,
                 new[]
                 {
                     new Vector2Int(1, 0), new Vector2Int(0, 0)
@@ -1182,7 +1178,7 @@ namespace TrashTD.Editor
 
         private static OperatorData CreateOperator(string assetName, string displayName, OperatorClass opClass,
             OperatorPosition pos, OperatorRarity rarity, int hp, int atk, int def, int res, int blockCount,
-            int range, float interval, int dp, Vector2Int[] rangePattern, Sprite portrait, GameObject prefab)
+            int range, float interval, Vector2Int[] rangePattern, Sprite portrait, GameObject prefab)
         {
             string path = $"{OperatorDataFolder}/{assetName}.asset";
             var data = AssetDatabase.LoadAssetAtPath<OperatorData>(path);
@@ -1203,7 +1199,6 @@ namespace TrashTD.Editor
             data.blockCount = blockCount;
             data.attackRange = range;
             data.attackInterval = interval;
-            data.dpCost = dp;
             data.rangePattern = rangePattern;
             data.portrait = portrait;
             data.operatorPrefab = prefab;

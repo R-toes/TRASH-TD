@@ -40,8 +40,6 @@ MonoBehaviour:
   chillSlowDuration: 2.5
   chillFreezeThreshold: 100
   chillFreezeDuration: 1.5
-  dpCost: 14
-  redeployCooldown: 60
   portrait: {fileID: 4414281254907323090, guid: fe8337c638fa85a44806c8f50af25317, type: 3}
   operatorPrefab: {fileID: 7272833774495134628, guid: e3be5a76b71b4dc09d5f90a82354c2f9, type: 3}
   intelQuote: "Nobody gets past the door."

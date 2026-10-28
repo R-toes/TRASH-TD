@@ -38,8 +38,6 @@ MonoBehaviour:
   chillSlowDuration: 2.5
   chillFreezeThreshold: 100
   chillFreezeDuration: 1.5
-  dpCost: 12
-  redeployCooldown: 60
   portrait: {fileID: -1433936279, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
   operatorPrefab: {fileID: 6120733290429841632, guid: c1d2e3f4a5b67890123456789abcdef0, type: 3}
   intelQuote: "Six arms. All of them swinging."

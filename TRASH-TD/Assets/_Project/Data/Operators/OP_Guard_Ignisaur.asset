@@ -42,8 +42,6 @@ MonoBehaviour:
   chillSlowDuration: 2.5
   chillFreezeThreshold: 100
   chillFreezeDuration: 1.5
-  dpCost: 11
-  redeployCooldown: 60
   portrait: {fileID: -1820305707, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
   operatorPrefab: {fileID: 8120733290429841632, guid: f9a8b7c6d5e432109876543210abcdef, type: 3}
   projectileOrigin: {x: -0.25, y: 0.13}

@@ -457,7 +457,10 @@ namespace TrashTD.Systems
             OnOperatorRetreated?.Invoke(op);
         }
 
-        private static int GetRetreatCooldownRounds(OperatorClass operatorClass)
+        /// <summary>
+        /// Waves a retreated operator of this class sits out before it can be redeployed.
+        /// </summary>
+        public static int GetRetreatCooldownRounds(OperatorClass operatorClass)
         {
             return operatorClass switch
             {
