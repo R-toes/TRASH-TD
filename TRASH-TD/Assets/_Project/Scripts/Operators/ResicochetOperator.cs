@@ -37,6 +37,21 @@ namespace TrashTD.Operators
         public float SluggishSpeedMultiplier => sluggishSpeedMultiplier;
         public float SluggishAttackIntervalMultiplier => sluggishAttackIntervalMultiplier;
 
+        public static readonly Color Charge1ProjectileColor = new Color(1f, 0.55f, 0.12f); // Orange (1 charge)
+        public static readonly Color Charge2ProjectileColor = new Color(0.2f, 0.95f, 0.35f); // Green (2 charges)
+        public static readonly Color Charge3ProjectileColor = new Color(0.2f, 0.65f, 1f);   // Blue (3 charges)
+
+        public static Color GetProjectileColorForCharges(int chargeCount)
+        {
+            return chargeCount switch
+            {
+                1 => Charge1ProjectileColor,
+                2 => Charge2ProjectileColor,
+                3 => Charge3ProjectileColor,
+                _ => Charge1ProjectileColor
+            };
+        }
+
         public static float GetChargeDamageMultiplier(int chargeCount)
         {
             return chargeCount switch
@@ -273,7 +288,6 @@ namespace TrashTD.Operators
 
         public override bool CanAttackTarget(EnemyBase target)
         {
-            if (isFiringBurst) return false;
             return base.CanAttackTarget(target);
         }
 
@@ -281,8 +295,12 @@ namespace TrashTD.Operators
         {
             if (target == null || !isDeployed || isStunned || isBound || isFiringBurst) return;
 
+            HasFoughtInWave = true;
+            DeployedDuringCurrentPreparation = false;
+
             int burstCount = charges;
             float chargeMultiplier = GetChargeDamageMultiplier(charges);
+            Color projectileColor = GetProjectileColorForCharges(charges);
 
             // Consume extra charges back to default 1
             charges = 1;
@@ -293,10 +311,15 @@ namespace TrashTD.Operators
             {
                 StopCoroutine(burstCoroutine);
             }
-            burstCoroutine = StartCoroutine(FireBurstRoutine(target, burstCount, chargeMultiplier));
+            burstCoroutine = StartCoroutine(FireBurstRoutine(target, burstCount, chargeMultiplier, projectileColor));
         }
 
-        private IEnumerator FireBurstRoutine(EnemyBase initialTarget, int shotsToFire, float chargeMultiplier)
+        protected override void FireAttackProjectile(EnemyBase target, Vector3 startOffset = default)
+        {
+            FireSingleBouncingProjectile(target, GetChargeDamageMultiplier(charges), GetProjectileColorForCharges(charges));
+        }
+
+        private IEnumerator FireBurstRoutine(EnemyBase initialTarget, int shotsToFire, float chargeMultiplier, Color projectileColor)
         {
             isFiringBurst = true;
 
@@ -313,7 +336,7 @@ namespace TrashTD.Operators
                 if (currentEnemy != null && !currentEnemy.IsDead)
                 {
                     PlayAttackSound();
-                    FireSingleBouncingProjectile(currentEnemy, chargeMultiplier);
+                    FireSingleBouncingProjectile(currentEnemy, chargeMultiplier, projectileColor);
                 }
 
                 if (i < shotsToFire - 1)
@@ -327,22 +350,23 @@ namespace TrashTD.Operators
             burstCoroutine = null;
         }
 
-        public void FireSingleBouncingProjectile(EnemyBase target, float chargeMultiplier = 1.0f)
+        public void FireSingleBouncingProjectile(EnemyBase target, float chargeMultiplier = 1.0f, Color? projectileColor = null)
         {
             if (target == null) return;
 
+            Color color = projectileColor ?? GetProjectileColorForCharges(1);
             Vector3 startPos = ProjectileOrigin;
             EnemyBase primaryTarget = target;
 
             CombatProjectileVisual.Fire(
                 startPos,
                 primaryTarget,
-                new Color(0.85f, 0.45f, 1f),
+                color,
                 13f,
                 0.24f,
                 0.12f,
                 true,
-                () => HandleHitAndBounce(primaryTarget, primaryTarget, 0, new HashSet<EnemyBase> { primaryTarget }, chargeMultiplier),
+                () => HandleHitAndBounce(primaryTarget, primaryTarget, 0, new HashSet<EnemyBase> { primaryTarget }, chargeMultiplier, color),
                 ProjectileStyle.ArtsOrb);
         }
 
@@ -353,8 +377,10 @@ namespace TrashTD.Operators
         /// - Applies Sluggish effect to enemies hit.
         /// - Bounces up to 4 targets total (initial hit + 3 bounces).
         /// </summary>
-        public void HandleHitAndBounce(EnemyBase primaryTarget, EnemyBase currentTarget, int bounceIndex, HashSet<EnemyBase> hitEnemies, float chargeMultiplier = 1.0f)
+        public void HandleHitAndBounce(EnemyBase primaryTarget, EnemyBase currentTarget, int bounceIndex, HashSet<EnemyBase> hitEnemies, float chargeMultiplier = 1.0f, Color? projectileColor = null)
         {
+            Color color = projectileColor ?? GetProjectileColorForCharges(1);
+
             if (currentTarget != null && !currentTarget.IsDead)
             {
                 float bounceMultiplier = Mathf.Max(0.1f, 1f - (bounceIndex * BounceDamageReductionPerHit));
@@ -377,12 +403,12 @@ namespace TrashTD.Operators
                     CombatProjectileVisual.Fire(
                         bounceStart,
                         nextTarget,
-                        new Color(0.95f, 0.6f, 1f),
+                        color,
                         15f,
                         0.2f,
                         0.1f,
                         true,
-                        () => HandleHitAndBounce(primaryTarget, nextTarget, bounceIndex + 1, hitEnemies, chargeMultiplier),
+                        () => HandleHitAndBounce(primaryTarget, nextTarget, bounceIndex + 1, hitEnemies, chargeMultiplier, color),
                         ProjectileStyle.ArtsOrb);
                 }
             }
