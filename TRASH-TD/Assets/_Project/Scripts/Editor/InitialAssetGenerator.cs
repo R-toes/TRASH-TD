@@ -80,6 +80,7 @@ namespace TrashTD.Editor
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Defender_Bulkhead.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Defender_Mossmo.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Sniper_Deadeye.asset"),
+                AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Sniper_Pompoth.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Sniper_Proxishot.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Sniper_Basurocket.asset"),
                 AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Pyrolite.asset"),
@@ -208,6 +209,7 @@ namespace TrashTD.Editor
             // Add corresponding class component
             if (prefabName == "Prefab_OP_Bulkhead") go.AddComponent<BulkheadOperator>();
             else if (prefabName == "Prefab_OP_Deadeye") go.AddComponent<DeadeyeOperator>();
+            else if (prefabName == "Prefab_OP_Pompoth") go.AddComponent<PompothOperator>();
             else if (prefabName == "Prefab_OP_Pyrolite") go.AddComponent<PyroliteOperator>();
             else if (prefabName == "Prefab_OP_Chillpath") go.AddComponent<ChillpathOperator>();
             else if (prefabName == "Prefab_OP_Coalesce") go.AddComponent<CoalesceOperator>();
@@ -567,6 +569,25 @@ namespace TrashTD.Editor
                 sniperSprite, sniperPrefab);
             deadeye.skillDescription = "Increases damage by 20% but also increases attack interval by 20% against flying enemies.";
             EditorUtility.SetDirty(deadeye);
+
+            // 3a. Sniper (Pompoth)
+            var pompothFrame0 = LoadSprite("Pompoth-Sheet.png", "Pompoth-Sheet_0");
+            if (pompothFrame0 != null)
+            {
+                var pompothPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Pompoth", pompothFrame0, OperatorClass.Sniper);
+                var pompoth = CreateOperator("OP_Sniper_Pompoth", "Pompoth", OperatorClass.Sniper, OperatorPosition.Ranged, OperatorRarity.Star1,
+                    hp: 85, atk: 95, def: 8, res: 0, blockCount: 0, range: 3, interval: 0.6f, dp: 11,
+                    new[]
+                    {
+                        new Vector2Int(1, 0), new Vector2Int(2, 0), new Vector2Int(3, 0),
+                        new Vector2Int(1, 1), new Vector2Int(2, 1),
+                        new Vector2Int(1, -1), new Vector2Int(2, -1),
+                        new Vector2Int(3, -1), new Vector2Int(3, 1)
+                    },
+                    pompothFrame0, pompothPrefab);
+                pompoth.skillDescription = "Rapid-fire sniper. Fires faster with lower damage per shot but equal DPS. Passive: attack speed increases by 10% per enemy in range, up to 30%.";
+                EditorUtility.SetDirty(pompoth);
+            }
 
             // 3b. Sniper (Basurocket)
             var basuFrame0 = LoadSprite("Basurocket-sheet.png", "Basurocket-sheet_0");
