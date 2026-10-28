@@ -12,7 +12,7 @@ namespace TrashTD.UI
     /// <summary>
     /// Reclaimers' Intel: an almanac of every operator and enemy, opened from the main menu and the pause menu.
     /// A dossier picker (Operators / Enemies) leads to a gallery: filter tabs and a portrait grid on the left,
-    /// and the selected unit's file on the right (animated sprite, chips, stats by tier, range, ability, lore).
+    /// and the selected unit's file on the right (animated sprite, chips, field notes, stats by tier, range, ability).
     /// Units come from <see cref="UnitIntelRegistry"/>, which updates itself when unit assets change, and all text
     /// comes from the unit data assets. Built in code in the green terminal style of AudioSettingsUI; runs on
     /// unscaled time so it works while the game is paused. The creating screen styles and places the open button
@@ -172,7 +172,6 @@ namespace TrashTD.UI
         private RectTransform chipRow;
         private RectTransform rarityRow;
         private Text statusText;
-        private Text quoteText;
         private Text statsHeader;
         private readonly List<TierButton> tierButtons = new List<TierButton>();
         private readonly List<StatRow> statRows = new List<StatRow>();
@@ -636,13 +635,19 @@ namespace TrashTD.UI
             statusText = CreateText(galleryCard, string.Empty, 10, TextAnchor.MiddleLeft, LabelColor);
             PlaceTopLeft(statusText.rectTransform, InfoX, 212f, InfoWidth, 20f);
 
-            Image quoteBar = CreateImage(galleryCard, "QuoteBar", new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.6f));
-            PlaceTopLeft(quoteBar.rectTransform, InfoX, 252f, 4f, 116f);
-            quoteText = CreateText(galleryCard, string.Empty, 13, TextAnchor.MiddleLeft, BodyColor);
-            quoteText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            quoteText.verticalOverflow = VerticalWrapMode.Truncate;
-            quoteText.lineSpacing = 1.5f;
-            PlaceTopLeft(quoteText.rectTransform, InfoX + 20f, 252f, InfoWidth - 20f, 116f);
+            // ── Field notes (beside the sprite) ──
+            Image notesBar = CreateImage(galleryCard, "FieldNotesBar", new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.6f));
+            PlaceTopLeft(notesBar.rectTransform, InfoX, 248f, 4f, 148f);
+            Text fieldNotesHeader = CreateText(galleryCard, "// FIELD NOTES", 12, TextAnchor.MiddleLeft, AccentColor);
+            PlaceTopLeft(fieldNotesHeader.rectTransform, InfoX + 20f, 248f, InfoWidth - 20f, 20f);
+            loreText = CreateText(galleryCard, string.Empty, 13, TextAnchor.UpperLeft, BodyColor);
+            loreText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            loreText.verticalOverflow = VerticalWrapMode.Truncate;
+            loreText.lineSpacing = 1.45f;
+            loreText.resizeTextForBestFit = true;
+            loreText.resizeTextMinSize = 10;
+            loreText.resizeTextMaxSize = 13;
+            PlaceTopLeft(loreText.rectTransform, InfoX + 20f, 274f, InfoWidth - 20f, 122f);
 
             // ── Combat data ──
             Image statsPanel = CreateImage(galleryCard, "StatsPanel", new Color(0f, 0f, 0f, 0.22f));
@@ -700,8 +705,6 @@ namespace TrashTD.UI
 
             abilityHeader = CreateNotesText(notesContent, "// ABILITY", 12, AccentColor);
             abilityText = CreateNotesText(notesContent, string.Empty, 11, BodyColor);
-            CreateNotesText(notesContent, "// FIELD NOTES", 12, AccentColor);
-            loreText = CreateNotesText(notesContent, string.Empty, 11, BodyColor);
             sightedHeader = CreateNotesText(notesContent, "// SIGHTED AT", 12, AccentColor);
             sightedText = CreateNotesText(notesContent, string.Empty, 11, BodyColor);
         }
@@ -970,9 +973,6 @@ namespace TrashTD.UI
             nameText.text = entry.Name.ToUpperInvariant();
             BuildChips(entry);
 
-            string quote = entry.Operator != null ? entry.Operator.intelQuote : entry.Enemy.intelQuote;
-            quoteText.text = string.IsNullOrWhiteSpace(quote) ? "\"...\"" : "\"" + quote.Trim() + "\"";
-
             string lore = entry.Operator != null ? entry.Operator.intelLore : entry.Enemy.intelLore;
             loreText.text = string.IsNullOrWhiteSpace(lore) ? "No field notes recovered yet." : lore.Trim();
 
@@ -1001,7 +1001,7 @@ namespace TrashTD.UI
             SetPixelSprite(stageSprite, null, 0f);
             fileText.text = string.Empty;
             nameText.text = "NO ENTRIES";
-            quoteText.text = string.Empty;
+            loreText.text = string.Empty;
             statusText.text = string.Empty;
             ClearChildren(chipRow);
             ClearChildren(rarityRow);
