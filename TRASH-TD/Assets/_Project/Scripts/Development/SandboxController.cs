@@ -392,8 +392,8 @@ namespace TrashTD.Development
             for (int i = 0; i < availableEnemies.Count; i++)
             {
                 EnemyData enemy = availableEnemies[i];
-                bool isAir = enemy.movementType == EnemyMovementType.Air;
-                MakeRow(enemyList, enemy.enemyName, isAir ? "AIR" : "GND", isAir ? AirColor : GroundColor, RowColor)
+                Sprite icon = GameplayHUDUI.GetEnemyClassIconSprite(enemy);
+                MakeRow(enemyList, enemy.enemyName, null, Color.white, RowColor, icon)
                     .onClick.AddListener(() => HandleEnemyClicked(enemy));
             }
 
@@ -410,7 +410,8 @@ namespace TrashTD.Development
             for (int i = 0; i < operatorData.Count; i++)
             {
                 OperatorData op = operatorData[i];
-                MakeRow(operatorList, op.operatorName, op.operatorClass.ToString().ToUpperInvariant(), DimColor, RowColor)
+                Sprite icon = GameplayHUDUI.GetClassIconSprite(op.operatorClass);
+                MakeRow(operatorList, op.operatorName, null, Color.white, RowColor, icon)
                     .onClick.AddListener(() => AddOperator(op));
             }
             MakeRow(operatorList, "CLEAR DECK", null, Color.white, DangerColor).onClick.AddListener(ClearDeck);
@@ -494,8 +495,8 @@ namespace TrashTD.Development
             return strip.transform;
         }
 
-        /// <summary>Clickable row with a left-aligned label and an optional right-aligned tag.</summary>
-        private static Button MakeRow(Transform parent, string label, string tag, Color tagColor, Color background)
+        /// <summary>Clickable row with a left-aligned label and an optional right-aligned tag or icon.</summary>
+        private static Button MakeRow(Transform parent, string label, string tag, Color tagColor, Color background, Sprite icon = null)
         {
             var obj = new GameObject(string.IsNullOrEmpty(label) ? "Row" : label,
                 typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
@@ -509,11 +510,31 @@ namespace TrashTD.Development
             colors.pressedColor = new Color(0.7f, 0.7f, 0.7f, 1f);
             button.colors = colors;
 
+            bool hasRightContent = tag != null || icon != null;
             Text text = MakeText(obj.transform, label, RowFontSize, Color.white,
-                tag == null ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft);
-            Stretch(text.rectTransform, 8f, tag == null ? 8f : 52f);
+                hasRightContent ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter);
 
-            if (tag != null)
+            float rightPadding = icon != null ? 34f : (tag != null ? 52f : 8f);
+            Stretch(text.rectTransform, 8f, rightPadding);
+
+            if (icon != null)
+            {
+                var iconObj = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+                iconObj.transform.SetParent(obj.transform, false);
+                Image img = iconObj.GetComponent<Image>();
+                img.sprite = icon;
+                img.preserveAspect = true;
+                img.raycastTarget = false;
+                img.color = Color.white;
+
+                RectTransform rt = iconObj.GetComponent<RectTransform>();
+                rt.anchorMin = new Vector2(1f, 0.5f);
+                rt.anchorMax = new Vector2(1f, 0.5f);
+                rt.pivot = new Vector2(1f, 0.5f);
+                rt.anchoredPosition = new Vector2(-6f, 0f);
+                rt.sizeDelta = new Vector2(20f, 20f);
+            }
+            else if (tag != null)
             {
                 Text tagText = MakeText(obj.transform, tag, 9, tagColor, TextAnchor.MiddleRight);
                 Stretch(tagText.rectTransform, 8f, 8f);

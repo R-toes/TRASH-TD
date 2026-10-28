@@ -1035,7 +1035,7 @@ namespace TrashTD.UI
             else
             {
                 EnemyData enemy = entry.Enemy;
-                x = AddChip(x, ArchetypeLabel(enemy.archetype), HostileBright, null);
+                x = AddChip(x, ArchetypeLabel(enemy.archetype), HostileBright, GameplayHUDUI.GetEnemyClassIconSprite(enemy));
                 // Flyers' archetype chip already reads AIR, so only show movement when it adds something
                 string movement = enemy.movementType == EnemyMovementType.Air ? "AIR" : "GROUND";
                 if (movement != ArchetypeLabel(enemy.archetype)) x = AddChip(x, movement, LabelColor, null);

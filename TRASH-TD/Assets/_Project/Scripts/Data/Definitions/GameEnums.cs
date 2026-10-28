@@ -114,6 +114,19 @@ namespace TrashTD.Data
     }
 
     /// <summary>
+    /// Enemy class icon indexes matching enemy-class-icons.png:
+    /// 0 - air, 1 - rusher, 2 - caster, 3 - tank, 4 - grunt.
+    /// </summary>
+    public enum EnemyClassIcon
+    {
+        Air = 0,
+        Rusher = 1,
+        Caster = 2,
+        Tank = 3,
+        Grunt = 4
+    }
+
+    /// <summary>
     /// Stage difficulty variants (GDD 1.4.7).
     /// Life points: Easy=10, Normal=5, Hard=1.
     /// </summary>

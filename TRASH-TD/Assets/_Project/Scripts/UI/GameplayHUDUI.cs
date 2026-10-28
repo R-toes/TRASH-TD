@@ -2438,6 +2438,132 @@ namespace TrashTD.UI
             return null;
         }
 
+        private static bool enemyClassIconsLoaded = false;
+        private static readonly Dictionary<EnemyClassIcon, Sprite> EnemyClassIconSprites = new Dictionary<EnemyClassIcon, Sprite>();
+
+        public static void ReloadEnemyClassIcons()
+        {
+            enemyClassIconsLoaded = false;
+            EnemyClassIconSprites.Clear();
+            EnsureEnemyClassIconsLoaded();
+        }
+
+        private static void EnsureEnemyClassIconsLoaded()
+        {
+            if (enemyClassIconsLoaded && EnemyClassIconSprites.Count >= 5) return;
+
+            Sprite[] sprites = null;
+
+#if UNITY_EDITOR
+            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/enemy-class-icons.png");
+            if (assets != null && assets.Length > 0)
+            {
+                var list = new List<Sprite>();
+                for (int i = 0; i < assets.Length; i++)
+                {
+                    if (assets[i] is Sprite s) list.Add(s);
+                }
+                sprites = list.ToArray();
+            }
+#endif
+
+            if (sprites == null || sprites.Length == 0)
+            {
+                sprites = Resources.LoadAll<Sprite>("UI/icons/enemy-class-icons");
+            }
+
+            if (sprites != null && sprites.Length > 0)
+            {
+                for (int i = 0; i < sprites.Length; i++)
+                {
+                    Sprite s = sprites[i];
+                    if (s == null) continue;
+                    switch (s.name)
+                    {
+                        case "enemy-class-icons_0": EnemyClassIconSprites[EnemyClassIcon.Air] = s; break;
+                        case "enemy-class-icons_1": EnemyClassIconSprites[EnemyClassIcon.Rusher] = s; break;
+                        case "enemy-class-icons_2": EnemyClassIconSprites[EnemyClassIcon.Caster] = s; break;
+                        case "enemy-class-icons_3": EnemyClassIconSprites[EnemyClassIcon.Tank] = s; break;
+                        case "enemy-class-icons_4": EnemyClassIconSprites[EnemyClassIcon.Grunt] = s; break;
+                    }
+                }
+            }
+
+            // Fallback: If sub-sprites are not found or sliced, load Texture2D and slice them manually
+            // (0 - air, 1 - rusher, 2 - caster, 3 - tank, 4 - grunt)
+            if (EnemyClassIconSprites.Count < 5)
+            {
+                Texture2D tex = null;
+#if UNITY_EDITOR
+                tex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_Project/Art/enemy-class-icons.png");
+#endif
+                if (tex == null)
+                {
+                    tex = Resources.Load<Texture2D>("UI/icons/enemy-class-icons");
+                }
+                if (tex == null)
+                {
+                    string diskPath = System.IO.Path.Combine(Application.dataPath, "_Project/Art/enemy-class-icons.png");
+                    if (System.IO.File.Exists(diskPath))
+                    {
+                        byte[] raw = System.IO.File.ReadAllBytes(diskPath);
+                        tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                        tex.LoadImage(raw);
+                    }
+                }
+
+                if (tex != null)
+                {
+                    tex.filterMode = FilterMode.Point;
+                    if (!EnemyClassIconSprites.ContainsKey(EnemyClassIcon.Air))
+                        EnemyClassIconSprites[EnemyClassIcon.Air] = Sprite.Create(tex, new Rect(0f, 32f, 32f, 32f), new Vector2(0.5f, 0.5f), 32f);
+                    if (!EnemyClassIconSprites.ContainsKey(EnemyClassIcon.Rusher))
+                        EnemyClassIconSprites[EnemyClassIcon.Rusher] = Sprite.Create(tex, new Rect(32f, 32f, 32f, 32f), new Vector2(0.5f, 0.5f), 32f);
+                    if (!EnemyClassIconSprites.ContainsKey(EnemyClassIcon.Caster))
+                        EnemyClassIconSprites[EnemyClassIcon.Caster] = Sprite.Create(tex, new Rect(64f, 32f, 32f, 32f), new Vector2(0.5f, 0.5f), 32f);
+                    if (!EnemyClassIconSprites.ContainsKey(EnemyClassIcon.Tank))
+                        EnemyClassIconSprites[EnemyClassIcon.Tank] = Sprite.Create(tex, new Rect(0f, 0f, 32f, 32f), new Vector2(0.5f, 0.5f), 32f);
+                    if (!EnemyClassIconSprites.ContainsKey(EnemyClassIcon.Grunt))
+                        EnemyClassIconSprites[EnemyClassIcon.Grunt] = Sprite.Create(tex, new Rect(32f, 0f, 32f, 32f), new Vector2(0.5f, 0.5f), 32f);
+                }
+            }
+
+            enemyClassIconsLoaded = true;
+        }
+
+        public static Sprite GetEnemyClassIconSprite(EnemyClassIcon iconType)
+        {
+            EnsureEnemyClassIconsLoaded();
+            if (EnemyClassIconSprites.TryGetValue(iconType, out Sprite sprite) && sprite != null)
+            {
+                return sprite;
+            }
+            return null;
+        }
+
+        public static Sprite GetEnemyClassIconSprite(EnemyArchetype archetype)
+        {
+            switch (archetype)
+            {
+                case EnemyArchetype.Flyer: return GetEnemyClassIconSprite(EnemyClassIcon.Air);
+                case EnemyArchetype.Rusher: return GetEnemyClassIconSprite(EnemyClassIcon.Rusher);
+                case EnemyArchetype.Caster: return GetEnemyClassIconSprite(EnemyClassIcon.Caster);
+                case EnemyArchetype.Tank: return GetEnemyClassIconSprite(EnemyClassIcon.Tank);
+                case EnemyArchetype.Grunt: return GetEnemyClassIconSprite(EnemyClassIcon.Grunt);
+                default: return GetEnemyClassIconSprite(EnemyClassIcon.Grunt);
+            }
+        }
+
+        public static Sprite GetEnemyClassIconSprite(EnemyData enemy)
+        {
+            if (enemy == null) return null;
+            if (enemy.movementType == EnemyMovementType.Air || enemy.archetype == EnemyArchetype.Flyer)
+            {
+                return GetEnemyClassIconSprite(EnemyClassIcon.Air);
+            }
+            return GetEnemyClassIconSprite(enemy.archetype);
+        }
+
         private GameObject CreateCooldownBadge(Transform parent, out Image clockImage, out Text roundsText)
         {
             var badge = new GameObject("CooldownBadge", typeof(RectTransform), typeof(Image));
