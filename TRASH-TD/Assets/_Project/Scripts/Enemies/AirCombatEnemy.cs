@@ -75,7 +75,7 @@ namespace TrashTD.Enemies
             if (attackTimer < interval || lockedTarget == null) return;
 
             attackTimer = 0f;
-            attackPauseTimer = interval * AttackPauseFraction;
+            attackPauseTimer = GetAttackPause(interval);
             PlayAttackSound();
             PerformAirAttack(lockedTarget);
         }
@@ -92,10 +92,16 @@ namespace TrashTD.Enemies
 
             // Engaged: creep forward between attacks instead of flying past the target.
             float normalSpeed = currentMoveSpeed;
-            currentMoveSpeed *= EngagedSpeedMultiplier;
+            currentMoveSpeed *= EngagedSpeed;
             base.MoveAlongPath();
             currentMoveSpeed = normalSpeed;
         }
+
+        /// <summary>How long the flyer stops still on each attack. Default: most of the attack interval (attack, creep a little, attack).</summary>
+        protected virtual float GetAttackPause(float attackInterval) => attackInterval * AttackPauseFraction;
+
+        /// <summary>Movement speed multiplier while a valid target is in range.</summary>
+        protected virtual float EngagedSpeed => EngagedSpeedMultiplier;
 
         /// <summary>
         /// Keeps the current target while it stays valid and in range, unless a higher-priority

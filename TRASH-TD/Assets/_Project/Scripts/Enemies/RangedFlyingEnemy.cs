@@ -16,6 +16,14 @@ namespace TrashTD.Enemies
         // Just reaches orthogonally adjacent tiles (diagonals are ~1.41 away).
         private const float BlastRadiusInTiles = 1.05f;
         private const float CollateralRatio = 0.5f;
+        // Skyshard keeps flying between throws: it stops only for the throw itself, then drifts on at half speed
+        // while a target is in range (full speed otherwise).
+        private const float ThrowPauseSeconds = 0.15f;
+        private const float EngagedSpeedMultiplier = 0.5f;
+
+        protected override float GetAttackPause(float attackInterval) => Mathf.Min(ThrowPauseSeconds, attackInterval);
+
+        protected override float EngagedSpeed => EngagedSpeedMultiplier;
 
         protected override bool IsTargetable(OperatorBase op)
         {
