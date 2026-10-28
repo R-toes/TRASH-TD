@@ -279,12 +279,17 @@ Each asset's `skillDescription` is the authoritative description of that operato
   | Claw | three raking marks | enemy melee, Talon Rat |
   | Bash | impact ring, white flash, sparks, dust, impact streaks | Defenders, tank enemies |
   | Spikes | spines bursting out of the target | Thornchin, Spoilcupine |
-  | Smash | big flash, shockwave, flying debris, smoke | THE ERADICATOR's melee |
+  | Smash | huge thick double arc swung into the target, then (0.07 s later, as it lands) a white flash, shockwave, debris and dust | THE ERADICATOR's melee (size 1.4) |
   | Impact | flash, falling sparks, dust | Stage 2 falling items |
 
   - `Edge()` brightens the colour for the cutting edge, so near-black colours still read.
   - A Guard picks its basic-attack effect by overriding `GuardOperator.MeleeSlashStyle` / `MeleeSlashSize` (Scrapper does).
   - **Shadeslice's thrust** (`MeleeSwipeVisual.PlayStab`, the Guard isolation strike) keeps its original crimson line-and-glow look in `MeleeStabVisual` (LineRenderers, one GameObject per stab). The team preferred it to a pixel version.
+- **Hit reactions** (`HitReaction.Play`, called from `EnemyBase.TakeDamage` and `OperatorBase.TakeDamage` / `TakeTrueDamage` next to the damage numbers):
+  - The unit's sprite glows **white** for 0.12 s (`FlashOpacity` 0.5, `FlashColor`): a `HitFlashOverlay` child drawn with `Resources/Shaders/SpriteFlash.shader` (`TrashTD/SpriteFlash`, a solid-colour silhouette). Only the root sprite and the `EnemyVisual` child flash; auras and bubbles don't.
+  - It **shakes** side to side for 0.16 s, up to 2.5 art pixels, snapped to whole pixels. The offset is added in `LateUpdate` and removed in `Update`, which runs first (`[DefaultExecutionOrder(-10000)]`), so movement, range, targeting and projectile origins always see the true position.
+  - An **impact burst** (white star and sparks; heavy hits add a big flash and a ring) pops on the sprite. Bursts don't repeat within 0.08 s, so rapid laser ticks don't stack them.
+  - Strength = damage ÷ max HP, full at 12%. Hits under 2% of max HP (acid rain, burning, trap ticks) don't react; those keep their own coloured flashes. Play mode only, so EditMode tests never create one.
 - `CombatProjectileVisual.Fire(start, EnemyBase target, ...)` follows a moving target — prefer it over the fixed-position overload.
 - **Combat effects are pixel art** at the stage-art scale (32 texels per unit, point-filtered, positions snapped to that pixel grid).
   - `CombatFxArt` generates the sprites, shaded from one colour.
@@ -360,8 +365,12 @@ Each asset's `skillDescription` is the authoritative description of that operato
   - Then use `HoldBlockedPosition`, `GetPathForwardDirection`, `MoveAlongPath` (or `MoveAlongPathBy(distance)` for a custom pace) and `CurrentGrid` as needed. Roboflame and THE ERADICATOR put their per-frame logic in a public `Step(deltaTime)` so EditMode tests can drive it.
 - **Ramping lasers** (`LightLaserVisual`, used by Castiel and Askalaser): a pixel-art beam built from three stretched 1-texel layers (core, body, glow), snapped to whole art pixels. `Fire(source, target, LaserPalette, tickInterval, onTick)`.
   - **Driving it:** the owner calls `SetStage(0–5)` as its damage ramps (one stage per step: 5/15/30/80/100/150) and `OnDamageTick()` on every hit.
-  - **Stages:** each stage widens and brightens the beam (core 1→3 px, body 2→7 px, glow 0→14 px). Stage 1 adds the glow and sparks at the impact. Stage 2 makes the beam pulse. Stage 3 streams motes along it, with sparkles (Holy) or crackling arcs (Crimson). Stage 4 adds a width flicker and a halo ring (Holy) or heat smoke (Crimson) at the impact. Stage 5 adds a burst on every tick.
-  - **Feedback:** a stage-up flashes both ends and pops a ring at the target. Six pips above the source show the current stage.
+  - **Stages:** each stage widens and brightens the beam (core 1→3 px, body 2→7 px, glow 0→14 px). Stage 1 adds the glow. Stage 2 makes the beam pulse. Stage 3 streams motes along it, with sparkles (Holy) or crackling arcs (Crimson). Stage 4 adds a width flicker and a halo ring (Holy) or heat smoke (Crimson) at the impact. Stage 5 adds a burst on every tick.
+  - **Ends and pulses (every stage, scaled by it):**
+    - Release point: a glowing orb with a hot core (`MuzzleGlowPx` / `MuzzleCorePx`), with energy motes streaming into it.
+    - Impact: a splash of light with a twinkling star flare (`ImpactGlowPx` / `ImpactCorePx` / `FlarePx`, built from `CombatFxArt.GlowDisc` / `Disc` / `Flare`), with sparks spraying back toward the source. From stage 1 it also throws off rising motes of light (Holy) or molten drips (Crimson).
+    - Both ends throb by a pixel. Bright pulses run down the beam, faster each stage, with a second pulse from stage 3.
+  - **Feedback:** a stage-up flashes and pops both ends and sends a shockwave out from the target. Six pips above the source show the current stage.
   - Castiel's beam shows the power of its *next* tick: it steps up right after the tick that crosses a 1.5 s mark. Askalaser's steps up continuously with its lock time (`GetLaserStageForDuration`).
 - **Heat from enemies:** `Stage4HeatHazard.AddHeatStack(op)` is public. Enemy fire attacks call it only when `StageCombatModifiers.IsHeatHazardActive` is true (Stage 4, or the sandbox on the Stage 4 map).
 - **Blocking position:** a blocked enemy stops on the boundary in front of its blocker (`EnemyBase.BlockedPosition`). Range checks for blocked enemies count both the blocker's tile and the adjacent path tile. Defenders also attack enemies in their range pattern when they aren't blocking.

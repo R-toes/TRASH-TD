@@ -15,14 +15,17 @@ namespace TrashTD.Combat
     /// <summary>
     /// Pixel-art ramping laser (Castiel, Askalaser): a hot core, a body and an outer glow, each a stretched
     /// 1-texel sprite snapped to whole art pixels. The owner calls SetStage as its damage ramps (stage 0-5,
-    /// matching the 5 → 15 → 30 → 80 → 100 → 150 steps) and OnDamageTick on every hit. Each stage widens and
-    /// brightens the beam and adds effects:
-    /// - 1: outer glow, sparks at the impact;
+    /// matching the 5 → 15 → 30 → 80 → 100 → 150 steps) and OnDamageTick on every hit.
+    /// At every stage the release point holds a glowing orb that energy motes stream into, the impact holds a
+    /// splash of light with a twinkling star flare and a spray of sparks thrown back toward the source, and
+    /// bright pulses run down the beam. All of these grow, speed up and thicken with the stage.
+    /// Each stage also widens and brightens the beam and adds effects:
+    /// - 1: outer glow; the impact throws off rising motes of light (Holy) or molten drips (Crimson);
     /// - 2: the beam pulses, glow at the source;
-    /// - 3: motes stream along the beam; Holy sheds sparkles, Crimson crackles with arcs;
+    /// - 3: a second pulse; motes stream along the beam; Holy sheds sparkles, Crimson crackles with arcs;
     /// - 4: the beam flickers in width, a halo ring (Holy) or heat smoke (Crimson) at the impact;
     /// - 5: everything at full strength, with a burst on every tick.
-    /// A stage-up flashes both ends and pops a ring at the target. Six pips above the source show the stage.
+    /// A stage-up flashes and pops both ends and sends a shockwave out from the target. Six pips above the source show the stage.
     /// Runs on scaled time.
     /// </summary>
     public sealed class LightLaserVisual : MonoBehaviour
@@ -42,6 +45,14 @@ namespace TrashTD.Combat
         private static readonly int[] BodyWidthPx = { 2, 3, 4, 5, 6, 7 };
         private static readonly int[] GlowWidthPx = { 0, 5, 7, 9, 11, 14 };
         private static readonly float[] GlowAlpha = { 0f, 0.22f, 0.28f, 0.36f, 0.44f, 0.55f };
+
+        // The two ends, radius in art pixels per stage: an orb at the release point, a flaring splash at the impact
+        private static readonly int[] MuzzleCorePx = { 1, 2, 2, 3, 3, 4 };
+        private static readonly int[] MuzzleGlowPx = { 3, 4, 5, 6, 7, 9 };
+        private static readonly int[] ImpactCorePx = { 2, 2, 3, 3, 4, 5 };
+        private static readonly int[] ImpactGlowPx = { 4, 5, 6, 8, 9, 11 };
+        private static readonly int[] FlarePx = { 3, 4, 6, 7, 9, 11 };
+        private const float PulseLengthPx = 6f;
 
         private sealed class Palette
         {
@@ -85,11 +96,25 @@ namespace TrashTD.Combat
         private SpriteRenderer body;
         private SpriteRenderer glow;
         private SpriteRenderer[] pips;
+        private SpriteRenderer muzzleGlow;
+        private SpriteRenderer muzzleCore;
+        private SpriteRenderer impactGlow;
+        private SpriteRenderer impactCore;
+        private SpriteRenderer impactFlare;
+        private SpriteRenderer[] pulses;
+        // Per stage, two sizes each (index stage * 2 + throb) so the ends throb by a pixel without per-frame lookups
+        private Sprite[] muzzleCoreSprites;
+        private Sprite[] muzzleGlowSprites;
+        private Sprite[] impactCoreSprites;
+        private Sprite[] impactGlowSprites;
+        private Sprite[] flareSprites;
         private int stage;
         private float age;
         private float stageUpFlash;
         private float moteCarry;
         private float effectCarry;
+        private float chargeCarry;
+        private float impactCarry;
 
         public int Stage => stage;
 
@@ -195,6 +220,34 @@ namespace TrashTD.Combat
                 pips[i].transform.localScale = new Vector3(CombatFxArt.Pixel * 2f, CombatFxArt.Pixel * 2f, 1f);
             }
             UpdatePips();
+
+            // Energy pulses running down the beam (the second joins at stage 3)
+            pulses = new SpriteRenderer[2];
+            for (int i = 0; i < pulses.Length; i++)
+                pulses[i] = AddLayer("Pulse" + i, CoreSortingOrder);
+
+            muzzleCoreSprites = BuildStageSprites(MuzzleCorePx, CombatFxArt.Disc);
+            muzzleGlowSprites = BuildStageSprites(MuzzleGlowPx, CombatFxArt.GlowDisc);
+            impactCoreSprites = BuildStageSprites(ImpactCorePx, CombatFxArt.Disc);
+            impactGlowSprites = BuildStageSprites(ImpactGlowPx, CombatFxArt.GlowDisc);
+            flareSprites = BuildStageSprites(FlarePx, CombatFxArt.Flare);
+
+            muzzleGlow = AddLayer("MuzzleGlow", GlowSortingOrder);
+            muzzleCore = AddLayer("MuzzleCore", CoreSortingOrder);
+            impactGlow = AddLayer("ImpactGlow", GlowSortingOrder);
+            impactCore = AddLayer("ImpactCore", CoreSortingOrder);
+            impactFlare = AddLayer("ImpactFlare", PipSortingOrder);
+        }
+
+        private static Sprite[] BuildStageSprites(int[] radiusPx, Func<int, Sprite> build)
+        {
+            var sprites = new Sprite[radiusPx.Length * 2];
+            for (int s = 0; s < radiusPx.Length; s++)
+            {
+                sprites[s * 2] = build(radiusPx[s]);
+                sprites[s * 2 + 1] = build(radiusPx[s] + 1);
+            }
+            return sprites;
         }
 
         private SpriteRenderer AddLayer(string layerName, int sortingOrder)
@@ -239,6 +292,63 @@ namespace TrashTD.Combat
             Vector2 pipOrigin = start + new Vector2(-(pips.Length - 1) * PipSpacingPx * 0.5f * CombatFxArt.Pixel, PipHeight);
             for (int i = 0; i < pips.Length; i++)
                 pips[i].transform.position = PixelParticles.Snap(pipOrigin + new Vector2(i * PipSpacingPx * CombatFxArt.Pixel, 0f));
+
+            UpdatePulses(start, delta, length, angle);
+            UpdateEnds(start, end, flash);
+        }
+
+        /// <summary>Short bright segments running from the source to the target, faster at higher stages.</summary>
+        private void UpdatePulses(Vector2 start, Vector2 delta, float length, float angle)
+        {
+            float speed = 3f + stage * 1.5f;
+            for (int i = 0; i < pulses.Length; i++)
+            {
+                bool active = length > 0.05f && (i == 0 || stage >= 3);
+                pulses[i].enabled = active;
+                if (!active) continue;
+
+                float phase = Mathf.Repeat(age * speed / length + i * 0.5f, 1f);
+                Color color = palette.Accent;
+                color.a = 0.85f * Mathf.Sin(phase * Mathf.PI); // fades in off the source and out into the target
+                SetLayer(pulses[i], PixelParticles.Snap(start + delta * phase), angle, PulseLengthPx * CombatFxArt.Pixel,
+                    BodyWidthPx[stage] + 1, color);
+            }
+        }
+
+        /// <summary>
+        /// The ends of the beam, sized by stage and throbbing by a pixel: a glowing orb with a hot core at the
+        /// release point, and at the impact a splash of light with a twinkling star flare.
+        /// </summary>
+        private void UpdateEnds(Vector2 start, Vector2 end, float flash)
+        {
+            int throb = Mathf.Repeat(age * (6f + stage * 1.5f), 1f) < 0.5f ? 1 : 0;
+            int index = stage * 2 + throb;
+            Vector3 startSnapped = PixelParticles.Snap(start);
+            Vector3 endSnapped = PixelParticles.Snap(end);
+
+            Color muzzleGlowColor = palette.Glow;
+            muzzleGlowColor.a = Mathf.Clamp01(0.45f + stage * 0.08f + flash * 0.3f);
+            SetEnd(muzzleGlow, startSnapped, muzzleGlowSprites[index], muzzleGlowColor);
+            SetEnd(muzzleCore, startSnapped, muzzleCoreSprites[index], Color.Lerp(palette.Core, Color.white, flash));
+
+            Color impactGlowColor = palette.Body;
+            impactGlowColor.a = Mathf.Clamp01(0.4f + stage * 0.08f + flash * 0.3f);
+            SetEnd(impactGlow, endSnapped, impactGlowSprites[index], impactGlowColor);
+            SetEnd(impactCore, endSnapped, impactCoreSprites[index], Color.Lerp(palette.Core, Color.white, flash));
+
+            Color flareColor = palette.Accent;
+            flareColor.a = Mathf.Clamp01(0.55f + stage * 0.08f + flash * 0.4f);
+            SetEnd(impactFlare, endSnapped, flareSprites[index], flareColor);
+            // Twinkle: the star turns an eighth of a turn every few frames
+            impactFlare.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Repeat(age * (8f + stage * 2f), 2f) < 1f ? 0f : 45f);
+        }
+
+        private static void SetEnd(SpriteRenderer layer, Vector3 position, Sprite sprite, Color color)
+        {
+            layer.transform.position = position;
+            layer.transform.localScale = Vector3.one;
+            layer.sprite = sprite;
+            layer.color = color;
         }
 
         private static void SetLayer(SpriteRenderer layer, Vector3 middle, float angle, float length, int widthPx, Color color)
@@ -271,7 +381,17 @@ namespace TrashTD.Combat
 
             CombatFx.Flash(start, palette.Accent, true);
             CombatFx.Flash(end, palette.Accent, true);
+            CombatFx.Pop(start, palette.Accent);
             CombatFx.Pop(end, palette.Body);
+            PixelParticles.Emit(new PixelParticle
+            {
+                Position = end,
+                Life = 0.25f,
+                StartColor = palette.Accent,
+                EndColor = new Color(palette.Glow.r, palette.Glow.g, palette.Glow.b, 0f),
+                Frames = CombatFxArt.ShockwaveFrames(ImpactGlowPx[stage] + 4),
+                SortingOrder = PipSortingOrder
+            });
             CombatFx.Sparks(end, palette.Spark, 4 + stage * 2, 2f + stage * 0.4f, 0.3f, big: true);
             if (paletteKind == LaserPalette.Holy)
                 CombatFx.Crosses(start, palette.Accent, 1 + stage / 2, 0.12f, false, 0.5f);
@@ -291,14 +411,62 @@ namespace TrashTD.Combat
             Vector2 direction = delta / length;
             Vector2 side = new Vector2(-direction.y, direction.x);
 
-            // Stage 1+: a steady sizzle at the impact
-            effectCarry += deltaTime * (stage >= 1 ? 6f + stage * 4f : 3f);
+            // A steady spray of sparks splashing back off the impact, denser and faster each stage
+            effectCarry += deltaTime * (8f + stage * 5f);
             while (effectCarry >= 1f)
             {
                 effectCarry -= 1f;
-                CombatFx.Sparks(end, palette.Spark, 1, 1.2f + stage * 0.3f, 0.15f + stage * 0.02f);
+                CombatFx.Sparks(end, palette.Spark, 1, 1.4f + stage * 0.35f, 0.16f + stage * 0.03f, 3f,
+                    -direction, 150f, stage >= 4);
                 if (stage >= 2 && Random.value < 0.3f)
                     CombatFx.Flash(start, palette.Body);
+            }
+
+            // Energy gathering into the release point
+            chargeCarry += deltaTime * (4f + stage * 4f);
+            while (chargeCarry >= 1f)
+            {
+                chargeCarry -= 1f;
+                const float ChargeSpeed = 0.9f;
+                float chargeAngle = Random.value * Mathf.PI * 2f;
+                Vector2 inward = new Vector2(Mathf.Cos(chargeAngle), Mathf.Sin(chargeAngle));
+                float distance = (MuzzleGlowPx[stage] + 3f) * CombatFxArt.Pixel;
+                PixelParticles.Emit(new PixelParticle
+                {
+                    Position = start + inward * distance,
+                    Velocity = -inward * ChargeSpeed,
+                    Life = distance / ChargeSpeed,
+                    StartColor = new Color(palette.Body.r, palette.Body.g, palette.Body.b, 0.5f),
+                    EndColor = palette.Core,
+                    Sprite = paletteKind == LaserPalette.Holy && Random.value < 0.3f ? CombatFxArt.Plus3() : CombatFxArt.Dot1(),
+                    SortingOrder = CoreSortingOrder
+                });
+            }
+
+            // Stage 1+: what the impact throws off - rising motes of light (Holy) or molten drips (Crimson)
+            if (stage >= 1)
+            {
+                impactCarry += deltaTime * (2f + stage * 2f);
+                while (impactCarry >= 1f)
+                {
+                    impactCarry -= 1f;
+                    Vector2 at = end + Random.insideUnitCircle * ImpactGlowPx[stage] * 0.5f * CombatFxArt.Pixel;
+                    bool holy = paletteKind == LaserPalette.Holy;
+                    PixelParticles.Emit(new PixelParticle
+                    {
+                        Position = at,
+                        Velocity = holy
+                            ? new Vector2(Random.Range(-0.15f, 0.15f), Random.Range(0.35f, 0.7f))
+                            : new Vector2(Random.Range(-0.6f, 0.6f), Random.Range(0.3f, 0.9f)),
+                        Gravity = holy ? 0f : 6f,
+                        Life = Random.Range(0.35f, 0.6f),
+                        StartColor = holy ? palette.Accent : palette.Spark,
+                        EndColor = new Color(palette.Glow.r, palette.Glow.g, palette.Glow.b, 0f),
+                        Sprite = holy ? (Random.value < 0.4f ? CombatFxArt.Plus3() : CombatFxArt.Dot1())
+                                      : (Random.value < 0.4f ? CombatFxArt.Dot2() : CombatFxArt.Dot1()),
+                        SortingOrder = CoreSortingOrder
+                    });
+                }
             }
 
             if (stage < 3) return;

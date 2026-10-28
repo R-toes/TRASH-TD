@@ -265,6 +265,61 @@ namespace TrashTD.Combat
             });
         }
 
+        /// <summary>Solid white disc (tinted by the renderer): orbs and hot cores.</summary>
+        public static Sprite Disc(int radiusPx)
+        {
+            radiusPx = Mathf.Max(0, radiusPx);
+            return Cached("disc" + radiusPx, () => RadialSprite("Fx Disc " + radiusPx, radiusPx,
+                (d, x, y) => d <= radiusPx + 0.5f ? 1f : 0f));
+        }
+
+        /// <summary>
+        /// Pixel-art glow: a solid middle, then two dithered bands fading out to the radius (tinted by the renderer).
+        /// </summary>
+        public static Sprite GlowDisc(int radiusPx)
+        {
+            radiusPx = Mathf.Max(1, radiusPx);
+            return Cached("glowdisc" + radiusPx, () => RadialSprite("Fx GlowDisc " + radiusPx, radiusPx, (d, x, y) =>
+            {
+                float t = d / (radiusPx + 0.5f);
+                if (t > 1f) return 0f;
+                if (t <= 0.45f) return 1f;
+                if (t <= 0.75f) return 0.6f;
+                return (x + y) % 2 == 0 ? 0.35f : 0f;
+            }));
+        }
+
+        /// <summary>Star flare: long 1 px rays up, down, left and right, shorter diagonals, a bright centre.</summary>
+        public static Sprite Flare(int radiusPx)
+        {
+            radiusPx = Mathf.Max(2, radiusPx);
+            return Cached("flare" + radiusPx, () => RadialSprite("Fx Flare " + radiusPx, radiusPx, (d, x, y) =>
+            {
+                int dx = Mathf.Abs(x - radiusPx), dy = Mathf.Abs(y - radiusPx);
+                if (d <= 1.5f) return 1f;
+                if (dx == 0 || dy == 0) return d <= radiusPx + 0.5f ? 1f - 0.5f * (d / radiusPx) : 0f;
+                if (dx == dy) return d <= radiusPx * 0.6f ? 0.7f : 0f;
+                return 0f;
+            }));
+        }
+
+        /// <summary>Square sprite of (2r+1) px whose alpha comes from <paramref name="alphaAt"/>(distance, x, y).</summary>
+        private static Sprite RadialSprite(string name, int radiusPx, Func<float, int, int, float> alphaAt)
+        {
+            int size = radiusPx * 2 + 1;
+            Texture2D texture = NewTexture(size, size, name);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float d = new Vector2(x - radiusPx, y - radiusPx).magnitude;
+                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, alphaAt(d, x, y)));
+                }
+            }
+            texture.Apply();
+            return ToSprite(texture);
+        }
+
         /// <summary>Shockwave: a 2 px ring expanding to the exact radius over 6 frames.</summary>
         public static Sprite[] ShockwaveFrames(int radiusPx)
         {

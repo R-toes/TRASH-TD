@@ -53,7 +53,7 @@ namespace TrashTD.Combat
                     PlaySpikes(target, color, size);
                     break;
                 case MeleeStyle.Smash:
-                    PlaySmash(target, color, size);
+                    PlaySmash(target, forward, color, size);
                     break;
                 case MeleeStyle.Impact:
                     PlayImpact(target, color, size);
@@ -211,35 +211,46 @@ namespace TrashTD.Combat
             CombatFx.Flash(target, edge);
         }
 
-        private static void PlaySmash(Vector2 target, Color color, float size)
+        /// <summary>
+        /// THE ERADICATOR's blow: a huge, thick double arc swung into the target, then (as it lands) a white flash,
+        /// a shockwave, sparks, flying debris and dust.
+        /// </summary>
+        private static void PlaySmash(Vector2 target, Vector2 forward, Color color, float size)
         {
             Color edge = Edge(color);
-            int radiusPx = Mathf.RoundToInt(14f * size);
+            const float landDelay = 0.07f;
 
-            CombatFx.Flash(target, Color.white, true);
+            bool clockwise = Random.value < 0.5f;
+            float radius = 0.4f * size;
+            Arc(target, forward, radius, 80f, 4f * size, landDelay, 0f, color, clockwise, 1.5f);
+            Arc(target, forward, radius * 0.8f, 70f, 2.5f * size, landDelay, 0.03f, Color.Lerp(color, Color.white, 0.4f), clockwise, 1.5f);
+
+            int radiusPx = Mathf.RoundToInt(14f * size);
+            CombatFx.Flash(target, Color.white, true, landDelay);
             PixelParticles.Emit(new PixelParticle
             {
                 Position = target,
+                Delay = landDelay,
                 Life = 0.3f,
                 StartColor = edge,
                 EndColor = Fade(color),
                 Frames = CombatFxArt.ShockwaveFrames(radiusPx),
                 SortingOrder = SortingOrder
             });
-            CombatFx.Sparks(target, edge, Mathf.RoundToInt(8 * size), 3.2f * size, 0.25f, 3f, big: true);
+            CombatFx.Sparks(target, edge, Mathf.RoundToInt(8 * size), 3.2f * size, 0.25f, 3f, forward, 160f, true, landDelay);
 
             // Debris kicked up by the slam
             Color[] debris = { new Color(0.42f, 0.44f, 0.48f), new Color(0.6f, 0.58f, 0.55f), new Color(0.3f, 0.3f, 0.32f) };
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 10; i++)
             {
                 Vector2 dir = new Vector2(Random.Range(-1f, 1f), Random.Range(0.3f, 1f)).normalized;
                 Color c = debris[i % debris.Length];
-                Dot(target, 0f, Random.Range(0.45f, 0.7f), c, new Color(c.r, c.g, c.b, 0f),
+                Dot(target, landDelay, Random.Range(0.45f, 0.7f), c, new Color(c.r, c.g, c.b, 0f),
                     i % 2 == 0 ? CombatFxArt.Dot2() : CombatFxArt.Dot1(),
                     dir * size * Random.Range(1.6f, 2.6f), 9f, 1.2f);
             }
-            CombatFx.Smoke(target, new Color(0.62f, 0.6f, 0.58f, 0.6f), 3, 0.15f * size, 0.55f, 0.25f,
-                sortingOrder: SortingOrder - 1);
+            CombatFx.Smoke(target, new Color(0.62f, 0.6f, 0.58f, 0.6f), 3, 0.15f * size, 0.55f, 0.25f, landDelay,
+                SortingOrder - 1);
         }
 
         private static void PlayImpact(Vector2 position, Color color, float size)
