@@ -1097,6 +1097,7 @@ namespace TrashTD.Enemies
             {
                 FloatingCombatNumber.Show(VisualPosition, actualDamage, damageType);
                 WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
+                HitReaction.Play(gameObject, VisualPosition, actualDamage, maxHP);
             }
 
             if (currentHP <= 0)

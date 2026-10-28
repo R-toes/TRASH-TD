@@ -673,6 +673,7 @@ namespace TrashTD.Operators
             {
                 TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualDamage, damageType);
                 TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
+                TrashTD.Combat.HitReaction.Play(gameObject, transform.position, actualDamage, maxHP);
             }
 
             if (currentHP <= 0)
@@ -712,6 +713,7 @@ namespace TrashTD.Operators
             {
                 TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualDamage, DamageType.True);
                 TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
+                TrashTD.Combat.HitReaction.Play(gameObject, transform.position, actualDamage, maxHP);
             }
 
             if (currentHP <= 0)
