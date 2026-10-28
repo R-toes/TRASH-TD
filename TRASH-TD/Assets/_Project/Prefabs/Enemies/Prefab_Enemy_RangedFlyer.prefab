@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5465132969498921482}
   - component: {fileID: 4852890320471864355}
   - component: {fileID: 7930916116004686842}
+  - component: {fileID: 7930916116004686843}
   m_Layer: 0
   m_Name: Prefab_Enemy_RangedFlyer
   m_TagString: Untagged
@@ -45,8 +46,8 @@ SpriteRenderer:
   m_Materials:
   - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
   m_SortingOrder: 8
-  m_Sprite: {fileID: 21300000, guid: b2222222222222222222222222222205, type: 3}
-  m_Color: {r: 0.55, g: 0.9, b: 1, a: 1}
+  m_Sprite: {fileID: 8242679458929585706, guid: 628cb5b8661b6374b88d559d1c0f2e35, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -64,3 +65,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Enemies.RangedFlyingEnemy
   data: {fileID: 0}
+--- !u!114 &7930916116004686843
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9005451285246291142}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a8f102573e449dbd1624b5e28a9b210, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Enemies.SkyshardSpriteAnimation
+  frames:
+  - {fileID: 8242679458929585706, guid: 628cb5b8661b6374b88d559d1c0f2e35, type: 3}
+  - {fileID: -1957781678, guid: 628cb5b8661b6374b88d559d1c0f2e35, type: 3}
+  - {fileID: 92012974, guid: 628cb5b8661b6374b88d559d1c0f2e35, type: 3}
+  - {fileID: 1687558089, guid: 628cb5b8661b6374b88d559d1c0f2e35, type: 3}
+  - {fileID: -828457136, guid: 628cb5b8661b6374b88d559d1c0f2e35, type: 3}
+  - {fileID: -701352640, guid: 628cb5b8661b6374b88d559d1c0f2e35, type: 3}
+  - {fileID: -1175650452, guid: 628cb5b8661b6374b88d559d1c0f2e35, type: 3}
+  - {fileID: 2018283721, guid: 628cb5b8661b6374b88d559d1c0f2e35, type: 3}
+  frameDuration: 0.125
