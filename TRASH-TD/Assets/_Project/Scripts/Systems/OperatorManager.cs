@@ -203,6 +203,7 @@ namespace TrashTD.Systems
                    (opData.operatorName == "Scrapper" && !(opComp is ScrapperOperator)) ||
                    (opData.operatorName == "Bulkhead" && !(opComp is BulkheadOperator)) ||
                    (opData.operatorName == "Pyrolite" && !(opComp is PyroliteOperator)) ||
+                   (opData.operatorName == "Pompoth" && !(opComp is PompothOperator)) ||
                    (opData.operatorName == "Deadeye" && !(opComp is DeadeyeOperator)) ||
                    (opData.operatorName == "Chillpath" && !(opComp is ChillpathOperator)) ||
                    (opData.operatorName == "Coalesce" && !(opComp is CoalesceOperator)) ||
@@ -253,6 +254,10 @@ namespace TrashTD.Systems
             if (opData != null && opData.operatorName == "Pyrolite")
             {
                 return obj.AddComponent<PyroliteOperator>();
+            }
+            if (opData != null && opData.operatorName == "Pompoth")
+            {
+                return obj.AddComponent<PompothOperator>();
             }
             if (opData != null && opData.operatorName == "Deadeye")
             {
