@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
   m_Name: OP_Sniper_Deadeye
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
-  operatorName: Deadeye
+  operatorName: Dead Eye
   operatorClass: 2
   baseRarity: 1
   position: 1
@@ -38,7 +38,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Increases damage by 20% but also increases attack interval by 20% against flying enemies.'
+  skillDescription: Increases damage by 20% but also increases attack interval by 20% against flying enemies.
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
@@ -46,6 +46,7 @@ MonoBehaviour:
   chillFreezeDuration: 1.5
   portrait: {fileID: -4691806355717932049, guid: e5f3f422054a5ac47a0160148a848406, type: 3}
   operatorPrefab: {fileID: 685036189517171224, guid: 83469e4c69a448f58a694844db277f9d, type: 3}
-  projectileOrigin: {x: 0.0, y: 0.05}
-  intelQuote: "Wings just make bigger targets."
-  intelLore: "A hooded watcher who perches on high ground and does not blink. Deadeye fires fast, light shots and takes extra care lining up anything that flies. Says nothing during a wave and everything after it."
+  projectileOrigin: {x: 0, y: 0.05}
+  intelQuote: Wings just make bigger targets.
+  intelLore: 'The Blight killed its eyes years ago, but crystals continued growing inside their empty sockets, burrowing deeper each day, its countless facets scatter light into thousands of reflections, letting it see through almost any space. Yet some reflections reveal things that should not exist: faces in agony, familiar silhouettes disfigured, and entities that mimics its movements a fraction too late. The last time it saw its reflection, something inside it was still blinking.'
+  talentRangePattern: []

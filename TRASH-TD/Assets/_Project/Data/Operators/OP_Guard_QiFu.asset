@@ -40,5 +40,7 @@ MonoBehaviour:
   chillFreezeDuration: 1.5
   portrait: {fileID: 2002156026692265899, guid: f1dce23d008b5034bb6a3ebb5780f7fc, type: 3}
   operatorPrefab: {fileID: 4120733290429841632, guid: a1d9c8667b114f4aa94dc9b5ff89d30d, type: 3}
-  intelQuote: "Breathe in. Step back. ...Not you. Them."
-  intelLore: "A tiger cub who trains on the rooftops of New Calder Basin. Chi Paw lands quick strikes, and every fourth hit channels a palm of green chi that knocks the enemy back a tile. Bows before every fight, even against trash bags."
+  projectileOrigin: {x: 0, y: 0}
+  intelQuote: Breathe in. Step back. ...Not you. Them.
+  intelLore: Chi Paw's  energy persists independently of its body, leaving glowing pawprints on surfaces. These marks remain active for hours, discharging violently when touched. Chi Paw often returns to old pawprints, pressing its paws against them and remaining motionless until their glow fades, suggesting the lingering energy may serve as a source of comfort tied to an unresolved memory. Whether it is reliving something lost or simply unable to let go remains unknown.
+  talentRangePattern: []
