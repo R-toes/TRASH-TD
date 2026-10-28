@@ -45,6 +45,7 @@ MonoBehaviour:
   animationFrameRate: 8
   visualScale: 2
   visualOffset: {x: 0, y: 0.2, z: 0}
+  projectileOrigin: {x: 0.47, y: 0}
   enemyPrefab: {fileID: 4017071742725256548, guid: 533985cfcdac56c51a603e330fdaf29d, type: 3}
   abilityDescription: "Takes 2 block slots and costs 2 lives. Smashes ground operators on or next to its tile (the first hit on each stuns for 2 seconds). Otherwise fires rockets at the weakest operator within 3 tiles; every 4th rocket is a heavy shell."
   intelQuote: "TARGET ACQUIRED. TARGET ERASED."

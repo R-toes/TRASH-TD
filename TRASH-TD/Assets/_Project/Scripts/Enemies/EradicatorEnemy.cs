@@ -44,9 +44,6 @@ namespace TrashTD.Enemies
         private static readonly Color RocketBlastColor = new Color(0.8f, 0.08f, 0.14f, 1f);
         private static readonly Color HeavyRocketColor = new Color(1f, 0.32f, 0.05f, 1f);
 
-        [Tooltip("Rocket pods on its back, in world units at 2x scale (x mirrors with facing)")]
-        [SerializeField] private Vector2 launcherOffset = new Vector2(-0.35f, 0.95f);
-
         private readonly HashSet<OperatorBase> stunnedOperators = new HashSet<OperatorBase>();
         private float meleeTimer;
         private float rocketTimer;
@@ -158,7 +155,7 @@ namespace TrashTD.Enemies
         private void MeleeAttack(OperatorBase target)
         {
             PlayAttackSound();
-            MeleeSwipeVisual.Play(VisualPosition, target.transform.position, new Color(1f, 0.45f, 0.2f, 1f), 1.6f);
+            MeleeSwipeVisual.Play(VisualPosition, target.transform.position, new Color(1f, 0.45f, 0.2f, 1f), 1.4f, MeleeStyle.Smash);
             if (!target.TryTakeAttackDamage(currentATK, data.damageType, this)) return;
 
             CombatFx.Sparks(target.transform.position, new Color(1f, 0.75f, 0.35f), 6, 2.4f, 0.2f, big: true);
@@ -202,8 +199,8 @@ namespace TrashTD.Enemies
             bool heavy = rocketsFired % HeavyRocketEvery == 0;
             Vector2Int targetCell = target.DeployedCell.GridPosition;
 
-            Vector3 launcher = transform.position + new Vector3(
-                isFacingLeft ? -launcherOffset.x : launcherOffset.x, launcherOffset.y, 0f);
+            // The front of its arm cannon (EnemyData.projectileOrigin), scaled and raised with the sprite.
+            Vector3 launcher = ProjectileOrigin;
 
             Vector3 impact = target.transform.position;
             float speed = heavy ? HeavyRocketSpeed : RocketSpeed;

@@ -73,9 +73,13 @@ namespace TrashTD.Operators
                 return;
             }
 
-            MeleeSwipeVisual.Play(transform.position, target.VisualPosition, new Color(1f, 0.78f, 0.3f, 1f));
+            MeleeSwipeVisual.Play(transform.position, target.VisualPosition, new Color(1f, 0.78f, 0.3f, 1f), MeleeSlashSize, MeleeSlashStyle);
             base.Attack(target);
         }
+
+        /// <summary>The melee hit effect for this Guard's basic attack (a Guard with its own look overrides these).</summary>
+        protected virtual MeleeStyle MeleeSlashStyle => MeleeStyle.Slash;
+        protected virtual float MeleeSlashSize => 1f;
 
         private void ApplyIsolatedDamage(EnemyBase target, int attackPower)
         {

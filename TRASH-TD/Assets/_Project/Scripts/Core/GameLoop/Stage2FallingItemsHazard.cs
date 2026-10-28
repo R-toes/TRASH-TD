@@ -302,7 +302,7 @@ namespace TrashTD.Core.GameLoop
             AudioManager.Instance?.PlaySfxOrFallback(landSfx, SfxId.GameplayMeleeAttack);
 
             // Impact visual ring/puff
-            MeleeSwipeVisual.Play(impactWorldPos, impactWorldPos + Vector3.up * 0.1f, new Color(1f, 0.75f, 0.2f, 0.8f));
+            MeleeSwipeVisual.Play(impactWorldPos, impactWorldPos + Vector3.up * 0.1f, new Color(1f, 0.75f, 0.2f, 0.8f), 1f, MeleeStyle.Impact);
 
             // Determine affected units
             List<OperatorBase> operatorsToHit = new List<OperatorBase>();

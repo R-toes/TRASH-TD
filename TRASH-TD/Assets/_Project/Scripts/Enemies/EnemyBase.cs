@@ -1309,7 +1309,8 @@ namespace TrashTD.Enemies
             {
                 attackTimer = 0f;
                 PlayAttackSound();
-                MeleeSwipeVisual.Play(VisualPosition, blockingOperator.transform.position, new Color(1f, 0.35f, 0.25f, 1f));
+                MeleeSwipeVisual.Play(VisualPosition, blockingOperator.transform.position, new Color(1f, 0.35f, 0.25f, 1f), 1f,
+                    data.archetype == EnemyArchetype.Tank ? MeleeStyle.Bash : MeleeStyle.Claw);
                 blockingOperator.TryTakeAttackDamage(currentATK, data.damageType, this);
             }
         }

@@ -51,7 +51,7 @@ namespace TrashTD.Operators
             {
                 // Physical melee slash on own tile
                 PlayAttackSound(SfxId.GameplayMeleeAttack);
-                MeleeSwipeVisual.Play(transform.position, target.VisualPosition, SlashColor);
+                MeleeSwipeVisual.Play(transform.position, target.VisualPosition, SlashColor, 1.35f, MeleeStyle.FlameSlash);
                 ApplyDamage(target, DamageType.Physical);
             }
             else

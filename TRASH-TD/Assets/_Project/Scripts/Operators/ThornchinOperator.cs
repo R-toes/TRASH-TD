@@ -33,7 +33,7 @@ namespace TrashTD.Operators
         {
             if (target == null || !isDeployed) return;
 
-            MeleeSwipeVisual.Play(transform.position, target.VisualPosition, SpineColor);
+            MeleeSwipeVisual.Play(transform.position, target.VisualPosition, SpineColor, 1f, MeleeStyle.Spikes);
             base.Attack(target);
         }
 
@@ -48,7 +48,7 @@ namespace TrashTD.Operators
             if (distance <= 1.5f)
             {
                 // Melee attacker retaliation
-                MeleeSwipeVisual.Play(startPos, targetPos, SpineColor);
+                MeleeSwipeVisual.Play(startPos, targetPos, SpineColor, 1f, MeleeStyle.Spikes);
                 ApplyRetaliationDamage(target);
             }
             else

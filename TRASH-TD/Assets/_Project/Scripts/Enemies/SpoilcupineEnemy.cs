@@ -83,7 +83,7 @@ namespace TrashTD.Enemies
 
                 if (distance <= 1.5f)
                 {
-                    MeleeSwipeVisual.Play(startPos, targetPos, quillColor);
+                    MeleeSwipeVisual.Play(startPos, targetPos, quillColor, 1f, MeleeStyle.Spikes);
                     targetOperator.TakeDamage(reflectDamage, reflectDamageType, this);
                 }
                 else

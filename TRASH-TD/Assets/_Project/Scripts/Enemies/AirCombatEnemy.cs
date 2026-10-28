@@ -212,7 +212,7 @@ namespace TrashTD.Enemies
 
         protected void PlayAirMeleeAttack(OperatorBase target)
         {
-            MeleeSwipeVisual.Play(ProjectileOrigin, target.transform.position, new Color(1f, 0.3f, 0.18f, 1f));
+            MeleeSwipeVisual.Play(ProjectileOrigin, target.transform.position, new Color(1f, 0.3f, 0.18f, 1f), 1f, MeleeStyle.Claw);
             target.TryTakeAttackDamage(CurrentATK, Data.damageType, this);
         }
 

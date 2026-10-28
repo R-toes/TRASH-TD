@@ -106,4 +106,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Enemies.EradicatorEnemy
   data: {fileID: 11400000, guid: 0a111e39debae428e62145540dddbed2, type: 2}
-  launcherOffset: {x: -0.35, y: 0.95}

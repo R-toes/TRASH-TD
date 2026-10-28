@@ -74,8 +74,8 @@ namespace TrashTD.Tests
                 Object.DestroyImmediate(projectile.gameObject);
             foreach (var blast in Object.FindObjectsByType<AoeBlastVisual>())
                 Object.DestroyImmediate(blast.gameObject);
-            foreach (var swipe in Object.FindObjectsByType<MeleeSwipeVisual>())
-                Object.DestroyImmediate(swipe.gameObject);
+            foreach (var stab in Object.FindObjectsByType<MeleeStabVisual>())
+                Object.DestroyImmediate(stab.gameObject);
             foreach (var warning in Object.FindObjectsByType<BlastWarningVisual>())
                 Object.DestroyImmediate(warning.gameObject);
 

@@ -1,4 +1,5 @@
 using UnityEngine;
+using TrashTD.Combat;
 using TrashTD.Enemies;
 
 namespace TrashTD.Operators
@@ -11,6 +12,9 @@ namespace TrashTD.Operators
     {
         private const float StunChance = 0.20f;
         private const float StunDuration = 2.0f;
+
+        protected override MeleeStyle MeleeSlashStyle => MeleeStyle.ScrapSlash;
+        protected override float MeleeSlashSize => 1.3f;
 
         public override void Attack(EnemyBase target)
         {

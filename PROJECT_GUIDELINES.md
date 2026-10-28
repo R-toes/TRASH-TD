@@ -203,7 +203,7 @@ Each asset's `skillDescription` is the authoritative description of that operato
   - **Blast look:** a crimson heavy-ordnance blast (`AoeStyle.HeavyOrdnance`): a red-tinted fireball, dark shrapnel, a column of black smoke, a second shockwave and a scorch mark left on the ground.
   - **Warning marker:** while a rocket is in the air, `BlastWarningVisual` marks the blast area. It shows a faint fill and a target ring that blinks faster as impact nears, and a second ring closes in on the centre.
   - **Heavy rocket:** every 4th rocket uses its own projectile (`ProjectileStyle.HeavyRocket`) and a "HEAVY!" label, and deals 1.5× damage. Its blast is the same, in molten red-orange instead of crimson. On Stage 4 it also adds 1 heat stack to every operator it hits.
-  - Rockets launch from the pods on its back (`launcherOffset`, mirrored with facing).
+  - Rockets launch from the front of its arm cannon (`EnemyData.projectileOrigin`, mirrored with facing; see Projectile origins in §7.3). Its melee uses `MeleeStyle.Smash`.
 - **Askalaser** (`AskalaserEnemy`): Arts damage, low DEF / high RES, Grunt speed, blockable (weight 1). It switches between two states:
   - **State 1:** global range. Every 5 s it stops and deals 20 Arts damage to the deployed operator with the lowest DEF.
   - **State 2:** starts when an operator is inside its pattern: a 12-tile diamond (distance ≤ 2) for every unit, widened to 5×5 minus the corners for ranged units. It stops and fires a Castiel-style ramping laser at the lowest-DEF target. The laser lasts until that target dies, camouflages or leaves the pattern. The laser uses `LaserPalette.Crimson` (pink-white core, red body, dark crimson glow), so it never looks like Castiel's.
@@ -265,9 +265,26 @@ Each asset's `skillDescription` is the authoritative description of that operato
 - `EnemyBase.VisualPosition` — centre of the visible sprite. Aim visuals (projectiles, swipes, damage numbers, health bars) at it, not `transform.position`; game logic (range, grid cells) still uses `transform.position`.
 - **Projectile origins:** shots start at the unit's `ProjectileOrigin` (`OperatorBase` / `EnemyBase`), never at `transform.position` (the tile centre).
   - It reads `OperatorData.projectileOrigin` / `EnemyData.projectileOrigin`: an offset in world units from the sprite's centre, measured on the art as drawn, and mirrored with the sprite. Operator art faces **left** (flipped only when facing Right). Enemy art faces **right** (flipped when walking left). For enemies the centre is the visible `EnemyVisual`, so flyers raised by `visualOffset` shoot from their body, not the ground below. Zero = sprite centre.
-  - Current points: Basurocket's launcher front, Deadeye's eyes, Proxishot's leading eye-light, Pyrolite's head flame, Resicochet's floating charge orb, Progeny's leading heart, Bubblets' front mouth, Ignisaur's mouth, Echosquire's sword, Shadeslice's raised blade, Sand Poncho's sleeve cannon, Hextension's head, Skyshard's glass body, Talon Rat's talons (its swipe).
-  - Units with their own muzzles keep them: Askalaser (`muzzleOffset`), THE ERADICATOR (`launcherOffset`), Roboflame (`flameOriginOffset`), Hextension's wire (`wireOriginOffset`). Castiel's laser starts at its crystal (the sprite centre).
+  - Current points: Basurocket's launcher front, Deadeye's eyes, Proxishot's leading eye-light, Pyrolite's head flame, Resicochet's floating charge orb, Progeny's leading heart, Bubblets' front mouth, Ignisaur's mouth, Echosquire's sword, Shadeslice's raised blade, Sand Poncho's sleeve cannon, Smog's chimney, Hextension's head, Skyshard's glass body, Talon Rat's talons (its swipe), THE ERADICATOR's arm cannon (front of the gun, between its two barrels).
+  - The offset is in the sprite's own units and is multiplied by the unit's scale, so THE ERADICATOR's `(0.47, 0)` lands on the muzzle of its 2× sprite. (Its old `launcherOffset` was measured from the path position, ignoring the scale and `visualOffset`.)
+  - Units with their own muzzles keep them: Askalaser (`muzzleOffset`), Roboflame (`flameOriginOffset`), Hextension's wire (`wireOriginOffset`). They have no `visualOffset`, so these match the sprite. Castiel's laser starts at its crystal (the sprite centre).
   - A new shooting unit sets `projectileOrigin` on its data asset; no code change.
+- **Melee hits:** `MeleeSwipeVisual.Play(attacker, target, color, size, MeleeStyle)` draws pixel-art hits with pooled `PixelParticles` (no GameObject per hit). The effect is centred on the target; the attacker only sets the direction. A size of 1.5 or more draws a heavier version (slashes get a second echo arc). Styles:
+
+  | Style | Look | Used by |
+  |---|---|---|
+  | Slash (default) | crescent swept across the target, bright edge leading | Guards, Specialists, Stag-ger, Echosquire (1.8, heavy) |
+  | FlameSlash | double arc trailing fire, small fireball on the hit, spray of embers | Ignisaur's own-tile slash (size 1.35) |
+  | ScrapSlash | double arc, impact ring, shower of falling sparks, junk knocked loose (rust, steel, paint, plastic) | Scrapper (size 1.3) |
+  | Claw | three raking marks | enemy melee, Talon Rat |
+  | Bash | impact ring, white flash, sparks, dust, impact streaks | Defenders, tank enemies |
+  | Spikes | spines bursting out of the target | Thornchin, Spoilcupine |
+  | Smash | big flash, shockwave, flying debris, smoke | THE ERADICATOR's melee |
+  | Impact | flash, falling sparks, dust | Stage 2 falling items |
+
+  - `Edge()` brightens the colour for the cutting edge, so near-black colours still read.
+  - A Guard picks its basic-attack effect by overriding `GuardOperator.MeleeSlashStyle` / `MeleeSlashSize` (Scrapper does).
+  - **Shadeslice's thrust** (`MeleeSwipeVisual.PlayStab`, the Guard isolation strike) keeps its original crimson line-and-glow look in `MeleeStabVisual` (LineRenderers, one GameObject per stab). The team preferred it to a pixel version.
 - `CombatProjectileVisual.Fire(start, EnemyBase target, ...)` follows a moving target — prefer it over the fixed-position overload.
 - **Combat effects are pixel art** at the stage-art scale (32 texels per unit, point-filtered, positions snapped to that pixel grid).
   - `CombatFxArt` generates the sprites, shaded from one colour.
