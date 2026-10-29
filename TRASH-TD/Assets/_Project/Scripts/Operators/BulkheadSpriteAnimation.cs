@@ -5,7 +5,8 @@ namespace TrashTD.Operators
     [RequireComponent(typeof(SpriteRenderer))]
     public class BulkheadSpriteAnimation : MonoBehaviour, IOperatorSpriteFrames
     {
-        private const float FrameInterval = 0.25f;
+        // 8-frame idle loop (1 s per cycle).
+        private const float FrameInterval = 0.125f;
 
         [SerializeField] private Sprite[] frames;
 
@@ -19,11 +20,21 @@ namespace TrashTD.Operators
         private void Awake()
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
-            if (frames == null || frames.Length != 2 || frames[0] == null || frames[1] == null)
+            if (frames == null || frames.Length < 2)
             {
-                Debug.LogError("BulkheadSpriteAnimation requires exactly two assigned sprites.", this);
+                Debug.LogError("BulkheadSpriteAnimation requires at least two assigned sprites.", this);
                 enabled = false;
                 return;
+            }
+
+            for (int i = 0; i < frames.Length; i++)
+            {
+                if (frames[i] == null)
+                {
+                    Debug.LogError($"BulkheadSpriteAnimation: frame {i} is not assigned.", this);
+                    enabled = false;
+                    return;
+                }
             }
 
             spriteRenderer.sprite = frames[0];

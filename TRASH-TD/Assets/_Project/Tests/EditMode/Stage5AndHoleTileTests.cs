@@ -945,6 +945,55 @@ namespace TrashTD.Tests
         }
 
         [Test]
+        public void Bulkhead_Prefab_Has8AnimationFrames()
+        {
+            var bulkheadPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/Operators/Prefab_OP_Bulkhead.prefab");
+            if (bulkheadPrefab != null)
+            {
+                var anim = bulkheadPrefab.GetComponent<BulkheadSpriteAnimation>();
+                Assert.IsNotNull(anim, "Bulkhead prefab must have BulkheadSpriteAnimation component.");
+                Assert.IsNotNull(anim.Frames, "Bulkhead animation frames must not be null.");
+                Assert.AreEqual(8, anim.Frames.Length, "Bulkhead animation must have 8 frames.");
+                Assert.AreEqual(0.125f, anim.FrameDuration, 0.001f, "Bulkhead animation frame duration should be 0.125s (8 FPS).");
+                for (int i = 0; i < anim.Frames.Length; i++)
+                {
+                    Assert.IsNotNull(anim.Frames[i], $"Bulkhead frame {i} must be assigned.");
+                }
+            }
+        }
+
+        [Test]
+        public void BulkheadSpriteAnimation_Cycles8Frames()
+        {
+            var animObj = new GameObject("TestBulkheadAnim");
+            var sr = animObj.AddComponent<SpriteRenderer>();
+            var anim = animObj.AddComponent<BulkheadSpriteAnimation>();
+
+            var sprites = new Sprite[8];
+            for (int i = 0; i < 8; i++)
+            {
+                sprites[i] = Sprite.Create(new Texture2D(32, 32), new Rect(0, 0, 32, 32), Vector2.one * 0.5f);
+            }
+
+            var framesField = typeof(BulkheadSpriteAnimation).GetField("frames",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            framesField.SetValue(anim, sprites);
+
+            TestUtility.CallAwake(anim);
+
+            Assert.AreEqual(sprites[0], sr.sprite);
+            Assert.AreEqual(8, anim.Frames.Length);
+            Assert.AreEqual(0.125f, anim.FrameDuration, 0.001f);
+
+            Object.DestroyImmediate(animObj);
+            for (int i = 0; i < 8; i++)
+            {
+                Object.DestroyImmediate(sprites[i].texture);
+                Object.DestroyImmediate(sprites[i]);
+            }
+        }
+
+        [Test]
         public void Mossmo_SkillDescription_And_DoesNotAttack()
         {
             var mossmoData = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>("Assets/_Project/Data/Operators/OP_Defender_Mossmo.asset");

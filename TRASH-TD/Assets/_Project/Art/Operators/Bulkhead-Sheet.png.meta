@@ -8,6 +8,24 @@ TextureImporter:
   - first:
       213: 6587980602759215763
     second: Bulkhead-Sheet_1
+  - first:
+      213: 1950014413
+    second: Bulkhead-Sheet_2
+  - first:
+      213: -863085198
+    second: Bulkhead-Sheet_3
+  - first:
+      213: 467509389
+    second: Bulkhead-Sheet_4
+  - first:
+      213: 2007582955
+    second: Bulkhead-Sheet_5
+  - first:
+      213: -1606516053
+    second: Bulkhead-Sheet_6
+  - first:
+      213: -95616900
+    second: Bulkhead-Sheet_7
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -161,6 +179,138 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: Bulkhead-Sheet_2
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b3f740d662e7e4d49bf9885c14f1c2ff
+      internalID: 1950014413
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bulkhead-Sheet_3
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 55f50ecaeb2b77e49a93c084076a7e7f
+      internalID: -863085198
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bulkhead-Sheet_4
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1881edf30c68d0244a5b3de14edbd610
+      internalID: 467509389
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bulkhead-Sheet_5
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5e61208590ede6e48a36a58abca01eb1
+      internalID: 2007582955
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bulkhead-Sheet_6
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3791b30620c65a945a08e014f4fac0eb
+      internalID: -1606516053
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bulkhead-Sheet_7
+      rect:
+        serializedVersion: 2
+        x: 224
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8828417ea7339634e899a6698ed1060d
+      internalID: -95616900
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
@@ -179,6 +329,12 @@ TextureImporter:
     nameFileIdTable:
       Bulkhead-Sheet_0: 4414281254907323090
       Bulkhead-Sheet_1: 6587980602759215763
+      Bulkhead-Sheet_2: 1950014413
+      Bulkhead-Sheet_3: -863085198
+      Bulkhead-Sheet_4: 467509389
+      Bulkhead-Sheet_5: 2007582955
+      Bulkhead-Sheet_6: -1606516053
+      Bulkhead-Sheet_7: -95616900
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
