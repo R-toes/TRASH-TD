@@ -197,13 +197,13 @@ namespace TrashTD.Core.GameLoop
                 if (step == null) continue;
                 if (step.action == TutorialAction.DefeatChoice)
                 {
-                    dialogue.Say(step.text, true);
+                    dialogue.Say(step.text, true, step.emote);
                     dialogue.ShowChoices("TRY AGAIN", RetryTutorial, "SKIP TUTORIAL", EndTutorial);
                     yield break;
                 }
 
                 advanced = false;
-                dialogue.Say(step.text, false);
+                dialogue.Say(step.text, false, step.emote);
                 while (!advanced && !ending) yield return null;
                 if (ending) yield break;
             }
@@ -322,7 +322,7 @@ namespace TrashTD.Core.GameLoop
         {
             advanced = false;
             dialogue.SetLayout(TutorialDialogueLayout.Gameplay);
-            dialogue.Say(step.text, false);
+            dialogue.Say(step.text, false, step.emote);
             ApplyHighlight(step);
             while (!advanced && !ending) yield return null;
         }
@@ -338,7 +338,7 @@ namespace TrashTD.Core.GameLoop
             draftOverlay?.ReleaseHeldDraft();
 
             dialogue.SetLayout(TutorialDialogueLayout.Compact);
-            dialogue.Say(step.text, true);
+            dialogue.Say(step.text, true, step.emote);
             while (!ending && gameManager.CurrentPhase == StagePhase.CardPick)
             {
                 dialogue.PointAt(draftOverlay != null ? draftOverlay.GetOfferedCardRect(pickTarget) : null);
@@ -356,7 +356,7 @@ namespace TrashTD.Core.GameLoop
             while (!ending && gameManager.CurrentPhase == StagePhase.CardPick) yield return null;
 
             dialogue.SetLayout(TutorialDialogueLayout.Gameplay);
-            dialogue.Say(step.text, true);
+            dialogue.Say(step.text, true, step.emote);
             while (!ending && FindDeployed(step.operatorData) == null)
             {
                 // Discarded, or lost in battle: nothing to deploy, so don't hold the tutorial up
@@ -377,7 +377,7 @@ namespace TrashTD.Core.GameLoop
 
             waveStartAllowed = true;
             dialogue.SetLayout(TutorialDialogueLayout.Gameplay);
-            dialogue.Say(step.text, true);
+            dialogue.Say(step.text, true, step.emote);
             while (!ending && gameManager.CurrentPhase == StagePhase.Preparation)
             {
                 dialogue.PointAt(hud != null ? hud.StartWaveButtonRect : null);
@@ -390,7 +390,7 @@ namespace TrashTD.Core.GameLoop
         {
             recallTaught = true; // The RETREAT button appears from here on
             dialogue.SetLayout(TutorialDialogueLayout.Gameplay);
-            dialogue.Say(step.text, true);
+            dialogue.Say(step.text, true, step.emote);
             OperatorBase target;
             while (!ending && (target = FindDeployed(step.operatorData)) != null)
             {

@@ -561,8 +561,9 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
 Coalesce teaches the basics on a guided stage. Added 2026-10-29 on branch `tutorial-trial`.
 
 - **Stage map intro** (`MapTutorialGuide`, created by `ShowStageSelectionInternal` while PlayerPrefs `TrashTD.TutorialDone` / `TutorialDirector.IsTutorialDone` is unset): PLAY always opens the stage map.
-  - **Lines:** Coalesce pops up bottom right (`TutorialDialogueLayout.StageMap`, above the QA SANDBOX button) and plays `TutorialScript.mapIntro`. It introduces themself, the map controls and the markers, pointing at STAGE 01 and then STAGE 00 (`StageNode` highlight + `stageNumber`).
-  - **Request:** the last step (`OpenTutorialStage`) asks for STAGE 00. The pointer follows the STAGE 00 marker, then PLAY once its dossier is open.
+  - **Lines:** Coalesce slides in bottom right (`TutorialDialogueLayout.StageMap`) and plays `TutorialScript.mapIntro`. It introduces themself, the map controls and the markers, pointing at STAGE 01 and then STAGE 00 (`StageNode` highlight + `stageNumber`).
+  - **Spotlight** (`SetSpotlight(true)`, stage map only): talk lines darken the map more (62% black). A line that points at a marker leaves a soft circle of normal brightness around it, which closes in from the edges and follows the pointer. It's built from a code-generated round-hole sprite plus four bars, so it needs no shader.
+  - **Request:** the last step (`OpenTutorialStage`) asks for STAGE 00. It's a task line: Coalesce leaves, and the task strip sits above the QA SANDBOX button. The pointer follows the STAGE 00 marker, then PLAY once its dossier is open.
   - **Requirement:** until the tutorial is done, `SelectStage` refuses every other stage (wobble + denied sound), the sandbox included. Map pan and zoom are blocked while Coalesce is mid-line.
   - **Skip:** SKIP TUTORIAL works here too; it marks the tutorial done and removes Coalesce.
   - **Repeat visits:** the intro plays once per session (`introHeard`); later map visits go straight to the STAGE 00 request. Quitting the tutorial halfway doesn't count as done.
@@ -570,8 +571,8 @@ Coalesce teaches the basics on a guided stage. Added 2026-10-29 on branch `tutor
 - **Map node:** STAGE 00 by the lake on the map's west side (`TutorialNodePosition`, 0.275 / 0.345). It is always playable and replays the full tutorial. It's appended to `availableStages` after the sandbox, so Stage *i*+1 and the sandbox keep their indices. Node lookups go through `FindStageNode(stage)`, never `stageMapNodes[stageIndex]`. Node intros are staggered by `StageNumber`, so STAGE 00 comes first. The title backdrop and the Intel's "Sighted at" lists skip it.
 - **Dossier:** for the tutorial only the preview, name, brief and Back / Play show. The stats line, divider, difficulty label, slider and info strip are hidden (`SetDetailsBlockVisible`). The preview's bare-grid fallback leaves Blocked tiles empty (void).
 - **Stage data:** `Resources/Stages/STAGE_TUTORIAL.asset` (`stageId` `TUTORIAL`, `TutorialDirector.TutorialStageId`).
-  - A 13x5 grid with no art. Row 2 is a straight lane from the spawn (0,2) to the exit (9,2), with high ground above and below it.
-  - Rows 0 and 4 and columns 10-12 are Blocked void. At 16:9 the empty right columns sit under Coalesce and the speech bubble, so neither covers the lane.
+  - A 10x5 grid with no art, centred on screen (the camera centres on the grid's width). Row 2 is a straight lane from the spawn (0,2) to the exit (9,2), with high ground above and below it.
+  - Rows 0 and 4 are Blocked void. Coalesce covers part of the field while talking, but the game is frozen then.
   - 6 waves, the same on every difficulty: Sludge Grunt, Toxic Rusher, Pollution Tank and Skyshard.
   - 10 lives, and **it can be lost** like any stage.
   - **Defeat:** the normal defeat screen shows. After 1.9 s (`DefeatTalkDelay`) Coalesce talks over it (`BringAboveResults`, sorting order 310) with `TutorialScript.onDefeat`. It ends with `DefeatChoice`, two buttons in the bubble: TRY AGAIN (encouraged, hazard yellow; restarts the tutorial like Retry) and SKIP TUTORIAL (marks it done and loads the stage map). The defeat screen's own buttons keep working.
@@ -592,6 +593,8 @@ Coalesce teaches the basics on a guided stage. Added 2026-10-29 on branch `tutor
   - `OpenTutorialStage`: stage-map intro only (see above).
 
   `highlight` adds a pointer: lives, a deck card, START WAVE, a draft card, path, high ground or spawn/exit tiles, or an operator's tile.
+
+  `emote` (`TutorialEmote`) is the pose Coalesce strikes as the line starts: Nod (default), Happy (a hop), Curious (a head tilt), Worried (shrinks back and shivers), Excited (two hops) or Point (leans in). Every current line has one picked to match what it says.
 - **Lesson order:** Chi Paw (draft, deploy, facing, blocking) → Deadeye (high ground; Toxic Rusher) → Pyrolite (Arts vs DEF; Pollution Tank) → Coalesce (healing; Skyshard flies over blockers) → Bulkhead, then the upgrade lesson → a free pick and the final mixed wave.
   - **Upgrade lesson:** two gifted Chi Paw cards plus retreating the deployed one make 3 copies, which merge into a 2★ card. Guards have no recall cooldown, so it is redeployed at once; Coalesce then lists the other classes' cooldowns.
   - **Opening lines:** the stage's intro works for first-timers and for returning players.
@@ -603,10 +606,14 @@ Coalesce teaches the basics on a guided stage. Added 2026-10-29 on branch `tutor
   - **End:** finishing marks the tutorial done and shows the results screen. Skipping marks it done and loads the main menu at the stage map. Losing stops the script and hands over to the defeat lines.
   - **No script asset:** the stage just plays freely.
 - **Coalesce** (`TutorialDialogueUI`, its own canvas at sorting order 250: above the HUD (100) and the draft (200), under the results (300)):
-  - **Sprite and bubble:** 256 px, standing on the HUD's bottom-right panel, with a terminal speech bubble above. Text types at 42 characters/s with a voice blip. The sheet animates only while text is typing, 1.25x faster than its idle frame time (`SpeakingFrameSpeedup`).
-  - **Talk lines:** they dim the screen and catch every click. A click (or Space) finishes the line, the next click advances.
-  - **Task lines:** they show a yellow ▶ TASK tag and leave the game clickable.
-  - **During draft tasks:** it switches to a compact bottom-left layout, under the card column.
-  - **Pointer:** pulsing brackets frame any UI element on any canvas.
-  - **Skip:** SKIP TUTORIAL ▶▶ asks for confirmation.
+  - **Sprite and bubble:** close to the camera. The 32 px sheet is drawn at 640 px (20x) in the bottom-right corner, pushed 150 px past the bottom and right edges so the feet and shell are cut off. Coalesce faces left, into the screen. The terminal speech bubble (540x230) sits left of the head, with its tail at the snout. Together they cover about 20% of a 16:9 screen. Text types at 42 characters/s with a voice blip. The sheet animates only while text is typing, 1.25x faster than its idle frame time (`SpeakingFrameSpeedup`).
+  - **Only on screen while talking:**
+    - Coalesce and the bubble slide in from the right for a line (0.32 s, unscaled time) and back out when the bubble hides (`HideBubble`, e.g. while a wave runs). Back-to-back lines keep Coalesce on screen.
+    - Typing starts once Coalesce is in place, with the step's `emote`.
+    - A layout change snaps Coalesce off screen; the next line slides in from that layout's side.
+  - **Talk lines:** they dim the screen (fading in) and catch every click. A click (or Space) finishes the line, the next click advances.
+  - **Task lines:** they show a yellow ▶ TASK tag and leave the game clickable. Once the line has typed out and held 1.4 s plus 0.01 s per character, Coalesce slides out. A pinned ▶ TASK strip then keeps the instruction on screen until the next line. It sits on the HUD's bottom-right panel, where Coalesce used to stand. Pointers and tile highlights don't change.
+  - **Stays on screen:** during draft tasks, in a compact bottom-left layout under the card column (it slides in from the left), and while a line has choices (`DefeatChoice`).
+  - **Pointer:** pulsing brackets frame any UI element on any canvas, drawn above Coalesce.
+  - **Skip:** SKIP TUTORIAL ▶▶ stays put while Coalesce comes and goes. In-game it's top right under the HUD's top bar. On the map it's top right under the stage progress readout. In the draft layout it sits above Coalesce. It asks for confirmation.
 - **Voice:** `SfxId.TutorialVoice` (`SFX/UI/TutorialVoice`). It is played as a clip (the shared repeat throttle would drop most blips). Until a file exists, a code-generated 45 ms blip plays instead.

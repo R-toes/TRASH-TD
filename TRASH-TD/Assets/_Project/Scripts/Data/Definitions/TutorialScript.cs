@@ -35,6 +35,17 @@ namespace TrashTD.Data
         StageNode        // Map intro: the marker of `stageNumber` (0 = the tutorial)
     }
 
+    /// <summary>The little pose Coalesce strikes as a line starts. Leans and tilts go toward the speech bubble.</summary>
+    public enum TutorialEmote
+    {
+        Nod,     // A small nod: plain explaining
+        Happy,   // One hop: praise, greetings
+        Curious, // A head tilt held for a moment: questions, new ideas
+        Worried, // Shrinks back and shivers: threats, warnings
+        Excited, // Two bouncy hops: big moments
+        Point    // Leans in toward the screen: "look here", instructions
+    }
+
     [Serializable]
     public class TutorialStep
     {
@@ -60,6 +71,9 @@ namespace TrashTD.Data
 
         [Tooltip("StageNode highlight: which map marker (0 = the tutorial)")]
         [Min(0)] public int stageNumber;
+
+        [Tooltip("Coalesce's pose as the line starts (Coalesce only shows up for lines with text)")]
+        public TutorialEmote emote;
     }
 
     /// <summary>

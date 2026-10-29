@@ -49,6 +49,7 @@ namespace TrashTD.UI
             Sprite[] frames = UnitSpriteFrames.GetOperatorFrames(script.speaker, out float frameDuration);
             dialogue = TutorialDialogueUI.Create(script.speakerName, frames, frameDuration);
             dialogue.SetLayout(TutorialDialogueLayout.StageMap);
+            dialogue.SetSpotlight(true);
             dialogue.Advanced += HandleAdvanced;
             dialogue.SkipConfirmed += HandleSkipConfirmed;
             StartCoroutine(Run(script));
@@ -92,7 +93,7 @@ namespace TrashTD.UI
                 if (introHeard) continue;
 
                 advanced = false;
-                dialogue.Say(step.text, false);
+                dialogue.Say(step.text, false, step.emote);
                 while (!advanced && !closed)
                 {
                     dialogue.PointAt(step.highlight == TutorialHighlight.StageNode ? menu.GetStageNodeRect(step.stageNumber) : null);
@@ -109,7 +110,7 @@ namespace TrashTD.UI
             }
 
             // Open STAGE 00, then PLAY; the pointer follows whichever is next
-            dialogue.Say(request.text, true);
+            dialogue.Say(request.text, true, request.emote);
             while (!closed)
             {
                 dialogue.PointAt(menu.IsTutorialDossierOpen ? menu.PlayStageButtonRect : menu.GetStageNodeRect(0));
