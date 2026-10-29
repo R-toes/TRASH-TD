@@ -306,82 +306,116 @@ namespace TrashTD.Systems
             return list;
         }
 
+        /// <summary>
+        /// How many enemies GetEnemiesInCells(cells, operatorPosition) would return, without building the list
+        /// (for checks that run every frame, e.g. Pompoth's attack speed).
+        /// </summary>
+        public int CountEnemiesInCells(IEnumerable<GridCell> cells, OperatorPosition operatorPosition)
+        {
+            if (!FillQueryCellSet(cells)) return 0;
+
+            bool canTargetAir = operatorPosition != OperatorPosition.Melee;
+            int count = 0;
+            for (int i = 0; i < activeEnemies.Count; i++)
+            {
+                var enemy = activeEnemies[i];
+                if (MatchesQueryCells(enemy, canTargetAir) && enemy.CanBeTargetedBy(operatorPosition)) count++;
+            }
+            return count;
+        }
+
         private List<EnemyBase> GetEnemiesInCells(IEnumerable<GridCell> cells, bool canTargetAir)
         {
             var result = new List<EnemyBase>();
-            if (cells == null || gridManager == null) return result;
+            if (!FillQueryCellSet(cells)) return result;
 
-            var cellSet = new HashSet<Vector2Int>();
-            foreach (var c in cells)
+            for (int i = 0; i < activeEnemies.Count; i++)
             {
-                if (c != null) cellSet.Add(c.GridPosition);
-            }
-
-            if (cellSet.Count == 0) return result;
-
-            float cellSize = gridManager.CellSize > 0f ? gridManager.CellSize : 1.0f;
-            float tolerance = 0.35f * cellSize;
-            Vector3 origin = gridManager.GridOrigin;
-
-            foreach (var enemy in activeEnemies)
-            {
-                if (enemy == null || enemy.IsDead || enemy.IsInsideHole) continue;
-                if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air) continue;
-
-                bool matches = false;
-
-                // 1. Direct discrete grid position check
-                Vector2Int pos = gridManager.WorldToGridPosition(enemy.transform.position);
-                if (cellSet.Contains(pos))
-                {
-                    matches = true;
-                }
-
-                // 2. If blocked, check both the blocker's tile and the adjacent path tile (in between tiles)
-                if (!matches && enemy.IsBlocked)
-                {
-                    if (enemy.BlockingOperator != null)
-                    {
-                        var blocker = enemy.BlockingOperator;
-                        Vector2Int blockerPos = blocker.DeployedCell != null
-                            ? blocker.DeployedCell.GridPosition
-                            : gridManager.WorldToGridPosition(blocker.transform.position);
-
-                        if (cellSet.Contains(blockerPos) || cellSet.Contains(enemy.BlockedAdjacentGridPos))
-                        {
-                            matches = true;
-                        }
-                    }
-                }
-
-                // 3. Spatial bounding overlap check (handles transitioning enemies in-between tiles before leaving range)
-                if (!matches)
-                {
-                    Vector3 enemyPos = enemy.transform.position;
-                    int minX = Mathf.FloorToInt((enemyPos.x - tolerance - origin.x) / cellSize);
-                    int maxX = Mathf.FloorToInt((enemyPos.x + tolerance - origin.x) / cellSize);
-                    int minY = Mathf.FloorToInt((enemyPos.y - tolerance - origin.y) / cellSize);
-                    int maxY = Mathf.FloorToInt((enemyPos.y + tolerance - origin.y) / cellSize);
-
-                    for (int x = minX; x <= maxX && !matches; x++)
-                    {
-                        for (int y = minY; y <= maxY && !matches; y++)
-                        {
-                            if (cellSet.Contains(new Vector2Int(x, y)))
-                            {
-                                matches = true;
-                            }
-                        }
-                    }
-                }
-
-                if (matches)
+                var enemy = activeEnemies[i];
+                if (MatchesQueryCells(enemy, canTargetAir))
                 {
                     result.Add(enemy);
                 }
             }
 
             return result;
+        }
+
+        // Reused by every cell query instead of a new HashSet per call (operators query this every attack)
+        private readonly HashSet<Vector2Int> queryCellSet = new HashSet<Vector2Int>();
+
+        /// <summary>Loads the cells' grid positions into queryCellSet; false when there is nothing to match.</summary>
+        private bool FillQueryCellSet(IEnumerable<GridCell> cells)
+        {
+            queryCellSet.Clear();
+            if (cells == null || gridManager == null) return false;
+
+            // Arrays and lists without a boxed enumerator
+            if (cells is GridCell[] array)
+            {
+                for (int i = 0; i < array.Length; i++)
+                {
+                    if (array[i] != null) queryCellSet.Add(array[i].GridPosition);
+                }
+            }
+            else if (cells is List<GridCell> list)
+            {
+                for (int i = 0; i < list.Count; i++)
+                {
+                    if (list[i] != null) queryCellSet.Add(list[i].GridPosition);
+                }
+            }
+            else
+            {
+                foreach (var c in cells)
+                {
+                    if (c != null) queryCellSet.Add(c.GridPosition);
+                }
+            }
+
+            return queryCellSet.Count > 0;
+        }
+
+        /// <summary>Whether an enemy counts as inside the cells loaded by FillQueryCellSet.</summary>
+        private bool MatchesQueryCells(EnemyBase enemy, bool canTargetAir)
+        {
+            if (enemy == null || enemy.IsDead || enemy.IsInsideHole) return false;
+            if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air) return false;
+
+            // 1. Direct discrete grid position check
+            Vector2Int pos = gridManager.WorldToGridPosition(enemy.transform.position);
+            if (queryCellSet.Contains(pos)) return true;
+
+            // 2. If blocked, check both the blocker's tile and the adjacent path tile (in between tiles)
+            if (enemy.IsBlocked && enemy.BlockingOperator != null)
+            {
+                var blocker = enemy.BlockingOperator;
+                Vector2Int blockerPos = blocker.DeployedCell != null
+                    ? blocker.DeployedCell.GridPosition
+                    : gridManager.WorldToGridPosition(blocker.transform.position);
+
+                if (queryCellSet.Contains(blockerPos) || queryCellSet.Contains(enemy.BlockedAdjacentGridPos)) return true;
+            }
+
+            // 3. Spatial bounding overlap check (handles transitioning enemies in-between tiles before leaving range)
+            float cellSize = gridManager.CellSize > 0f ? gridManager.CellSize : 1.0f;
+            float tolerance = 0.35f * cellSize;
+            Vector3 origin = gridManager.GridOrigin;
+            Vector3 enemyPos = enemy.transform.position;
+            int minX = Mathf.FloorToInt((enemyPos.x - tolerance - origin.x) / cellSize);
+            int maxX = Mathf.FloorToInt((enemyPos.x + tolerance - origin.x) / cellSize);
+            int minY = Mathf.FloorToInt((enemyPos.y - tolerance - origin.y) / cellSize);
+            int maxY = Mathf.FloorToInt((enemyPos.y + tolerance - origin.y) / cellSize);
+
+            for (int x = minX; x <= maxX; x++)
+            {
+                for (int y = minY; y <= maxY; y++)
+                {
+                    if (queryCellSet.Contains(new Vector2Int(x, y))) return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -405,22 +439,42 @@ namespace TrashTD.Systems
             return list;
         }
 
+        /// <summary>How many enemies GetEnemiesInRadius(center, radius, operatorPosition) would return, without building the list.</summary>
+        public int CountEnemiesInRadius(Vector3 center, float radius, OperatorPosition operatorPosition)
+        {
+            bool canTargetAir = operatorPosition != OperatorPosition.Melee;
+            float sqrRadius = radius * radius;
+            int count = 0;
+            for (int i = 0; i < activeEnemies.Count; i++)
+            {
+                var enemy = activeEnemies[i];
+                if (IsInRadius(enemy, center, sqrRadius, canTargetAir) && enemy.CanBeTargetedBy(operatorPosition)) count++;
+            }
+            return count;
+        }
+
         private List<EnemyBase> GetEnemiesInRadius(Vector3 center, float radius, bool canTargetAir)
         {
             var result = new List<EnemyBase>();
             float sqrRadius = radius * radius;
 
-            foreach (var enemy in activeEnemies)
+            for (int i = 0; i < activeEnemies.Count; i++)
             {
-                if (enemy == null || enemy.IsDead || enemy.IsInsideHole) continue;
-                if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air) continue;
-                if ((enemy.transform.position - center).sqrMagnitude <= sqrRadius)
+                var enemy = activeEnemies[i];
+                if (IsInRadius(enemy, center, sqrRadius, canTargetAir))
                 {
                     result.Add(enemy);
                 }
             }
 
             return result;
+        }
+
+        private static bool IsInRadius(EnemyBase enemy, Vector3 center, float sqrRadius, bool canTargetAir)
+        {
+            if (enemy == null || enemy.IsDead || enemy.IsInsideHole) return false;
+            if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air) return false;
+            return (enemy.transform.position - center).sqrMagnitude <= sqrRadius;
         }
 
         /// <summary>

@@ -680,7 +680,9 @@ namespace TrashTD.Core.GameLoop
             texture.SetPixels(pixels);
             texture.Apply();
 
-            return Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), width);
+            // FullRect: the default Tight mesh traces a simplified outline around the visible pixels and cuts the
+            // faint falloff along its straight edges, so puffs showed as flat, low-opacity polygons.
+            return Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), width, 0, SpriteMeshType.FullRect);
         }
 
         /// <summary>A vertical gradient: clear at the bottom, solid towards the top.</summary>
@@ -703,7 +705,8 @@ namespace TrashTD.Core.GameLoop
             }
 
             texture.Apply();
-            fogBankSprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, height), new Vector2(0.5f, 0.5f), height);
+            // FullRect so the clear end of the gradient isn't trimmed into a hard bottom edge (see CreateMistSprite)
+            fogBankSprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, height), new Vector2(0.5f, 0.5f), height, 0, SpriteMeshType.FullRect);
             return fogBankSprite;
         }
     }

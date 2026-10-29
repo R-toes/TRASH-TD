@@ -48,26 +48,37 @@ namespace TrashTD.Operators
             var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells, data.position);
             if (candidates == null || candidates.Count == 0) return null;
 
+            // Priority: taunt, then highest DEF, then the biggest splash cluster. The cluster size only breaks DEF ties,
+            // so it's counted only when a tie comes up (it scans every enemy), not for every candidate.
             EnemyBase bestTarget = null;
             int highestDefense = -1;
-            int largestCluster = -1;
+            int largestCluster = -1; // bestTarget's cluster size; -1 until a tie needs it
 
             for (int i = 0; i < candidates.Count; i++)
             {
                 var candidate = candidates[i];
                 if (candidate == null || candidate.IsDead || candidate == excludeTarget || !CanAttackTarget(candidate)) continue;
 
-                var splashGroup = EnemyManager.Instance.GetEnemiesInRadius(candidate.transform.position, splashRadius, data.position);
-                int count = splashGroup != null ? splashGroup.Count : 1;
                 bool isTaunt = candidate.HasTaunt;
                 bool bestIsTaunt = bestTarget != null && bestTarget.HasTaunt;
+                int defense = candidate.CurrentDEF;
+                int count = -1;
+                bool better;
 
-                if (bestTarget == null ||
-                    (isTaunt && !bestIsTaunt) ||
-                    (isTaunt == bestIsTaunt && candidate.CurrentDEF > highestDefense) ||
-                    (isTaunt == bestIsTaunt && candidate.CurrentDEF == highestDefense && count > largestCluster))
+                if (bestTarget == null || (isTaunt && !bestIsTaunt)) better = true;
+                else if (isTaunt != bestIsTaunt) better = false;
+                else if (defense > highestDefense) better = true;
+                else if (defense == highestDefense)
                 {
-                    highestDefense = candidate.CurrentDEF;
+                    if (largestCluster < 0) largestCluster = CountSplashCluster(bestTarget);
+                    count = CountSplashCluster(candidate);
+                    better = count > largestCluster;
+                }
+                else better = false;
+
+                if (better)
+                {
+                    highestDefense = defense;
                     largestCluster = count;
                     bestTarget = candidate;
                 }
@@ -75,6 +86,10 @@ namespace TrashTD.Operators
 
             return bestTarget;
         }
+
+        /// <summary>Enemies this caster's splash would hit if it aimed at the target.</summary>
+        private int CountSplashCluster(EnemyBase target) =>
+            EnemyManager.Instance.CountEnemiesInRadius(target.transform.position, splashRadius, data.position);
 
         /// <summary>
         /// Deals Arts damage to main target and splash Arts damage to all surrounding enemies.

@@ -66,15 +66,8 @@ namespace TrashTD.Operators
             if (cachedRangeCells == null || cachedRangeCells.Length == 0) RefreshRangeCells();
             if (cachedRangeCells == null) return 0;
 
-            var candidates = EnemyManager.Instance.GetEnemiesInCells(cachedRangeCells, data.position);
-            if (candidates == null) return 0;
-
-            int count = 0;
-            foreach (var enemy in candidates)
-            {
-                if (enemy != null && !enemy.IsDead) count++;
-            }
-            return count;
+            // Runs every frame (GetAttackInterval), so count without building a list
+            return EnemyManager.Instance.CountEnemiesInCells(cachedRangeCells, data.position);
         }
 
         public override float GetAttackInterval()
