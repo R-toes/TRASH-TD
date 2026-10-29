@@ -600,7 +600,7 @@ Coalesce teaches the basics on a guided stage. Added 2026-10-29 on branch `tutor
   - **Opening lines:** the stage's intro works for first-timers and for returning players.
 - **Director** (`TutorialDirector`, added by `StageBootstrapper` before `StartStage` so the first draft is already held):
   - **Draft hold:** holds each draft (`GameplayHUDUI.ShouldBlockDraftOverlay` → `HoldsDraft`) until its Draft step releases it (`CardDraftOverlayUI.ReleaseHeldDraft`).
-  - **Gates:** START WAVE works only during a StartWave step (`AllowsWaveStart`). The draft hides Reroll, Skip and Minimize.
+  - **Gates:** START WAVE works only during a StartWave step (`AllowsWaveStart`). The draft hides Reroll, Skip and Minimize. PREVIEW PATH is greyed out and P does nothing on the whole tutorial stage (`TutorialDirector.IsPathPreviewAllowed`, `GameplayHUDUI.RefreshPreviewPathLock`), because Coalesce reveals the route.
   - **Recall:** recalling is hidden until the Retreat step teaches it (`TutorialDirector.IsRecallAllowed`), so players can't empty the field by accident and lose. This covers the RETREAT button next to a selected operator, right-click on a selected operator, and `UnitInfoPanelUI`. Outside the tutorial it is always allowed.
   - **Freeze:** while a talk line or the skip prompt is up, it sets time scale 0. The pause menu still works on top.
   - **End:** finishing marks the tutorial done and shows the results screen. Skipping marks it done and loads the main menu at the stage map. Losing stops the script and hands over to the defeat lines.

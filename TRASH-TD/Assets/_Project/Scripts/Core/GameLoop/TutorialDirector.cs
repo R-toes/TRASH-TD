@@ -41,6 +41,9 @@ namespace TrashTD.Core.GameLoop
         /// <summary>Recall (retreat) is available: always outside the tutorial; in it, once Coalesce has taught it.</summary>
         public static bool IsRecallAllowed => Instance == null || Instance.freePlay || Instance.finished || Instance.recallTaught;
 
+        /// <summary>PREVIEW PATH works everywhere but the tutorial stage, where Coalesce reveals the route.</summary>
+        public static bool IsPathPreviewAllowed => Instance == null;
+
         public static void MarkTutorialDone()
         {
             PlayerPrefs.SetInt(TutorialDoneKey, 1);

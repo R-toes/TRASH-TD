@@ -270,6 +270,8 @@ namespace TrashTD.UI
         private RectTransform bottomRightPanelRect;
         private Text previewPathButtonText;
         private MenuButtonFeedback previewPathFeedback;
+        private Color previewPathRestColor = Color.white;
+        private bool previewPathLocked;
         private GameplayPathPreviewOverlay pathPreviewOverlay;
 
         // Animation state
@@ -398,6 +400,7 @@ namespace TrashTD.UI
 
         private void Update()
         {
+            RefreshPreviewPathLock();
             HandleKeyboardInput();
             if (gameManager != null)
             {
@@ -2066,6 +2069,19 @@ namespace TrashTD.UI
 
             previewPathFeedback = AttachFeedback(previewPathButton, AccentColor, 1.05f, () => PlaySfx(clickClip, 1.1f));
             previewPathButton.onClick.AddListener(TogglePathPreview);
+            previewPathRestColor = previewPathButton.targetGraphic != null ? previewPathButton.targetGraphic.color : Color.white;
+        }
+
+        /// <summary>Greys PREVIEW PATH out (and blocks P) on the tutorial stage, where Coalesce reveals the route.</summary>
+        private void RefreshPreviewPathLock()
+        {
+            bool locked = !TutorialDirector.IsPathPreviewAllowed;
+            if (previewPathButton == null || locked == previewPathLocked) return;
+
+            if (locked && pathPreviewOverlay != null && pathPreviewOverlay.IsVisible) TogglePathPreview();
+            previewPathLocked = locked;
+            previewPathButton.interactable = !locked;
+            UpdatePathPreviewButtonVisuals(false);
         }
 
         /// <summary>
@@ -2128,6 +2144,7 @@ namespace TrashTD.UI
 
         public void TogglePathPreview()
         {
+            if (previewPathLocked) return;
             EnsurePathPreviewOverlay();
             if (pathPreviewOverlay == null) return;
 
@@ -2144,10 +2161,11 @@ namespace TrashTD.UI
             {
                 previewPathFeedback.glowAlways = active;
                 previewPathFeedback.glowColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 1f);
+                previewPathFeedback.SetBaseColor(previewPathLocked ? WaitingColor : previewPathRestColor);
             }
             if (previewPathButtonText != null)
             {
-                previewPathButtonText.color = active ? Color.white : TextDim;
+                previewPathButtonText.color = previewPathLocked ? WaitingColor : active ? Color.white : TextDim;
             }
         }
 
