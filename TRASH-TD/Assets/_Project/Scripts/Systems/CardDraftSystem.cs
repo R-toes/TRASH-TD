@@ -62,6 +62,8 @@ namespace TrashTD.Systems
         [SerializeField] private float star3Weight = 3f;
 
         private readonly List<DraftCard> currentOfferedCards = new List<DraftCard>(3);
+        // Set by the tutorial: the next draft offers exactly these operators instead of random ones
+        private readonly List<OperatorData> scriptedOffer = new List<OperatorData>(3);
         private int currentRound = 0;
         private int rerollsRemaining = 3;
 
@@ -95,6 +97,20 @@ namespace TrashTD.Systems
 #endif
 
         public event Action<IReadOnlyList<DraftCard>> OnCardsOffered;
+
+        /// <summary>
+        /// Makes the next <see cref="GenerateDraftOffer"/> offer exactly these operators, at base rarity, in this
+        /// order (used once, then drafts are random again). The tutorial uses it to deal fixed hands.
+        /// </summary>
+        public void SetScriptedOffer(IEnumerable<OperatorData> operators)
+        {
+            scriptedOffer.Clear();
+            if (operators == null) return;
+            foreach (OperatorData op in operators)
+            {
+                if (op != null) scriptedOffer.Add(op);
+            }
+        }
         public event Action<DraftCard> OnCardSelected;
         public event Action<int> OnRerollCountChanged;
 
@@ -237,6 +253,14 @@ namespace TrashTD.Systems
         {
             currentOfferedCards.Clear();
             currentRound++;
+
+            if (scriptedOffer.Count > 0)
+            {
+                foreach (OperatorData op in scriptedOffer) currentOfferedCards.Add(new DraftCard(op, op.baseRarity));
+                scriptedOffer.Clear();
+                OnCardsOffered?.Invoke(currentOfferedCards);
+                return currentOfferedCards;
+            }
 
             if (availableOperatorPool == null || availableOperatorPool.Count == 0)
             {

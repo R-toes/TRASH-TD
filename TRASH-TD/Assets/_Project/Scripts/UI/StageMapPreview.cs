@@ -363,6 +363,7 @@ namespace TrashTD.UI
                 for (int x = 0; x < stage.gridWidth; x++)
                 {
                     TileType type = stage.GetTile(x, y);
+                    if (type == TileType.Blocked) continue; // Void, as on the tutorial's floor (TutorialStageVisuals)
                     Color color = type switch
                     {
                         TileType.LowGround => new Color(0.10f, 0.24f, 0.15f, 1f),

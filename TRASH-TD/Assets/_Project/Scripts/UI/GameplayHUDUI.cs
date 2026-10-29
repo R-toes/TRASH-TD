@@ -199,6 +199,8 @@ namespace TrashTD.UI
         {
             get
             {
+                // The tutorial deals each hand when Coalesce is ready (CardDraftOverlayUI.ReleaseHeldDraft)
+                if (TutorialDirector.Instance != null) return TutorialDirector.Instance.HoldsDraft;
                 if (environmentBriefingDismissed || gameManager == null || gameManager.CurrentStage == null) return false;
                 string stageId = stageBootstrapper != null ? stageBootstrapper.EnvironmentStageId : gameManager.CurrentStage.stageId;
                 return stageId == "STAGE_02" || stageId == "STAGE_03" || stageId == "STAGE_04" || stageId == "STAGE_05" || stageId == "STAGE_06";
@@ -268,6 +270,8 @@ namespace TrashTD.UI
         private RectTransform bottomRightPanelRect;
         private Text previewPathButtonText;
         private MenuButtonFeedback previewPathFeedback;
+        private Color previewPathRestColor = Color.white;
+        private bool previewPathLocked;
         private GameplayPathPreviewOverlay pathPreviewOverlay;
 
         // Animation state
@@ -396,6 +400,7 @@ namespace TrashTD.UI
 
         private void Update()
         {
+            RefreshPreviewPathLock();
             HandleKeyboardInput();
             if (gameManager != null)
             {
@@ -943,7 +948,7 @@ namespace TrashTD.UI
                 float retreatX = localPosition.x + halfW + 28f;
                 float retreatY = localPosition.y + panelH - 53f;
                 retreatRect.anchoredPosition = new Vector2(retreatX, retreatY);
-                retreatOperatorButton.gameObject.SetActive(true);
+                retreatOperatorButton.gameObject.SetActive(TutorialDirector.IsRecallAllowed);
 
                 if (!selectedLabelShown)
                 {
@@ -2064,6 +2069,19 @@ namespace TrashTD.UI
 
             previewPathFeedback = AttachFeedback(previewPathButton, AccentColor, 1.05f, () => PlaySfx(clickClip, 1.1f));
             previewPathButton.onClick.AddListener(TogglePathPreview);
+            previewPathRestColor = previewPathButton.targetGraphic != null ? previewPathButton.targetGraphic.color : Color.white;
+        }
+
+        /// <summary>Greys PREVIEW PATH out (and blocks P) on the tutorial stage, where Coalesce reveals the route.</summary>
+        private void RefreshPreviewPathLock()
+        {
+            bool locked = !TutorialDirector.IsPathPreviewAllowed;
+            if (previewPathButton == null || locked == previewPathLocked) return;
+
+            if (locked && pathPreviewOverlay != null && pathPreviewOverlay.IsVisible) TogglePathPreview();
+            previewPathLocked = locked;
+            previewPathButton.interactable = !locked;
+            UpdatePathPreviewButtonVisuals(false);
         }
 
         /// <summary>
@@ -2126,6 +2144,7 @@ namespace TrashTD.UI
 
         public void TogglePathPreview()
         {
+            if (previewPathLocked) return;
             EnsurePathPreviewOverlay();
             if (pathPreviewOverlay == null) return;
 
@@ -2142,10 +2161,11 @@ namespace TrashTD.UI
             {
                 previewPathFeedback.glowAlways = active;
                 previewPathFeedback.glowColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 1f);
+                previewPathFeedback.SetBaseColor(previewPathLocked ? WaitingColor : previewPathRestColor);
             }
             if (previewPathButtonText != null)
             {
-                previewPathButtonText.color = active ? Color.white : TextDim;
+                previewPathButtonText.color = previewPathLocked ? WaitingColor : active ? Color.white : TextDim;
             }
         }
 
@@ -3912,7 +3932,7 @@ namespace TrashTD.UI
         private void RetreatSelectedOperator()
         {
             OperatorBase selectedOperator = operatorManager != null ? operatorManager.SelectedOperator : null;
-            if (selectedOperator != null)
+            if (selectedOperator != null && TutorialDirector.IsRecallAllowed)
             {
                 operatorManager.RetreatOperator(selectedOperator);
             }
@@ -4151,6 +4171,11 @@ namespace TrashTD.UI
             }
             if (gameManager == null || waveManager == null) return;
             if (gameManager.CurrentPhase != StagePhase.Preparation) return;
+            if (TutorialDirector.Instance != null && !TutorialDirector.Instance.AllowsWaveStart)
+            {
+                AudioManager.Instance?.PlaySfx(SfxId.UiDenied);
+                return;
+            }
 
             // Enter wave phase
             gameManager.EnterWavePhase();
@@ -4187,6 +4212,26 @@ namespace TrashTD.UI
         }
 
         public bool IsPaused => (pausePanel != null && pausePanel.activeSelf) || (gameManager != null && gameManager.CurrentState == GamePlayState.Paused);
+        public bool IsPauseMenuOpen => pausePanel != null && pausePanel.activeSelf;
+
+        // Highlight targets for the tutorial (TutorialDialogueUI)
+        public RectTransform StartWaveButtonRect => startWaveButton != null ? startWaveButton.GetComponent<RectTransform>() : null;
+        public RectTransform LivesRect => livesTubeRect != null ? livesTubeRect.parent as RectTransform : null;
+        public RectTransform RetreatButtonRect =>
+            retreatOperatorButton != null && retreatOperatorButton.gameObject.activeInHierarchy ? retreatOperatorButton.GetComponent<RectTransform>() : null;
+
+        /// <summary>The deck slot holding a card of this operator (any rarity; ready ones only by default), or null.</summary>
+        public RectTransform GetDeckSlotRect(OperatorData operatorData, bool readyOnly = true)
+        {
+            if (playerDeck == null || deckButtons == null || operatorData == null) return null;
+            var deck = playerDeck.DeckSlots;
+            for (int i = 0; i < deck.Count && i < deckButtons.Length; i++)
+            {
+                if (deck[i] != null && deck[i].operatorData == operatorData && (!readyOnly || deck[i].cooldownRoundsRemaining <= 0) && deckButtons[i] != null)
+                    return deckButtons[i].GetComponent<RectTransform>();
+            }
+            return null;
+        }
         public bool HasConsumedEscapeThisFrame => Time.frameCount == lastEscapeHandledFrame;
 
         public void ConsumeEscapeKey()
