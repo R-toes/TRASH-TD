@@ -62,7 +62,7 @@ MonoBehaviour:
     emote: 1
   steps:
   - action: 0
-    text: "Welcome to the orientation grid! I'm Coalesce, in case we haven't met. First drill or a refresher, I'll walk you through it."
+    text: "Welcome to the orientation grid! I'm Coalesce, and this is your very first drill. Don't worry, we'll take it one step at a time."
     highlight: 0
     operatorData: {fileID: 0}
     enemyData: {fileID: 0}
@@ -70,6 +70,17 @@ MonoBehaviour:
     count: 1
     stageNumber: 0
     emote: 1
+    condition: 1
+  - action: 0
+    text: "Welcome back to the orientation grid! Here for a refresher? Same drill as before. I'll run you through it again."
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 1
+    condition: 2
   - action: 0
     text: "Out in the Basin it's sludge and scrap. In here it's just green lines and practice hostiles. Perfect for learning the ropes."
     highlight: 0
@@ -89,7 +100,7 @@ MonoBehaviour:
     stageNumber: 0
     emote: 5
   - action: 0
-    text: "Every hostile that reaches the exit costs us lives. Lose them all and the stage is lost, even this one. So let's keep them out!"
+    text: "Every hostile that reaches the exit costs us a life, and we only have 3 here. Lose them all and the stage is lost, even this one. So let's keep them out!"
     highlight: 1
     operatorData: {fileID: 0}
     enemyData: {fileID: 0}
@@ -173,7 +184,7 @@ MonoBehaviour:
     stageNumber: 0
     emote: 0
   - action: 0
-    text: "Those were Sludge Grunts: slow, soft, and everywhere. You'll meet plenty more. Great work!"
+    text: "Those were Sludge Grunts: slow, soft, and everywhere. You'll meet plenty more."
     highlight: 0
     operatorData: {fileID: 0}
     enemyData: {fileID: 0}
@@ -181,6 +192,36 @@ MonoBehaviour:
     count: 1
     stageNumber: 0
     emote: 1
+  - action: 0
+    text: "And not a single one got through. Great work!"
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 1
+    condition: 3
+  - action: 0
+    text: "A few slipped past, but that's okay! Keep Chi Paw right on their route, facing the spawn, and it'll catch them."
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 0
+    condition: 4
+  - action: 0
+    text: "Phew, that was close! Only one life left. Don't worry, we'll tighten up the line together. You've got this."
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 3
+    condition: 5
   - action: 0
     text: "New wave, new draft. This time let's get someone who can shoot from a distance."
     highlight: 0
@@ -256,6 +297,36 @@ MonoBehaviour:
     count: 1
     stageNumber: 0
     emote: 0
+  - action: 0
+    text: "Two waves and zero leaks. You're a natural!"
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 4
+    condition: 3
+  - action: 0
+    text: "You're doing okay! Keep the route inside Deadeye's range and those rushers won't get far."
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 0
+    condition: 4
+  - action: 0
+    text: "That one hurt, but we're still standing! Stop the fast ones early and we'll be fine."
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 3
+    condition: 5
   - action: 0
     text: "Next up is armour. Some hostiles shrug off normal hits, because their DEF soaks up physical damage."
     highlight: 0
@@ -407,7 +478,7 @@ MonoBehaviour:
     stageNumber: 0
     emote: 0
   - action: 0
-    text: "You're doing great. Now let's add a wall that can hold more than one hostile."
+    text: "You're doing great! Not a single leak so far."
     highlight: 0
     operatorData: {fileID: 0}
     enemyData: {fileID: 0}
@@ -415,6 +486,36 @@ MonoBehaviour:
     count: 1
     stageNumber: 0
     emote: 1
+    condition: 3
+  - action: 0
+    text: "You're doing okay. A couple got by, but you're learning fast."
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 0
+    condition: 4
+  - action: 0
+    text: "It's been a rough drill, but don't give up! One more blocker will make a big difference."
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 3
+    condition: 5
+  - action: 0
+    text: "Now let's add a wall that can hold more than one hostile."
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 2
   - action: 2
     text: "Pick BULKHEAD, a Defender. Defenders are tough and can block several hostiles at once."
     highlight: 0
@@ -454,8 +555,29 @@ MonoBehaviour:
     count: 2
     stageNumber: 0
     emote: 1
+    condition: 6
+  - action: 7
+    text: "Chi Paw's card is already back in your deck, so here are two more copies to go with it..."
+    highlight: 2
+    operatorData: {fileID: 11400000, guid: b6c6f5ad90104e25a13e6c61c91b8a04, type: 2}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 2
+    stageNumber: 0
+    emote: 0
+    condition: 7
+  - action: 7
+    text: "Oh! Chi Paw got knocked out earlier. No worries, here are three fresh Chi Paw cards..."
+    highlight: 2
+    operatorData: {fileID: 11400000, guid: b6c6f5ad90104e25a13e6c61c91b8a04, type: 2}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 3
+    stageNumber: 0
+    emote: 2
+    condition: 8
   - action: 8
-    text: "Operators can now be recalled! Click Chi Paw on the grid, then press its new RETREAT button (or right-click it)."
+    text: "Now let's recall Chi Paw! Click it on the grid, then press its RETREAT button (or right-click it)."
     highlight: 0
     operatorData: {fileID: 11400000, guid: b6c6f5ad90104e25a13e6c61c91b8a04, type: 2}
     enemyData: {fileID: 0}
@@ -463,6 +585,7 @@ MonoBehaviour:
     count: 1
     stageNumber: 0
     emote: 5
+    condition: 6
   - action: 0
     text: "Three copies merged into a 2★ Chi Paw! Cards only merge in the deck, so retreating is how you upgrade someone on the field."
     highlight: 2
@@ -557,7 +680,7 @@ MonoBehaviour:
     stageNumber: 0
     emote: 0
   - action: 0
-    text: "We did it! That's the whole job: draft, deploy, block, and adapt to whatever crawls out of the Basin."
+    text: "A flawless drill! Not one hostile made it through. I'm impressed!"
     highlight: 0
     operatorData: {fileID: 0}
     enemyData: {fileID: 0}
@@ -565,6 +688,36 @@ MonoBehaviour:
     count: 1
     stageNumber: 0
     emote: 4
+    condition: 3
+  - action: 0
+    text: "We did it, with a few scrapes along the way. That's how everyone starts!"
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 1
+    condition: 4
+  - action: 0
+    text: "We made it, by a whisker! Every clear counts, and you'll only get better from here."
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 1
+    condition: 5
+  - action: 0
+    text: "That's the whole job: draft, deploy, block, and adapt to whatever crawls out of the Basin."
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 0
   - action: 9
     text: "The real stages are waiting on the map. You can replay this drill from STAGE 00 any time. Stay close. I've got you."
     highlight: 0
@@ -593,3 +746,24 @@ MonoBehaviour:
     count: 1
     stageNumber: 0
     emote: 1
+  onLifeLost:
+  - action: 0
+    text: "Oops, one got through! We've still got lives to spare, so no panic. Watch where it slipped past and patch that spot."
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 3
+    condition: 4
+  - action: 0
+    text: "That's our last life! Don't give up now. Every hostile counts, so let's hold the line together!"
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 3
+    condition: 5

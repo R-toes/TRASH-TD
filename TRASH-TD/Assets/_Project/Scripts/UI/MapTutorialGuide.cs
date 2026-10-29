@@ -19,7 +19,7 @@ namespace TrashTD.UI
         private static bool introHeard;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetSession() => introHeard = false;
+        internal static void ResetSession() => introHeard = false;
 
         private MainMenuController menu;
         private TutorialDialogueUI dialogue;

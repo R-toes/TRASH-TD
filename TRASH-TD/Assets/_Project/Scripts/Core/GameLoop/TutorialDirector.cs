@@ -38,9 +38,6 @@ namespace TrashTD.Core.GameLoop
         /// <summary>The tutorial was finished or skipped on this install.</summary>
         public static bool IsTutorialDone => PlayerPrefs.GetInt(TutorialDoneKey, 0) == 1;
 
-        /// <summary>Recall (retreat) is available: always outside the tutorial; in it, once Coalesce has taught it.</summary>
-        public static bool IsRecallAllowed => Instance == null || Instance.freePlay || Instance.finished || Instance.recallTaught;
-
         /// <summary>PREVIEW PATH works everywhere but the tutorial stage, where Coalesce reveals the route.</summary>
         public static bool IsPathPreviewAllowed => Instance == null;
 
@@ -48,6 +45,14 @@ namespace TrashTD.Core.GameLoop
         {
             PlayerPrefs.SetInt(TutorialDoneKey, 1);
             PlayerPrefs.Save();
+        }
+
+        /// <summary>Forget the tutorial was done, so the next stage-map visit plays Coalesce's full intro (TRASH TD → Reset Player Progress).</summary>
+        public static void ResetTutorialProgress()
+        {
+            PlayerPrefs.DeleteKey(TutorialDoneKey);
+            PlayerPrefs.Save();
+            MapTutorialGuide.ResetSession();
         }
 
         private TutorialScript script;
@@ -71,7 +76,9 @@ namespace TrashTD.Core.GameLoop
         private bool ending;   // Skipped: leaving for the stage map
         private bool finished; // Script done: results screen (or free play if the waves aren't over)
         private bool defeated;
-        private bool recallTaught;
+        private bool firstVisit;   // The tutorial wasn't done when this run started (TutorialCondition.FirstVisit)
+        private int lastLives;
+        private bool lifeLost;     // A hostile cost a life; Coalesce reacts at the next point the wave is running
         private int starsEarned = 3;
         private bool freePlay; // No script: the stage just plays normally
         private readonly HashSet<EnemyData> seenEnemies = new HashSet<EnemyData>();
@@ -105,6 +112,7 @@ namespace TrashTD.Core.GameLoop
             {
                 gameManager.OnStageVictory -= HandleStageVictory;
                 gameManager.OnStageDefeat -= HandleStageDefeat;
+                gameManager.OnLifePointsChanged -= HandleLifePointsChanged;
             }
             if (dialogue != null)
             {
@@ -122,6 +130,7 @@ namespace TrashTD.Core.GameLoop
         {
             bootstrapper = owner;
             stageData = stage;
+            firstVisit = !IsTutorialDone;
             gridManager = grid;
             script = Resources.Load<TutorialScript>(ScriptResourcePath);
             if (script == null) Debug.LogError($"TutorialDirector: no TutorialScript at Resources/{ScriptResourcePath}.");
@@ -147,6 +156,8 @@ namespace TrashTD.Core.GameLoop
             {
                 gameManager.OnStageVictory += HandleStageVictory;
                 gameManager.OnStageDefeat += HandleStageDefeat;
+                gameManager.OnLifePointsChanged += HandleLifePointsChanged;
+                lastLives = gameManager.CurrentLifePoints;
             }
 
             StartCoroutine(RunScript());
@@ -175,6 +186,13 @@ namespace TrashTD.Core.GameLoop
 
         private void HandleStageVictory(int stars) => starsEarned = stars;
 
+        private void HandleLifePointsChanged(int current, int max)
+        {
+            // The last life lost is a defeat, which has its own lines (onDefeat)
+            if (current < lastLives && current > 0 && !freePlay && !finished && !defeated) lifeLost = true;
+            lastLives = current;
+        }
+
         private void HandleStageDefeat()
         {
             if (defeated || finished || ending || freePlay) return;
@@ -197,7 +215,7 @@ namespace TrashTD.Core.GameLoop
             dialogue.SetLayout(TutorialDialogueLayout.Gameplay);
             foreach (TutorialStep step in script.onDefeat)
             {
-                if (step == null) continue;
+                if (step == null || !StepApplies(step)) continue;
                 if (step.action == TutorialAction.DefeatChoice)
                 {
                     dialogue.Say(step.text, true, step.emote);
@@ -249,7 +267,8 @@ namespace TrashTD.Core.GameLoop
 
             foreach (TutorialStep step in script.steps)
             {
-                if (step == null) continue;
+                // Conditions pick between variants: first visit or replay, how the lives are holding up, Chi Paw's fate
+                if (step == null || !StepApplies(step)) continue;
                 yield return RunStep(step);
                 ClearPointers();
                 if (ending || finished) yield break;
@@ -295,16 +314,25 @@ namespace TrashTD.Core.GameLoop
                 case TutorialAction.WaitForEnemy:
                     dialogue.HideBubble();
                     while (!ending && step.enemyData != null && !seenEnemies.Contains(step.enemyData) && !IsStageOver)
+                    {
+                        if (lifeLost) yield return ReactToLifeLoss();
                         yield return null;
+                    }
                     // Game time, so the hostile has walked the same distance at any speed
                     for (float waited = 0f; !ending && waited < EnemyIntroDelay && !IsStageOver; waited += Time.deltaTime)
+                    {
+                        if (lifeLost) yield return ReactToLifeLoss();
                         yield return null;
+                    }
                     break;
 
                 case TutorialAction.WaitForWaveEnd:
                     dialogue.HideBubble();
                     while (!ending && gameManager.CurrentPhase == StagePhase.WaveActive && !IsStageOver)
+                    {
+                        if (lifeLost) yield return ReactToLifeLoss();
                         yield return null;
+                    }
                     break;
 
                 case TutorialAction.Retreat:
@@ -319,6 +347,40 @@ namespace TrashTD.Core.GameLoop
         }
 
         private bool IsStageOver => gameManager.CurrentState == GamePlayState.Victory || gameManager.CurrentState == GamePlayState.Defeat;
+
+        private bool StepApplies(TutorialStep step)
+        {
+            int lives = gameManager != null ? gameManager.CurrentLifePoints : 0;
+            int maxLives = gameManager != null ? gameManager.MaxLifePoints : 0;
+            switch (step.condition)
+            {
+                case TutorialCondition.FirstVisit: return firstVisit;
+                case TutorialCondition.ReturningPlayer: return !firstVisit;
+                case TutorialCondition.NoLivesLost: return lives >= maxLives;
+                case TutorialCondition.SomeLivesLost: return lives < maxLives && lives > 1;
+                case TutorialCondition.OneLifeLeft: return lives <= 1;
+                case TutorialCondition.OperatorOnField: return FindDeployed(step.operatorData) != null;
+                case TutorialCondition.OperatorInDeck: return FindDeployed(step.operatorData) == null && HasCardInDeck(step.operatorData);
+                case TutorialCondition.OperatorGone: return FindDeployed(step.operatorData) == null && !HasCardInDeck(step.operatorData);
+                default: return true;
+            }
+        }
+
+        /// <summary>A hostile cost a life mid-wave: Coalesce says how it's going (onLifeLost), then the wave carries on.</summary>
+        private IEnumerator ReactToLifeLoss()
+        {
+            lifeLost = false;
+            if (script == null || script.onLifeLost == null) yield break;
+
+            foreach (TutorialStep reaction in script.onLifeLost)
+            {
+                if (reaction == null || string.IsNullOrEmpty(reaction.text) || !StepApplies(reaction)) continue;
+                yield return Talk(reaction);
+                ClearPointers();
+                if (!ending) dialogue.HideBubble();
+                yield break;
+            }
+        }
 
         /// <summary>A talk line: the game freezes until the player clicks past it.</summary>
         private IEnumerator Talk(TutorialStep step)
@@ -378,20 +440,47 @@ namespace TrashTD.Core.GameLoop
         {
             while (!ending && gameManager.CurrentPhase != StagePhase.Preparation) yield return null;
 
-            waveStartAllowed = true;
             dialogue.SetLayout(TutorialDialogueLayout.Gameplay);
-            dialogue.Say(step.text, true, step.emote);
+            bool? warning = null;
             while (!ending && gameManager.CurrentPhase == StagePhase.Preparation)
             {
-                dialogue.PointAt(hud != null ? hud.StartWaveButtonRect : null);
+                // Recalling is always allowed, so the field may be empty: Coalesce asks for an operator before the
+                // wave. Only when a card is ready to deploy, so a deck on cooldown can't stall the tutorial.
+                DraftCard readyCard = IsFieldEmpty() ? FindReadyCard() : null;
+                bool warn = readyCard != null;
+                if (warning != warn)
+                {
+                    warning = warn;
+                    waveStartAllowed = !warn;
+                    if (warn) dialogue.Say(EmptyFieldWarning, true, TutorialEmote.Worried);
+                    else dialogue.Say(step.text, true, step.emote);
+                }
+
+                if (warn)
+                {
+                    // Like a Deploy step: point at the card until it's picked up, then light the tiles it fits
+                    DraftCard placing = bootstrapper != null ? bootstrapper.PendingDeployCard : null;
+                    dialogue.PointAt(placing == null && hud != null ? hud.GetDeckSlotRect(readyCard.operatorData) : null);
+                    visuals.SetHighlightedTiles(placing != null ? GetDeployTiles(placing.operatorData) : null);
+                }
+                else
+                {
+                    dialogue.PointAt(hud != null ? hud.StartWaveButtonRect : null);
+                    visuals.SetHighlightedTiles(null);
+                }
                 yield return null;
             }
             waveStartAllowed = false;
         }
 
+        private const string DefaultEmptyFieldWarning =
+            "Wait! Nobody's on the field. Put an operator down before you start the wave, or the junk walks right through!";
+
+        private string EmptyFieldWarning =>
+            script != null && !string.IsNullOrWhiteSpace(script.emptyFieldWarning) ? script.emptyFieldWarning : DefaultEmptyFieldWarning;
+
         private IEnumerator RetreatStep(TutorialStep step)
         {
-            recallTaught = true; // The RETREAT button appears from here on
             dialogue.SetLayout(TutorialDialogueLayout.Gameplay);
             dialogue.Say(step.text, true, step.emote);
             OperatorBase target;
@@ -476,6 +565,16 @@ namespace TrashTD.Core.GameLoop
             return tiles;
         }
 
+        private bool HasCardInDeck(OperatorData operatorData)
+        {
+            if (playerDeck == null || operatorData == null) return false;
+            foreach (DraftCard card in playerDeck.DeckSlots)
+            {
+                if (card != null && card.operatorData == operatorData) return true;
+            }
+            return false;
+        }
+
         private bool HasReadyCard(OperatorData operatorData)
         {
             if (playerDeck == null || operatorData == null) return false;
@@ -484,6 +583,27 @@ namespace TrashTD.Core.GameLoop
                 if (card != null && card.operatorData == operatorData && card.cooldownRoundsRemaining <= 0) return true;
             }
             return false;
+        }
+
+        private bool IsFieldEmpty()
+        {
+            if (operatorManager == null) return false;
+            foreach (OperatorBase op in operatorManager.DeployedOperators)
+            {
+                if (op != null) return false;
+            }
+            return true;
+        }
+
+        /// <summary>The first deck card that can be deployed right now (off cooldown).</summary>
+        private DraftCard FindReadyCard()
+        {
+            if (playerDeck == null) return null;
+            foreach (DraftCard card in playerDeck.DeckSlots)
+            {
+                if (card != null && card.operatorData != null && card.cooldownRoundsRemaining <= 0) return card;
+            }
+            return null;
         }
 
         private OperatorBase FindDeployed(OperatorData operatorData)

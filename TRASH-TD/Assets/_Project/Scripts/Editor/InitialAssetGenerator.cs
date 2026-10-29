@@ -581,7 +581,7 @@ namespace TrashTD.Editor
                         new Vector2Int(3, -1), new Vector2Int(3, 1)
                     },
                     pompothFrame0, pompothPrefab);
-                pompoth.skillDescription = "Rapid-fire sniper. Fires faster with lower damage per shot but equal DPS. Passive: attack speed increases by 10% per enemy in range, up to 30%.";
+                pompoth.skillDescription = "Rapid-fire sniper. Fires faster with lower damage per shot but equal DPS. Passive: attack interval shortens by 10% per enemy in range, with no upper limit.";
                 EditorUtility.SetDirty(pompoth);
             }
 

@@ -219,6 +219,11 @@ namespace TrashTD.UI
         private GameObject developerPickerRoot;
         private Transform developerPickerList;
         private bool developerPickerPopulated;
+
+        // Compiled out of release builds; in the Editor and Development Builds it also follows DevMode.
+        private static bool DeveloperPickerEnabled => TrashTD.Development.DevMode.IsEnabled;
+#else
+        private static bool DeveloperPickerEnabled => false;
 #endif
 
         // --- State ---
@@ -1926,11 +1931,7 @@ namespace TrashTD.UI
             var buttonsRect = buttonsContainer.GetComponent<RectTransform>();
             buttonsRect.anchorMin = new Vector2(0.5f, 0f);
             buttonsRect.anchorMax = new Vector2(0.5f, 0f);
-#if UNITY_EDITOR || DEBUG
-            buttonsRect.sizeDelta = new Vector2(640f, 64f);
-#else
-            buttonsRect.sizeDelta = new Vector2(420f, 64f);
-#endif
+            buttonsRect.sizeDelta = new Vector2(DeveloperPickerEnabled ? 640f : 420f, 64f);
             buttonsRect.anchoredPosition = new Vector2(ColumnCenterX, 120f);
 
             var btnHlg = buttonsContainer.AddComponent<HorizontalLayoutGroup>();
@@ -1955,13 +1956,16 @@ namespace TrashTD.UI
             skipFeedback = AttachFeedback(skipButton, Color.white, 1.05f);
 
 #if UNITY_EDITOR || DEBUG
-            developerPickButton = MakeButton(overlayRoot.transform, "DeveloperPickButton", "D",
-                new Vector2(48f, 48f), GameplayHUDUI.ButtonContainerType.Secondary);
-            PositionRT(developerPickButton, new Vector2(28f, -32f), new Vector2(0f, 1f), new Vector2(48f, 48f));
-            developerPickButton.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
-            developerPickButton.onClick.AddListener(ShowDeveloperPicker);
-            AttachFeedback(developerPickButton, new Color(0.75f, 0.55f, 1f, 1f), 1.05f);
-            BuildDeveloperPicker();
+            if (DeveloperPickerEnabled)
+            {
+                developerPickButton = MakeButton(overlayRoot.transform, "DeveloperPickButton", "D",
+                    new Vector2(48f, 48f), GameplayHUDUI.ButtonContainerType.Secondary);
+                PositionRT(developerPickButton, new Vector2(28f, -32f), new Vector2(0f, 1f), new Vector2(48f, 48f));
+                developerPickButton.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
+                developerPickButton.onClick.AddListener(ShowDeveloperPicker);
+                AttachFeedback(developerPickButton, new Color(0.75f, 0.55f, 1f, 1f), 1.05f);
+                BuildDeveloperPicker();
+            }
 #endif
 
             // Confirm button (under the detail panel, where the decision is made)
@@ -2052,15 +2056,19 @@ namespace TrashTD.UI
         private void BuildMinimizeControls(Transform canvasRoot, Transform buttonsContainer)
         {
             Button minimize;
-#if UNITY_EDITOR || DEBUG
-            minimize = MakeButton(buttonsContainer, "MinimizeDraftButton", "MINIMIZE",
-                new Vector2(200f, 60f), GameplayHUDUI.ButtonContainerType.Dark, "icon_minus");
-#else
-            minimize = MakeButton(overlayRoot.transform, "MinimizeDraftButton", "MINIMIZE",
-                new Vector2(200f, 48f), GameplayHUDUI.ButtonContainerType.Dark, "icon_minus");
-            PositionRT(minimize, new Vector2(28f, -32f), new Vector2(0f, 1f), new Vector2(200f, 48f));
-            minimize.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
-#endif
+            if (DeveloperPickerEnabled)
+            {
+                // The developer picker's "D" takes the top-left corner, so MINIMIZE joins the button row.
+                minimize = MakeButton(buttonsContainer, "MinimizeDraftButton", "MINIMIZE",
+                    new Vector2(200f, 60f), GameplayHUDUI.ButtonContainerType.Dark, "icon_minus");
+            }
+            else
+            {
+                minimize = MakeButton(overlayRoot.transform, "MinimizeDraftButton", "MINIMIZE",
+                    new Vector2(200f, 48f), GameplayHUDUI.ButtonContainerType.Dark, "icon_minus");
+                PositionRT(minimize, new Vector2(28f, -32f), new Vector2(0f, 1f), new Vector2(200f, 48f));
+                minimize.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
+            }
             minimizeButton = minimize;
             minimize.onClick.AddListener(() => StartCoroutine(MinimizeAfterClick()));
             AttachFeedback(minimize, Color.white, 1.05f);

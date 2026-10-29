@@ -99,7 +99,9 @@ namespace TrashTD.Operators
                 for (int i = 0; i < blockedTargets.Count; i++)
                 {
                     EnemyBase enemy = blockedTargets[i];
-                    if (enemy != null && !enemy.IsDead && enemy.CurrentHP < lowestHPValue)
+                    bool isTaunt = enemy != null && enemy.HasTaunt;
+                    bool bestIsTaunt = lowestHP != null && lowestHP.HasTaunt;
+                    if (enemy != null && !enemy.IsDead && (lowestHP == null || (isTaunt && !bestIsTaunt) || (isTaunt == bestIsTaunt && enemy.CurrentHP < lowestHPValue)))
                     {
                         lowestHP = enemy;
                         lowestHPValue = enemy.CurrentHP;
@@ -295,7 +297,9 @@ namespace TrashTD.Operators
             for (int i = 0; i < candidates.Count; i++)
             {
                 EnemyBase enemy = candidates[i];
-                if (enemy != null && !enemy.IsDead && enemy.CurrentHP < lowestHPValue)
+                bool isTaunt = enemy != null && enemy.HasTaunt;
+                bool bestIsTaunt = lowestHP != null && lowestHP.HasTaunt;
+                if (enemy != null && !enemy.IsDead && (lowestHP == null || (isTaunt && !bestIsTaunt) || (isTaunt == bestIsTaunt && enemy.CurrentHP < lowestHPValue)))
                 {
                     lowestHP = enemy;
                     lowestHPValue = enemy.CurrentHP;

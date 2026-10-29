@@ -7,6 +7,7 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using TrashTD.Audio;
 using TrashTD.Data;
+using StageProgress = TrashTD.Core.GameLoop.StageProgress;
 
 namespace TrashTD.UI
 {
@@ -36,9 +37,19 @@ namespace TrashTD.UI
                 || stageId == FourthPlayableStageId
                 || stageId == FifthPlayableStageId
                 || stageId == SixthPlayableStageId
-                || stageId == SandboxStageId
+                || (stageId == SandboxStageId && TrashTD.Development.DevMode.IsEnabled)
                 || stageId == TutorialStageId;
         }
+
+        /// <summary>Online, and unlocked by progress on at least one difficulty (StageProgress; dev mode opens all).</summary>
+        private static bool IsStageOpen(StageData stage)
+        {
+            return stage != null && IsStagePlayable(stage.stageId) && StageProgress.IsAnyDifficultyUnlocked(stage.stageId);
+        }
+
+        /// <summary>The selected stage can be played on the selected difficulty.</summary>
+        private bool IsSelectedDifficultyUnlocked =>
+            selectedStage == null || IsTutorialStage(selectedStage) || StageProgress.IsUnlocked(selectedStage.stageId, selectedDifficulty);
 
         // ── Palette ──────────────────────────────────────────
         private static readonly Color AccentColor = new Color(0.18f, 0.82f, 0.45f, 1f);
@@ -135,6 +146,8 @@ namespace TrashTD.UI
         private Text difficultyLabel;
         private Text difficultyStats;
         private Text difficultyBlurb;
+        private Text difficultyRecord; // Best stars on the selected difficulty, or what unlocks it
+        private Text playStageLabel;
         private RectTransform difficultyBriefing;
 
         // Extra UI references created by the default layout
@@ -1165,6 +1178,7 @@ namespace TrashTD.UI
             SetPanelVisible(mainMenuPanel, false, true);
             SetPanelVisible(stageSelectionPanel, true, true);
             SetPanelVisible(stageDetailsPanel, false, true, stageDetailsModal);
+            ApplyDevModeVisibility();
 
             // Deselect all nodes when returning to the map
             foreach (var node in stageMapNodes)
@@ -1201,6 +1215,21 @@ namespace TrashTD.UI
             if (selectedNode != null)
             {
                 FocusUi(selectedNode.gameObject);
+            }
+        }
+
+        // Players never see QA SANDBOX (DevMode). The ESC hint drops into its slot so the corner isn't left empty.
+        private void ApplyDevModeVisibility()
+        {
+            bool dev = TrashTD.Development.DevMode.IsEnabled;
+            if (sandboxButton != null) sandboxButton.gameObject.SetActive(dev);
+            if (stageHint == null) return;
+
+            var hintPos = new Vector2(-60f, dev ? 96f : 52f);
+            stageHint.anchoredPosition = hintPos;
+            foreach (EntranceItem item in stageEntrance)
+            {
+                if (item.rt == stageHint) item.target = hintPos; // the entrance slides back to its stored target
             }
         }
 
@@ -1299,7 +1328,7 @@ namespace TrashTD.UI
             for (int i = 0; i < mapStageCount; i++)
             {
                 var stage = availableStages[i];
-                bool isPlayable = IsStagePlayable(stage.stageId);
+                bool isPlayable = IsStageOpen(stage);
                 if (isPlayable) unlocked++;
 
                 var node = CreateStageMapNode(stage, i + 1, isPlayable, StageNodePositions[i]);
@@ -1588,7 +1617,7 @@ namespace TrashTD.UI
                 return;
             }
 
-            if (!IsStagePlayable(availableStages[stageIndex].stageId))
+            if (!IsStageOpen(availableStages[stageIndex]))
             {
                 // Wobble the node's feedback if it exists
                 StageMapNode lockedNode = FindStageNode(availableStages[stageIndex]);
@@ -1612,6 +1641,7 @@ namespace TrashTD.UI
             {
                 stageDetailsStats.text = $"GRID {selectedStage.gridWidth}x{selectedStage.gridHeight}   //   SQUAD {selectedStage.squadSizeLimit}";
             }
+            if (!tutorial) selectedDifficulty = PickOpenDifficulty(selectedStage, selectedDifficulty);
             UpdateDifficultyDisplay();
 
             // The tutorial's dossier is just the preview, name, brief and Back / Play
@@ -1795,6 +1825,7 @@ namespace TrashTD.UI
             playStageButton = CreateButtonChild(column.transform, "PlayStageButton", "▶  PLAY");
             playStageButton.GetComponent<Image>().color = AccentColor;
             var playBtnLabel = playStageButton.GetComponentInChildren<Text>();
+            playStageLabel = playBtnLabel;
             if (playBtnLabel != null) { playBtnLabel.fontSize = 22; playBtnLabel.fontStyle = FontStyle.Bold; playBtnLabel.color = new Color(0.02f, 0.08f, 0.04f, 1f); }
             Place(playStageButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(1f, 0f), Vector2.zero, new Vector2(250f, 62f));
             AddCornerBrackets(playStageButton.GetComponent<RectTransform>(), 12f, 2f, new Color(0.85f, 1f, 0.90f, 0.9f), -5f);
@@ -1903,6 +1934,12 @@ namespace TrashTD.UI
             difficultyBlurb = MakeText(briefing.transform, "DifficultyBlurb", "", 11, TextAnchor.MiddleLeft, new Color(0.62f, 0.76f, 0.68f, 0.85f));
             FitText(difficultyBlurb, 9, 11);
             StretchTop(difficultyBlurb.rectTransform, 18f, 18f, 46f, 20f);
+            difficultyBlurb.rectTransform.anchorMax = new Vector2(0.62f, 1f);
+
+            difficultyRecord = MakeText(briefing.transform, "DifficultyRecord", "", 11, TextAnchor.MiddleRight, TextDim, FontStyle.Bold);
+            FitText(difficultyRecord, 9, 11);
+            StretchTop(difficultyRecord.rectTransform, 18f, 18f, 46f, 20f);
+            difficultyRecord.rectTransform.anchorMin = new Vector2(0.62f, 1f);
         }
 
         /// <summary>Lets a Text shrink (down to minSize) instead of being cut off by its rect.</summary>
@@ -2051,6 +2088,22 @@ namespace TrashTD.UI
             UpdateDifficultyDisplay();
         }
 
+        private static readonly Color LockedDifficultyColor = new Color(0.55f, 0.58f, 0.56f, 1f);
+
+        private bool IsDifficultyOpen(StageDifficulty difficulty) =>
+            selectedStage == null || IsTutorialStage(selectedStage) || StageProgress.IsUnlocked(selectedStage.stageId, difficulty);
+
+        /// <summary>Keeps the current difficulty if it's open on this stage, else Normal, Easy, then Hard.</summary>
+        private static StageDifficulty PickOpenDifficulty(StageData stage, StageDifficulty preferred)
+        {
+            if (StageProgress.IsUnlocked(stage.stageId, preferred)) return preferred;
+            foreach (StageDifficulty difficulty in new[] { StageDifficulty.Normal, StageDifficulty.Easy, StageDifficulty.Hard })
+            {
+                if (StageProgress.IsUnlocked(stage.stageId, difficulty)) return difficulty;
+            }
+            return preferred;
+        }
+
         private void UpdateDifficultyDisplay()
         {
             Color selectedTint = GetDifficultyColor(selectedDifficulty);
@@ -2069,7 +2122,9 @@ namespace TrashTD.UI
                     bool reached = i <= selectedIndex;
                     bool isSelected = i == selectedIndex;
                     difficultyNotches[i].color = reached ? Color.Lerp(tint, Color.white, 0.35f) : new Color(1f, 1f, 1f, 0.18f);
-                    difficultyNotchLabels[i].color = isSelected ? tint : new Color(TextDim.r, TextDim.g, TextDim.b, 0.8f);
+                    bool open = IsDifficultyOpen(DifficultyOrder[i]);
+                    difficultyNotchLabels[i].color = isSelected ? (open ? tint : LockedDifficultyColor)
+                        : new Color(TextDim.r, TextDim.g, TextDim.b, open ? 0.8f : 0.35f);
                 }
             }
 
@@ -2079,9 +2134,40 @@ namespace TrashTD.UI
                 difficultyHeading.color = selectedTint;
             }
 
+            bool unlocked = IsSelectedDifficultyUnlocked;
             if (difficultyBlurb != null)
             {
                 difficultyBlurb.text = GetDifficultyBlurb(selectedDifficulty);
+            }
+
+            if (difficultyRecord != null)
+            {
+                if (selectedStage == null || IsTutorialStage(selectedStage))
+                {
+                    difficultyRecord.text = string.Empty;
+                }
+                else if (!unlocked)
+                {
+                    difficultyRecord.text = "LOCKED // " + StageProgress.GetUnlockRequirement(selectedStage.stageId, selectedDifficulty);
+                    difficultyRecord.color = LockedDifficultyColor;
+                }
+                else
+                {
+                    int best = StageProgress.GetBestStars(selectedStage.stageId, selectedDifficulty);
+                    difficultyRecord.text = best > 0
+                        ? "BEST " + new string('★', best) + "<color=#3C424D>" + new string('☆', 3 - best) + "</color>"
+                        : "NOT CLEARED";
+                    difficultyRecord.color = best > 0 ? new Color(0.98f, 0.78f, 0.28f, 1f) : TextDim;
+                }
+            }
+
+            if (playStageButton != null)
+            {
+                Color playColor = unlocked ? AccentColor : new Color(0.20f, 0.24f, 0.22f, 1f);
+                playStageButton.GetComponent<Image>().color = playColor;
+                var playFeedback = playStageButton.GetComponent<MenuButtonFeedback>();
+                if (playFeedback != null) playFeedback.SetBaseColor(playColor); // it lerps the image back to its base
+                if (playStageLabel != null) playStageLabel.text = unlocked ? "▶  PLAY" : "LOCKED";
             }
 
             if (difficultyStats != null)
@@ -2145,6 +2231,14 @@ namespace TrashTD.UI
         {
             if (isLoadingStage || selectedStage == null || !IsStagePlayable(selectedStage.stageId))
             {
+                return;
+            }
+
+            if (!IsSelectedDifficultyUnlocked)
+            {
+                var playFeedback = playStageButton != null ? playStageButton.GetComponent<MenuButtonFeedback>() : null;
+                if (playFeedback != null) playFeedback.Wobble();
+                PlayDenied();
                 return;
             }
 

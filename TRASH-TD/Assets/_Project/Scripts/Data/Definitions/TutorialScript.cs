@@ -46,6 +46,23 @@ namespace TrashTD.Data
         Point    // Leans in toward the screen: "look here", instructions
     }
 
+    /// <summary>
+    /// When a step plays; steps whose condition is false are skipped. Life conditions read the lives left when the
+    /// step is reached (the tutorial has 3: all = NoLivesLost, 2 = SomeLivesLost, 1 = OneLifeLeft).
+    /// </summary>
+    public enum TutorialCondition
+    {
+        Always,
+        FirstVisit,       // The tutorial hadn't been finished or skipped when this run started
+        ReturningPlayer,  // It had: a replay from STAGE 00
+        NoLivesLost,
+        SomeLivesLost,    // At least one life lost, more than one left
+        OneLifeLeft,
+        OperatorOnField,  // `operatorData` is deployed
+        OperatorInDeck,   // Not deployed, but a card of it is in the deck (e.g. recalled earlier)
+        OperatorGone      // Neither: it was knocked out
+    }
+
     [Serializable]
     public class TutorialStep
     {
@@ -74,6 +91,8 @@ namespace TrashTD.Data
 
         [Tooltip("Coalesce's pose as the line starts (Coalesce only shows up for lines with text)")]
         public TutorialEmote emote;
+        [Tooltip("Play this step only when the condition holds (e.g. lines for first-timers vs returning players)")]
+        public TutorialCondition condition;
     }
 
     /// <summary>
@@ -99,5 +118,9 @@ namespace TrashTD.Data
 
         [Tooltip("Over the defeat screen: Say steps, ending with DefeatChoice")]
         public TutorialStep[] onDefeat;
+        [Tooltip("When a hostile costs a life mid-wave (and lives remain): Say steps; the first one whose condition holds plays")]
+        public TutorialStep[] onLifeLost;
+        [Tooltip("StartWave steps: shown instead of the step's line while no operator is on the field (empty = built-in line)")]
+        [TextArea(2, 6)] public string emptyFieldWarning;
     }
 }

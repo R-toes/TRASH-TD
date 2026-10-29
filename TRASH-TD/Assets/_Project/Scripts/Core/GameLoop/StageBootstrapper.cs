@@ -812,7 +812,6 @@ namespace TrashTD.Core.GameLoop
                 }
                 else if (operatorManager != null && operatorManager.SelectedOperator != null)
                 {
-                    if (!TutorialDirector.IsRecallAllowed) return; // Coalesce teaches recalling later
                     ClearOperatorRangePreview();
                     operatorManager.RetreatOperator(operatorManager.SelectedOperator);
                     return;

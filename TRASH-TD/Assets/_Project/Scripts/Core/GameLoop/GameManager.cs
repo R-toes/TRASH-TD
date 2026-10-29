@@ -245,6 +245,7 @@ namespace TrashTD.Core.GameLoop
             Time.timeScale = 0f;
 
             int stars = CalculateStars();
+            if (currentStage != null) StageProgress.RecordClear(currentStage.stageId, currentDifficulty, stars);
             OnStageVictory?.Invoke(stars);
         }
 

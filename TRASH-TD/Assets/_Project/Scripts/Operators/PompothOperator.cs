@@ -10,7 +10,7 @@ namespace TrashTD.Operators
     /// <summary>
     /// Pompoth operator — Sniper variant with rapid fire.
     /// Damage per shot is reduced, but attack interval is faster, keeping DPS equal to Deadeye.
-    /// Passive: attack interval improves by 10% per enemy in range, up to 30%.
+    /// Passive: attack interval shortens by 10% per enemy in range, with no upper limit (10+ enemies reach 100%).
     /// </summary>
     public class PompothOperator : SniperOperator
     {
@@ -83,7 +83,7 @@ namespace TrashTD.Operators
             float baseInterval = base.GetAttackInterval();
             float interval = baseInterval * IntervalMultiplier;
 
-            // Passive bonus based on enemies in range: 10% per enemy up to 30%
+            // Passive bonus based on enemies in range: 10% per enemy, clamped only at 100%
             int enemyCount = GetEnemyCountInRange();
             float bonus = Mathf.Clamp01(enemyCount * 0.10f);
             // Reduce interval by bonus (i.e., faster attacks)

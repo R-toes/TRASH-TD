@@ -226,6 +226,8 @@ namespace TrashTD.UI
 
             // Buttons: NEXT STAGE (victory, if any) / RETRY / STAGE SELECT
             nextStage = victory ? FindNextStage(stage) : null;
+            // NEXT STAGE keeps the difficulty, so it only shows when that difficulty is open there (StageProgress)
+            if (nextStage != null && manager != null && !StageProgress.IsUnlocked(nextStage.stageId, manager.CurrentDifficulty)) nextStage = null;
             activeButtons.Clear();
             if (nextStage != null) activeButtons.Add(nextButton);
             activeButtons.Add(retryButton);
@@ -295,12 +297,7 @@ namespace TrashTD.UI
             return top;
         }
 
-        private static int GetStageNumber(StageData stage)
-        {
-            if (stage == null || string.IsNullOrEmpty(stage.stageId)) return 0;
-            int underscore = stage.stageId.LastIndexOf('_');
-            return underscore >= 0 && int.TryParse(stage.stageId.Substring(underscore + 1), out int number) ? number : 0;
-        }
+        private static int GetStageNumber(StageData stage) => stage != null ? StageProgress.GetStageNumber(stage.stageId) : 0;
 
         /// <summary>The following numbered stage in Resources/Stages (STAGE_03 → STAGE_04; the tutorial → STAGE_01), or null.</summary>
         private static StageData FindNextStage(StageData stage)
