@@ -59,9 +59,13 @@ namespace TrashTD.Operators
 
                 var splashGroup = EnemyManager.Instance.GetEnemiesInRadius(candidate.transform.position, splashRadius, data.position);
                 int count = splashGroup != null ? splashGroup.Count : 1;
+                bool isTaunt = candidate.HasTaunt;
+                bool bestIsTaunt = bestTarget != null && bestTarget.HasTaunt;
 
-                if (candidate.CurrentDEF > highestDefense ||
-                    (candidate.CurrentDEF == highestDefense && count > largestCluster))
+                if (bestTarget == null ||
+                    (isTaunt && !bestIsTaunt) ||
+                    (isTaunt == bestIsTaunt && candidate.CurrentDEF > highestDefense) ||
+                    (isTaunt == bestIsTaunt && candidate.CurrentDEF == highestDefense && count > largestCluster))
                 {
                     highestDefense = candidate.CurrentDEF;
                     largestCluster = count;

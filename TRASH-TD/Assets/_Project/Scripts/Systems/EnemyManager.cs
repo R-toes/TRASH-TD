@@ -180,6 +180,8 @@ namespace TrashTD.Systems
                     enemyComp = enemyObj.AddComponent<Enemies.HextensionEnemy>();
                 else if (enemyData != null && (enemyData.enemyName == "Occulorm" || enemyData.enemyName == "Oculorm"))
                     enemyComp = enemyObj.AddComponent<Enemies.OcculormEnemy>();
+                else if (enemyData != null && (enemyData.enemyName == "Junkernaut" || enemyData.enemyName == "The Junkernaut"))
+                    enemyComp = enemyObj.AddComponent<Enemies.JunkernautEnemy>();
                 else
                     enemyComp = AddArchetypeComponent(enemyObj, enemyData.archetype);
             }

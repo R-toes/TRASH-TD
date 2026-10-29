@@ -78,7 +78,17 @@ namespace TrashTD.Operators
                 return null;
             }
 
-            if (lockedTarget != null && !lockedTarget.IsDead && candidates.Contains(lockedTarget))
+            bool hasTauntCandidate = false;
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                if (candidates[i] != null && !candidates[i].IsDead && candidates[i].HasTaunt && CanAttackTarget(candidates[i]))
+                {
+                    hasTauntCandidate = true;
+                    break;
+                }
+            }
+
+            if (lockedTarget != null && !lockedTarget.IsDead && candidates.Contains(lockedTarget) && (!hasTauntCandidate || lockedTarget.HasTaunt))
                 return lockedTarget;
 
             ResetLock();
@@ -87,7 +97,11 @@ namespace TrashTD.Operators
             for (int i = 0; i < candidates.Count; i++)
             {
                 EnemyBase candidate = candidates[i];
-                if (candidate == null || candidate.IsDead || candidate.DistanceToGoal >= closestToGoal) continue;
+                if (candidate == null || candidate.IsDead || !CanAttackTarget(candidate)) continue;
+                bool isTaunt = candidate.HasTaunt;
+                bool bestIsTaunt = bestTarget != null && bestTarget.HasTaunt;
+                if (bestTarget != null && !isTaunt && bestIsTaunt) continue;
+                if (bestTarget != null && isTaunt == bestIsTaunt && candidate.DistanceToGoal >= closestToGoal) continue;
                 bestTarget = candidate;
                 closestToGoal = candidate.DistanceToGoal;
             }

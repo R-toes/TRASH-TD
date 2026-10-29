@@ -32,7 +32,9 @@ namespace TrashTD.Operators
 
                 foreach (EnemyBase enemy in blockedEnemies)
                 {
-                    if (enemy != null && enemy.CurrentHP > highestHPValue)
+                    bool isTaunt = enemy != null && enemy.HasTaunt;
+                    bool bestIsTaunt = highestHP != null && highestHP.HasTaunt;
+                    if (enemy != null && !enemy.IsDead && (highestHP == null || (isTaunt && !bestIsTaunt) || (isTaunt == bestIsTaunt && enemy.CurrentHP > highestHPValue)))
                     {
                         highestHP = enemy;
                         highestHPValue = enemy.CurrentHP;
@@ -69,7 +71,9 @@ namespace TrashTD.Operators
                     for (int i = 0; i < candidates.Count; i++)
                     {
                         var enemy = candidates[i];
-                        if (enemy != null && CanAttackTarget(enemy) && enemy.CurrentHP > highestHPValue)
+                        bool isTaunt = enemy != null && enemy.HasTaunt;
+                        bool bestIsTaunt = highestHP != null && highestHP.HasTaunt;
+                        if (enemy != null && CanAttackTarget(enemy) && (highestHP == null || (isTaunt && !bestIsTaunt) || (isTaunt == bestIsTaunt && enemy.CurrentHP > highestHPValue)))
                         {
                             highestHP = enemy;
                             highestHPValue = enemy.CurrentHP;

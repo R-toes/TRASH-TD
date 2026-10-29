@@ -218,7 +218,9 @@ namespace TrashTD.Operators
                 for (int i = 0; i < blockedEnemies.Count; i++)
                 {
                     var enemy = blockedEnemies[i];
-                    if (enemy != null && !enemy.IsDead && enemy.CurrentHP < lowestHPValue)
+                    bool isTaunt = enemy != null && enemy.HasTaunt;
+                    bool bestIsTaunt = lowestHP != null && lowestHP.HasTaunt;
+                    if (enemy != null && !enemy.IsDead && (lowestHP == null || (isTaunt && !bestIsTaunt) || (isTaunt == bestIsTaunt && enemy.CurrentHP < lowestHPValue)))
                     {
                         lowestHP = enemy;
                         lowestHPValue = enemy.CurrentHP;
@@ -249,7 +251,9 @@ namespace TrashTD.Operators
                     {
                         var enemy = candidates[i];
                         // Skip flyers melee guards can't reach so they don't lock onto them over ground enemies.
-                        if (enemy != null && CanAttackTarget(enemy) && enemy.CurrentHP < lowestHPValue)
+                        bool isTaunt = enemy != null && enemy.HasTaunt;
+                        bool bestIsTaunt = lowestHP != null && lowestHP.HasTaunt;
+                        if (enemy != null && CanAttackTarget(enemy) && (lowestHP == null || (isTaunt && !bestIsTaunt) || (isTaunt == bestIsTaunt && enemy.CurrentHP < lowestHPValue)))
                         {
                             lowestHP = enemy;
                             lowestHPValue = enemy.CurrentHP;

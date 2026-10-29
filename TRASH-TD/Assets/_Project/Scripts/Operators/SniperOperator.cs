@@ -65,10 +65,13 @@ namespace TrashTD.Operators
                 float distanceToOperator = Vector3.Distance(transform.position, enemy.transform.position);
                 bool isCloserToGoal = distanceToGoal < bestDistanceToGoal && !Mathf.Approximately(distanceToGoal, bestDistanceToGoal);
                 bool sameGoalDistanceButCloser = Mathf.Approximately(distanceToGoal, bestDistanceToGoal) && distanceToOperator < bestDistanceToOperator;
+                bool isTaunt = enemy.HasTaunt;
+                bool bestIsTaunt = bestTarget != null && bestTarget.HasTaunt;
 
                 if (bestTarget == null ||
-                    (isAir && !bestIsAir) ||
-                    (isAir == bestIsAir && (isCloserToGoal || sameGoalDistanceButCloser)))
+                    (isTaunt && !bestIsTaunt) ||
+                    (isTaunt == bestIsTaunt && (isAir && !bestIsAir)) ||
+                    (isTaunt == bestIsTaunt && isAir == bestIsAir && (isCloserToGoal || sameGoalDistanceButCloser)))
                 {
                     bestTarget = enemy;
                     bestDistanceToGoal = distanceToGoal;

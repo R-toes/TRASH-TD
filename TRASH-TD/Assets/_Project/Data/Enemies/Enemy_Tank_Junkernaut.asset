@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f34436990ad48f4d90f0736ce7dcdd3, type: 3}
+  m_Name: Enemy_Tank_Junkernaut
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.EnemyData
+  enemyName: Junkernaut
+  archetype: 2
+  movementType: 0
+  baseHP: 950
+  baseATK: 50
+  baseDEF: 40
+  baseRES: 10
+  moveSpeed: 0.65
+  damageType: 0
+  attackInterval: 2
+  attackRange: 0
+  isUnblockable: 0
+  blockWeight: 1
+  lifePointCost: 1
+  sprite: {fileID: -299940036, guid: 62d170eeef6dc7d4493f20bf1e26e3a3, type: 3}
+  animationFrames:
+  - {fileID: -299940036, guid: 62d170eeef6dc7d4493f20bf1e26e3a3, type: 3}
+  - {fileID: -408693026, guid: 62d170eeef6dc7d4493f20bf1e26e3a3, type: 3}
+  - {fileID: 323033258, guid: 62d170eeef6dc7d4493f20bf1e26e3a3, type: 3}
+  - {fileID: 1361380579, guid: 62d170eeef6dc7d4493f20bf1e26e3a3, type: 3}
+  - {fileID: 1641771117, guid: 62d170eeef6dc7d4493f20bf1e26e3a3, type: 3}
+  - {fileID: 1578484899, guid: 62d170eeef6dc7d4493f20bf1e26e3a3, type: 3}
+  - {fileID: -1580970816, guid: 62d170eeef6dc7d4493f20bf1e26e3a3, type: 3}
+  - {fileID: -7762048, guid: 62d170eeef6dc7d4493f20bf1e26e3a3, type: 3}
+  animationFrameRate: 8
+  visualScale: 1
+  visualOffset: {x: 0, y: 0, z: 0}
+  enemyPrefab: {fileID: 7123456789012345678, guid: 5c84917a1f28456ea78234db0913ef01, type: 3}
+  abilityDescription: "Has Taunt, drawing operator attacks. Other enemies on its tile and surrounding tiles take 50% reduced damage from operators."
+  intelQuote: "*armored clanking* Try getting through me!"
+  intelLore: "A towering colossus cobbled together from scrap engine blocks, reinforced rebar, and dumpster hulls. The Junkernaut thumps down the lane, drawing all enemy fire while its magnetic bulk shields surrounding junk from harm."
+

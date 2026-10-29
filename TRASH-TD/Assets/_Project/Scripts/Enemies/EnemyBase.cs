@@ -120,6 +120,7 @@ namespace TrashTD.Enemies
         public float SluggishAttackIntervalMultiplier => sluggishAttackIntervalMultiplier;
         public bool IsInsideHole => isInsideHole;
         public virtual bool CanBeTargetedBy(OperatorPosition opPosition) => true;
+        public virtual bool HasTaunt => false;
 
         /// <summary>
         /// Where this enemy's shots and strikes leave its sprite: <see cref="EnemyData.projectileOrigin"/> from the
@@ -1152,6 +1153,11 @@ namespace TrashTD.Enemies
                     AudioManager.Instance?.PlaySfx(SfxId.CombatMiss, 0.6f);
                     return false;
                 }
+            }
+
+            if (attacker != null && JunkernautEnemy.IsProtectedByJunkernaut(this))
+            {
+                damage = Mathf.Max(1, Mathf.RoundToInt(damage * (1f - JunkernautEnemy.DamageReductionPercent)));
             }
 
             TakeDamage(damage, damageType);
