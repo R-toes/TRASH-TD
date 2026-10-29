@@ -48,7 +48,7 @@ SFX/
 
 | File | When it plays |
 |---|---|
-| `Deploy` | ✓ exists. Operator placed. Used when the operator has no own `Deploy`. |
+| `Deploy` | ✓ exists. The default placing sound: plays on **every** deploy, together with the operator's own `Deploy` if it has one. |
 | `Retreat` | Operator recalled to the deck (not on death). |
 | `OperatorDeath` | Operator dies. Used when the operator has no own `Death`. |
 | `EnemyDeath` | ✓ exists. Enemy dies. Used when the enemy has no own `Death`. |
@@ -100,7 +100,7 @@ SFX/
 
 | File | When it plays |
 |---|---|
-| `Deploy` | Placed on the field. *Fallback: Gameplay/Deploy.* |
+| `Deploy` | Placed on the field. Plays on top of Gameplay/Deploy, which always plays. |
 | `Attack` | The attack starts: swing, shot, launch, cast. Medics: each heal. *Fallback: Combat/ sound for its damage type.* |
 | `Impact` | The attack lands (once per volley, even on several enemies). |
 | `Ability` | The operator's special trigger (table below). |

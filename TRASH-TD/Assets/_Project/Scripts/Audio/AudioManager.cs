@@ -523,10 +523,12 @@ namespace TrashTD.Audio
                 PlaySfx(SfxId.GameplayEnemyDeath, 0.75f);
         }
 
+        // The only place the deploy sound plays: the default placing sound for every operator,
+        // with the operator's own Deploy clip (if it has one) on top.
         private void HandleOperatorDeployed(OperatorBase op)
         {
-            if (op == null || !UnitSfx.Play(op.Data, UnitSfxEvent.Deploy))
-                PlaySfx(SfxId.GameplayDeploy);
+            PlaySfx(SfxId.GameplayDeploy);
+            if (op != null) UnitSfx.Play(op.Data, UnitSfxEvent.Deploy);
         }
 
         // Deaths also raise OnOperatorRetreated; they already played a death sound, so only real retreats play this.
