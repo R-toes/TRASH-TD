@@ -12,12 +12,21 @@ namespace TrashTD.Enemies
     /// Characteristics:
     /// - High HP and DEF, slow movement speed.
     /// - Taunt: Operators prioritize targeting Junkernaut when in range or when choosing between blocked enemies.
-    /// - Protection Aura: All other enemies on Junkernaut's tile and its surrounding tiles gain -50% damage
-    ///   taken from operators. Junkernaut himself does not receive this damage reduction.
+    /// - Protection Aura: All other enemies on Junkernaut's tile and its surrounding tiles gain damage reduction
+    ///   from operator attacks:
+    ///     1 Junkernaut  -> -50% damage taken
+    ///     2 Junkernauts -> -60% damage taken
+    ///     3 Junkernauts -> -70% damage taken
+    ///     4 Junkernauts -> -80% damage taken
+    ///     5+ Junkernauts -> -90% damage taken (capped at 90%)
+    ///   Junkernauts themselves never receive this damage reduction and always take full damage.
     /// </summary>
     public class JunkernautEnemy : EnemyBase
     {
-        public const float DefaultDamageReductionPercent = 0.50f;
+        public const float BaseDamageReductionPercent = 0.50f;
+        public const float AdditionalReductionPerExtraJunkernaut = 0.10f;
+        public const float MaxDamageReductionPercent = 0.90f;
+        public const float DefaultDamageReductionPercent = BaseDamageReductionPercent;
 
         [Header("Junkernaut Ability Settings")]
         [Range(0f, 1f)]
@@ -105,15 +114,14 @@ namespace TrashTD.Enemies
         }
 
         /// <summary>
-        /// Determines if the given enemy is currently protected by at least one active Junkernaut.
-        /// Other enemies on Junkernaut's tile and surrounding tiles take 50% reduced damage from operators.
-        /// Junkernaut himself does not receive this reduction.
+        /// Counts how many distinct active Junkernauts are currently protecting the target enemy.
+        /// Junkernauts themselves always return 0 (never protected).
         /// </summary>
-        public static bool IsProtectedByJunkernaut(EnemyBase target)
+        public static int GetProtectingJunkernautCount(EnemyBase target)
         {
-            if (target == null || target.IsDead || target.IsInsideHole) return false;
+            if (target == null || target.IsDead || target.IsInsideHole || target is JunkernautEnemy) return 0;
 
-            // Check active Junkernauts list
+            int count = 0;
             for (int i = 0; i < activeJunkernauts.Count; i++)
             {
                 var j = activeJunkernauts[i];
@@ -121,12 +129,12 @@ namespace TrashTD.Enemies
 
                 if (j.IsWithinProtectionRange(target.transform.position))
                 {
-                    return true;
+                    count++;
                 }
             }
 
             // Fallback for tests or instances not yet registered in activeJunkernauts
-            if (activeJunkernauts.Count == 0)
+            if (count == 0 && activeJunkernauts.Count == 0)
             {
                 JunkernautEnemy[] sceneJunkernauts = FindObjectsByType<JunkernautEnemy>();
                 for (int i = 0; i < sceneJunkernauts.Length; i++)
@@ -136,12 +144,44 @@ namespace TrashTD.Enemies
 
                     if (j.IsWithinProtectionRange(target.transform.position))
                     {
-                        return true;
+                        count++;
                     }
                 }
             }
 
-            return false;
+            return count;
+        }
+
+        /// <summary>
+        /// Calculates the percentage of damage reduced based on the number of protecting Junkernauts:
+        /// 1 -> 50%
+        /// 2 -> 60%
+        /// 3 -> 70%
+        /// 4 -> 80%
+        /// 5+ -> 90% (cap)
+        /// </summary>
+        public static float GetDamageReductionPercent(int count)
+        {
+            if (count <= 0) return 0f;
+            return Mathf.Min(BaseDamageReductionPercent + (count - 1) * AdditionalReductionPerExtraJunkernaut, MaxDamageReductionPercent);
+        }
+
+        /// <summary>
+        /// Gets the damage reduction percentage granted to the target enemy by nearby Junkernauts.
+        /// Junkernauts themselves always return 0f.
+        /// </summary>
+        public static float GetDamageReductionPercent(EnemyBase target)
+        {
+            int count = GetProtectingJunkernautCount(target);
+            return GetDamageReductionPercent(count);
+        }
+
+        /// <summary>
+        /// Determines if the given enemy is currently protected by at least one active Junkernaut.
+        /// </summary>
+        public static bool IsProtectedByJunkernaut(EnemyBase target)
+        {
+            return GetProtectingJunkernautCount(target) > 0;
         }
     }
 }

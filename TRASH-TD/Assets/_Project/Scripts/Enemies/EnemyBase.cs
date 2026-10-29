@@ -1155,9 +1155,13 @@ namespace TrashTD.Enemies
                 }
             }
 
-            if (attacker != null && JunkernautEnemy.IsProtectedByJunkernaut(this))
+            if (attacker != null)
             {
-                damage = Mathf.Max(1, Mathf.RoundToInt(damage * (1f - JunkernautEnemy.DamageReductionPercent)));
+                float junkernautReduction = JunkernautEnemy.GetDamageReductionPercent(this);
+                if (junkernautReduction > 0f)
+                {
+                    damage = Mathf.Max(1, Mathf.RoundToInt(damage * (1f - junkernautReduction)));
+                }
             }
 
             TakeDamage(damage, damageType);

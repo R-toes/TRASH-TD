@@ -32,16 +32,6 @@ namespace TrashTD.Operators
                     }
                 }
                 return bestBlocked;
-                for (int i = 0; false && i < blockedEnemies.Count; i++)
-                {
-                    var enemy = blockedEnemies[i];
-                    if (enemy != null && !enemy.IsDead && CanAttackTarget(enemy))
-                    {
-                        if (enemy.HasTaunt) return enemy;
-                        if (bestBlocked == null) bestBlocked = enemy;
-                    }
-                }
-                if (bestBlocked != null) return bestBlocked;
             }
 
             var gridManager = FindAnyObjectByType<GridManager>();
