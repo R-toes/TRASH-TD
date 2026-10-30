@@ -430,12 +430,8 @@ namespace TrashTD.UI
             }
             enemiesCount.text = identified + " / " + enemyEntries.Count + " HOSTILES IDENTIFIED";
 
-            // The cover shows Toxic Rusher once met, otherwise any enemy that has been met, otherwise a silhouette
-            IntelEntry cover = enemyEntries.Find(e => string.Equals(e.Name, "Toxic Rusher", StringComparison.OrdinalIgnoreCase) && e.Frames.Length > 0);
-            if (cover == null || cover.Locked) cover = enemyEntries.Find(e => !e.Locked && e.Frames.Length > 0) ?? cover;
-            if (cover == null) cover = enemyEntries.Find(e => e.Frames.Length > 0);
-            SetPixelSprite(enemiesSprite, cover != null ? cover.Frames[0] : null, 256f);
-            SetSilhouette(enemiesSprite, cover != null && cover.Locked);
+            // The dossier cover is artwork, not a file: Toxic Rusher is always shown in full, met or not
+            SetPixelSprite(enemiesSprite, FindCover(enemyEntries, "Toxic Rusher"), 256f);
         }
 
         /// <summary>
