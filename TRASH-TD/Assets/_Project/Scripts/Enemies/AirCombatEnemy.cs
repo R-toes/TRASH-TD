@@ -44,6 +44,9 @@ namespace TrashTD.Enemies
 
         protected override bool HandlesOwnAttacks => true;
 
+        /// <summary>The operator this flyer is fighting this frame (null with nothing in range).</summary>
+        protected OperatorBase CurrentAirTarget => lockedTarget;
+
         public override void Initialize(EnemyData enemyData, int difficultyLevel)
         {
             base.Initialize(enemyData, difficultyLevel);
@@ -218,8 +221,15 @@ namespace TrashTD.Enemies
 
         protected void PlayAirMeleeAttack(OperatorBase target)
         {
-            MeleeSwipeVisual.Play(ProjectileOrigin, target.transform.position, new Color(1f, 0.3f, 0.18f, 1f), 1f, MeleeStyle.Claw);
+            PlayAirMeleeSwipe(target);
             target.TryTakeAttackDamage(CurrentATK, Data.damageType, this);
+        }
+
+        /// <summary>The claw marks of an air melee strike, from the talons (ProjectileOrigin) to the target.</summary>
+        protected void PlayAirMeleeSwipe(OperatorBase target)
+        {
+            if (target == null) return;
+            MeleeSwipeVisual.Play(ProjectileOrigin, target.transform.position, new Color(1f, 0.3f, 0.18f, 1f), 1f, MeleeStyle.Claw);
         }
 
         /// <summary>
