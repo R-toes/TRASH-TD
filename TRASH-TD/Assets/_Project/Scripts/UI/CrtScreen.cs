@@ -54,6 +54,31 @@ namespace TrashTD.UI
                 scaled.brightness *= scale;
                 return scaled;
             }
+
+            /// <summary>
+            /// Full TV on screens under 1080 lines. The slot mask, scanline beams, soft sampling and halation are
+            /// sized in screen pixels while the UI shrinks with the screen, so small text blurred into them. They
+            /// fade down below 1080p (clearest at 720p and under), and brightness drops with them because the
+            /// lighter mask no longer darkens the picture as much. Classic and Off are unchanged.
+            /// </summary>
+            public Settings ForPictureHeight(int height)
+            {
+                if (legacy > 0.5f || passthrough > 0.5f) return this;
+
+                float t = Mathf.InverseLerp(1080f, 720f, height);
+                if (t <= 0f) return this;
+
+                Settings clear = this;
+                clear.sharpness = Mathf.Lerp(sharpness, 1f, t);
+                clear.maskStrength = Mathf.Lerp(maskStrength, 0.35f, t);
+                clear.scanlineStrength = Mathf.Lerp(scanlineStrength, 0.45f, t);
+                clear.beamMin = Mathf.Lerp(beamMin, 0.3f, t);
+                clear.beamMax = Mathf.Lerp(beamMax, 0.5f, t);
+                clear.bloom = Mathf.Lerp(bloom, 0.2f, t);
+                clear.chromatic = Mathf.Lerp(chromatic, chromatic * 0.5f, t);
+                clear.brightness = Mathf.Lerp(brightness, 1.1f, t);
+                return clear;
+            }
         }
 
         /// <summary>

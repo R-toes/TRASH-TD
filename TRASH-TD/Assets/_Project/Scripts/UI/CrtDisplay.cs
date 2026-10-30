@@ -33,9 +33,10 @@ namespace TrashTD.UI
 
         /// <summary>
         /// The whole game through the chosen CRT style: Full TV (Television), Classic (the first, crisper
-        /// version) or Off (passthrough). The player's brightness applies on top in every style.
+        /// version) or Off (passthrough). Full TV eases off below 1080p so small text stays readable.
+        /// The player's brightness applies on top in every style.
         /// </summary>
-        private static CrtScreen.Settings GetActiveSettings()
+        private static CrtScreen.Settings GetActiveSettings(int pictureHeight)
         {
             CrtScreen.Settings baseSettings = GameGraphicsSettings.CrtStyle switch
             {
@@ -44,12 +45,12 @@ namespace TrashTD.UI
                 _ => CrtScreen.Television
             };
             baseSettings.opaque = 1f; // full-screen presenter: never show the backbuffer through the picture
-            return baseSettings.WithBrightnessScale(GameGraphicsSettings.Brightness);
+            return baseSettings.ForPictureHeight(pictureHeight).WithBrightnessScale(GameGraphicsSettings.Brightness);
         }
 
         private void ApplyGraphicsSettings()
         {
-            settings = GetActiveSettings();
+            settings = GetActiveSettings(picture != null ? picture.height : Mathf.Max(16, Screen.height));
             CrtScreen.ApplySettings(material, settings);
         }
         private Material material;
@@ -224,6 +225,7 @@ namespace TrashTD.UI
             picture = CreateTexture("CRT_Game", width, height);
             uiPicture = CreateTexture("CRT_UI", width, height);
             uiCamera.targetTexture = uiPicture;
+            ApplyGraphicsSettings(); // Full TV depends on the resolution
         }
 
         private static RenderTexture CreateTexture(string textureName, int width, int height)

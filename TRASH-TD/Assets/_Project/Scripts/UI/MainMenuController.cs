@@ -4,7 +4,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
-using UnityEngine.SceneManagement;
 using TrashTD.Audio;
 using TrashTD.Data;
 using StageProgress = TrashTD.Core.GameLoop.StageProgress;
@@ -206,7 +205,6 @@ namespace TrashTD.UI
         private bool stageSelectionOpen;
         private bool detailsOpen;
         private bool isLoadingStage;
-        private bool showLoadingLabel;
 
         // Animation plumbing
         private readonly Dictionary<GameObject, Coroutine> panelRoutines = new Dictionary<GameObject, Coroutine>();
@@ -219,7 +217,6 @@ namespace TrashTD.UI
         private Coroutine overlayRoutine;
         private readonly List<Mote> motes = new List<Mote>();
         private Image fadeOverlay;
-        private Text loadingLabel;
         private AudioSource sfxSource;
         private AudioSettingsUI audioSettingsUI;
         private ReclaimersIntelUI intelUI;
@@ -2238,14 +2235,11 @@ namespace TrashTD.UI
             isLoadingStage = true;
 
             if (overlayRoutine != null) StopCoroutine(overlayRoutine);
-            StartCoroutine(LoadStageRoutine());
-        }
 
-        private IEnumerator LoadStageRoutine()
-        {
-            showLoadingLabel = true;
-            yield return FadeOverlayRoutine(0f, 1f, 0.35f);
-            SceneManager.LoadScene(GameplaySceneName);
+            string stageTag = selectedStage.stageId == SandboxStageId
+                ? "QA SANDBOX"
+                : "STAGE " + (IsTutorialStage(selectedStage) ? 0 : selectedStageIndex + 1).ToString("00");
+            LoadingScreen.LoadStage(GameplaySceneName, selectedStage, stageTag, selectedDifficulty, GetDifficultyColor(selectedDifficulty));
         }
 
         private void ExitGame()
@@ -2490,7 +2484,7 @@ namespace TrashTD.UI
         }
 
         // ─────────────────────────────────────────────────────
-        //  Scene fade overlay (fade-in on load, fade-out when starting a stage)
+        //  Scene fade overlay (fade-in on load; starting a stage uses LoadingScreen)
         // ─────────────────────────────────────────────────────
 
         private void EnsureFadeOverlay()
@@ -2508,9 +2502,6 @@ namespace TrashTD.UI
             fadeOverlay = go.GetComponent<Image>();
             fadeOverlay.color = new Color(0.01f, 0.012f, 0.02f, 0f);
             fadeOverlay.raycastTarget = false;
-
-            loadingLabel = MakeText(go.transform, "LoadingLabel", "LOADING...", 22, TextAnchor.MiddleCenter, new Color(TextDim.r, TextDim.g, TextDim.b, 0f));
-            StretchFill(loadingLabel.rectTransform);
         }
 
         private void SetOverlayAlpha(float alpha)
@@ -2518,13 +2509,6 @@ namespace TrashTD.UI
             Color c = fadeOverlay.color;
             c.a = alpha;
             fadeOverlay.color = c;
-
-            if (loadingLabel != null)
-            {
-                Color l = loadingLabel.color;
-                l.a = showLoadingLabel ? alpha : 0f;
-                loadingLabel.color = l;
-            }
         }
 
         private IEnumerator FadeOverlayRoutine(float from, float to, float duration)

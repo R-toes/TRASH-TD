@@ -16,24 +16,25 @@ namespace TrashTD.UI
 {
     /// <summary>
     /// Runtime-built fullscreen card draft overlay.
-    /// Left: 3 portrait-focused cards (portrait, name, rarity stars). Cards are dealt face-down
-    /// after a shuffle animation and only flip to their front when the player clicks them.
+    /// Left: 3 portrait-focused cards in a rarity-coloured frame (class and position header, portrait window,
+    /// name plate, rarity stars). Cards are dealt face-down (a sealed "reclaimer file" back) after a shuffle
+    /// animation and only flip to their front when the player clicks them.
     /// Right: a detail panel for the selected card (name, class / position / damage-type chips,
     /// stats and passive/ability text).
     /// Player selects a card, then clicks Confirm to add it to their deck.
     /// Includes a Reroll button (up to 3 rerolls per stage); a reroll flips the cards back,
     /// shuffles and deals a fresh face-down hand.
     /// Integrates with GameManager phase system: shown during CardPick phase.
-    /// Visual polish: fade-in, shuffle + deal, flip reveal, rarity colors, selection feedback,
-    /// hover/press feedback (MenuButtonFeedback), keyboard shortcuts and optional UI sounds.
+    /// Visual polish: fade-in, shuffle + deal with a landing pop, flip reveal (lift and tilt, rarity flash,
+    /// pixel sparks, shine sweep, stars filling in one by one), idle float / bob / shine, a lifted selected
+    /// card, the picked card rising while the others drop away, hover/press feedback (MenuButtonFeedback),
+    /// keyboard shortcuts and optional UI sounds.
     /// </summary>
     public class CardDraftOverlayUI : MonoBehaviour
     {
         // --- Colors ---
         private static readonly Color BG_OVERLAY = new Color(0.02f, 0.03f, 0.05f, 1f);
         private static readonly Color CARD_BG = new Color(0.08f, 0.10f, 0.14f, 1f);
-        private static readonly Color CARD_SELECTED = new Color(0.15f, 0.25f, 0.45f, 1f);
-        private static readonly Color CARD_HOVER = new Color(0.12f, 0.16f, 0.24f, 1f);
         private static readonly Color PORTRAIT_BG = new Color(0.06f, 0.07f, 0.10f, 1f);
         private static readonly Color PANEL_BG = new Color(0.045f, 0.055f, 0.075f, 0.96f);
         private static readonly Color TILE_BG = new Color(0.07f, 0.085f, 0.115f, 1f);
@@ -51,7 +52,9 @@ namespace TrashTD.UI
         private static readonly Color ACCENT_BRIGHT = new Color(0.30f, 0.95f, 0.58f, 1f);
         private static readonly Color MELEE_COLOR = new Color(0.95f, 0.60f, 0.25f, 1f);
         private static readonly Color RANGED_COLOR = new Color(0.35f, 0.78f, 0.92f, 1f);
-        private static readonly Color BACK_BG = new Color(0.045f, 0.06f, 0.09f, 1f);
+        private static readonly Color BACK_BG = new Color(0.020f, 0.045f, 0.032f, 1f);
+        private static readonly Color HAZARD_YELLOW = new Color(0.98f, 0.80f, 0.18f, 1f);
+        private static readonly Color HAZARD_INK = new Color(0.07f, 0.06f, 0.03f, 1f);
 
         // Range preview tiles use the same colours as the in-game placement preview (StageBootstrapper).
         private static readonly Color RANGE_TILE_COLOR = new Color(0.15f, 1f, 0.28f, 1f);
@@ -62,10 +65,10 @@ namespace TrashTD.UI
         private const float CardWidth = 360f;
         private const float CardHeight = 640f;
         private const float CardSpacing = 30f;
-        private const float PortraitMargin = 16f;
-        private const float PortraitTop = 18f;
-        private const float PortraitHeight = 452f;
-        private const float PortraitPadding = 12f;
+        private const float PortraitMargin = 20f;
+        private const float PortraitTop = 64f;
+        private const float PortraitHeight = 376f;
+        private const float PortraitPadding = 18f;
         private const float ColumnCenterX = -285f;   // card column (left side)
         private const float PanelCenterX = 650f;     // detail panel (right side)
         private const float PanelWidth = 500f;
@@ -95,6 +98,14 @@ namespace TrashTD.UI
         private const float DealStagger = 0.11f;
         private const float FlipHalfOut = 0.11f;
         private const float FlipHalfIn = 0.22f;
+        private const float FlipLift = 0.1f;          // extra scale at the top of the flip
+        private const float FlipTilt = 4f;            // degrees
+        private const float SelectedLift = 18f;       // px the selected card rises
+        private const float FaceDownBob = 5f;         // px face-down cards float
+        private const float ShineDuration = 0.55f;
+        private const float StarPopInterval = 0.07f;
+        private const float BurstLifetime = 0.6f;
+        private const float PickOutTime = 0.34f;      // picked card rises, the others drop, the overlay fades
 
         // Pixel-art portraits are scaled by whole numbers (when they fit) inside this area.
         private static readonly Vector2 PortraitFitArea = new Vector2(
@@ -171,6 +182,32 @@ namespace TrashTD.UI
         private bool isShuffling;
         private bool freshDraft;     // true until the first offer of a draft has been applied
         private bool offerApplied;   // false while a shuffle is still waiting to fill the cards
+
+        // --- Card dressing: rarity-tinted parts, plates, idle and reveal effects ---
+        private struct TintedPart
+        {
+            public Image image;
+            public float alpha;
+        }
+
+        private readonly List<TintedPart>[] cardRarityParts = new List<TintedPart>[3];
+        private Image[] portraitGlows = new Image[3];
+        private Image[] namePlates = new Image[3];
+        private Text[] classNameTexts = new Text[3];
+        private Text[] positionTexts = new Text[3];
+        private RectTransform[] shineRects = new RectTransform[3];
+        private RectTransform[] backScanLines = new RectTransform[3];
+        private Image[] backEmblems = new Image[3];
+        private Text[] backHints = new Text[3];
+        private float[] cardLifts = new float[3];
+        private float[] shineStarts = { -10f, -10f, -10f };
+        private float[] nextShineTimes = new float[3];
+        private int[] cardStarCounts = new int[3];
+        private Coroutine[] starPopRoutines = new Coroutine[3];
+        private int pickedCardIndex = -1;
+        private Sprite glowSprite;
+        private Sprite stripeSprite;
+        private Sprite gridSprite;
 
         // --- Detail panel ---
         private sealed class Chip
@@ -386,6 +423,7 @@ namespace TrashTD.UI
                     : 1f;
             }
 
+            AnimateCards();
             HandleKeyboardShortcuts();
         }
 
@@ -410,6 +448,10 @@ namespace TrashTD.UI
                 gameplayHudUI.EnvironmentBriefingDismissed -= HandleEnvironmentBriefingDismissed;
 
             SceneManager.activeSceneChanged -= HandleActiveSceneChanged;
+
+            DestroyGeneratedSprite(glowSprite);
+            DestroyGeneratedSprite(stripeSprite);
+            DestroyGeneratedSprite(gridSprite);
         }
 
 #if UNITY_EDITOR || DEBUG
@@ -666,13 +708,33 @@ namespace TrashTD.UI
                 rarityTexts[i].text = BuildStarString(starCount);
                 rarityTexts[i].color = rarityColor;
 
-                // Rarity tint: top stripe, portrait backdrop/frame
+                // Rarity tint: frame, notches, name tick, portrait backdrop/glow/frame
+                cardStarCounts[i] = starCount;
+                TintRarityParts(i, rarityColor);
                 cardAccents[i].color = rarityColor;
-                portraitBgImages[i].color = Color.Lerp(PORTRAIT_BG, rarityColor, 0.10f);
+                namePlates[i].color = Color.Lerp(new Color(0.03f, 0.035f, 0.05f, 1f), rarityColor, 0.16f);
+                portraitBgImages[i].color = Color.Lerp(PORTRAIT_BG, rarityColor, 0.14f);
+                portraitGlows[i].color = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.38f);
                 portraitFrames[i].effectColor = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.6f);
                 classBadgeBackgrounds[i].color = Color.clear;
                 classBadgeIcons[i].sprite = GameplayHUDUI.GetClassIconSprite(opData.operatorClass);
                 classBadgeIcons[i].color = Color.white;
+
+                // Header: class and position
+                classNameTexts[i].text = opData.operatorClass.ToString().ToUpper();
+                classNameTexts[i].color = GetClassColor(opData.operatorClass);
+                bool isMelee = opData.position == OperatorPosition.Melee;
+                positionTexts[i].text = isMelee ? "MELEE" : "RANGED";
+                positionTexts[i].color = isMelee ? MELEE_COLOR : RANGED_COLOR;
+
+                if (starPopRoutines[i] != null)
+                {
+                    StopCoroutine(starPopRoutines[i]);
+                    starPopRoutines[i] = null;
+                }
+                rarityTexts[i].rectTransform.localScale = Vector3.one;
+                shineStarts[i] = -10f;
+                nextShineTimes[i] = Time.unscaledTime + 1.5f + i * 0.4f;
 
                 // The hover glow stays neutral while face-down so it can't give away the rarity.
                 cardFeedbacks[i].glowColor = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.95f);
@@ -746,7 +808,7 @@ namespace TrashTD.UI
 
                 bool selected = i == selectedCardIndex;
                 Color baseColor = selected
-                    ? CARD_SELECTED
+                    ? Color.Lerp(CARD_BG, cardRarityColors[i], 0.22f)
                     : (anySelected ? Color.Lerp(CARD_BG, Color.black, 0.3f) : CARD_BG);
 
                 cardFeedbacks[i].SetBaseColor(baseColor);
@@ -820,6 +882,7 @@ namespace TrashTD.UI
                 cardFeedbacks[i].introScale = StackScale;
                 cardFeedbacks[i].horizontalScale = 1f;
                 cardGroups[i].alpha = 0f;
+                cardLifts[i] = 0f;
             }
 
             SetCardsInteractable(false);
@@ -850,6 +913,7 @@ namespace TrashTD.UI
 
             isShuffling = true;
             offerApplied = false;
+            for (int i = 0; i < 3; i++) cardLifts[i] = 0f;
             SetCardsInteractable(false);
             dealRoutine = StartCoroutine(ShuffleDealRoutine());
         }
@@ -1011,7 +1075,8 @@ namespace TrashTD.UI
                     position.y += Mathf.Sin(k * Mathf.PI) * 36f;
                     float side = Mathf.Clamp(cardSlots[i].x / (CardWidth + CardSpacing), -1f, 1f);
                     SetCardPose(i, position, (1f - eased) * side * -6f);
-                    cardFeedbacks[i].introScale = Mathf.Lerp(StackScale, 1f, eased);
+                    // A small overshoot on landing, so each card pops into its slot
+                    cardFeedbacks[i].introScale = Mathf.LerpUnclamped(StackScale, 1f, EaseOutBack(k));
 
                     if (!soundPlayed[a] && k > 0f)
                     {
@@ -1103,40 +1168,49 @@ namespace TrashTD.UI
         private IEnumerator FlipRoutine(int index)
         {
             MenuButtonFeedback feedback = cardFeedbacks[index];
+            RectTransform rect = cardRects[index];
+            float tilt = (index == 0 ? -1f : index == 2 ? 1f : (UnityEngine.Random.value < 0.5f ? -1f : 1f)) * FlipTilt;
             // The 1.3 pitch turns the hover blip fallback into a flick; a real flip sound plays as recorded.
             PlaySfx(flipClip, flipClip == hoverClip ? 1.3f : UnityEngine.Random.Range(0.97f, 1.03f));
 
-            // Half 1: the back squeezes away
+            // Half 1: the card lifts and tilts while the back squeezes away
             float t = 0f;
             while (t < FlipHalfOut)
             {
                 t += Time.unscaledDeltaTime;
                 float k = Mathf.Clamp01(t / FlipHalfOut);
                 feedback.horizontalScale = Mathf.Max(0.001f, 1f - EaseInCubic(k));
-                feedback.introScale = 1f + 0.06f * k;
+                feedback.introScale = 1f + FlipLift * EaseOutCubic(k);
+                rect.localRotation = Quaternion.Euler(0f, 0f, tilt * k);
                 yield return null;
             }
 
-            // Swap to the front and let the rarity color show through
+            // Swap to the front: rarity glow and flash, sparks, a shine sweep and the stars filling in
             feedback.horizontalScale = 0.001f;
             SetFaceVisual(index, true);
             feedback.glowColor = RarityGlow(index);
             Color rarityColor = cardRarityColors[index];
+            StartCoroutine(BurstRoutine(index));
+            StartShine(index);
+            if (starPopRoutines[index] != null) StopCoroutine(starPopRoutines[index]);
+            starPopRoutines[index] = StartCoroutine(StarPopRoutine(index));
 
-            // Half 2: the front springs open, with a short flash in the rarity color
+            // Half 2: the front springs open and settles back down
             t = 0f;
             while (t < FlipHalfIn)
             {
                 t += Time.unscaledDeltaTime;
                 float k = Mathf.Clamp01(t / FlipHalfIn);
                 feedback.horizontalScale = Mathf.Max(0.001f, Mathf.LerpUnclamped(0.001f, 1f, EaseOutBack(k)));
-                feedback.introScale = 1.06f - 0.06f * k;
-                cardFlashes[index].color = new Color(rarityColor.r, rarityColor.g, rarityColor.b, (1f - k) * 0.4f);
+                feedback.introScale = 1f + FlipLift * (1f - EaseOutCubic(k));
+                rect.localRotation = Quaternion.Euler(0f, 0f, tilt * (1f - EaseOutCubic(k)));
+                cardFlashes[index].color = new Color(rarityColor.r, rarityColor.g, rarityColor.b, (1f - k) * 0.55f);
                 yield return null;
             }
 
             feedback.horizontalScale = 1f;
             feedback.introScale = 1f;
+            rect.localRotation = Quaternion.identity;
             cardFlashes[index].color = new Color(1f, 1f, 1f, 0f);
             flipRoutines[index] = null;
         }
@@ -1158,7 +1232,158 @@ namespace TrashTD.UI
                 }
 
                 if (cardFlashes[i] != null) cardFlashes[i].color = new Color(1f, 1f, 1f, 0f);
+                if (cardRects[i] != null && !isShuffling) cardRects[i].localRotation = Quaternion.identity;
                 if (cardRevealed[i]) SetFaceVisual(i, true);
+
+                if (starPopRoutines[i] != null)
+                {
+                    StopCoroutine(starPopRoutines[i]);
+                    starPopRoutines[i] = null;
+                    rarityTexts[i].text = BuildStarString(cardStarCounts[i]);
+                    rarityTexts[i].rectTransform.localScale = Vector3.one;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Idle motion once the hand is dealt: face-down cards float out of step, the selected card lifts,
+        /// revealed portraits bob a pixel at a time, 3★+ cards catch a shine now and then, and the backs
+        /// scan and pulse.
+        /// </summary>
+        private void AnimateCards()
+        {
+            float time = Time.unscaledTime;
+            float dt = Time.unscaledDeltaTime;
+
+            for (int i = 0; i < 3; i++)
+            {
+                if (cardPanels[i] == null || !cardPanels[i].activeSelf) continue;
+
+                if (!isShuffling)
+                {
+                    float lift = i == selectedCardIndex ? SelectedLift : 0f;
+                    cardLifts[i] = Mathf.Lerp(cardLifts[i], lift, 1f - Mathf.Exp(-12f * dt));
+                    float bob = cardRevealed[i] ? 0f : Mathf.Sin(time * 1.8f + i * 2.1f) * FaceDownBob;
+                    cardRects[i].anchoredPosition = cardSlots[i] + new Vector2(0f, cardLifts[i] + bob);
+                }
+
+                if (cardRevealed[i])
+                {
+                    float speed = i == selectedCardIndex ? 4f : 2.4f;
+                    portraitImages[i].rectTransform.anchoredPosition = new Vector2(0f, Mathf.Round(Mathf.Sin(time * speed + i) * 3f));
+                    if (cardStarCounts[i] >= 3 && time >= nextShineTimes[i]) StartShine(i);
+                }
+                else
+                {
+                    if (backScanLines[i] != null)
+                    {
+                        backScanLines[i].anchoredPosition = new Vector2(0f, -16f - Mathf.Repeat(time * 140f + i * 210f, CardHeight - 32f));
+                    }
+
+                    if (backEmblems[i] != null)
+                    {
+                        Color emblem = backEmblems[i].color;
+                        emblem.a = 0.08f + 0.07f * (0.5f + 0.5f * Mathf.Sin(time * 2.2f + i));
+                        backEmblems[i].color = emblem;
+                    }
+
+                    if (backHints[i] != null) backHints[i].enabled = Mathf.Repeat(time + i * 0.3f, 1.1f) < 0.8f;
+                }
+
+                UpdateShine(i, time);
+            }
+        }
+
+        /// <summary>Starts a shine sweep now and schedules the next one (rarer cards shine more often).</summary>
+        private void StartShine(int index)
+        {
+            float now = Time.unscaledTime;
+            shineStarts[index] = now;
+            float rarity = Mathf.Clamp01((cardStarCounts[index] - 3) / 2f);
+            nextShineTimes[index] = now + Mathf.Lerp(4.5f, 2.2f, rarity) + UnityEngine.Random.Range(0f, 0.8f);
+        }
+
+        private void UpdateShine(int index, float time)
+        {
+            RectTransform shine = shineRects[index];
+            if (shine == null) return;
+
+            float k = (time - shineStarts[index]) / ShineDuration;
+            bool active = cardRevealed[index] && k >= 0f && k <= 1f;
+            if (shine.gameObject.activeSelf != active) shine.gameObject.SetActive(active);
+            if (active) shine.anchoredPosition = new Vector2(Mathf.Lerp(-CardWidth, CardWidth, EaseInOutCubic(k)), 0f);
+        }
+
+        /// <summary>The rarity stars fill in one at a time after a flip, each with a small pop.</summary>
+        private IEnumerator StarPopRoutine(int index)
+        {
+            int stars = cardStarCounts[index];
+            Text text = rarityTexts[index];
+            RectTransform rect = text.rectTransform;
+
+            text.text = BuildStarString(0);
+            yield return new WaitForSecondsRealtime(0.08f);
+
+            for (int s = 1; s <= stars; s++)
+            {
+                text.text = BuildStarString(s);
+                float t = 0f;
+                while (t < StarPopInterval)
+                {
+                    t += Time.unscaledDeltaTime;
+                    rect.localScale = Vector3.one * (1f + 0.2f * (1f - Mathf.Clamp01(t / StarPopInterval)));
+                    yield return null;
+                }
+            }
+
+            rect.localScale = Vector3.one;
+            starPopRoutines[index] = null;
+        }
+
+        /// <summary>Pixel sparks in the rarity colour burst out of a card as it turns over; rarer cards throw more.</summary>
+        private IEnumerator BurstRoutine(int index)
+        {
+            int count = 6 + cardStarCounts[index] * 4;
+            Color color = cardRarityColors[index];
+            Transform parent = cardRects[index].parent; // the container, so the flip's squeeze doesn't squash them
+            Vector2 origin = cardRects[index].anchoredPosition;
+
+            var sparks = new RectTransform[count];
+            var images = new Image[count];
+            var velocities = new Vector2[count];
+            for (int s = 0; s < count; s++)
+            {
+                images[s] = CreatePlainImage(parent, "Spark", color);
+                sparks[s] = images[s].rectTransform;
+                float size = Mathf.Round(UnityEngine.Random.Range(6f, 12f));
+                sparks[s].sizeDelta = new Vector2(size, size);
+                sparks[s].anchoredPosition = origin + new Vector2(
+                    UnityEngine.Random.Range(-CardWidth * 0.3f, CardWidth * 0.3f),
+                    UnityEngine.Random.Range(-CardHeight * 0.2f, CardHeight * 0.25f));
+                float angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+                velocities[s] = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * UnityEngine.Random.Range(260f, 620f) + new Vector2(0f, 140f);
+            }
+
+            float t = 0f;
+            while (t < BurstLifetime)
+            {
+                float dt = Time.unscaledDeltaTime;
+                t += dt;
+                float k = Mathf.Clamp01(t / BurstLifetime);
+                for (int s = 0; s < count; s++)
+                {
+                    if (sparks[s] == null) continue;
+                    velocities[s] *= 1f - Mathf.Min(1f, 2.5f * dt);
+                    velocities[s].y -= 900f * dt;
+                    sparks[s].anchoredPosition += velocities[s] * dt;
+                    images[s].color = new Color(color.r, color.g, color.b, 1f - k * k);
+                }
+                yield return null;
+            }
+
+            for (int s = 0; s < count; s++)
+            {
+                if (sparks[s] != null) Destroy(sparks[s].gameObject);
             }
         }
 
@@ -1398,9 +1623,12 @@ namespace TrashTD.UI
             }
 
             // Select the card from the draft
+            int pickedIndex = selectedCardIndex;
             if (draftSystem.SelectCard(selectedCardIndex, out DraftCard selectedCard))
             {
                 pickConfirmed = true;
+                pickedCardIndex = pickedIndex;
+                if (cardFeedbacks[pickedIndex] != null) cardFeedbacks[pickedIndex].Punch();
                 // Add to player deck
                 playerDeck.AddCard(selectedCard);
 
@@ -1706,13 +1934,32 @@ namespace TrashTD.UI
             overlayGroup.interactable = false;
             overlayGroup.blocksRaycasts = false;
 
-            const float duration = 0.18f;
+            // The picked card rises and grows a little, the others drop away, and the screen fades out
+            int picked = pickConfirmed ? pickedCardIndex : -1;
+            var start = new Vector2[3];
+            for (int i = 0; i < 3; i++) if (cardRects[i] != null) start[i] = cardRects[i].anchoredPosition;
+
             float from = overlayGroup.alpha;
             float t = 0f;
-            while (t < duration)
+            while (t < PickOutTime)
             {
                 t += Time.unscaledDeltaTime;
-                overlayGroup.alpha = Mathf.Lerp(from, 0f, Mathf.Clamp01(t / duration));
+                float k = Mathf.Clamp01(t / PickOutTime);
+                for (int i = 0; i < 3; i++)
+                {
+                    if (cardRects[i] == null || !cardPanels[i].activeSelf) continue;
+                    if (i == picked)
+                    {
+                        cardRects[i].anchoredPosition = start[i] + new Vector2(0f, 40f * EaseOutCubic(k));
+                        cardFeedbacks[i].introScale = 1f + 0.08f * EaseOutCubic(k);
+                    }
+                    else
+                    {
+                        cardRects[i].anchoredPosition = start[i] + new Vector2(0f, -140f * k * k);
+                        cardGroups[i].alpha = 1f - k;
+                    }
+                }
+                overlayGroup.alpha = Mathf.Lerp(from, 0f, EaseInCubic(k));
                 yield return null;
             }
 
@@ -2278,28 +2525,49 @@ namespace TrashTD.UI
 
             cardPanels[index] = cardObj;
             cardBackgrounds[index] = cardImg;
+            cardRarityParts[index] = new List<TintedPart>();
 
-            // The front of the card (portrait, name, stars) lives under one container so the
-            // whole face can be shown/hidden when the card flips.
-            var front = new GameObject($"Front_{index}", typeof(RectTransform));
+            // The front of the card lives under one container so the whole face can be shown/hidden when the
+            // card flips. It is masked so the shine sweep stays on the card.
+            var front = new GameObject($"Front_{index}", typeof(RectTransform), typeof(RectMask2D));
             front.transform.SetParent(cardObj.transform, false);
             StretchFill(front.GetComponent<RectTransform>());
             cardFronts[index] = front;
 
-            // Rarity-colored accent stripe along the top edge
-            var accent = new GameObject($"Accent_{index}", typeof(RectTransform), typeof(Image));
-            accent.transform.SetParent(front.transform, false);
-            var accentRect = accent.GetComponent<RectTransform>();
-            accentRect.anchorMin = new Vector2(0f, 1f);
-            accentRect.anchorMax = new Vector2(1f, 1f);
-            accentRect.pivot = new Vector2(0.5f, 1f);
-            accentRect.sizeDelta = new Vector2(0f, 5f);
-            cardAccents[index] = accent.GetComponent<Image>();
-            cardAccents[index].color = STAR_COLOR;
-            cardAccents[index].raycastTarget = false;
+            // --- Rarity frame: outer line, faint inner line and corner notches (recoloured per card) ---
+            AddRarityParts(index, CreateFrame(front.transform, 6f, 3f, Color.white), 0.9f);
+            AddRarityParts(index, CreateFrame(front.transform, 14f, 1f, Color.white), 0.3f);
+            foreach (Image notch in CreateCornerNotches(front.transform, 6f, 12f, Color.white))
+            {
+                AddRarityPart(index, notch, 1f);
+            }
 
-            // --- Portrait frame: takes up most of the card ---
-            var portraitBg = new GameObject($"PortraitBg_{index}", typeof(RectTransform), typeof(Image));
+            // --- Header: class icon and name on the left, position on the right ---
+            var classBadge = new GameObject($"ClassBadge_{index}", typeof(RectTransform), typeof(Image));
+            classBadge.transform.SetParent(front.transform, false);
+            PlaceTopLeft(classBadge.transform, 22f, 20f, 34f, 34f);
+            classBadgeBackgrounds[index] = classBadge.GetComponent<Image>();
+            classBadgeBackgrounds[index].raycastTarget = false;
+            classBadgeBackgrounds[index].color = Color.clear;
+
+            var classIconObject = new GameObject($"ClassIcon_{index}", typeof(RectTransform), typeof(Image));
+            classIconObject.transform.SetParent(classBadge.transform, false);
+            classBadgeIcons[index] = classIconObject.GetComponent<Image>();
+            classBadgeIcons[index].preserveAspect = true;
+            classBadgeIcons[index].raycastTarget = false;
+            classBadgeIcons[index].color = Color.white;
+            StretchFill(classBadgeIcons[index].rectTransform);
+
+            classNameTexts[index] = MakeText(front.transform, $"ClassName_{index}", "", 16, TextAnchor.MiddleLeft, CLASS_COLOR);
+            classNameTexts[index].fontStyle = FontStyle.Bold;
+            StretchTopRT(classNameTexts[index], 64f, 120f, 22f, 30f);
+
+            positionTexts[index] = MakeText(front.transform, $"Position_{index}", "", 14, TextAnchor.MiddleRight, RANGED_COLOR);
+            positionTexts[index].fontStyle = FontStyle.Bold;
+            StretchTopRT(positionTexts[index], 180f, 24f, 22f, 30f);
+
+            // --- Portrait window: rarity-tinted backdrop, faint grid, a glow behind the operator and a floor ---
+            var portraitBg = new GameObject($"PortraitBg_{index}", typeof(RectTransform), typeof(Image), typeof(RectMask2D));
             portraitBg.transform.SetParent(front.transform, false);
             StretchTopRT(portraitBg.transform, PortraitMargin, PortraitMargin, PortraitTop, PortraitHeight);
             portraitBgImages[index] = portraitBg.GetComponent<Image>();
@@ -2311,15 +2579,37 @@ namespace TrashTD.UI
             portraitFrames[index].effectDistance = new Vector2(2f, -2f);
             portraitFrames[index].effectColor = new Color(1f, 1f, 1f, 0.15f);
 
+            Image grid = CreatePlainImage(portraitBg.transform, "Grid", new Color(1f, 1f, 1f, 0.05f));
+            grid.sprite = GetGridSprite();
+            grid.type = Image.Type.Tiled;
+            StretchFill(grid.rectTransform);
+
+            portraitGlows[index] = CreatePlainImage(portraitBg.transform, "Glow", Color.clear);
+            portraitGlows[index].sprite = GetGlowSprite();
+            PositionRT(portraitGlows[index], new Vector2(0f, -30f), new Vector2(0.5f, 0.5f), new Vector2(340f, 320f));
+
+            Image floor = CreatePlainImage(portraitBg.transform, "Floor", new Color(0f, 0f, 0f, 0.35f));
+            RectTransform floorRect = floor.rectTransform;
+            floorRect.anchorMin = new Vector2(0f, 0f);
+            floorRect.anchorMax = new Vector2(1f, 0f);
+            floorRect.pivot = new Vector2(0.5f, 0f);
+            floorRect.offsetMin = Vector2.zero;
+            floorRect.offsetMax = new Vector2(0f, 64f);
+
+            Image floorLine = CreatePlainImage(portraitBg.transform, "FloorLine", Color.white);
+            RectTransform floorLineRect = floorLine.rectTransform;
+            floorLineRect.anchorMin = new Vector2(0f, 0f);
+            floorLineRect.anchorMax = new Vector2(1f, 0f);
+            floorLineRect.pivot = new Vector2(0.5f, 0f);
+            floorLineRect.offsetMin = new Vector2(0f, 64f);
+            floorLineRect.offsetMax = new Vector2(0f, 66f);
+            AddRarityPart(index, floorLine, 0.45f);
+
             // Placeholder initial (shown when the operator has no portrait art)
             portraitFallbackTexts[index] = MakeText(portraitBg.transform, $"PortraitFallback_{index}", "?", 140,
                 TextAnchor.MiddleCenter, new Color(1f, 1f, 1f, 0.10f));
             portraitFallbackTexts[index].fontStyle = FontStyle.Bold;
-            var fallbackRect = portraitFallbackTexts[index].rectTransform;
-            fallbackRect.anchorMin = Vector2.zero;
-            fallbackRect.anchorMax = Vector2.one;
-            fallbackRect.offsetMin = Vector2.zero;
-            fallbackRect.offsetMax = Vector2.zero;
+            StretchFill(portraitFallbackTexts[index].rectTransform);
 
             // Portrait sprite: centered in the frame, size set per sprite in SetPortrait()
             var portraitObj = new GameObject($"Portrait_{index}", typeof(RectTransform), typeof(Image));
@@ -2335,49 +2625,55 @@ namespace TrashTD.UI
             portraitImages[index].color = Color.white;
             portraitImages[index].raycastTarget = false;
 
-            var classBadge = new GameObject($"ClassBadge_{index}", typeof(RectTransform), typeof(Image));
-            classBadge.transform.SetParent(portraitBg.transform, false);
-            RectTransform classBadgeRect = classBadge.GetComponent<RectTransform>();
-            classBadgeRect.anchorMin = new Vector2(0f, 1f);
-            classBadgeRect.anchorMax = new Vector2(0f, 1f);
-            classBadgeRect.pivot = new Vector2(0f, 1f);
-            classBadgeRect.anchoredPosition = new Vector2(10f, -10f);
-            classBadgeRect.sizeDelta = new Vector2(44f, 44f);
-            classBadgeBackgrounds[index] = classBadge.GetComponent<Image>();
-            classBadgeBackgrounds[index].raycastTarget = false;
-            classBadgeBackgrounds[index].color = Color.clear;
+            // --- Name plate: a tinted band with a rarity tick on the left ---
+            namePlates[index] = CreatePlainImage(front.transform, $"NamePlate_{index}", CARD_BG);
+            StretchTopRT(namePlates[index], PortraitMargin, PortraitMargin, 452f, 52f);
 
-            var classIconObject = new GameObject($"ClassIcon_{index}", typeof(RectTransform), typeof(Image));
-            classIconObject.transform.SetParent(classBadge.transform, false);
-            classBadgeIcons[index] = classIconObject.GetComponent<Image>();
-            classBadgeIcons[index].preserveAspect = true;
-            classBadgeIcons[index].raycastTarget = false;
-            classBadgeIcons[index].color = Color.white;
-            RectTransform classIconRect = classBadgeIcons[index].rectTransform;
-            classIconRect.anchorMin = Vector2.zero;
-            classIconRect.anchorMax = Vector2.one;
-            classIconRect.offsetMin = Vector2.zero;
-            classIconRect.offsetMax = Vector2.zero;
+            var accent = CreatePlainImage(namePlates[index].transform, $"Accent_{index}", STAR_COLOR);
+            RectTransform accentRect = accent.rectTransform;
+            accentRect.anchorMin = new Vector2(0f, 0f);
+            accentRect.anchorMax = new Vector2(0f, 1f);
+            accentRect.pivot = new Vector2(0f, 0.5f);
+            accentRect.offsetMin = Vector2.zero;
+            accentRect.offsetMax = new Vector2(6f, 0f);
+            cardAccents[index] = accent;
 
-            // --- Name (bottom) ---
-            nameTexts[index] = MakeText(front.transform, $"Name_{index}", "", 26,
+            nameTexts[index] = MakeText(namePlates[index].transform, $"Name_{index}", "", 26,
                 TextAnchor.MiddleCenter, Color.white);
             nameTexts[index].fontStyle = FontStyle.Bold;
             nameTexts[index].resizeTextForBestFit = true;
             nameTexts[index].resizeTextMinSize = 14;
             nameTexts[index].resizeTextMaxSize = 26;
-            StretchTopRT(nameTexts[index], 14f, 14f, 484f, 44f);
+            RectTransform nameRect = nameTexts[index].rectTransform;
+            nameRect.anchorMin = Vector2.zero;
+            nameRect.anchorMax = Vector2.one;
+            nameRect.offsetMin = new Vector2(16f, 0f);
+            nameRect.offsetMax = new Vector2(-10f, 0f);
 
-            // --- Rarity stars (bottom) ---
-            rarityTexts[index] = MakeText(front.transform, $"Rarity_{index}", "", 28,
+            // --- Rarity stars ---
+            rarityTexts[index] = MakeText(front.transform, $"Rarity_{index}", "", 30,
                 TextAnchor.MiddleCenter, STAR_COLOR);
-            StretchTopRT(rarityTexts[index], 14f, 14f, 530f, 40f);
+            StretchTopRT(rarityTexts[index], 14f, 14f, 510f, 42f);
 
-            // --- Select hint / selected badge ---
-            selectHintTexts[index] = MakeText(front.transform, $"SelectHint_{index}", "CLICK TO SELECT", 12,
+            Image divider = CreatePlainImage(front.transform, "Divider", new Color(1f, 1f, 1f, 0.08f));
+            StretchTopRT(divider, 40f, 40f, 560f, 1f);
+
+            // --- Select hint / selected badge, and the hotkey ---
+            selectHintTexts[index] = MakeText(front.transform, $"SelectHint_{index}", "CLICK TO SELECT", 13,
                 TextAnchor.MiddleCenter, STAT_LABEL_COLOR);
             selectHintTexts[index].fontStyle = FontStyle.Bold;
-            StretchTopRT(selectHintTexts[index], 14f, 14f, 596f, 24f);
+            StretchTopRT(selectHintTexts[index], 14f, 14f, 570f, 24f);
+
+            var keyText = MakeText(front.transform, $"Key_{index}", $"KEY [ {index + 1} ]", 11, TextAnchor.MiddleCenter,
+                new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.45f));
+            StretchTopRT(keyText, 14f, 14f, 598f, 18f);
+
+            // --- Shine sweep: a slanted light band that crosses the face (on reveal, and now and then on 3★+) ---
+            Image shine = CreatePlainImage(front.transform, $"Shine_{index}", new Color(1f, 1f, 1f, 0.16f));
+            PositionRT(shine, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(70f, CardHeight * 1.5f));
+            shine.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -18f);
+            shineRects[index] = shine.rectTransform;
+            shine.gameObject.SetActive(false);
 
             // --- The back of the card (shown until the player clicks it) ---
             BuildCardBack(cardObj.transform, index);
@@ -2394,7 +2690,11 @@ namespace TrashTD.UI
             cardFronts[index].SetActive(false);
         }
 
-        /// <summary>Card back: dark face, double frame, a diamond emblem and a "click to reveal" hint.</summary>
+        /// <summary>
+        /// Card back, a sealed reclaimer file: dark plate with a faint grid, hazard-striped bands top and bottom,
+        /// double frame with corner notches, a "TR" diamond emblem that pulses, a scan line and a blinking hint.
+        /// It looks the same for every card, so it never gives away the rarity.
+        /// </summary>
         private void BuildCardBack(Transform card, int index)
         {
             var back = new GameObject($"Back_{index}", typeof(RectTransform), typeof(Image));
@@ -2407,64 +2707,187 @@ namespace TrashTD.UI
 
             Color frameColor = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.55f);
             Color innerFrameColor = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.22f);
-            CreateFrame(back.transform, 14f, 3f, frameColor);
-            CreateFrame(back.transform, 26f, 1f, innerFrameColor);
 
-            // Diamond emblem
-            var diamond = new GameObject("Emblem", typeof(RectTransform), typeof(Image));
-            diamond.transform.SetParent(back.transform, false);
-            var diamondRect = diamond.GetComponent<RectTransform>();
-            diamondRect.anchorMin = new Vector2(0.5f, 0.5f);
-            diamondRect.anchorMax = new Vector2(0.5f, 0.5f);
-            diamondRect.pivot = new Vector2(0.5f, 0.5f);
-            diamondRect.sizeDelta = new Vector2(190f, 190f);
-            diamondRect.anchoredPosition = new Vector2(0f, 10f);
-            diamondRect.localRotation = Quaternion.Euler(0f, 0f, 45f);
-            var diamondImage = diamond.GetComponent<Image>();
-            diamondImage.color = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.10f);
-            diamondImage.raycastTarget = false;
-            CreateFrame(diamond.transform, 0f, 3f, frameColor);
+            Image grid = CreatePlainImage(back.transform, "Grid", new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.08f));
+            grid.sprite = GetGridSprite();
+            grid.type = Image.Type.Tiled;
+            StretchFill(grid.rectTransform);
 
-            var emblemText = MakeText(back.transform, "BackEmblem", "TD", 88, TextAnchor.MiddleCenter,
-                new Color(ACCENT_BRIGHT.r, ACCENT_BRIGHT.g, ACCENT_BRIGHT.b, 0.9f));
-            emblemText.fontStyle = FontStyle.Bold;
-            PositionRT(emblemText, new Vector2(0f, 10f), new Vector2(0.5f, 0.5f), new Vector2(260f, 120f));
-
-            // Small diamonds in the corners of the inner frame
-            for (int c = 0; c < 4; c++)
+            // Hazard bands
+            for (int band = 0; band < 2; band++)
             {
-                bool right = (c & 1) == 1;
-                bool top = (c & 2) == 2;
-                var corner = new GameObject($"Corner_{c}", typeof(RectTransform), typeof(Image));
-                corner.transform.SetParent(back.transform, false);
-                var cornerRect = corner.GetComponent<RectTransform>();
-                Vector2 anchor = new Vector2(right ? 1f : 0f, top ? 1f : 0f);
-                cornerRect.anchorMin = anchor;
-                cornerRect.anchorMax = anchor;
-                cornerRect.pivot = new Vector2(0.5f, 0.5f);
-                cornerRect.sizeDelta = new Vector2(12f, 12f);
-                cornerRect.anchoredPosition = new Vector2(right ? -26f : 26f, top ? -26f : 26f);
-                cornerRect.localRotation = Quaternion.Euler(0f, 0f, 45f);
-                var cornerImage = corner.GetComponent<Image>();
-                cornerImage.color = frameColor;
-                cornerImage.raycastTarget = false;
+                Image stripes = CreatePlainImage(back.transform, band == 0 ? "HazardTop" : "HazardBottom", new Color(1f, 1f, 1f, 0.5f));
+                stripes.sprite = GetStripeSprite();
+                stripes.type = Image.Type.Tiled;
+                StretchTopRT(stripes, 16f, 16f, band == 0 ? 16f : CardHeight - 44f, 28f);
             }
 
-            // Hotkey label near the top and the reveal hint near the bottom
+            CreateFrame(back.transform, 6f, 3f, frameColor);
+            CreateFrame(back.transform, 14f, 1f, innerFrameColor);
+            CreateCornerNotches(back.transform, 6f, 12f, frameColor);
+
+            // Diamond emblem (its fill pulses, see AnimateCards) with a smaller outline inside
+            var diamond = CreatePlainImage(back.transform, "Emblem", new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.10f));
+            PositionRT(diamond, new Vector2(0f, 14f), new Vector2(0.5f, 0.5f), new Vector2(196f, 196f));
+            diamond.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            CreateFrame(diamond.transform, 0f, 3f, frameColor);
+            CreateFrame(diamond.transform, 22f, 1f, innerFrameColor);
+            backEmblems[index] = diamond;
+
+            var emblemText = MakeText(back.transform, "BackEmblem", "TR", 84, TextAnchor.MiddleCenter,
+                new Color(ACCENT_BRIGHT.r, ACCENT_BRIGHT.g, ACCENT_BRIGHT.b, 0.9f));
+            emblemText.fontStyle = FontStyle.Bold;
+            PositionRT(emblemText, new Vector2(0f, 14f), new Vector2(0.5f, 0.5f), new Vector2(260f, 120f));
+
+            var fileText = MakeText(back.transform, "BackFile", "RECLAIMER FILE", 15, TextAnchor.MiddleCenter,
+                new Color(ACCENT_BRIGHT.r, ACCENT_BRIGHT.g, ACCENT_BRIGHT.b, 0.75f));
+            fileText.fontStyle = FontStyle.Bold;
+            PositionRT(fileText, new Vector2(0f, -136f), new Vector2(0.5f, 0.5f), new Vector2(300f, 24f));
+
+            var classifiedText = MakeText(back.transform, "BackClassified", "// CLASSIFIED //", 12, TextAnchor.MiddleCenter,
+                new Color(HAZARD_YELLOW.r, HAZARD_YELLOW.g, HAZARD_YELLOW.b, 0.7f));
+            PositionRT(classifiedText, new Vector2(0f, -162f), new Vector2(0.5f, 0.5f), new Vector2(300f, 20f));
+
+            // Hotkey label under the top band and the reveal hint above the bottom one
             var keyText = MakeText(back.transform, "BackKey", $"[ {index + 1} ]", 14, TextAnchor.MiddleCenter,
                 new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.6f));
             keyText.fontStyle = FontStyle.Bold;
-            StretchTopRT(keyText, 14f, 14f, 44f, 24f);
+            StretchTopRT(keyText, 14f, 14f, 54f, 24f);
 
-            var hintText = MakeText(back.transform, "BackHint", "CLICK TO REVEAL", 14, TextAnchor.MiddleCenter,
+            backHints[index] = MakeText(back.transform, "BackHint", "CLICK TO REVEAL", 14, TextAnchor.MiddleCenter,
                 new Color(ACCENT_BRIGHT.r, ACCENT_BRIGHT.g, ACCENT_BRIGHT.b, 0.8f));
-            hintText.fontStyle = FontStyle.Bold;
-            StretchTopRT(hintText, 14f, 14f, CardHeight - 74f, 26f);
+            backHints[index].fontStyle = FontStyle.Bold;
+            StretchTopRT(backHints[index], 14f, 14f, CardHeight - 82f, 26f);
+
+            // Scan line sweeping down the back, inside the frame (AnimateCards)
+            Image scan = CreatePlainImage(back.transform, "ScanLine", new Color(ACCENT_BRIGHT.r, ACCENT_BRIGHT.g, ACCENT_BRIGHT.b, 0.2f));
+            RectTransform scanRect = scan.rectTransform;
+            scanRect.anchorMin = new Vector2(0f, 1f);
+            scanRect.anchorMax = new Vector2(1f, 1f);
+            scanRect.pivot = new Vector2(0.5f, 0.5f);
+            scanRect.sizeDelta = new Vector2(0f, 3f);
+            backScanLines[index] = scanRect;
+        }
+
+        private void AddRarityPart(int index, Image image, float alpha)
+        {
+            cardRarityParts[index].Add(new TintedPart { image = image, alpha = alpha });
+        }
+
+        private void AddRarityParts(int index, Image[] images, float alpha)
+        {
+            foreach (Image image in images) AddRarityPart(index, image, alpha);
+        }
+
+        /// <summary>Recolours a card's frame, notches and floor line in its rarity colour, keeping each part's alpha.</summary>
+        private void TintRarityParts(int index, Color color)
+        {
+            foreach (TintedPart part in cardRarityParts[index])
+            {
+                part.image.color = new Color(color.r, color.g, color.b, part.alpha);
+            }
+        }
+
+        private static Image CreatePlainImage(Transform parent, string name, Color color)
+        {
+            var obj = new GameObject(name, typeof(RectTransform), typeof(Image));
+            obj.transform.SetParent(parent, false);
+            var image = obj.GetComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        /// <summary>Small squares in the four corners, <paramref name="inset"/> from the edges.</summary>
+        private static Image[] CreateCornerNotches(Transform parent, float inset, float size, Color color)
+        {
+            var notches = new Image[4];
+            for (int c = 0; c < 4; c++)
+            {
+                var corner = new Vector2(c & 1, (c & 2) >> 1);
+                Image notch = CreatePlainImage(parent, $"Notch_{c}", color);
+                RectTransform rect = notch.rectTransform;
+                rect.anchorMin = corner;
+                rect.anchorMax = corner;
+                rect.pivot = corner;
+                rect.sizeDelta = new Vector2(size, size);
+                rect.anchoredPosition = new Vector2(corner.x > 0.5f ? -inset : inset, corner.y > 0.5f ? -inset : inset);
+                notches[c] = notch;
+            }
+            return notches;
+        }
+
+        // ============================
+        // Generated card textures (owned by this overlay and destroyed with it)
+        // ============================
+
+        private Sprite GetGlowSprite()
+        {
+            if (glowSprite == null)
+            {
+                glowSprite = CreateGeneratedSprite("Card Glow", 64, 64, FilterMode.Bilinear, (x, y) =>
+                {
+                    float dx = (x + 0.5f) / 32f - 1f;
+                    float dy = (y + 0.5f) / 32f - 1f;
+                    float a = Mathf.Clamp01(1f - Mathf.Sqrt(dx * dx + dy * dy));
+                    return new Color(1f, 1f, 1f, a * a);
+                });
+            }
+            return glowSprite;
+        }
+
+        private Sprite GetStripeSprite()
+        {
+            if (stripeSprite == null)
+            {
+                stripeSprite = CreateGeneratedSprite("Card Hazard Stripes", 16, 16, FilterMode.Point,
+                    (x, y) => (x + y) % 16 < 8 ? HAZARD_YELLOW : HAZARD_INK);
+            }
+            return stripeSprite;
+        }
+
+        private Sprite GetGridSprite()
+        {
+            if (gridSprite == null)
+            {
+                gridSprite = CreateGeneratedSprite("Card Grid", 16, 16, FilterMode.Point,
+                    (x, y) => x == 0 || y == 0 ? Color.white : Color.clear);
+            }
+            return gridSprite;
+        }
+
+        /// <summary>100 pixels per unit, so a Tiled Image repeats it at its pixel size on the 1080p canvas.</summary>
+        private static Sprite CreateGeneratedSprite(string name, int width, int height, FilterMode filter, Func<int, int, Color> pixel)
+        {
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            {
+                name = name,
+                filterMode = filter,
+                wrapMode = TextureWrapMode.Repeat
+            };
+
+            var pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++) pixels[y * width + x] = pixel(x, y);
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+
+            return Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect);
+        }
+
+        private static void DestroyGeneratedSprite(Sprite sprite)
+        {
+            if (sprite == null) return;
+            if (sprite.texture != null) Destroy(sprite.texture);
+            Destroy(sprite);
         }
 
         /// <summary>Hollow rectangle made of four thin strips, inset from the edges of its parent.</summary>
-        private static void CreateFrame(Transform parent, float inset, float thickness, Color color)
+        private static Image[] CreateFrame(Transform parent, float inset, float thickness, Color color)
         {
+            var strips = new Image[4];
             for (int side = 0; side < 4; side++)
             {
                 var strip = new GameObject($"Frame_{side}", typeof(RectTransform), typeof(Image));
@@ -2502,7 +2925,9 @@ namespace TrashTD.UI
                 var image = strip.GetComponent<Image>();
                 image.color = color;
                 image.raycastTarget = false;
+                strips[side] = image;
             }
+            return strips;
         }
 
         private void BuildDetailsPanel(Transform parent)

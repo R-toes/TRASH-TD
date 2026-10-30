@@ -74,8 +74,9 @@ namespace TrashTD.UI
         {
             if (loaded) return;
             loaded = true;
-            int style = PlayerPrefs.GetInt(CrtStyleKey, (int)CrtStyle.FullTv);
-            crtStyle = Enum.IsDefined(typeof(CrtStyle), style) ? (CrtStyle)style : CrtStyle.FullTv;
+            // Classic until the player picks a style: Full TV is harder to read on small screens.
+            int style = PlayerPrefs.GetInt(CrtStyleKey, (int)CrtStyle.Classic);
+            crtStyle = Enum.IsDefined(typeof(CrtStyle), style) ? (CrtStyle)style : CrtStyle.Classic;
             brightness = Mathf.Clamp(PlayerPrefs.GetFloat(BrightnessKey, DefaultBrightness), MinBrightness, MaxBrightness);
         }
     }

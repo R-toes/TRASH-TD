@@ -70,7 +70,13 @@ Any UI, system, or flow that involves "select your squad before the stage" is **
 - **Deploying:** pick a deck card, click a tile, then hold and drag from the operator to set its facing. Release to confirm. Esc cancels. **Right-click** cancels placement or undeploys the selected operator. Keyboard shortcuts are listed in §7.6.
 - **Preparation refund:** an operator deployed and retreated between waves (Card Pick or Preparation), before it has fought (`DeployedDuringCurrentPreparation && !HasFoughtInWave`), returns with **no recall cooldown**. Every other retreat uses the normal class cooldown. Always refunded in Sandbox.
 - **No DP / deployment cost.** Deploying is free: the only limits are the deck, the squad cap and the recall cooldown. The recall cooldown is counted in **waves**, by class (`OperatorManager.GetRetreatCooldownRounds`: Guard 0, Sniper 1, Caster 1, Defender 2, Medic 3, Specialist 0), and ticks down when a wave ends (`PlayerDeck.AdvanceRedeployCooldownsOneRound`). `OperatorData.dpCost`, the seconds-based `redeployCooldown` and `IDeployable.GetDPCost` were removed on 2026-10-28. Don't bring back a DP cost or a cooldown in seconds.
-- The draft overlay has card flip and shuffle animations. Card frame sprites exist in `Resources/UI/cards/` but are **not wired up yet**.
+- **Draft cards** (`CardDraftOverlayUI.BuildCard` / `BuildCardBack`, all built in code). The small stock frames in `Resources/UI/cards/` are unused.
+  - **Front:** a rarity-coloured double frame with corner notches (`TintRarityParts`). A header shows the class icon, class name and MELEE / RANGED. Below it: the portrait window (rarity-tinted backdrop, faint grid, soft glow and a floor line), a name plate with a rarity tick, the stars, the select hint and the hotkey.
+  - **Back:** a "reclaimer file", the same for every card so it never leaks the rarity. It has hazard-striped bands, a faint grid, a pulsing "TR" diamond, a scan line and a blinking CLICK TO REVEAL.
+  - **Animation:** shuffle, then a deal with a landing pop. The flip lifts and tilts the card, then shows a rarity flash, pixel sparks (`BurstRoutine`, more for rarer cards), a shine sweep, and stars filling in one by one (`StarPopRoutine`).
+  - **Idle** (`AnimateCards`): face-down cards float, revealed portraits bob, 3★+ cards shine now and then, and the selected card lifts 18 px.
+  - **On confirm:** the picked card rises while the others drop away (`HideRoutine`).
+  - **Generated textures** (glow, stripes, grid) belong to the overlay instance and are destroyed in `OnDestroy`.
   - **Skip card animation** (a checkbox under the deck count, top-right; `CardDraftOverlayUI.SkipCardAnimation`, PlayerPrefs `TrashTD.SkipCardAnimation`, off by default): no shuffle, deal or flip. Cards land straight in their slots face-up, rerolls included. Turning it on mid-draft finishes the current animation and reveals the hand.
   - **Header:** "CHOOSE YOUR CARD" (y 94–154 from the top), and under it a plain-text wave counter "WAVE 1/20" (next wave / total, no icon). Both are centred over the card column. The cards and details panel sit at y 230–870 (`ContentCenterY` −10).
 
@@ -571,8 +577,8 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
   - **Finding a canvas** to build UI on: use `CrtDisplay.FindGameCanvas()`, not `FindFirstObjectByType<Canvas>()`, which could return the CRT's own canvas.
   - **Graphics settings** (Settings panel → GRAPHICS; `GameGraphicsSettings`, saved in PlayerPrefs, `Changed` event):
     - **CRT Style** (all styles go through `CrtDisplay` for the whole game; `CrtDisplay.GetActiveSettings`):
-      - **Full TV** (default): `CrtScreen.Television`; the preview uses `Monitor`.
-      - **Classic:** the first CRT version, kept exactly (`CrtScreen.ClassicTelevision`, `legacy = 1` selects the old shader maths `_Legacy`); the preview uses `ClassicMonitor`.
+      - **Full TV:** `CrtScreen.Television`; the preview uses `Monitor`. Below 1080p, `Settings.ForPictureHeight` (applied by `CrtDisplay` whenever the screen size changes) eases off the horizontal softening, slot mask, scanlines, halation and fringing, fully at 720p and under, and lowers the brightness to match. These effects are sized in screen pixels while the UI shrinks with the screen, so small text used to blur on low-res screens.
+      - **Classic** (default until the player picks a style, `GameGraphicsSettings.Load`): the first CRT version, kept exactly (`CrtScreen.ClassicTelevision`, `legacy = 1` selects the old shader maths `_Legacy`); the preview uses `ClassicMonitor`.
       - **Off:** no CRT anywhere (`CrtScreen.Clean`, passthrough). Identical to the pre-CRT game at 100% brightness.
     - **Brightness** (50–150%) scales the `CrtDisplay` pass in every style (`Settings.WithBrightnessScale`).
     - The settings panel class is still named `AudioSettingsUI` (Audio + Graphics sections).
@@ -581,6 +587,13 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
 - `StageMapScanlines` (now unused by the menu; superseded by the CRT shader) is the old CRT overlay: scanlines, a rolling refresh band, a vignette and a faint flicker, all tunable in the Inspector. It builds its layers at runtime and runs on unscaled time.
 - The map scripts' file names don't match their class names (`Stagemapnode.cs` → `StageMapNode`, `Stagemaplayout.cs` → `StageMapLayout`, `Stagemapscanlines.cs` → `StageMapScanlines`). That works because they are only added with `AddComponent`. Rename the files before attaching any of them in the Inspector.
 - `MapSelectUI` (an older stage-select component that also uses `StageMapNode`) isn't used in any scene. Its `IsStageUnlocked` always returns true.
+
+- **Loading screen** (`LoadingScreen.LoadStage`, called by the dossier's PLAY): a DontDestroyOnLoad canvas (sort order 32000) styled like the title screen's viewfinder.
+  - **Contents:** the stage's `mapVisualSprite` drifts behind a dark tint, with corner brackets, a blinking REC line and `FEED STAGE NN`. It shows `NOW ENTERING // STAGE NN`, the map name, a difficulty chip in the dossier's colour, the short description and the 3★ condition.
+  - **Progress:** a segmented progress bar with a percentage and a terminal status line. Coalesce (the tutorial script's `speaker`) idles on a plate bottom-right, and a random tip from `Tips` sits under the bar.
+  - **Flow:** fade in (0.3 s) → `LoadSceneAsync` with activation held → the bar follows the slower of the real progress and a 1.6 s minimum → `SIGNAL LOCKED` → activate → wait 2 frames for the stage's `Start` → fade out (0.45 s).
+  - **Other transitions** (retry, next stage, back to menu) still use plain `SceneManager.LoadScene`.
+  - **Keep the tips true** when mechanics change.
 
 ### 7.8 Tutorial (STAGE 00 "Orientation")
 
