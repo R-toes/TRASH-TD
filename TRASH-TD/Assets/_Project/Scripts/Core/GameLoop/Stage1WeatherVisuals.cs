@@ -122,8 +122,12 @@ namespace TrashTD.Core.GameLoop
         private Vector2 rainVelocity;
 
         private static Sprite whiteSprite;
-        private static Sprite[] mistSprites;
-        private static Sprite fogBankSprite;
+
+        // Owned by this instance and destroyed with it. Cached statically, the textures could be unloaded while their
+        // sprites survived (domain reload is off, and scene loads unload assets), and a sprite without its texture
+        // draws plain white: the puffs showed as flat, low-opacity white shapes.
+        private Sprite[] mistSprites;
+        private Sprite fogBankSprite;
 
         public void Initialize(GridManager grid, StageData stage)
         {
@@ -147,6 +151,25 @@ namespace TrashTD.Core.GameLoop
             UpdateRainVelocity();
             AdvanceForecast();
             PrefillRain();
+        }
+
+        private void OnDestroy()
+        {
+            if (mistSprites != null)
+            {
+                foreach (Sprite sprite in mistSprites) DestroyGeneratedSprite(sprite);
+                mistSprites = null;
+            }
+
+            DestroyGeneratedSprite(fogBankSprite);
+            fogBankSprite = null;
+        }
+
+        private static void DestroyGeneratedSprite(Sprite sprite)
+        {
+            if (sprite == null) return;
+            if (sprite.texture != null) Destroy(sprite.texture);
+            Destroy(sprite);
         }
 
         private void Update()
@@ -571,11 +594,9 @@ namespace TrashTD.Core.GameLoop
             return whiteSprite;
         }
 
-        private static Sprite[] GetMistSprites()
+        private Sprite[] GetMistSprites()
         {
-            // Domain reload is off (Enter Play Mode options), so this array outlives the sprites in it:
-            // runtime sprites are destroyed when play mode ends. Check the elements, not just the array.
-            if (mistSprites != null && System.Array.TrueForAll(mistSprites, sprite => sprite != null)) return mistSprites;
+            if (mistSprites != null) return mistSprites;
 
             mistSprites = new Sprite[MistSpriteVariants];
             for (int i = 0; i < MistSpriteVariants; i++)
@@ -686,7 +707,7 @@ namespace TrashTD.Core.GameLoop
         }
 
         /// <summary>A vertical gradient: clear at the bottom, solid towards the top.</summary>
-        private static Sprite GetFogBankSprite()
+        private Sprite GetFogBankSprite()
         {
             if (fogBankSprite != null) return fogBankSprite;
 
