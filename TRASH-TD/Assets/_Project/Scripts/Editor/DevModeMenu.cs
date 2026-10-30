@@ -34,13 +34,14 @@ namespace TrashTD.Editor
         private static void ResetPlayerProgress()
         {
             if (!EditorUtility.DisplayDialog("Reset Player Progress",
-                    "Clear saved progress on this machine (tutorial completion, stage clears and stars)?\nAudio and graphics settings are kept.",
+                    "Clear saved progress on this machine (tutorial completion, stage clears and stars, enemies met in Intel)?\nAudio and graphics settings are kept.",
                     "Reset", "Cancel"))
                 return;
 
             TutorialDirector.ResetTutorialProgress();
             StageProgress.ResetAll();
-            Debug.Log("[DevMode] Player progress reset: tutorial and stage unlocks start over (turn Dev Mode off to see the locks).");
+            EnemyIntelProgress.ResetAll();
+            Debug.Log("[DevMode] Player progress reset: tutorial, stage unlocks and Intel enemy files start over (turn Dev Mode off to see the locks).");
         }
     }
 }

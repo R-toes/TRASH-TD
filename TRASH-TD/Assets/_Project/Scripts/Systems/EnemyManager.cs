@@ -196,6 +196,9 @@ namespace TrashTD.Systems
             activeEnemies.Add(enemyComp);
             OnEnemySpawned?.Invoke(enemyComp);
 
+            // Unlocks the enemy's Reclaimers' Intel file and logs the stage under SIGHTED AT
+            TrashTD.Core.GameLoop.EnemyIntelProgress.RecordEncounter(enemyData, TrashTD.Core.GameLoop.GameManager.Instance?.CurrentStage);
+
             return enemyComp;
         }
 

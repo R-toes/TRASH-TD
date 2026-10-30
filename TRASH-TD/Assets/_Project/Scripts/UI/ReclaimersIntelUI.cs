@@ -17,6 +17,9 @@ namespace TrashTD.UI
     /// comes from the unit data assets. Built in code in the green terminal style of AudioSettingsUI; runs on
     /// unscaled time so it works while the game is paused. The creating screen styles and places the open button
     /// and forwards Esc to <see cref="HandleBack"/>.
+    /// Enemy files stay locked until the player has met that enemy (<see cref="TrashTD.Core.GameLoop.EnemyIntelProgress"/>):
+    /// an animated silhouette, a name of cycling random letters, "???" for every field, and only under the ALL tab so
+    /// the archetype isn't given away. SIGHTED AT lists only the stages where the player has met the enemy.
     /// </summary>
     public sealed class ReclaimersIntelUI : MonoBehaviour
     {
@@ -78,6 +81,15 @@ namespace TrashTD.UI
         private const float NotesTop = 708f;
         private const float ShowDuration = 0.18f;
 
+        // Locked enemy files
+        private const string SilhouetteShaderPath = "Shaders/UISilhouette";
+        private const float ScrambleInterval = 0.08f;
+        private const string ScrambleGlyphs = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        private const string UnknownText = "???";
+        private static readonly Color SilhouetteColor = new Color(0.42f, 0.13f, 0.15f, 1f);
+        // Without the shader, a near-black tint still hides the sprite's details
+        private static readonly Color SilhouetteFallbackColor = new Color(0.06f, 0.02f, 0.025f, 1f);
+
         private static readonly OperatorClass[] ClassOrder =
         {
             OperatorClass.Guard, OperatorClass.Defender, OperatorClass.Sniper,
@@ -101,6 +113,7 @@ namespace TrashTD.UI
             public string FileId;
             public Sprite[] Frames;
             public float FrameDuration;
+            public bool Locked; // enemy not met yet (refreshed on every Open)
             public string Name => Operator != null ? Operator.operatorName : Enemy != null ? Enemy.enemyName : "UNKNOWN";
         }
 
@@ -156,7 +169,15 @@ namespace TrashTD.UI
         private readonly List<IntelEntry> operatorEntries = new List<IntelEntry>();
         private readonly List<IntelEntry> enemyEntries = new List<IntelEntry>();
         private readonly List<IntelEntry> filtered = new List<IntelEntry>();
-        private readonly Dictionary<EnemyData, List<string>> sightings = new Dictionary<EnemyData, List<string>>();
+        // Stage ids whose waves include each enemy (what dev mode shows), and stage id -> display name / order
+        private readonly Dictionary<EnemyData, List<string>> plannedSightings = new Dictionary<EnemyData, List<string>>();
+        private readonly Dictionary<string, string> stageNames = new Dictionary<string, string>();
+        private readonly Dictionary<string, int> stageOrder = new Dictionary<string, int>();
+        // Texts showing a locked enemy's name, re-rolled every ScrambleInterval, with the name they stand for
+        private readonly List<(Text text, string template)> scrambled = new List<(Text text, string template)>();
+        private float scrambleTimer;
+        private Material silhouetteMaterial;
+        private bool silhouetteShaderMissing;
         private int filterIndex;
         private int selectedIndex = -1;
         private bool rosterLoaded;
@@ -219,6 +240,7 @@ namespace TrashTD.UI
         {
             if (panel == null) return;
             LoadRoster();
+            RefreshEncounters(); // enemies met since the last Open (the pause menu's intel stays alive all stage)
             ShowChoice();
             panel.transform.SetAsLastSibling();
             panel.SetActive(true);
@@ -285,7 +307,13 @@ namespace TrashTD.UI
             }
 
             AnimateDetailSprite(dt);
+            AnimateScrambledNames(dt);
             HandleKeyboard();
+        }
+
+        private void OnDestroy()
+        {
+            if (silhouetteMaterial != null) Destroy(silhouetteMaterial);
         }
 
         private void HandleKeyboard()
@@ -388,19 +416,40 @@ namespace TrashTD.UI
             CollectSightings();
 
             operatorsCount.text = operatorEntries.Count + " RECLAIMERS ON FILE";
-            enemiesCount.text = enemyEntries.Count + " HOSTILES CATALOGUED";
             SetPixelSprite(operatorsSprite, FindCover(operatorEntries, "Coalesce"), 256f);
-            SetPixelSprite(enemiesSprite, FindCover(enemyEntries, "Toxic Rusher"), 256f);
         }
 
-        /// <summary>Stages whose waves (any difficulty) include each enemy, from the stage assets in Resources.</summary>
+        /// <summary>Locks the files of enemies not met yet, and updates the enemy dossier's count and cover.</summary>
+        private void RefreshEncounters()
+        {
+            int identified = 0;
+            foreach (IntelEntry entry in enemyEntries)
+            {
+                entry.Locked = !TrashTD.Core.GameLoop.EnemyIntelProgress.IsEncountered(entry.Enemy);
+                if (!entry.Locked) identified++;
+            }
+            enemiesCount.text = identified + " / " + enemyEntries.Count + " HOSTILES IDENTIFIED";
+
+            // The cover shows Toxic Rusher once met, otherwise any enemy that has been met, otherwise a silhouette
+            IntelEntry cover = enemyEntries.Find(e => string.Equals(e.Name, "Toxic Rusher", StringComparison.OrdinalIgnoreCase) && e.Frames.Length > 0);
+            if (cover == null || cover.Locked) cover = enemyEntries.Find(e => !e.Locked && e.Frames.Length > 0) ?? cover;
+            if (cover == null) cover = enemyEntries.Find(e => e.Frames.Length > 0);
+            SetPixelSprite(enemiesSprite, cover != null ? cover.Frames[0] : null, 256f);
+            SetSilhouette(enemiesSprite, cover != null && cover.Locked);
+        }
+
+        /// <summary>
+        /// Stage names and order, and the stages whose waves (any difficulty) include each enemy, from the stage assets
+        /// in Resources. Players only see the stages where they met the enemy (<see cref="GetSightings"/>).
+        /// </summary>
         private void CollectSightings()
         {
             foreach (StageData stage in Resources.LoadAll<StageData>("Stages"))
             {
-                if (stage == null || (stage.stageId != null && stage.stageId.ToUpperInvariant().Contains("SANDBOX"))) continue;
+                if (stage == null || string.IsNullOrEmpty(stage.stageId) || stage.stageId.ToUpperInvariant().Contains("SANDBOX")) continue;
                 if (stage.stageId == TrashTD.Core.GameLoop.TutorialDirector.TutorialStageId) continue; // Training drill, not a sighting
-                string stageName = string.IsNullOrEmpty(stage.mapName) ? stage.stageId : stage.mapName;
+                stageNames[stage.stageId] = string.IsNullOrEmpty(stage.mapName) ? stage.stageId : stage.mapName;
+                stageOrder[stage.stageId] = TrashTD.Core.GameLoop.StageProgress.GetStageNumber(stage.stageId);
 
                 foreach (WaveData[] waves in new[] { stage.wavesEasy, stage.wavesNormal, stage.wavesHard })
                 {
@@ -412,16 +461,36 @@ namespace TrashTD.UI
                         {
                             EnemyData enemy = waveEntry?.enemyData;
                             if (enemy == null) continue;
-                            if (!sightings.TryGetValue(enemy, out List<string> stages))
+                            if (!plannedSightings.TryGetValue(enemy, out List<string> stages))
                             {
                                 stages = new List<string>();
-                                sightings[enemy] = stages;
+                                plannedSightings[enemy] = stages;
                             }
-                            if (!stages.Contains(stageName)) stages.Add(stageName);
+                            if (!stages.Contains(stage.stageId)) stages.Add(stage.stageId);
                         }
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Names of the stages where the player has met this enemy, in stage order. Dev mode also lists every stage
+        /// whose waves include it (spawned minions such as Oculite Spawn are only known from encounters).
+        /// </summary>
+        private List<string> GetSightings(EnemyData enemy)
+        {
+            var ids = TrashTD.Core.GameLoop.EnemyIntelProgress.GetSightedStageIds(enemy);
+            if (TrashTD.Development.DevMode.IsEnabled && plannedSightings.TryGetValue(enemy, out List<string> planned))
+            {
+                foreach (string id in planned)
+                {
+                    if (!ids.Contains(id)) ids.Add(id);
+                }
+            }
+
+            ids.RemoveAll(id => !stageNames.ContainsKey(id));
+            ids.Sort((a, b) => stageOrder[a].CompareTo(stageOrder[b]));
+            return ids.ConvertAll(id => stageNames[id]);
         }
 
         private static Sprite FindCover(List<IntelEntry> entries, string unitName)
@@ -868,7 +937,8 @@ namespace TrashTD.UI
             foreach (IntelEntry entry in Entries)
             {
                 if (filterIndex == 0) filtered.Add(entry);
-                else if (Hostile && entry.Enemy.archetype == ArchetypeOrder[filterIndex - 1]) filtered.Add(entry);
+                // Locked files only show under ALL, so a tab can't give away what they are
+                else if (Hostile && !entry.Locked && entry.Enemy.archetype == ArchetypeOrder[filterIndex - 1]) filtered.Add(entry);
                 else if (!Hostile && entry.Operator.operatorClass == ClassOrder[filterIndex - 1]) filtered.Add(entry);
             }
 
@@ -886,6 +956,7 @@ namespace TrashTD.UI
         {
             foreach (Button tile in tileButtons) Destroy(tile.gameObject);
             tileButtons.Clear();
+            scrambled.Clear(); // the tile names go with the tiles; SelectEntry re-adds the detail name
 
             for (int i = 0; i < filtered.Count; i++)
             {
@@ -900,6 +971,7 @@ namespace TrashTD.UI
                 Image portrait = CreateImage(portraitBack.rectTransform, "Portrait", Color.white);
                 portrait.rectTransform.anchorMin = portrait.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
                 SetPixelSprite(portrait, entry.Frames.Length > 0 ? entry.Frames[0] : null, 104f);
+                SetSilhouette(portrait, entry.Locked);
 
                 if (entry.Operator != null)
                 {
@@ -918,11 +990,13 @@ namespace TrashTD.UI
                 }
                 else
                 {
-                    Text tag = CreateText(tile.transform, ArchetypeLabel(entry.Enemy.archetype), 8, TextAnchor.MiddleLeft, new Color(HostileBright.r, HostileBright.g, HostileBright.b, 0.85f));
+                    Text tag = CreateText(tile.transform, entry.Locked ? UnknownText : ArchetypeLabel(entry.Enemy.archetype), 8, TextAnchor.MiddleLeft, new Color(HostileBright.r, HostileBright.g, HostileBright.b, 0.85f));
                     PlaceTopLeft(tag.rectTransform, 14f, 14f, TileWidth - 28f, 16f);
                 }
 
-                Text name = CreateText(tile.transform, entry.Name.ToUpperInvariant(), 9, TextAnchor.MiddleCenter, LabelColor);
+                string tileName = entry.Name.ToUpperInvariant();
+                Text name = CreateText(tile.transform, entry.Locked ? Scramble(tileName) : tileName, 9, TextAnchor.MiddleCenter, LabelColor);
+                if (entry.Locked) scrambled.Add((name, tileName));
                 name.horizontalOverflow = HorizontalWrapMode.Wrap;
                 name.verticalOverflow = VerticalWrapMode.Truncate;
                 name.lineSpacing = 1.2f;
@@ -969,6 +1043,14 @@ namespace TrashTD.UI
             frameIndex = 0;
             frameTimer = 0f;
             SetPixelSprite(stageSprite, playingFrames.Length > 0 ? playingFrames[0] : null, StageSize - 28f);
+            SetSilhouette(stageSprite, entry.Locked);
+            scrambled.RemoveAll(item => item.text == nameText);
+
+            if (entry.Locked)
+            {
+                ShowLockedDetail(entry);
+                return;
+            }
 
             fileText.text = "FILE " + entry.FileId + (Hostile ? "    // HOSTILE" : "    // RECLAIMER");
             nameText.text = entry.Name.ToUpperInvariant();
@@ -986,14 +1068,101 @@ namespace TrashTD.UI
             sightedText.gameObject.SetActive(showSightings);
             if (showSightings)
             {
-                sightedText.text = sightings.TryGetValue(entry.Enemy, out List<string> stages) && stages.Count > 0
-                    ? string.Join("\n", stages)
-                    : "No confirmed sightings in the field yet.";
+                List<string> stages = GetSightings(entry.Enemy);
+                sightedText.text = stages.Count > 0 ? string.Join("\n", stages) : "No confirmed sightings in the field yet.";
             }
             notesScroll.verticalNormalizedPosition = 1f;
 
             ConfigureTiers(entry);
             UpdateRange(entry);
+        }
+
+        /// <summary>An enemy the player hasn't met: animated silhouette, scrambled name, and "???" in every field.</summary>
+        private void ShowLockedDetail(IntelEntry entry)
+        {
+            fileText.text = "FILE " + entry.FileId + "    // HOSTILE    // UNIDENTIFIED";
+            string template = entry.Name.ToUpperInvariant();
+            nameText.text = Scramble(template);
+            scrambled.Add((nameText, template));
+
+            ClearChildren(chipRow);
+            AddChip(0f, "UNIDENTIFIED", HintColor, null);
+            ClearChildren(rarityRow);
+            statusText.text = "STATUS: NOT YET ENCOUNTERED";
+            statusText.color = HintColor;
+
+            loreText.text = UnknownText;
+            abilityHeader.text = "// ABILITY";
+            abilityText.text = UnknownText;
+            sightedHeader.gameObject.SetActive(true);
+            sightedText.gameObject.SetActive(true);
+            sightedText.text = UnknownText;
+            notesScroll.verticalNormalizedPosition = 1f;
+
+            foreach (TierButton tier in tierButtons) tier.Button.gameObject.SetActive(false);
+            foreach (StatRow row in statRows)
+            {
+                row.Fill.rectTransform.anchorMax = new Vector2(0f, 1f);
+                row.Value.text = UnknownText;
+                row.Value.color = HintColor;
+            }
+
+            LayoutFacts(4);
+            string[] factLabels = { "SPEED", "ATK SPD", "BLOCK WT", "LIFE COST" };
+            for (int i = 0; i < factLabels.Length; i++) SetFact(i, factLabels[i], "?");
+
+            ClearChildren(rangeGrid);
+            ClearChildren(rangeLegend);
+            rangeReadout.text = "NO DATA";
+        }
+
+        private void AnimateScrambledNames(float dt)
+        {
+            if (scrambled.Count == 0) return;
+            scrambleTimer += dt;
+            if (scrambleTimer < ScrambleInterval) return;
+            scrambleTimer = 0f;
+
+            foreach ((Text text, string template) item in scrambled)
+            {
+                if (item.text != null) item.text.text = Scramble(item.template);
+            }
+        }
+
+        /// <summary>Same length and spacing as the name, with every letter or digit replaced by a random letter.</summary>
+        private static string Scramble(string template)
+        {
+            var chars = template.ToCharArray();
+            for (int i = 0; i < chars.Length; i++)
+            {
+                if (char.IsLetterOrDigit(chars[i])) chars[i] = ScrambleGlyphs[UnityEngine.Random.Range(0, ScrambleGlyphs.Length)];
+            }
+            return new string(chars);
+        }
+
+        /// <summary>Draws the sprite as a flat silhouette (only its outline shows), or normally again.</summary>
+        private void SetSilhouette(Image image, bool on)
+        {
+            if (image == null) return;
+            Material material = on ? GetSilhouetteMaterial() : null;
+            image.material = material;
+            image.color = !on ? Color.white : material != null ? SilhouetteColor : SilhouetteFallbackColor;
+        }
+
+        private Material GetSilhouetteMaterial()
+        {
+            if (silhouetteMaterial != null || silhouetteShaderMissing) return silhouetteMaterial;
+
+            Shader shader = Resources.Load<Shader>(SilhouetteShaderPath);
+            if (shader == null)
+            {
+                silhouetteShaderMissing = true;
+                Debug.LogWarning($"[Intel] Silhouette shader missing at Resources/{SilhouetteShaderPath}; locked enemies use a dark tint instead.");
+                return null;
+            }
+
+            silhouetteMaterial = new Material(shader) { name = "Intel Silhouette" };
+            return silhouetteMaterial;
         }
 
         private void ShowEmptyDetail()
@@ -1139,7 +1308,7 @@ namespace TrashTD.UI
                 SetFact(3, "LIFE COST", enemy.lifePointCost.ToString());
 
                 ClearChildren(rarityRow);
-                bool sighted = sightings.TryGetValue(enemy, out List<string> stages) && stages.Count > 0;
+                bool sighted = GetSightings(enemy).Count > 0;
                 statusText.text = sighted ? "STATUS: ACTIVE THREAT" : "STATUS: UNCONFIRMED";
                 statusText.color = sighted ? HostileBright : HintColor;
             }
