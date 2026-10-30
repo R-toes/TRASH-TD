@@ -21,7 +21,7 @@ MonoBehaviour:
   baseRES: 35
   moveSpeed: 0.75
   damageType: 1
-  attackInterval: 1
+  attackInterval: 1.15
   attackRange: 0
   isUnblockable: 1
   blockWeight: 1

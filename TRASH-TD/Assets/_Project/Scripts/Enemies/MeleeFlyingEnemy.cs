@@ -16,10 +16,11 @@ namespace TrashTD.Enemies
     /// </summary>
     public sealed class MeleeFlyingEnemy : AirCombatEnemy
     {
-        private const float DiveTime = 0.16f;
-        private const float LateDiveTime = 0.08f;     // dive when the strike comes with no warning
-        private const float StrikeHoldTime = 0.06f;
-        private const float RiseTime = 0.3f;
+        // Whole swoop ≈ 0.75 s (dive + hold + rise), inside the 1.15 s attack interval
+        private const float DiveTime = 0.24f;
+        private const float LateDiveTime = 0.12f;     // dive when the strike comes with no warning
+        private const float StrikeHoldTime = 0.09f;
+        private const float RiseTime = 0.42f;
         private const float StrikeHeightTiles = 0.3f; // the sprite's centre stops this far above the operator
 
         private enum SwoopPhase { None, Diving, Holding, Rising }
