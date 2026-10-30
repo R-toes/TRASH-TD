@@ -79,9 +79,12 @@ namespace TrashTD.Enemies
 
             attackTimer = 0f;
             attackPauseTimer = GetAttackPause(interval);
-            PlayAttackSound();
+            PlayAirAttackSound();
             PerformAirAttack(lockedTarget);
         }
+
+        /// <summary>Plays as each attack starts. Talon Rat plays its own when the claws land instead.</summary>
+        protected virtual void PlayAirAttackSound() => PlayAttackSound();
 
         protected override void MoveAlongPath()
         {

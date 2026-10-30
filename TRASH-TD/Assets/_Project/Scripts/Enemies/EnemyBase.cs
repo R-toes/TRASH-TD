@@ -688,6 +688,15 @@ namespace TrashTD.Enemies
             attackVoiceStartTime = Time.unscaledTime;
         }
 
+        /// <summary>The enemy's own Attack clip, else the given shared sound (e.g. the melee hit).</summary>
+        protected void PlayAttackSound(SfxId fallback)
+        {
+            if (!UnitSfx.Play(data, UnitSfxEvent.Attack, out attackVoice, EnemySfxVolume))
+                attackVoice = AudioManager.Instance?.PlaySfx(fallback, EnemySfxVolume);
+            attackVoiceClip = attackVoice != null ? attackVoice.clip : null;
+            attackVoiceStartTime = Time.unscaledTime;
+        }
+
         /// <summary>
         /// The enemy's own Impact clip (its projectile landing), if it has one. When it plays, the attack sound
         /// still running is cut so the two don't overlap.

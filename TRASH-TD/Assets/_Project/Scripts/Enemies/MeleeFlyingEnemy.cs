@@ -1,4 +1,5 @@
 using UnityEngine;
+using TrashTD.Audio;
 using TrashTD.Data;
 using TrashTD.Operators;
 
@@ -31,6 +32,7 @@ namespace TrashTD.Enemies
         private Vector3 swoopFrom;               // local positions of the EnemyVisual child
         private Vector3 swoopTo;
         private OperatorBase pendingSwipeTarget; // claw marks shown when the dive lands
+        private bool strikePending;              // an attack has dealt damage; its claws and sound come on landing
         private Transform visual;
 
         protected override bool IsTargetable(OperatorBase op)
@@ -63,22 +65,31 @@ namespace TrashTD.Enemies
         {
             if (Visual == null)
             {
+                PlayStrikeSound();
                 PlayAirMeleeAttack(target);
                 return;
             }
 
-            // Damage lands now, exactly as before; only the claw marks wait for the talons to arrive.
+            // Damage lands now, exactly as before; only the claw marks and their sound wait for the talons to arrive.
             target.TryTakeAttackDamage(CurrentATK, Data.damageType, this);
 
             if (phase == SwoopPhase.Holding)
             {
+                PlayStrikeSound();
                 PlayAirMeleeSwipe(target);
                 return;
             }
 
+            strikePending = true;
             pendingSwipeTarget = target;
             if (phase != SwoopPhase.Diving) BeginDive(target, LateDiveTime);
         }
+
+        // Every attack plays its sound with the claw marks (PlayStrikeSound), not as the dive starts
+        protected override void PlayAirAttackSound() { }
+
+        /// <summary>Talon Rat's own Attack clip if it gets one, else the shared melee hit.</summary>
+        private void PlayStrikeSound() => PlayAttackSound(SfxId.GameplayMeleeAttack);
 
         /// <summary>Starts the dive when the next attack is due within DiveTime and there is a target.</summary>
         private void StartDiveIfDue()
@@ -123,7 +134,13 @@ namespace TrashTD.Enemies
                 case SwoopPhase.Diving:
                     sprite.localPosition = Vector3.Lerp(swoopFrom, swoopTo, k * k); // speeds up into the strike
                     if (k < 1f) return;
-                    if (pendingSwipeTarget != null && pendingSwipeTarget.IsDeployed) PlayAirMeleeSwipe(pendingSwipeTarget);
+                    if (strikePending)
+                    {
+                        // The sound plays even if the hit already took the operator out
+                        PlayStrikeSound();
+                        if (pendingSwipeTarget != null) PlayAirMeleeSwipe(pendingSwipeTarget);
+                    }
+                    strikePending = false;
                     pendingSwipeTarget = null;
                     SetPhase(SwoopPhase.Holding, StrikeHoldTime);
                     break;
