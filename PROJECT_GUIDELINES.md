@@ -134,7 +134,7 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 
 | Aspect | Value |
 |---|---|
-| Unity version | 6000.6.2f1 (Unity 6 LTS) |
+| Unity version | 6000.6.1f1 (Unity 6; `ProjectSettings/ProjectVersion.txt`) |
 | Render pipeline | URP with 2D Renderer |
 | Input system | New Input System |
 | UI framework | uGUI (Canvas-based) |
@@ -148,6 +148,12 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 - Use `#if UNITY_EDITOR || DEBUG`, not `DEVELOPMENT_BUILD` (deprecated); `Debug.isDebugBuild` at runtime.
 - **Domain reload is off** (Enter Play Mode options), so static fields survive from one play session to the next, but textures/sprites/materials created at runtime are destroyed when play mode ends. Check a cached object with Unity's `== null`. For a cached **array or list** of them, check the elements too (e.g. `Array.TrueForAll(frames, f => f != null)`). Otherwise the second play reuses destroyed sprites and draws nothing (this hid the Stage 1 mist).
 - A camera's target RenderTexture needs a depth buffer (e.g. `new RenderTexture(w, h, 24, ...)`). Without one, URP's render graph logs a warning every frame (`CrtScreen` used to flood the Console this way).
+
+**Builds must behave like the Editor** (the first Windows build, 2026-10-30, showed a white stage map and a black game view). Check the player log (`%USERPROFILE%\AppData\LocalLow\<Company>\<Product>\Player.log`) first when a build differs.
+- **No URP post-processing on any camera** (`Render Post Processing` off). The game's look is the CRT pass (`CrtDisplay`), and the volume profiles override nothing. In builds the URP post-processing shaders are missing ("not supported or has been stripped"). The 2D renderer then either throws in `LensFlareScreenSpacePostProcessPass` or skips its final output, so the camera's picture never reaches the screen (the black game view). The gameplay camera had it on until 2026-10-30.
+- **Never load runtime assets only through `AssetDatabase` / `#if UNITY_EDITOR` or a disk path under `Assets/`.** Neither exists in a build. Serialize the reference on a prefab or data asset, or put the asset under a `Resources` folder and use `Resources.Load`. Editor-only loads are fine only as a convenience, when a build path also exists.
+- **An Image with no sprite draws a solid white rectangle.** Hide (`enabled = false`) any Image whose sprite failed to load. The stage map's radar overlay covered the map in white this way.
+- **Prefabs must point at real script GUIDs.** A hand-written `m_Script` guid shows up as "The referenced script on this Behaviour is missing" (Shadeslice's prefab had one until 2026-10-30; `OperatorManager`'s name check had been adding a second component to cover it).
 
 ---
 
@@ -514,7 +520,7 @@ The project uses the **New Input System only** (`activeInputHandler: 1`). Read k
   - The title is a small hazard-yellow "TINY" over a large "RECLAIMERS" (two-step extruded shadow, occasional RGB-split glitch), with a tilted hazard-yellow "TD" sticker. Above the title, a boot line types out the number of playable stages.
   - Menu rows PLAY 01 / INTEL 02 / SETTINGS 03 / EXIT 04 are styled by `StyleMainMenuButton`: a caret and bracket frame show while a row is selected (`MenuButtonFeedback.IsHot`). **Hovering selects the row**, so mouse and keyboard share one highlight. INTEL is created by `ReclaimersIntelUI.Create` and SETTINGS by `AudioSettingsUI.Create`. Until the tutorial has been finished or skipped, Coalesce guides the stage map and only STAGE 00 opens (§7.8).
 - Stage select is a Pip-Boy style map, built in code by `MainMenuController.BuildStageButtons`. It replaced the old stage grid. The background is `Art/Levels/Stage Selector Map.png`. Clicking a dot opens the stage details modal (difficulty selector, then play). A locked dot wobbles and plays the denied sound.
-  - **Radar overlay** (`StageMapAnimOverlay`): a 12-frame sonar pulse (`Art/Levels/StageMap_Anim_Overlay.png`, `Animations/StageMap_Anim_Overlay.*`) stretched over the map art.
+  - **Radar overlay** (`StageMapAnimOverlay`): a 12-frame sonar pulse stretched over the map art. Its frames load from `Resources/StageMap_Anim_Overlay.png` and the component animates them itself at 12 fps, the same in the Editor and in builds. The Editor-only Animator (`Animations/StageMap_Anim_Overlay.*`) is no longer used. The Image hides itself if the frames are missing.
   - **Lore card:** hovering the title block shows `StageZoneLore` in a card under the title plate (`StageHeaderLoreHover` / `StageHeaderLoreChildTrigger`, in `MainMenuController.cs`).
 - Each stage is a `StageMapNode` placed at a **normalized position** (0–1 across the map art, origin top-left) from `MainMenuController.StageNodePositions`. Index *i* is Stage *i*+1, so add an entry there when adding a stage. `StageMapLayout` (on the map art) rescales and repositions the nodes whenever the art resizes, so they stay in place at any 16:9 resolution.
 - **Stage markers** (`StageMapNode.Build`, called from `MainMenuController.CreateStageMapNode`) are built entirely by the node.

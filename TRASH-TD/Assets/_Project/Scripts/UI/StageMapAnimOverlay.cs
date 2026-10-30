@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace TrashTD.UI
 {
     /// <summary>
-    /// Animates the 12-frame radar/sonar pulse overlay ("StageMap_Anim_Overlay") stretched over
+    /// Animates the 12-frame radar/sonar pulse overlay (Resources/StageMap_Anim_Overlay.png) stretched over
     /// the stage selection map ("Stage Selector Map.png").
     /// </summary>
     [RequireComponent(typeof(Image))]
@@ -77,12 +77,6 @@ namespace TrashTD.UI
         {
             if (frames == null || frames.Length == 0) return;
 
-            // If an active Animator is already driving the sprite, let it take precedence
-            if (TryGetComponent<Animator>(out var anim) && anim != null && anim.runtimeAnimatorController != null && anim.enabled)
-            {
-                return;
-            }
-
             float dt = unscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
             timer += dt;
 
@@ -107,69 +101,33 @@ namespace TrashTD.UI
             }
         }
 
+        /// <summary>
+        /// Loads the 12 sliced frames from Resources/StageMap_Anim_Overlay, the same way in the Editor and in builds.
+        /// The Image is hidden while there are no frames: an Image without a sprite draws a solid white rectangle,
+        /// which used to cover the whole stage map in builds.
+        /// </summary>
         public void EnsureFramesLoaded()
         {
-            if (frames != null && frames.Length >= 12 && frames[0] != null) return;
-
-            // 1. In Unity Editor: load all sub-sprites directly from the asset database
-#if UNITY_EDITOR
-            var editorAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/StageMap_Anim_Overlay.png");
-            if (editorAssets != null && editorAssets.Length > 0)
+            if (frames == null || frames.Length < 12 || frames[0] == null)
             {
-                var spriteList = new List<Sprite>();
-                foreach (var asset in editorAssets)
+                var loaded = Resources.LoadAll<Sprite>(ResourcePath);
+                if (loaded != null && loaded.Length > 0)
                 {
-                    if (asset is Sprite s) spriteList.Add(s);
+                    var list = new List<Sprite>(loaded);
+                    list.Sort((a, b) => ExtractTrailingIndex(a.name).CompareTo(ExtractTrailingIndex(b.name)));
+                    frames = list.ToArray();
                 }
-
-                if (spriteList.Count > 0)
+                else
                 {
-                    spriteList.Sort((a, b) => ExtractTrailingIndex(a.name).CompareTo(ExtractTrailingIndex(b.name)));
-                    frames = spriteList.ToArray();
-                    return;
+                    Debug.LogWarning($"[StageMapAnimOverlay] No frames at Resources/{ResourcePath}; the radar overlay is hidden.");
                 }
             }
-#endif
 
-            // 2. Try loading via Resources
-            var loaded = Resources.LoadAll<Sprite>("StageMap_Anim_Overlay");
-            if (loaded != null && loaded.Length > 0)
-            {
-                var list = new List<Sprite>(loaded);
-                list.Sort((a, b) => ExtractTrailingIndex(a.name).CompareTo(ExtractTrailingIndex(b.name)));
-                frames = list.ToArray();
-                return;
-            }
-
-            // 3. Runtime fallback: load PNG from disk and slice 12 horizontal frames (each 480x270)
-            try
-            {
-                string relativePath = "Assets/_Project/Art/Levels/StageMap_Anim_Overlay.png";
-                string fullPath = System.IO.Path.Combine(Application.dataPath, "..", relativePath);
-                if (System.IO.File.Exists(fullPath))
-                {
-                    byte[] bytes = System.IO.File.ReadAllBytes(fullPath);
-                    var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-                    tex.filterMode = FilterMode.Point;
-                    if (tex.LoadImage(bytes))
-                    {
-                        tex.filterMode = FilterMode.Point;
-                        const int count = 12;
-                        float w = tex.width / (float)count; // 480
-                        float h = tex.height; // 270
-                        frames = new Sprite[count];
-                        for (int i = 0; i < count; i++)
-                        {
-                            frames[i] = Sprite.Create(tex, new Rect(i * w, 0f, w, h), new Vector2(0.5f, 0.5f), 100f);
-                        }
-                    }
-                }
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogWarning($"[StageMapAnimOverlay] Failed to load strip frames from disk: {ex.Message}");
-            }
+            if (targetImage == null) targetImage = GetComponent<Image>();
+            if (targetImage != null) targetImage.enabled = frames != null && frames.Length > 0 && frames[0] != null;
         }
+
+        private const string ResourcePath = "StageMap_Anim_Overlay";
 
         private static int ExtractTrailingIndex(string name)
         {

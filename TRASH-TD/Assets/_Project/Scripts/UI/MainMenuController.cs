@@ -575,18 +575,9 @@ namespace TrashTD.UI
                 animOverlayImage.raycastTarget = false;
                 animOverlayImage.color = Color.white;
 
+                // Animates itself from Resources (12 fps), identically in the Editor and in builds
                 var animOverlayComp = animOverlayGo.AddComponent<StageMapAnimOverlay>();
                 animOverlayComp.FrameDuration = 0.0833f;
-
-#if UNITY_EDITOR
-                var animController = UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/_Project/Animations/StageMap_Anim_Overlay.controller");
-                if (animController != null)
-                {
-                    var animator = animOverlayGo.AddComponent<Animator>();
-                    animator.runtimeAnimatorController = animController;
-                    animator.updateMode = AnimatorUpdateMode.UnscaledTime;
-                }
-#endif
 
                 // Add the layout driver so nodes scale with the map
                 stageMapLayout = mapContainerGo.AddComponent<StageMapLayout>();
