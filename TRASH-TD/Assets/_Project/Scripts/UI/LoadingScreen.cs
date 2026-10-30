@@ -21,9 +21,13 @@ namespace TrashTD.UI
         private const float FadeOutTime = 0.45f;
         private const float MinShowTime = 1.6f;
         private const float LockedHoldTime = 0.25f;
-        private const float BarWidth = 1180f;
+        private const float LeftMargin = 150f;
+        private const float PlateSize = 300f;
+        private const float PlateRightMargin = 150f;
+        // The bar, status line and tip stop this far from the right edge, clear of Coalesce's plate
+        private const float ProgressRightInset = PlateRightMargin + PlateSize + 40f;
         private const float BarHeight = 18f;
-        private const float SegmentWidth = 20f;
+        private const int BarSegments = 59;
         private const string TutorialScriptPath = "Tutorial/TutorialScript";
 
         private static readonly Color Background = new Color(0.012f, 0.016f, 0.024f, 1f);
@@ -171,7 +175,7 @@ namespace TrashTD.UI
 
             if (recDot != null) recDot.enabled = Mathf.Repeat(time, 1f) < 0.6f;
 
-            if (barFill != null) barFill.sizeDelta = new Vector2(BarWidth * progress, BarHeight);
+            if (barFill != null) barFill.anchorMax = new Vector2(progress, 1f);
             if (percentText != null) percentText.text = Mathf.FloorToInt(progress * 100f).ToString("000") + "%";
 
             if (statusText != null)
@@ -293,7 +297,7 @@ namespace TrashTD.UI
             string stageName = stage != null && !string.IsNullOrEmpty(stage.mapName) ? stage.mapName : "UNKNOWN SECTOR";
 
             RectTransform block = CreateRect("StageInfo", root);
-            Place(block, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(150f, 60f), new Vector2(1100f, 380f));
+            Place(block, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(LeftMargin, 60f), new Vector2(1100f, 380f));
             block.pivot = new Vector2(0f, 0.5f);
 
             Text entering = CreateText(block, "Entering", "NOW ENTERING  //  " + stageTag, 22, TextAnchor.UpperLeft, TerminalText);
@@ -339,11 +343,14 @@ namespace TrashTD.UI
             }
         }
 
+        /// <summary>
+        /// Status line and percentage over a segmented bar, with the tip underneath. All three stretch with the
+        /// screen width but stop short of Coalesce's plate, and the tip wraps onto a second line instead.
+        /// </summary>
         private void BuildProgress(RectTransform root)
         {
             RectTransform bar = CreateRect("Progress", root);
-            Place(bar, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(150f, 150f), new Vector2(BarWidth, BarHeight));
-            bar.pivot = new Vector2(0f, 0f);
+            PlaceBottomRow(bar, 150f, 150f + BarHeight, ProgressRightInset);
 
             Image track = CreateImage(bar, "Track", TrackColor);
             Stretch(track.rectTransform);
@@ -353,28 +360,39 @@ namespace TrashTD.UI
 
             Image fill = CreateImage(bar, "Fill", Accent);
             barFill = fill.rectTransform;
-            barFill.anchorMin = barFill.anchorMax = new Vector2(0f, 0.5f);
-            barFill.pivot = new Vector2(0f, 0.5f);
-            barFill.sizeDelta = new Vector2(0f, BarHeight);
+            Stretch(barFill);
+            barFill.anchorMax = new Vector2(0f, 1f);
 
             // Dark gaps cut the fill into pixel segments
-            for (float x = SegmentWidth; x < BarWidth; x += SegmentWidth)
+            for (int i = 1; i < BarSegments; i++)
             {
                 Image gap = CreateImage(bar, "Gap", TrackColor);
-                Place(gap.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(x, 0f), new Vector2(4f, BarHeight));
+                float x = (float)i / BarSegments;
+                gap.rectTransform.anchorMin = new Vector2(x, 0f);
+                gap.rectTransform.anchorMax = new Vector2(x, 1f);
+                gap.rectTransform.sizeDelta = new Vector2(4f, 0f);
             }
 
             statusText = CreateText(root, "Status", "> ", 22, TextAnchor.MiddleLeft, TerminalText);
-            Place(statusText.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(150f, 196f), new Vector2(900f, 32f));
-            statusText.rectTransform.pivot = new Vector2(0f, 0.5f);
+            PlaceBottomRow(statusText.rectTransform, 180f, 212f, ProgressRightInset + 160f);
 
             percentText = CreateText(root, "Percent", "000%", 28, TextAnchor.MiddleRight, Accent);
-            Place(percentText.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(150f + BarWidth, 196f), new Vector2(200f, 36f));
+            Place(percentText.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-ProgressRightInset, 196f), new Vector2(160f, 36f));
             percentText.rectTransform.pivot = new Vector2(1f, 0.5f);
 
-            Text tip = CreateText(root, "Tip", "TIP  //  " + Tips[Random.Range(0, Tips.Length)], 20, TextAnchor.MiddleLeft, TextDim);
-            Place(tip.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(150f, 100f), new Vector2(BarWidth, 30f));
-            tip.rectTransform.pivot = new Vector2(0f, 0.5f);
+            Text tip = CreateText(root, "Tip", "TIP  //  " + Tips[Random.Range(0, Tips.Length)], 20, TextAnchor.UpperLeft, TextDim);
+            tip.horizontalOverflow = HorizontalWrapMode.Wrap;
+            PlaceBottomRow(tip.rectTransform, 64f, 124f, ProgressRightInset);
+        }
+
+        /// <summary>From <see cref="LeftMargin"/> to <paramref name="rightInset"/> from the right edge, between two heights from the bottom.</summary>
+        private static void PlaceBottomRow(RectTransform rect, float bottom, float top, float rightInset)
+        {
+            rect.anchorMin = new Vector2(0f, 0f);
+            rect.anchorMax = new Vector2(1f, 0f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.offsetMin = new Vector2(LeftMargin, bottom);
+            rect.offsetMax = new Vector2(-rightInset, top);
         }
 
         /// <summary>Coalesce, the squad's guide, idling on a plate in the bottom-right corner.</summary>
@@ -388,7 +406,7 @@ namespace TrashTD.UI
             if (coalesceFrames == null || coalesceFrames.Length == 0) return;
 
             RectTransform plate = CreateRect("CoalescePlate", root);
-            Place(plate, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-150f, 100f), new Vector2(300f, 300f));
+            Place(plate, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-PlateRightMargin, 100f), new Vector2(PlateSize, PlateSize));
             plate.pivot = new Vector2(1f, 0f);
 
             Image back = CreateImage(plate, "Back", Plate);
@@ -405,8 +423,18 @@ namespace TrashTD.UI
             coalesceImage.preserveAspect = true;
             Stretch(coalesceImage.rectTransform);
 
-            Text speakerLabel = CreateText(plate, "Name", script.speakerName + "  //  ONLINE", 18, TextAnchor.MiddleCenter, Accent);
-            Place(speakerLabel.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 22f), new Vector2(0f, 28f));
+            // Shrinks to fit inside the plate rather than running past its edges
+            Text speakerLabel = CreateText(plate, "Name", script.speakerName + " // ONLINE", 16, TextAnchor.MiddleCenter, Accent);
+            speakerLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
+            speakerLabel.verticalOverflow = VerticalWrapMode.Truncate;
+            speakerLabel.resizeTextForBestFit = true;
+            speakerLabel.resizeTextMinSize = 10;
+            speakerLabel.resizeTextMaxSize = 16;
+            RectTransform labelRect = speakerLabel.rectTransform;
+            labelRect.anchorMin = new Vector2(0f, 0f);
+            labelRect.anchorMax = new Vector2(1f, 0f);
+            labelRect.offsetMin = new Vector2(14f, 10f);
+            labelRect.offsetMax = new Vector2(-14f, 36f);
         }
 
         // ─────────────────────────────────────────────────────
