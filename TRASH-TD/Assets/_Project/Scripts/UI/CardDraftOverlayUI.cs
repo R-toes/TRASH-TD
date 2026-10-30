@@ -1931,7 +1931,7 @@ namespace TrashTD.UI
             var buttonsRect = buttonsContainer.GetComponent<RectTransform>();
             buttonsRect.anchorMin = new Vector2(0.5f, 0f);
             buttonsRect.anchorMax = new Vector2(0.5f, 0f);
-            buttonsRect.sizeDelta = new Vector2(DeveloperPickerEnabled ? 640f : 420f, 64f);
+            buttonsRect.sizeDelta = new Vector2(640f, 64f);
             buttonsRect.anchoredPosition = new Vector2(ColumnCenterX, 120f);
 
             var btnHlg = buttonsContainer.AddComponent<HorizontalLayoutGroup>();
@@ -2055,20 +2055,9 @@ namespace TrashTD.UI
         /// </summary>
         private void BuildMinimizeControls(Transform canvasRoot, Transform buttonsContainer)
         {
-            Button minimize;
-            if (DeveloperPickerEnabled)
-            {
-                // The developer picker's "D" takes the top-left corner, so MINIMIZE joins the button row.
-                minimize = MakeButton(buttonsContainer, "MinimizeDraftButton", "MINIMIZE",
-                    new Vector2(200f, 60f), GameplayHUDUI.ButtonContainerType.Dark, "icon_minus");
-            }
-            else
-            {
-                minimize = MakeButton(overlayRoot.transform, "MinimizeDraftButton", "MINIMIZE",
-                    new Vector2(200f, 48f), GameplayHUDUI.ButtonContainerType.Dark, "icon_minus");
-                PositionRT(minimize, new Vector2(28f, -32f), new Vector2(0f, 1f), new Vector2(200f, 48f));
-                minimize.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
-            }
+            // MINIMIZE always joins the Reroll / Skip row, in dev mode and player mode alike.
+            Button minimize = MakeButton(buttonsContainer, "MinimizeDraftButton", "MINIMIZE",
+                new Vector2(200f, 60f), GameplayHUDUI.ButtonContainerType.Dark, "icon_minus");
             minimizeButton = minimize;
             minimize.onClick.AddListener(() => StartCoroutine(MinimizeAfterClick()));
             AttachFeedback(minimize, Color.white, 1.05f);

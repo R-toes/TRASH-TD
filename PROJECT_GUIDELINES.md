@@ -662,7 +662,7 @@ Added 2026-10-30. `TrashTD.Development.DevMode.IsEnabled` decides whether develo
 - **Builds:** on only for a **Development Build** (`Debug.isDebugBuild`). A release build is always player mode, and players can't turn it on.
 - **Gated by it:**
   - The stage map's QA SANDBOX button is hidden, and `IsStagePlayable("SANDBOX")` is false. The ESC hint moves down into the button's slot (`MainMenuController.ApplyDevModeVisibility`, run each time stage select opens).
-  - The draft's developer picker ("D"). Its code is still compiled out of release builds (`#if UNITY_EDITOR || DEBUG`). On top of that, `CardDraftOverlayUI.DeveloperPickerEnabled` skips building it when dev mode is off. MINIMIZE then moves to the top-left corner, exactly as in a release build.
+  - The draft's developer picker ("D"). Its code is still compiled out of release builds (`#if UNITY_EDITOR || DEBUG`). On top of that, `CardDraftOverlayUI.DeveloperPickerEnabled` skips building it when dev mode is off. MINIMIZE stays in the Reroll / Skip row either way.
 - **When a toggle applies:** dev mode is read when UI is built, so a change mid-Play shows on the next stage-map visit or stage load. Toggling between Play sessions is the reliable way.
 - **TRASH TD → Reset Player Progress** (with a confirm dialog): clears the tutorial-done flag (`TutorialDirector.ResetTutorialProgress`) and the map intro's once-per-session flag, so the next stage-map visit replays Coalesce's first-visit flow. It also clears every stage clear and star (`StageProgress.ResetAll`). Audio and graphics settings are kept. Add any new saved progress to this reset.
 - **New dev-only tools must check `DevMode.IsEnabled`.** Never leave a dev tool reachable in player mode.
