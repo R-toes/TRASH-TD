@@ -39,6 +39,6 @@ MonoBehaviour:
   animationFrameRate: 8
   visualOffset: {x: 0, y: 0.75, z: 0}
   enemyPrefab: {fileID: 9005451285246291141, guid: e4d1d87d2bc16634c81d7c93e58b8db0, type: 3}
-  abilityDescription: "Flying and unblockable. Only operators that can hit air can stop it."
+  abilityDescription: "Flying, unblockable and fast, but fragile. Spits at operators from up to 2.5 tiles away, going for ranged operators first."
   intelQuote: "*hiss* ...*drip*"
   intelLore: "A scavenger bird soaked through with contaminated runoff from The Pale. Acid Flyer drifts over the lanes on half-rotted wings, dripping as it goes. Don't stand under it."

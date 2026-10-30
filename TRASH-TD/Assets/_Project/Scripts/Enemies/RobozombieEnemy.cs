@@ -113,11 +113,11 @@ namespace TrashTD.Enemies
                 Vector2Int opCell = op.DeployedCell.GridPosition;
                 Vector2Int delta = opCell - selfCell;
 
-                // Hit if the operator is on one of the 4 adjacent tiles.
-                bool isAdjacent = (delta.x == 0 && (delta.y == 1 || delta.y == -1)) ||
-                                  (delta.y == 0 && (delta.x == 1 || delta.x == -1));
+                // Hit operators on the 4 adjacent tiles and on its own tile: a blocked enemy stops on the edge of
+                // its blocker's tile, which rounds onto the blocker's tile when it walks in from the left or below.
+                bool inBlast = Mathf.Abs(delta.x) + Mathf.Abs(delta.y) <= 1;
 
-                if (isAdjacent)
+                if (inBlast)
                 {
                     // True damage so the explosion bypasses operator DEF — 3× ATK for a meaningful burst.
                     op.TakeTrueDamage(currentATK * 3);

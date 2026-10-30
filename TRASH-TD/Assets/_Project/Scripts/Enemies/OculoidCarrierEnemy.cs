@@ -13,7 +13,7 @@ namespace TrashTD.Enemies
     /// - High DEF, low RES.
     /// - Immune to Stage 6 acid rain and acid/trap tiles.
     /// - When blocked, reduces the block count of the blocking operator by 1.
-    /// - When killed, spawns two Oculite Spawns that continue along the route to the exit.
+    /// - When killed, spawns three Oculite Spawns that continue along the route to the exit.
     /// </summary>
     public class OculoidCarrierEnemy : EnemyBase
     {

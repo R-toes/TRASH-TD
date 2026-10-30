@@ -133,22 +133,6 @@ namespace TrashTD.Enemies
                 }
             }
 
-            // Fallback for tests or instances not yet registered in activeJunkernauts
-            if (count == 0 && activeJunkernauts.Count == 0)
-            {
-                JunkernautEnemy[] sceneJunkernauts = FindObjectsByType<JunkernautEnemy>();
-                for (int i = 0; i < sceneJunkernauts.Length; i++)
-                {
-                    var j = sceneJunkernauts[i];
-                    if (j == null || j == target || j.IsDead || j.IsInsideHole) continue;
-
-                    if (j.IsWithinProtectionRange(target.transform.position))
-                    {
-                        count++;
-                    }
-                }
-            }
-
             return count;
         }
 

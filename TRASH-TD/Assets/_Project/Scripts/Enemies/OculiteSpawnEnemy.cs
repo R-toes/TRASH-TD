@@ -8,7 +8,7 @@ namespace TrashTD.Enemies
     /// Features:
     /// - High DEF, low RES.
     /// - Immune to Stage 6 acid rain and acid/trap tiles.
-    /// - Not normally spawned in stage waves; spawned when Oculoid Carrier is defeated.
+    /// - Released when an Oculoid Carrier dies and summoned by Occulorm; Stage 6 also places some directly in waves.
     /// </summary>
     public class OculiteSpawnEnemy : EnemyBase
     {

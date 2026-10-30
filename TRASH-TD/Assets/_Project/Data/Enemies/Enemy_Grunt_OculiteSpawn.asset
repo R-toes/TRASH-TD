@@ -43,6 +43,6 @@ MonoBehaviour:
   visualOffset: {x: 0, y: 0, z: 0}
   enemyPrefab: {fileID: 8358608267878886893, guid: a1b2c3d4e5f60718293a4b5c6d7e8f22, type: 3}
 
-  abilityDescription: "Released in pairs when an Oculoid Carrier dies. Immune to acid rain and acid tiles."
+  abilityDescription: "Released in threes when an Oculoid Carrier dies, and summoned by Occulorm. Immune to acid rain and acid tiles."
   intelQuote: "*blink* *blink*"
   intelLore: "Small pink crawlers covered in eyes, carried inside an Oculoid Carrier until it breaks open. They scatter toward the exit the moment it falls."

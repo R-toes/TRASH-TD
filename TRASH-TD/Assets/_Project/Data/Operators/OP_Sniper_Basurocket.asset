@@ -22,7 +22,7 @@ MonoBehaviour:
   - Explosive
   - DPS
   baseHP: 50
-  baseATK: 175
+  baseATK: 165
   baseDEF: 5
   baseRES: 0
   blockCount: 0

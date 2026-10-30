@@ -22,6 +22,7 @@ namespace TrashTD.UI
         private const float MinShowTime = 1.6f;
         private const float LockedHoldTime = 0.25f;
         private const float LeftMargin = 150f;
+        private const float StageInfoWidth = 1100f;
         private const float PlateSize = 300f;
         private const float PlateRightMargin = 150f;
         // The bar, status line and tip stop this far from the right edge, clear of Coalesce's plate
@@ -297,7 +298,7 @@ namespace TrashTD.UI
             string stageName = stage != null && !string.IsNullOrEmpty(stage.mapName) ? stage.mapName : "UNKNOWN SECTOR";
 
             RectTransform block = CreateRect("StageInfo", root);
-            Place(block, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(LeftMargin, 60f), new Vector2(1100f, 380f));
+            Place(block, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(LeftMargin, 60f), new Vector2(StageInfoWidth, 380f));
             block.pivot = new Vector2(0f, 0.5f);
 
             Text entering = CreateText(block, "Entering", "NOW ENTERING  //  " + stageTag, 22, TextAnchor.UpperLeft, TerminalText);
@@ -327,19 +328,24 @@ namespace TrashTD.UI
             Text chipText = CreateText(chip, "Label", "◆ " + difficulty.ToString().ToUpperInvariant(), 22, TextAnchor.MiddleCenter, difficultyColor);
             Stretch(chipText.rectTransform);
 
+            const float descriptionTop = 286f;
+            float goalTop = 350f;
             string description = stage != null ? stage.shortDescription : string.Empty;
             if (!string.IsNullOrEmpty(description))
             {
                 Text desc = CreateText(block, "Description", description, 22, TextAnchor.UpperLeft, TextDim);
                 desc.horizontalOverflow = HorizontalWrapMode.Wrap;
-                PlaceTop(desc.rectTransform, 286f, 60f);
+                // Long descriptions (the tutorial's) wrap past two lines, so the goal line moves down under them.
+                float height = Mathf.Max(60f, MeasureWrappedHeight(desc, StageInfoWidth));
+                PlaceTop(desc.rectTransform, descriptionTop, height);
+                goalTop = Mathf.Max(goalTop, descriptionTop + height + 4f);
             }
 
             string goal = stage != null ? stage.threeStarCondition : string.Empty;
             if (!string.IsNullOrEmpty(goal))
             {
                 Text goalText = CreateText(block, "Goal", "★★★  " + goal.ToUpperInvariant(), 18, TextAnchor.UpperLeft, new Color(0.98f, 0.80f, 0.18f, 0.9f));
-                PlaceTop(goalText.rectTransform, 350f, 30f);
+                PlaceTop(goalText.rectTransform, goalTop, 30f);
             }
         }
 
@@ -490,6 +496,13 @@ namespace TrashTD.UI
         }
 
         /// <summary>Full width of the parent, <paramref name="top"/> px down from its top edge.</summary>
+        /// <summary>Height of a text's content wrapped at <paramref name="width"/>, in canvas units (works before layout runs).</summary>
+        private static float MeasureWrappedHeight(Text text, float width)
+        {
+            TextGenerationSettings settings = text.GetGenerationSettings(new Vector2(width, 0f));
+            return text.cachedTextGeneratorForLayout.GetPreferredHeight(text.text, settings) / text.pixelsPerUnit;
+        }
+
         private static void PlaceTop(RectTransform rect, float top, float height)
         {
             rect.anchorMin = new Vector2(0f, 1f);

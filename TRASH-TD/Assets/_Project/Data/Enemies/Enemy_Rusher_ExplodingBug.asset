@@ -28,6 +28,6 @@ MonoBehaviour:
   lifePointCost: 1
   sprite: {fileID: -8970289619330850470, guid: 67c839d9114a1d94f9b7e50bec0561c2, type: 3}
   enemyPrefab: {fileID: 1234567890123456789, guid: b2e5d8f1c4a7930eb6d2f4a8c0e3b7d5, type: 3}
-  abilityDescription: "Fast. On death it explodes, dealing its ATK as physical damage to operators on the 4 adjacent tiles."
+  abilityDescription: "Fast. On death it explodes, dealing 65 physical damage to operators on the 4 adjacent tiles."
   intelQuote: "*click click click* ...BOOM"
   intelLore: "A factory beetle with a belly full of something volatile. Exploding Bug sprints for the exit, and whoever finally stops it gets caught in the blast."

@@ -40,4 +40,6 @@ MonoBehaviour:
   visualScale: 1
   visualOffset: {x: 0, y: 0, z: 0}
   enemyPrefab: {fileID: 7123456789012345678, guid: 8c91a320573e449dbd1624b5e28a9b21, type: 3}
-
+  abilityDescription: "Quill retaliation: any operator hit dealing more than a quarter of its max HP (over 80) bounces 25% of that damage back at the attacker as physical damage. Every hit of a splash or laser counts on its own."
+  intelQuote: "*rattle* ...go on. Hit me harder."
+  intelLore: "A porcupine that bedded down in a landfill of broken glass and rusted wire and came out wearing it. Spoilcupine shrugs off light hits, but anything big enough to hurt it comes back with quills attached. Reclaimer crews have learned to wear it down slowly instead of swinging hard."

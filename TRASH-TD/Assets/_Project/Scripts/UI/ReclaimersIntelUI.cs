@@ -1380,8 +1380,12 @@ namespace TrashTD.UI
             else
             {
                 EnemyData enemy = entry.Enemy;
+                // Casters and plain flyers (Acid Flyer) shoot with EnemyBase's default ranged reach.
+                bool plainFlyer = enemy.enemyPrefab != null &&
+                    enemy.enemyPrefab.GetComponent<TrashTD.Enemies.FlyerEnemy>() is TrashTD.Enemies.FlyerEnemy flyer &&
+                    !(flyer is TrashTD.Enemies.AirCombatEnemy);
                 float reach = enemy.attackRange > 0 ? enemy.attackRange
-                    : enemy.archetype == EnemyArchetype.Caster ? 2.5f : 0f; // EnemyBase's default ranged reach
+                    : enemy.archetype == EnemyArchetype.Caster || plainFlyer ? 2.5f : 0f;
                 if (reach > 0f)
                 {
                     int r = Mathf.CeilToInt(reach);

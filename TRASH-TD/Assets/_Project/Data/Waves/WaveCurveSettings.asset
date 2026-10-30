@@ -58,6 +58,4 @@ MonoBehaviour:
   swarmPackInterval: 0.25
   swarmPackGap: 3
   swarmWindow: 12
-  excludedEnemies:
-  - {fileID: 11400000, guid: dbcd494ba6a44644b91770a58e5af798, type: 2}
-  - {fileID: 11400000, guid: 2ca03e3556c7f9848ad8481102a7a591, type: 2}
+  excludedEnemies: []

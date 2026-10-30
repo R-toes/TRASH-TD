@@ -23,18 +23,9 @@ namespace TrashTD.Enemies
         /// <summary>How far ahead (in tiles) along the flight path targets are scored from.</summary>
         private const float LookAheadTiles = 1f;
 
-        // Air units draw above ground units (enemies 4, operators 5) and foreground artwork (10).
-        private const int AirSortingOrder = 12;
-        // The ground shadow draws over operators/ground enemies so the flyer visibly passes above them.
-        private const int ShadowSortingOrder = 6;
-        private const float ShadowDrop = 0.34f;
         private static readonly Color GlassColor = new Color(0.72f, 0.93f, 1f, 1f);
 
-        private static Sprite shadowSprite;
-
-        private SpriteRenderer shadowRenderer;
         private float attackPauseTimer;
-        private float hoverPhase;
         private OperatorBase lockedTarget;
 
         protected abstract bool IsTargetable(OperatorBase op);
@@ -50,24 +41,21 @@ namespace TrashTD.Enemies
         public override void Initialize(EnemyData enemyData, int difficultyLevel)
         {
             base.Initialize(enemyData, difficultyLevel);
-            CreateAirborneVisuals();
             attackPauseTimer = 0f;
             lockedTarget = null;
-            hoverPhase = Random.value * Mathf.PI * 2f;
             // Ready to strike on first contact; flyers pass through range quickly.
             attackTimer = GetEffectiveAttackInterval();
         }
 
         protected override void Update()
         {
-            // Base handles chill/freeze and calls MoveAlongPath (gated below while attacking).
+            // Base handles chill/freeze, the hover shadow and calls MoveAlongPath (gated below while attacking).
             base.Update();
             if (IsDead) return;
 
             if (attackPauseTimer > 0f)
                 attackPauseTimer = Mathf.Max(0f, attackPauseTimer - Time.deltaTime);
 
-            UpdateHoverShadow();
             if (IsFrozen || IsStunned) return;
 
             // Re-evaluated every frame so the flyer slows down as soon as something is in range.
@@ -179,25 +167,6 @@ namespace TrashTD.Enemies
             return point;
         }
 
-        protected static float CellSize
-        {
-            get
-            {
-                GridManager grid = GridManagerCache;
-                return grid != null ? grid.CellSize : 1f;
-            }
-        }
-
-        private static GridManager cachedGrid;
-        private static GridManager GridManagerCache
-        {
-            get
-            {
-                if (cachedGrid == null) cachedGrid = FindAnyObjectByType<GridManager>();
-                return cachedGrid;
-            }
-        }
-
         protected bool IsWithinCircularRange(OperatorBase op, float radiusInTiles)
         {
             if (op == null) return false;
@@ -278,89 +247,6 @@ namespace TrashTD.Enemies
                 if (offset.sqrMagnitude <= radius * radius)
                     collateral.TryTakeAttackDamage(collateralATK, Data.damageType, this);
             }
-        }
-
-        // ========================
-        // Airborne visuals
-        // ========================
-
-        private void CreateAirborneVisuals()
-        {
-            SpriteRenderer renderer = GetComponent<SpriteRenderer>();
-            if (renderer == null) return;
-
-            // A flyer with a visualOffset draws through its "EnemyVisual" child (the root renderer is hidden),
-            // so the air sorting order and tint go on every sprite but the shadow.
-            foreach (SpriteRenderer sprite in GetComponentsInChildren<SpriteRenderer>(true))
-            {
-                if (sprite.gameObject.name == "AirShadow") continue;
-                sprite.sortingOrder = AirSortingOrder;
-                sprite.color = GetAirColor();
-            }
-
-            if (shadowRenderer != null) return;
-
-            GameObject shadow = new GameObject("AirShadow");
-            shadow.transform.SetParent(transform, false);
-            shadow.transform.localPosition = new Vector3(0f, -ShadowDrop, 0.1f);
-            shadowRenderer = shadow.AddComponent<SpriteRenderer>();
-            shadowRenderer.sprite = GetShadowSprite();
-            shadowRenderer.color = new Color(0f, 0f, 0f, 0.4f);
-            shadowRenderer.sortingLayerID = renderer.sortingLayerID;
-            shadowRenderer.sortingOrder = ShadowSortingOrder;
-            UpdateHoverShadow();
-        }
-
-        /// <summary>Shadow breathes as if the flyer bobs up and down; shrinks/fades when "higher".</summary>
-        private void UpdateHoverShadow()
-        {
-            if (shadowRenderer == null) return;
-
-            hoverPhase += Time.deltaTime * 3f;
-            float bob = (Mathf.Sin(hoverPhase) + 1f) * 0.5f; // 0 = low, 1 = high
-            float size = CellSize * Mathf.Lerp(0.62f, 0.5f, bob);
-            Vector3 parentScale = transform.lossyScale;
-            shadowRenderer.transform.localScale = new Vector3(
-                size / Mathf.Max(0.0001f, Mathf.Abs(parentScale.x)),
-                size * 0.32f / Mathf.Max(0.0001f, Mathf.Abs(parentScale.y)),
-                1f);
-            Color color = shadowRenderer.color;
-            color.a = Mathf.Lerp(0.45f, 0.28f, bob);
-            shadowRenderer.color = color;
-        }
-
-        /// <summary>Soft-edged 1x1-unit ellipse generated once and shared by all flyers.</summary>
-        private static Sprite GetShadowSprite()
-        {
-            if (shadowSprite != null) return shadowSprite;
-
-            const int size = 32;
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
-            {
-                filterMode = FilterMode.Bilinear,
-                wrapMode = TextureWrapMode.Clamp
-            };
-            var pixels = new Color32[size * size];
-            float center = (size - 1) * 0.5f;
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    float dx = (x - center) / center;
-                    float dy = (y - center) / center;
-                    float alpha = Mathf.Clamp01(1f - Mathf.Sqrt(dx * dx + dy * dy));
-                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)(Mathf.SmoothStep(0f, 1f, alpha * 1.6f) * 255f));
-                }
-            }
-            texture.SetPixels32(pixels);
-            texture.Apply();
-            shadowSprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
-            return shadowSprite;
-        }
-
-        protected virtual Color GetAirColor()
-        {
-            return Color.white;
         }
     }
 }

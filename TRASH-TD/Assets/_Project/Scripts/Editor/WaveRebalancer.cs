@@ -14,12 +14,8 @@ namespace TrashTD.Editor
     {
         public const string SettingsPath = "Assets/_Project/Data/Waves/WaveCurveSettings.asset";
 
-        // Not fully configured yet; must never be placed in waves.
-        private static readonly string[] DefaultExcludedEnemyPaths =
-        {
-            "Assets/_Project/Data/Enemies/Enemy_Flyer_Acid.asset",
-            "Assets/_Project/Data/Enemies/Enemy_Caster_Smog.asset"
-        };
+        // Enemies not fully configured yet, which must never be placed in waves (none at the moment).
+        private static readonly string[] DefaultExcludedEnemyPaths = { };
 
         public static WaveCurveSettings LoadOrCreateSettings()
         {

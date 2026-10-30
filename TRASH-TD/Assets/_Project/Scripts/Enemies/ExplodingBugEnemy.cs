@@ -1,18 +1,22 @@
 using UnityEngine;
 using TrashTD.Combat;
 using TrashTD.Core.Grid;
+using TrashTD.Data;
 using TrashTD.Operators;
 using TrashTD.Systems;
 
 namespace TrashTD.Enemies
 {
     /// <summary>
-    /// Exploding Bug — a Rusher that detonates on death, dealing its ATK as physical damage
-    /// to all operators on adjacent (4-directional) tiles.
+    /// Exploding Bug — a Rusher that detonates on death, dealing 65 physical damage (reduced by DEF)
+    /// to operators on its own tile and the 4 adjacent tiles.
     /// Same base stats as the Toxic Rusher.
     /// </summary>
     public class ExplodingBugEnemy : RusherEnemy
     {
+        /// <summary>Physical damage of the death blast, before the operator's DEF.</summary>
+        public const int ExplosionDamage = 65;
+
         private static readonly Vector2Int[] AdjacentOffsets =
         {
             new Vector2Int( 1,  0),
@@ -60,14 +64,14 @@ namespace TrashTD.Enemies
                 Vector2Int opCell = op.DeployedCell.GridPosition;
                 Vector2Int delta = opCell - selfCell;
 
-                // Hit if the operator is on one of the 4 adjacent tiles.
-                bool isAdjacent = (delta.x == 0 && (delta.y == 1 || delta.y == -1)) ||
-                                  (delta.y == 0 && (delta.x == 1 || delta.x == -1));
+                // Hit operators on the 4 adjacent tiles and on its own tile: a blocked enemy stops on the edge of
+                // its blocker's tile, which rounds onto the blocker's tile when it walks in from the left or below.
+                bool inBlast = Mathf.Abs(delta.x) + Mathf.Abs(delta.y) <= 1;
 
-                if (isAdjacent)
+                if (inBlast)
                 {
-                    // True damage so the explosion bypasses operator DEF — 3× ATK for a meaningful burst.
-                    op.TakeTrueDamage(currentATK * 3);
+                    // Physical, so DEF matters: a Defender shrugs off most of it, a fragile sniper doesn't.
+                    op.TakeDamage(ExplosionDamage, DamageType.Physical, this);
                 }
             }
         }

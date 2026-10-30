@@ -161,7 +161,7 @@ namespace TrashTD.Tests
             var basurocket = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>("Assets/_Project/Data/Operators/OP_Sniper_Basurocket.asset");
             Assert.IsNotNull(basurocket, "OP_Sniper_Basurocket asset should exist.");
             Assert.AreEqual(50, basurocket.baseHP, "Basurocket HP should be 50.");
-            Assert.AreEqual(175, basurocket.baseATK, "Basurocket ATK should be 175.");
+            Assert.AreEqual(165, basurocket.baseATK, "Basurocket ATK should be 165.");
             Assert.AreEqual(2.8f, basurocket.attackInterval, 0.001f, "Basurocket attack interval should be 2.8.");
 
             var proxishot = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>("Assets/_Project/Data/Operators/OP_Sniper_Proxishot.asset");
