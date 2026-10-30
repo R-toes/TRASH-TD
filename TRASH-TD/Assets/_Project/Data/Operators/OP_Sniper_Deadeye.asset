@@ -46,7 +46,7 @@ MonoBehaviour:
   chillFreezeDuration: 1.5
   portrait: {fileID: -4691806355717932049, guid: e5f3f422054a5ac47a0160148a848406, type: 3}
   operatorPrefab: {fileID: 685036189517171224, guid: 83469e4c69a448f58a694844db277f9d, type: 3}
-  projectileOrigin: {x: 0, y: 0.05}
+  projectileOrigin: {x: -0.42, y: -0.08}
   intelQuote: Wings just make bigger targets.
   intelLore: 'The Blight killed its eyes years ago, but crystals continued growing inside their empty sockets, burrowing deeper each day, its countless facets scatter light into thousands of reflections, letting it see through almost any space. Yet some reflections reveal things that should not exist: faces in agony, familiar silhouettes disfigured, and entities that mimics its movements a fraction too late. The last time it saw its reflection, something inside it was still blinking.'
   talentRangePattern: []

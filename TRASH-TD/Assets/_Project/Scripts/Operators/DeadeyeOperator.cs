@@ -11,6 +11,8 @@ namespace TrashTD.Operators
     /// Deadeye operator — Sniper.
     /// Trait: Increases damage by 20% against flying enemies, but delays attack (increases attack interval by 20%)
     /// when preparing to attack air units. Returns to original attack interval when no aerial enemies are in range.
+    /// Attack animation (DeadeyeSpriteAnimation): the wind-up starts just before the next shot is due, so the shot
+    /// frame lines up with the real shot; attack timing and damage are unchanged.
     /// </summary>
     public class DeadeyeOperator : SniperOperator
     {
@@ -19,6 +21,8 @@ namespace TrashTD.Operators
 
         private GridManager gridManager;
         private GridCell[] cachedRangeCells;
+        private DeadeyeSpriteAnimation spriteAnimation;
+        private float lastAttackInterval; // from this frame's GetAttackInterval, so the air check isn't run twice
 
         private GridManager GetGridManager()
         {
@@ -27,6 +31,15 @@ namespace TrashTD.Operators
                 gridManager = FindAnyObjectByType<GridManager>();
             }
             return gridManager;
+        }
+
+        private DeadeyeSpriteAnimation SpriteAnimation
+        {
+            get
+            {
+                if (spriteAnimation == null) spriteAnimation = GetComponentInChildren<DeadeyeSpriteAnimation>(true);
+                return spriteAnimation;
+            }
         }
 
         protected override void OnDeployed()
@@ -38,7 +51,48 @@ namespace TrashTD.Operators
         protected override void OnRetreated()
         {
             cachedRangeCells = null;
+            SpriteAnimation?.CancelAttack();
             base.OnRetreated();
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+            StartAttackWindup();
+        }
+
+        /// <summary>
+        /// Starts the attack animation when the next shot is due within the wind-up time and the last target can
+        /// still be shot, so the shot frame shows as the shot fires.
+        /// </summary>
+        private void StartAttackWindup()
+        {
+            DeadeyeSpriteAnimation anim = SpriteAnimation;
+            if (anim == null || !anim.HasAttackAnimation || anim.IsAttacking) return;
+            if (!isDeployed || IsCombatPaused) return;
+
+            float timeUntilShot = lastAttackInterval - attackTimer;
+            if (timeUntilShot <= 0f || timeUntilShot > DeadeyeSpriteAnimation.WindupTime) return;
+            if (currentTarget == null || !CanAttackTarget(currentTarget) || !IsOnRangeTile(currentTarget)) return;
+
+            anim.BeginAttack(timeUntilShot);
+        }
+
+        /// <summary>
+        /// Whether the enemy stands on one of Deadeye's range tiles. Only checked during the short wind-up window;
+        /// a miss (e.g. an enemy held between two tiles) just means the animation starts at the shot frame instead.
+        /// </summary>
+        private bool IsOnRangeTile(EnemyBase enemy)
+        {
+            GridManager gm = GetGridManager();
+            if (gm == null || cachedRangeCells == null) return false;
+
+            Vector2Int position = gm.WorldToGridPosition(enemy.transform.position);
+            for (int i = 0; i < cachedRangeCells.Length; i++)
+            {
+                if (cachedRangeCells[i] != null && cachedRangeCells[i].GridPosition == position) return true;
+            }
+            return false;
         }
 
         public override void ApplyFacingVisuals()
@@ -90,7 +144,8 @@ namespace TrashTD.Operators
         public override float GetAttackInterval()
         {
             float baseInterval = base.GetAttackInterval();
-            return HasAirTargetInRange() ? baseInterval * AirIntervalMultiplier : baseInterval;
+            lastAttackInterval = HasAirTargetInRange() ? baseInterval * AirIntervalMultiplier : baseInterval;
+            return lastAttackInterval;
         }
 
         public override void Attack(EnemyBase target)
@@ -99,6 +154,7 @@ namespace TrashTD.Operators
 
             bool isAir = target.MovementType == EnemyMovementType.Air;
 
+            SpriteAnimation?.ShotFired();
             PlayAttackSound();
 
             Color projectileColor = isAir ? new Color(1f, 0.5f, 0.1f) : new Color(1f, 0.82f, 0.32f);

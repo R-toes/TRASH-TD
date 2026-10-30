@@ -287,7 +287,7 @@ namespace TrashTD.UI
             Place(rec.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(110f, -78f), new Vector2(900f, 30f));
             rec.rectTransform.pivot = new Vector2(0f, 0.5f);
 
-            Text tag = CreateText(root, "HeaderTag", "FEED " + stageTag, 20, TextAnchor.MiddleRight, TerminalText);
+            Text tag = CreateText(root, "HeaderTag", stageTag + " FEED", 20, TextAnchor.MiddleRight, TerminalText);
             Place(tag.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-84f, -78f), new Vector2(600f, 30f));
             tag.rectTransform.pivot = new Vector2(1f, 0.5f);
         }
