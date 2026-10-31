@@ -8,6 +8,24 @@ TextureImporter:
   - first:
       213: 6816289218689828701
     second: Drawgoo-Sheet_1
+  - first:
+      213: -2015449955
+    second: Drawgoo-Sheet_2
+  - first:
+      213: 1527855447
+    second: Drawgoo-Sheet_3
+  - first:
+      213: 1692334322
+    second: Drawgoo-Sheet_4
+  - first:
+      213: 451356927
+    second: Drawgoo-Sheet_5
+  - first:
+      213: -2071353061
+    second: Drawgoo-Sheet_6
+  - first:
+      213: 163965866
+    second: Drawgoo-Sheet_7
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -161,6 +179,138 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: Drawgoo-Sheet_2
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 26943e9731c5bdd48958dace475ee33c
+      internalID: -2015449955
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Drawgoo-Sheet_3
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e45b0bec69f56d14d88d7a96e525d2f2
+      internalID: 1527855447
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Drawgoo-Sheet_4
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: eb36467b992c4e44393af607254571e5
+      internalID: 1692334322
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Drawgoo-Sheet_5
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 07b4ac1b08a3843458548617e0c5c82c
+      internalID: 451356927
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Drawgoo-Sheet_6
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4d08f7d7f08d80d4e82b66676d51ef48
+      internalID: -2071353061
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Drawgoo-Sheet_7
+      rect:
+        serializedVersion: 2
+        x: 224
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 30bb6a24fa12d42489e79143a97274a4
+      internalID: 163965866
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
@@ -179,6 +329,12 @@ TextureImporter:
     nameFileIdTable:
       Drawgoo-Sheet_0: -1356300679520073598
       Drawgoo-Sheet_1: 6816289218689828701
+      Drawgoo-Sheet_2: -2015449955
+      Drawgoo-Sheet_3: 1527855447
+      Drawgoo-Sheet_4: 1692334322
+      Drawgoo-Sheet_5: 451356927
+      Drawgoo-Sheet_6: -2071353061
+      Drawgoo-Sheet_7: 163965866
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

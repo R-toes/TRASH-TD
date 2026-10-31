@@ -237,7 +237,7 @@ namespace TrashTD.Operators
             return sliced;
         }
 
-        /// <summary>Per-sheet playback speed overrides (Castiel, Stag-ger) applied to the default 0.25 s frame.</summary>
+        /// <summary>Per-sheet playback speed overrides (Castiel, Stag-ger, Drawgoo) applied to the default 0.25 s frame.</summary>
         public static float ResolveFrameDuration(Sprite sample, float frameDuration)
         {
             if (sample == null || sample.texture == null || !Mathf.Approximately(frameDuration, 0.25f)) return frameDuration;
@@ -245,6 +245,7 @@ namespace TrashTD.Operators
             string texName = sample.texture.name.ToLowerInvariant();
             if (texName.Contains("castiel")) return 0.1f;
             if (texName.Contains("stag-ger") || texName.Contains("stagger")) return 0.125f;
+            if (texName.Contains("drawgoo")) return 0.125f;
             return frameDuration;
         }
 

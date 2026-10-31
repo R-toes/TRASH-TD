@@ -118,6 +118,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15730cd9b1a04c21b3c152b454d2f53a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
+  frameDuration: 0.125
   frames:
   - {fileID: -1356300679520073598, guid: 133b4d89962378d4fad68db165fbca3e, type: 3}
   - {fileID: 6816289218689828701, guid: 133b4d89962378d4fad68db165fbca3e, type: 3}
+  - {fileID: -2015449955, guid: 133b4d89962378d4fad68db165fbca3e, type: 3}
+  - {fileID: 1527855447, guid: 133b4d89962378d4fad68db165fbca3e, type: 3}
+  - {fileID: 1692334322, guid: 133b4d89962378d4fad68db165fbca3e, type: 3}
+  - {fileID: 451356927, guid: 133b4d89962378d4fad68db165fbca3e, type: 3}
+  - {fileID: -2071353061, guid: 133b4d89962378d4fad68db165fbca3e, type: 3}
+  - {fileID: 163965866, guid: 133b4d89962378d4fad68db165fbca3e, type: 3}
