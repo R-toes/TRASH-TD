@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f34436990ad48f4d90f0736ce7dcdd3, type: 3}
+  m_Name: Enemy_Flyer_Robodrone
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.EnemyData
+  enemyName: Robodrone
+  archetype: 4
+  movementType: 1
+  baseHP: 80
+  baseATK: 25
+  baseDEF: 5
+  baseRES: 10
+  moveSpeed: 1.25
+  damageType: 0
+  attackInterval: 2
+  attackRange: 0
+  isUnblockable: 1
+  blockWeight: 1
+  lifePointCost: 1
+  sprite: {fileID: -3214557629790080340, guid: 26876a2c76cc2de428dc4dd1e2d9af72, type: 3}
+  animationFrames:
+  - {fileID: -3214557629790080340, guid: 26876a2c76cc2de428dc4dd1e2d9af72, type: 3}
+  - {fileID: -1623664181, guid: 26876a2c76cc2de428dc4dd1e2d9af72, type: 3}
+  - {fileID: 1984567280, guid: 26876a2c76cc2de428dc4dd1e2d9af72, type: 3}
+  - {fileID: -1550913442, guid: 26876a2c76cc2de428dc4dd1e2d9af72, type: 3}
+  animationFrameRate: 8
+  visualOffset: {x: 0, y: 0.75, z: 0}
+  enemyPrefab: {fileID: 9005451285246291141, guid: e4d1d87d2bc16634c81d7c93e58b8db0, type: 3}
+  abilityDescription: "Flying and unblockable. Hovers over lanes and fires at operators from range, targeting ranged operators first."
+  intelQuote: "*BZZZT*"
+  intelLore: "A salvaged industrial drone retrofitted with a jury-rigged weapon mount. Robodrone doesn't land, doesn't stop, and doesn't care who it hits. Field teams report it prefers to take potshots at operators in elevated positions."
+

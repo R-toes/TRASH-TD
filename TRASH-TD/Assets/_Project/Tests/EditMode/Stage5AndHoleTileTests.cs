@@ -994,6 +994,32 @@ namespace TrashTD.Tests
         }
 
         [Test]
+        public void Drawgoo_Prefab_Has8AnimationFrames()
+        {
+            var drawgooPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/Operators/Prefab_OP_Drawgoo.prefab");
+            if (drawgooPrefab != null)
+            {
+                var anim = drawgooPrefab.GetComponent<OperatorSpriteAnimation>();
+                Assert.IsNotNull(anim, "Drawgoo prefab must have OperatorSpriteAnimation component.");
+                Assert.IsNotNull(anim.Frames, "Drawgoo animation frames must not be null.");
+                Assert.AreEqual(8, anim.Frames.Length, "Drawgoo animation must have 8 frames.");
+                Assert.AreEqual(0.125f, anim.FrameDuration, 0.001f, "Drawgoo animation frame duration should be 0.125s (8 FPS).");
+                for (int i = 0; i < anim.Frames.Length; i++)
+                {
+                    Assert.IsNotNull(anim.Frames[i], $"Drawgoo frame {i} must be assigned.");
+                }
+            }
+
+            var drawgooData = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>("Assets/_Project/Data/Operators/OP_Specialist_Drawgoo.asset");
+            if (drawgooData != null)
+            {
+                var frames = TrashTD.UI.UnitSpriteFrames.GetOperatorFrames(drawgooData, out float duration);
+                Assert.AreEqual(8, frames.Length, "UnitSpriteFrames must resolve 8 frames for Drawgoo.");
+                Assert.AreEqual(0.125f, duration, 0.001f, "UnitSpriteFrames must resolve 0.125s frame duration for Drawgoo.");
+            }
+        }
+
+        [Test]
         public void Mossmo_SkillDescription_And_DoesNotAttack()
         {
             var mossmoData = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>("Assets/_Project/Data/Operators/OP_Defender_Mossmo.asset");
