@@ -468,7 +468,7 @@ namespace TrashTD.Systems
                 OperatorClass.Sniper => 1,
                 OperatorClass.Caster => 1,
                 OperatorClass.Defender => 2,
-                OperatorClass.Medic => 3,
+                OperatorClass.Medic => 2,
                 OperatorClass.Specialist => 0,
                 _ => 0
             };

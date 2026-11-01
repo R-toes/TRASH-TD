@@ -21,7 +21,7 @@ MonoBehaviour:
   baseATK: 85
   baseDEF: 20
   baseRES: 0
-  blockCount: 1
+  blockCount: 2
   attackRange: 2
   attackInterval: 1.1
   rangePattern:

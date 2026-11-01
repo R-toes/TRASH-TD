@@ -351,7 +351,7 @@ namespace TrashTD.Editor
             var scrapperFrames = scrapperFrame1 != null ? new[] { scrapperFrame0, scrapperFrame1 } : new[] { scrapperFrame0 };
             var guardPrefab = CreateScrapperPrefab(scrapperFrames);
             var scrapper = CreateOperator("OP_Guard_Scrapper", "Scrapper", OperatorClass.Guard, OperatorPosition.Melee, OperatorRarity.Star1,
-                hp: 140, atk: 85, def: 20, res: 0, blockCount: 1, range: 2, interval: 1.1f,
+                hp: 140, atk: 85, def: 20, res: 0, blockCount: 2, range: 2, interval: 1.1f,
                 new[] { new Vector2Int(1, 0), new Vector2Int(2, 0) },
                 scrapperFrame0, guardPrefab);
             scrapper.skillDescription = "When attacking, has a 20% chance to Stun the target for 2 seconds.";
