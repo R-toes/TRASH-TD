@@ -147,6 +147,34 @@ MonoBehaviour:
     count: 1
     stageNumber: 0
     emote: 0
+  - action: 0
+    text: "Before you place anyone: how do you like to give orders? Pick a control style. You can switch any time in Settings."
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 2
+  - action: 12
+    text: ""
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 0
+  - action: 3
+    text: "Click Chi Paw in your deck (or drag it) onto a glowing tile. Tap the LEFT arrow so it faces the spawn, then press PLACE."
+    highlight: 0
+    operatorData: {fileID: 11400000, guid: b6c6f5ad90104e25a13e6c61c91b8a04, type: 2}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 5
+    condition: 9
   - action: 3
     text: "Click Chi Paw in your deck, then a glowing tile. Hold and drag toward the spawn so it faces left, then let go."
     highlight: 0
@@ -156,6 +184,17 @@ MonoBehaviour:
     count: 1
     stageNumber: 0
     emote: 5
+    condition: 10
+  - action: 3
+    text: "Click Chi Paw in your deck (or drag it) onto a glowing tile, then tap the LEFT arrow. It faces the spawn and goes straight down."
+    highlight: 0
+    operatorData: {fileID: 11400000, guid: b6c6f5ad90104e25a13e6c61c91b8a04, type: 2}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 5
+    condition: 11
   - action: 0
     text: "Chi Paw BLOCKS hostiles that walk into it and holds them in place while it fights. Blocking is how we stop the line."
     highlight: 7
@@ -614,7 +653,16 @@ MonoBehaviour:
     stageNumber: 0
     emote: 5
   - action: 0
-    text: "Everyone else waits: Snipers and Casters sit out 1 wave, Defenders 2, and Medics 3. A card's Intel file lists it as REDEPLOY."
+    text: "Everyone else has to wait before coming back. Here's how that works."
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 5
+  - action: 13
+    text: ""
     highlight: 0
     operatorData: {fileID: 0}
     enemyData: {fileID: 0}
@@ -622,6 +670,15 @@ MonoBehaviour:
     count: 1
     stageNumber: 0
     emote: 0
+  - action: 0
+    text: "Each card's Intel file lists its wait as REDEPLOY, too. Plan your recalls around it!"
+    highlight: 0
+    operatorData: {fileID: 0}
+    enemyData: {fileID: 0}
+    cards: []
+    count: 1
+    stageNumber: 0
+    emote: 1
   - action: 4
     text: "Press START WAVE."
     highlight: 0

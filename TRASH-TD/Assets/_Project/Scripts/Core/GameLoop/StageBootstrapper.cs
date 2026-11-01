@@ -79,7 +79,10 @@ namespace TrashTD.Core.GameLoop
         public PlayerDeck playerDeck;
 
         private DraftCard pendingDeployCard = null;
+        // Arrow schemes: the pending operator is being dragged to another tile (held mouse button)
+        private bool isMovingPreview;
         private GameplayHUDUI gameplayHudUI;
+        private SandboxController sandboxController;
         private readonly List<GameObject> placementPreviewVisuals = new List<GameObject>();
         private readonly List<Transform> acidRainDrops = new List<Transform>();
         private readonly List<SpriteSheetAnimationState> backgroundAnimations = new List<SpriteSheetAnimationState>();
@@ -292,7 +295,8 @@ namespace TrashTD.Core.GameLoop
             {
                 operatorManager.SquadLimit = int.MaxValue;
                 FindAnyObjectByType<CardDraftOverlayUI>()?.HideForSandbox();
-                gameObject.AddComponent<SandboxController>().Initialize(this);
+                sandboxController = gameObject.AddComponent<SandboxController>();
+                sandboxController.Initialize(this);
             }
         }
 
@@ -587,7 +591,25 @@ namespace TrashTD.Core.GameLoop
             }
 
             pendingDeployCard = card;
+            if (!isPlacementPreviewActive) DrawDeployableTileHints(card);
             Debug.Log($"[Draft] Selected: {card.operatorData.operatorName} ({card.rarity}). Select a tile, choose a facing, then confirm placement.");
+        }
+
+        /// <summary>A card was clicked (not yet on a tile): faint outlines on every free tile it can go on.</summary>
+        private void DrawDeployableTileHints(DraftCard card)
+        {
+            ClearPlacementPreviewVisuals();
+            if (card == null || card.operatorData == null || gridManager == null || stageData == null || !IsDeploymentAllowed) return;
+
+            Color hint = new Color(0.15f, 0.85f, 1f, 0.35f);
+            for (int y = 0; y < stageData.gridHeight; y++)
+            {
+                for (int x = 0; x < stageData.gridWidth; x++)
+                {
+                    GridCell cell = gridManager.GetCell(x, y);
+                    if (cell != null && cell.CanDeploy(card.operatorData.position)) DrawCellOutline(cell.WorldPosition, hint);
+                }
+            }
         }
 
         public void BeginOperatorPlacement(DraftCard card, Vector2Int gridPosition)
@@ -665,6 +687,31 @@ namespace TrashTD.Core.GameLoop
             RefreshPlacementPreview();
         }
 
+        /// <summary>
+        /// A facing arrow (HUD button or WASD/arrow key) in the arrow schemes. Precise sets the facing and waits for
+        /// PLACE; Quick sets it and places the operator at once. Swipe uses keys only to set the facing.
+        /// </summary>
+        public void ChoosePlacementFacing(OperatorFacing facing)
+        {
+            if (!isPlacementPreviewActive || pendingDeployCard == null) return;
+
+            placementFacing = facing;
+            if (ControlSettings.Scheme == PlacementControlScheme.Quick)
+            {
+                ConfirmOperatorPlacement();
+                return;
+            }
+            RefreshPlacementPreview();
+        }
+
+        /// <summary>Redraws the placement preview and its controls (the HUD calls it when a dragged card is dropped).</summary>
+        public void RefreshPlacement()
+        {
+            if (isPlacementPreviewActive) RefreshPlacementPreview();
+        }
+
+        private static bool UsesArrowControls => ControlSettings.Scheme != PlacementControlScheme.Swipe;
+
         public void ConfirmOperatorPlacement()
         {
             if (!isPlacementPreviewActive || pendingDeployCard == null) return;
@@ -717,6 +764,7 @@ namespace TrashTD.Core.GameLoop
         {
             pendingDeployCard = null;
             isDraggingToDeploy = false;
+            isMovingPreview = false;
             HidePlacementPreview();
         }
 
@@ -810,7 +858,9 @@ namespace TrashTD.Core.GameLoop
                     CancelOperatorPlacement();
                     return;
                 }
-                else if (operatorManager != null && operatorManager.SelectedOperator != null)
+                // Right-clicks inside a sandbox dropdown edit the queue; they mustn't retreat the selected operator
+                else if (operatorManager != null && operatorManager.SelectedOperator != null &&
+                         (sandboxController == null || !sandboxController.IsPointerOverDropdown))
                 {
                     ClearOperatorRangePreview();
                     operatorManager.RetreatOperator(operatorManager.SelectedOperator);
@@ -893,15 +943,35 @@ namespace TrashTD.Core.GameLoop
                 return;
             }
 
+            // 2a. Arrow schemes: the pending operator is held and dragged to another tile
+            if (isPreparing && isMovingPreview && pendingDeployCard != null)
+            {
+                if (mouse == null || !mouse.leftButton.isPressed)
+                {
+                    isMovingPreview = false;
+                    RefreshPlacementPreview(); // the arrows come back on the new tile
+                    return;
+                }
+
+                if (TryGetGridPosition(CrtDisplay.ScreenToPicture(mouse.position.ReadValue()), out Vector2Int hoveredTile) &&
+                    gridManager != null && gridManager.IsInBounds(hoveredTile) && hoveredTile != placementGridPosition)
+                {
+                    GridCell hoveredCell = gridManager.GetCell(hoveredTile);
+                    if (hoveredCell != null && hoveredCell.CanDeploy(pendingDeployCard.operatorData.position))
+                        BeginOperatorPlacement(pendingDeployCard, hoveredTile); // keeps the chosen facing
+                }
+                return;
+            }
+
             // 2. Pending deployment card selected from deck: Left-clicking and holding on a tile maps to PointerDown
             if (isPreparing && pendingDeployCard != null)
             {
                 bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
                 if (!pointerOverUI && mouse != null && mouse.leftButton.wasPressedThisFrame &&
-                    TryGetGridPosition(CrtDisplay.ScreenToPicture(mouse.position.ReadValue()), out Vector2Int clickedTile) &&
-                    gridManager != null && gridManager.IsInBounds(clickedTile))
+                    TryGetGridPosition(CrtDisplay.ScreenToPicture(mouse.position.ReadValue()), out Vector2Int clickedTile))
                 {
-                    GridCell cell = gridManager.GetCell(clickedTile);
+                    bool inBounds = gridManager != null && gridManager.IsInBounds(clickedTile);
+                    GridCell cell = inBounds ? gridManager.GetCell(clickedTile) : null;
                     OperatorBase clickedOperator = cell != null && cell.OccupantOperator != null
                         ? cell.OccupantOperator.GetComponent<OperatorBase>()
                         : null;
@@ -916,17 +986,30 @@ namespace TrashTD.Core.GameLoop
                     {
                         if (isPlacementPreviewActive && clickedTile == placementGridPosition)
                         {
-                            // Step 2: Click and hold where the operator is to drag the direction it needs to face
+                            if (UsesArrowControls)
+                            {
+                                // Precise / Quick: hold the operator to drag it to another tile
+                                isMovingPreview = true;
+                                RefreshPlacementPreview();
+                                return;
+                            }
+
+                            // Swipe: click and hold where the operator is to drag the direction it needs to face
                             sweepAnchorWorldPosition = cell.WorldPosition;
                             isDraggingToDeploy = true;
                             return;
                         }
-                        else
-                        {
-                            // Step 1: Place or reposition operator preview on desired tile
-                            BeginOperatorPlacement(pendingDeployCard, clickedTile);
-                            return;
-                        }
+
+                        // Step 1: Place or reposition operator preview on desired tile
+                        BeginOperatorPlacement(pendingDeployCard, clickedTile);
+                        return;
+                    }
+
+                    // Arrow schemes: a click anywhere else on the map backs out of the placement
+                    if (UsesArrowControls && isPlacementPreviewActive)
+                    {
+                        CancelOperatorPlacement();
+                        return;
                     }
                 }
 
@@ -939,13 +1022,16 @@ namespace TrashTD.Core.GameLoop
                     return;
                 }
 
-                // Keyboard facing fallback
-                if (isPlacementPreviewActive)
+                // Keyboard facing: works like the arrow buttons in the arrow schemes (Quick places at once)
+                if (isPlacementPreviewActive && TryGetFacingKey(keyboard, out OperatorFacing keyFacing))
                 {
-                    OperatorFacing nextFacing = GetFacingInput(keyboard);
-                    if (nextFacing != placementFacing)
+                    if (UsesArrowControls)
                     {
-                        placementFacing = nextFacing;
+                        ChoosePlacementFacing(keyFacing);
+                    }
+                    else if (keyFacing != placementFacing)
+                    {
+                        placementFacing = keyFacing;
                         RefreshPlacementPreview();
                     }
                 }
@@ -1068,7 +1154,7 @@ namespace TrashTD.Core.GameLoop
 
         private void UpdateStage6AcidRainDamage()
         {
-            if (EnvironmentStageId != "STAGE_06" ||
+            if (EnvironmentStageId != "STAGE_06" || !TrashTD.Combat.StageCombatModifiers.HazardsEnabled ||
                 gameManager == null || gameManager.CurrentState != GamePlayState.Playing)
             {
                 return;
@@ -1270,7 +1356,7 @@ namespace TrashTD.Core.GameLoop
 
         private int GetDeckSlotHotkey(Keyboard keyboard)
         {
-            if (keyboard == null) return -1;
+            if (keyboard == null || GameplayHUDUI.IsTypingInTextField()) return -1;
 
             if (keyboard.digit1Key.wasPressedThisFrame || keyboard.numpad1Key.wasPressedThisFrame) return 0;
             if (keyboard.digit2Key.wasPressedThisFrame || keyboard.numpad2Key.wasPressedThisFrame) return 1;
@@ -1330,14 +1416,21 @@ namespace TrashTD.Core.GameLoop
             // Highlight the selected deck slot in HUD
             gameplayHudUI?.SetSelectedDeckSlot(slotIndex);
 
-            // Put operator on the tile and enter Phase 2 (facing sweep)
+            // Put operator on the tile. Swipe goes straight to the facing sweep (move the mouse, click to place);
+            // the arrow schemes show their arrows instead.
             pendingDeployCard = card;
             placementGridPosition = cursorGridPos;
             sweepAnchorWorldPosition = targetCell.WorldPosition;
             placementFacing = OperatorFacing.Right;
             isPlacementPreviewActive = true;
-            isDraggingToDeploy = true;
+            isMovingPreview = false;
+            isDraggingToDeploy = !UsesArrowControls;
             lastQuickDeployFrame = Time.frameCount;
+            if (UsesArrowControls)
+            {
+                RefreshPlacementPreview();
+                return;
+            }
 
             // Calculate initial facing from displacement if cursor is slightly away from tile center
             Camera gameCamera = Camera.main;
@@ -1357,12 +1450,19 @@ namespace TrashTD.Core.GameLoop
 
         private OperatorFacing GetFacingInput(Keyboard keyboard)
         {
-            if (keyboard == null) return placementFacing;
-            if (keyboard.rightArrowKey.wasPressedThisFrame || keyboard.dKey.wasPressedThisFrame) return OperatorFacing.Right;
-            if (keyboard.upArrowKey.wasPressedThisFrame || keyboard.wKey.wasPressedThisFrame) return OperatorFacing.Up;
-            if (keyboard.leftArrowKey.wasPressedThisFrame || keyboard.aKey.wasPressedThisFrame) return OperatorFacing.Left;
-            if (keyboard.downArrowKey.wasPressedThisFrame || keyboard.sKey.wasPressedThisFrame) return OperatorFacing.Down;
-            return placementFacing;
+            return TryGetFacingKey(keyboard, out OperatorFacing facing) ? facing : placementFacing;
+        }
+
+        /// <summary>A WASD / arrow key pressed this frame (even for the facing already chosen).</summary>
+        private static bool TryGetFacingKey(Keyboard keyboard, out OperatorFacing facing)
+        {
+            facing = OperatorFacing.Right;
+            if (keyboard == null || GameplayHUDUI.IsTypingInTextField()) return false;
+            if (keyboard.rightArrowKey.wasPressedThisFrame || keyboard.dKey.wasPressedThisFrame) { facing = OperatorFacing.Right; return true; }
+            if (keyboard.upArrowKey.wasPressedThisFrame || keyboard.wKey.wasPressedThisFrame) { facing = OperatorFacing.Up; return true; }
+            if (keyboard.leftArrowKey.wasPressedThisFrame || keyboard.aKey.wasPressedThisFrame) { facing = OperatorFacing.Left; return true; }
+            if (keyboard.downArrowKey.wasPressedThisFrame || keyboard.sKey.wasPressedThisFrame) { facing = OperatorFacing.Down; return true; }
+            return false;
         }
 
         private bool TryGetGridPosition(Vector2 screenPosition, out Vector2Int gridPosition)
@@ -1419,7 +1519,20 @@ namespace TrashTD.Core.GameLoop
             DrawCellOutline(targetCell.WorldPosition, placementColor);
             DrawOperatorPreview(targetCell.WorldPosition, pendingDeployCard.operatorData, placementFacing, canDeploy);
             DrawFacingMarker(targetCell.WorldPosition, placementFacing);
-            gameplayHudUI?.SetPlacementControls(false);
+            UpdatePlacementControls(targetCell.WorldPosition, canDeploy);
+        }
+
+        /// <summary>
+        /// The HUD controls around the previewed tile for the player's scheme (ControlSettings): arrows for Precise
+        /// and Quick, plus PLACE / CANCEL for Precise. Swipe has none. Hidden while the operator is being dragged.
+        /// </summary>
+        private void UpdatePlacementControls(Vector3 tileCenter, bool canDeploy)
+        {
+            if (gameplayHudUI == null) return;
+            PlacementControlScheme scheme = ControlSettings.Scheme;
+            bool show = scheme != PlacementControlScheme.Swipe && !isDraggingToDeploy && !isMovingPreview;
+            gameplayHudUI.SetPlacementControls(show, canDeploy, scheme == PlacementControlScheme.Precise, placementFacing);
+            if (show && gridManager != null) gameplayHudUI.SetPlacementControlsPosition(tileCenter, gridManager.CellSize);
         }
 
         private void DrawOperatorPreview(Vector3 position, OperatorData opData, OperatorFacing facing, bool canDeploy)
@@ -1622,6 +1735,7 @@ namespace TrashTD.Core.GameLoop
         private void HidePlacementPreview()
         {
             isPlacementPreviewActive = false;
+            isMovingPreview = false;
             isOperatorRangePreviewActive = false;
             ClearPlacementPreviewVisuals();
             gameplayHudUI?.SetPlacementControls(false);

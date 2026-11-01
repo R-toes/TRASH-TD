@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TrashTD.UI;
@@ -6,12 +7,18 @@ using TrashTD.UI;
 namespace TrashTD.Audio
 {
     /// <summary>
-    /// Runtime-built settings panel shared by menu and gameplay: Audio (music, SFX) and Graphics
-    /// (CRT style, brightness; see GameGraphicsSettings). The class keeps its original name because
-    /// several screens create it. Styled as the green terminal used by the main menu and stage selector.
+    /// Runtime-built settings panel shared by menu and gameplay, in four tabs: AUDIO (music, SFX), DISPLAY
+    /// (resolution and window mode, CRT style, brightness; see GameGraphicsSettings), CONTROLS (operator
+    /// placement scheme with animated diagrams; see ControlSettings) and GAMEPLAY (notices; see
+    /// GameplaySettings). The class keeps its original name because several screens create it.
+    /// Styled as the green terminal used by the main menu and stage selector.
     /// </summary>
     public sealed class AudioSettingsUI : MonoBehaviour
     {
+        private enum Tab { Audio, Display, Controls, Gameplay }
+        private static readonly string[] TabLabels = { "AUDIO", "DISPLAY", "CONTROLS", "GAMEPLAY" };
+        private static Tab lastTab = Tab.Audio;
+
         // Terminal palette (matches MainMenuController)
         private static readonly Color ButtonColor = new Color(0.10f, 0.13f, 0.18f, 1f);
         private static readonly Color AccentColor = new Color(0.18f, 0.82f, 0.45f, 1f);
@@ -28,10 +35,14 @@ namespace TrashTD.Audio
 
         // Layout, in card pixels from the top-left. PressStart2P glyphs are as wide as the font size,
         // so every text box is sized from its longest string (e.g. "BRIGHTNESS" at 14 px = 140 px).
-        private const float CardWidth = 760f;
-        private const float CardHeight = 500f;
+        private const float CardWidth = 900f;
+        private const float CardHeight = 620f;
         private const float HeaderHeight = 56f;
-        private const float Padding = 36f;
+        private const float TabY = 72f;
+        private const float TabHeight = 40f;
+        private const float TabWidth = 190f;
+        private const float FooterY = 540f;
+        private const float Padding = 40f;
         private const float LabelWidth = 220f;
         private const float ControlX = Padding + LabelWidth + 14f;      // 270
         private const float ValueWidth = 72f;
@@ -54,6 +65,21 @@ namespace TrashTD.Audio
         private Button classicButton;
         private Button offButton;
         private Text crtStyleHint;
+        private Text resolutionText;
+        private Button resolutionApplyButton;
+        private Button resolutionPrevButton;
+        private Button resolutionNextButton;
+        private Button fullscreenButton;
+        private Button windowedButton;
+        private readonly List<Vector2Int> resolutions = new List<Vector2Int>();
+        private int resolutionIndex;
+        private Vector2Int shownScreenSize;
+        private Button noticeOnButton;
+        private Button noticeOffButton;
+        private readonly Button[] tabButtons = new Button[4];
+        private readonly GameObject[] pages = new GameObject[4];
+        private readonly PlacementSchemeOption[] schemeOptions = new PlacementSchemeOption[3];
+        private Transform pageRoot; // rows are built into the page being filled
         public Button SettingsButton { get; private set; }
         public bool IsOpen => panel != null && panel.activeSelf;
         public void Close() => Hide();
@@ -108,35 +134,94 @@ namespace TrashTD.Audio
             Text escHint = CreateText(header.transform, "[ESC] CLOSE", 11, TextAnchor.MiddleRight, HintColor);
             PlaceTopLeft(escHint.rectTransform, CardWidth - Padding + 8f - 300f, 0f, 300f, HeaderHeight);
 
+            // ── Tabs ──
+            for (int i = 0; i < TabLabels.Length; i++)
+            {
+                Tab tab = (Tab)i;
+                tabButtons[i] = CreateTerminalButton(card, TabLabels[i] + "Tab", TabLabels[i], 13);
+                PlaceTopLeft(tabButtons[i].GetComponent<RectTransform>(), Padding + i * (TabWidth + 10f), TabY, TabWidth, TabHeight);
+                tabButtons[i].onClick.AddListener(() => SelectTab(tab));
+                AttachFeedback(tabButtons[i], SfxId.UiClick);
+            }
+            Image tabLine = CreateImage(card, "TabLine", new Color(LineColor.r, LineColor.g, LineColor.b, 0.35f));
+            PlaceTopLeft(tabLine.rectTransform, Padding, TabY + TabHeight + 6f, CardWidth - 2f * Padding, 2f);
+
             // ── Audio ──
-            CreateSectionHeader("AUDIO", 88f);
+            pageRoot = CreatePage(Tab.Audio);
+            CreateSectionHeader("VOLUME", 160f);
             float musicValue = AudioManager.Instance != null ? AudioManager.Instance.MusicVolume : 0.45f;
-            musicSlider = CreateSliderRow("MUSIC", 130f, 0f, 1f, musicValue, out musicValueText);
+            musicSlider = CreateSliderRow("MUSIC", 210f, 0f, 1f, musicValue, out musicValueText);
             float sfxValue = AudioManager.Instance != null ? AudioManager.Instance.SfxVolume : 0.45f;
-            sfxSlider = CreateSliderRow("SFX", 176f, 0f, 1f, sfxValue, out sfxValueText);
+            sfxSlider = CreateSliderRow("SFX", 262f, 0f, 1f, sfxValue, out sfxValueText);
 
-            // ── Graphics ──
-            CreateSectionHeader("GRAPHICS", 228f);
-            CreateRowLabel("CRT STYLE", 272f);
-            fullTvButton = CreateStyleButton("CrtFullTvButton", "FULL TV", 0, CrtStyle.FullTv);
-            classicButton = CreateStyleButton("CrtClassicButton", "CLASSIC", 1, CrtStyle.Classic);
-            offButton = CreateStyleButton("CrtOffButton", "OFF", 2, CrtStyle.Off);
+            // ── Display ──
+            pageRoot = CreatePage(Tab.Display);
+            CreateSectionHeader("SCREEN", 150f);
+            CreateResolutionRow(196f);
+            CreateRowLabel("MODE", 244f);
+            fullscreenButton = CreateSegmentButton("FullscreenButton", "FULLSCREEN", 0, 244f, () => SetWindowMode(true));
+            windowedButton = CreateSegmentButton("WindowedButton", "WINDOWED", 1, 244f, () => SetWindowMode(false));
+#if UNITY_EDITOR
+            Text editorHint = CreateText(pageRoot, "(In the editor, the Game view sets these.)", 9, TextAnchor.MiddleLeft, HintColor);
+            PlaceTopLeft(editorHint.rectTransform, ControlX, 268f, CardWidth - Padding - ControlX, 18f);
+#endif
 
-            crtStyleHint = CreateText(card, string.Empty, 11, TextAnchor.UpperLeft, HintColor);
+            CreateSectionHeader("CRT STYLE", 310f);
+            CreateRowLabel("STYLE", 356f);
+            fullTvButton = CreateStyleButton("CrtFullTvButton", "FULL TV", 0, CrtStyle.FullTv, 356f);
+            classicButton = CreateStyleButton("CrtClassicButton", "CLASSIC", 1, CrtStyle.Classic, 356f);
+            offButton = CreateStyleButton("CrtOffButton", "OFF", 2, CrtStyle.Off, 356f);
+
+            crtStyleHint = CreateText(pageRoot, string.Empty, 11, TextAnchor.UpperLeft, HintColor);
             crtStyleHint.horizontalOverflow = HorizontalWrapMode.Wrap;
             crtStyleHint.verticalOverflow = VerticalWrapMode.Overflow;
             crtStyleHint.lineSpacing = 1.4f;
-            PlaceTopLeft(crtStyleHint.rectTransform, ControlX, 302f, CardWidth - Padding - ControlX, 40f);
+            PlaceTopLeft(crtStyleHint.rectTransform, ControlX, 388f, CardWidth - Padding - ControlX, 40f);
 
-            brightnessSlider = CreateSliderRow("BRIGHTNESS", 372f,
+            CreateSectionHeader("PICTURE", 450f);
+            brightnessSlider = CreateSliderRow("BRIGHTNESS", 494f,
                 GameGraphicsSettings.MinBrightness, GameGraphicsSettings.MaxBrightness, GameGraphicsSettings.Brightness,
                 out brightnessValueText);
 
+            // ── Controls ──
+            pageRoot = CreatePage(Tab.Controls);
+            CreateSectionHeader("OPERATOR PLACEMENT", 150f);
+            Text placementHint = CreateText(pageRoot, "After a card is dropped (or clicked, then a tile clicked):", 10, TextAnchor.MiddleLeft, HintColor);
+            PlaceTopLeft(placementHint.rectTransform, Padding, 168f, CardWidth - 2f * Padding, 20f);
+            Vector2 optionSize = new Vector2(250f, 300f);
+            float optionGap = (CardWidth - 2f * Padding - 3f * optionSize.x) * 0.5f;
+            for (int i = 0; i < schemeOptions.Length; i++)
+            {
+                PlacementControlScheme scheme = (PlacementControlScheme)i;
+                PlacementSchemeOption option = PlacementSchemeOption.Create(pageRoot, scheme, optionSize);
+                PlaceTopLeft(option.Button.GetComponent<RectTransform>(), Padding + i * (optionSize.x + optionGap), 194f, optionSize.x, optionSize.y);
+                option.Button.onClick.AddListener(() => SetPlacementScheme(scheme));
+                AttachFeedback(option.Button, SfxId.UiClick);
+                schemeOptions[i] = option;
+            }
+            Text keysHint = CreateText(pageRoot, "KEYS: WASD / ARROWS FACE  |  ENTER PLACES  |  ESC / RIGHT-CLICK CANCELS", 9, TextAnchor.MiddleCenter, HintColor);
+            PlaceTopLeft(keysHint.rectTransform, Padding, 504f, CardWidth - 2f * Padding, 20f);
+
+            // ── Gameplay ──
+            pageRoot = CreatePage(Tab.Gameplay);
+            CreateSectionHeader("NOTICES", 160f);
+            CreateRowLabel("REROLL NOTICE", 210f);
+            noticeOnButton = CreateSegmentButton("RerollNoticeOnButton", "ON", 0, 210f, () => SetRerollNotice(true));
+            noticeOffButton = CreateSegmentButton("RerollNoticeOffButton", "OFF", 1, 210f, () => SetRerollNotice(false));
+            Text noticeHint = CreateText(pageRoot,
+                "Warns before you reroll the first draft of a run, which only deals 1-star operators.",
+                11, TextAnchor.UpperLeft, HintColor);
+            noticeHint.horizontalOverflow = HorizontalWrapMode.Wrap;
+            noticeHint.verticalOverflow = VerticalWrapMode.Overflow;
+            noticeHint.lineSpacing = 1.4f;
+            PlaceTopLeft(noticeHint.rectTransform, ControlX, 242f, CardWidth - Padding - ControlX, 40f);
+            pageRoot = card;
+
             // Footer
             Image footerLine = CreateImage(card, "FooterLine", new Color(LineColor.r, LineColor.g, LineColor.b, 0.25f));
-            PlaceTopLeft(footerLine.rectTransform, Padding, 412f, CardWidth - 2f * Padding, 2f);
+            PlaceTopLeft(footerLine.rectTransform, Padding, FooterY, CardWidth - 2f * Padding, 2f);
             Button closeButton = CreateTerminalButton(card, "CloseButton", "CLOSE", 16);
-            PlaceTopLeft(closeButton.GetComponent<RectTransform>(), (CardWidth - 220f) * 0.5f, 432f, 220f, 48f);
+            PlaceTopLeft(closeButton.GetComponent<RectTransform>(), (CardWidth - 220f) * 0.5f, FooterY + 18f, 220f, 48f);
             AddCornerBrackets(closeButton.GetComponent<RectTransform>(), 10f, 2f, LineColor);
             closeButton.onClick.AddListener(Hide);
             AttachFeedback(closeButton, SfxId.UiBack);
@@ -157,11 +242,183 @@ namespace TrashTD.Audio
                 RefreshGraphicsControls();
             });
             RefreshGraphicsControls();
+            RefreshControls();
+            RefreshGameplay();
+            SyncResolutions();
+            SelectTab(lastTab);
             panel.SetActive(false);
+        }
+
+        /// <summary>A full-card container for one tab; rows use the card's own coordinates.</summary>
+        private Transform CreatePage(Tab tab)
+        {
+            var page = new GameObject(TabLabels[(int)tab] + "Page", typeof(RectTransform));
+            page.transform.SetParent(card, false);
+            SetStretch(page.GetComponent<RectTransform>());
+            pages[(int)tab] = page;
+            return page.transform;
+        }
+
+        private void SelectTab(Tab tab)
+        {
+            lastTab = tab;
+            for (int i = 0; i < pages.Length; i++)
+            {
+                bool selected = i == (int)tab;
+                if (pages[i] != null) pages[i].SetActive(selected);
+                SetToggleVisual(tabButtons[i], selected);
+            }
+        }
+
+        private void SetPlacementScheme(PlacementControlScheme scheme)
+        {
+            ControlSettings.Scheme = scheme;
+            RefreshControls();
+        }
+
+        private void RefreshControls()
+        {
+            PlacementControlScheme current = ControlSettings.Scheme;
+            foreach (PlacementSchemeOption option in schemeOptions)
+                option?.SetSelected(option.Scheme == current);
+        }
+
+        private void SetRerollNotice(bool show)
+        {
+            GameplaySettings.ShowOpeningRerollNotice = show;
+            RefreshGameplay();
+        }
+
+        private void RefreshGameplay()
+        {
+            bool show = GameplaySettings.ShowOpeningRerollNotice;
+            SetToggleVisual(noticeOnButton, show);
+            SetToggleVisual(noticeOffButton, !show);
+        }
+
+        // ── Resolution ──
+
+        /// <summary>
+        /// RESOLUTION: [&lt;] 1920 x 1080 [&gt;] in the first two segments, APPLY in the third. The arrows only pick;
+        /// APPLY switches (Screen.SetResolution, which the player remembers between launches).
+        /// </summary>
+        private void CreateResolutionRow(float centerY)
+        {
+            const float arrowWidth = 44f;
+            CreateRowLabel("RESOLUTION", centerY);
+            float pickerWidth = 2f * SegmentWidth + 12f;
+
+            resolutionPrevButton = CreateTerminalButton(pageRoot, "ResolutionPrevButton", "<", 14);
+            PlaceTopLeft(resolutionPrevButton.GetComponent<RectTransform>(), ControlX, centerY - 20f, arrowWidth, 40f);
+            resolutionPrevButton.onClick.AddListener(() => StepResolution(-1));
+            AttachFeedback(resolutionPrevButton, SfxId.UiClick);
+
+            resolutionNextButton = CreateTerminalButton(pageRoot, "ResolutionNextButton", ">", 14);
+            PlaceTopLeft(resolutionNextButton.GetComponent<RectTransform>(), ControlX + pickerWidth - arrowWidth, centerY - 20f, arrowWidth, 40f);
+            resolutionNextButton.onClick.AddListener(() => StepResolution(1));
+            AttachFeedback(resolutionNextButton, SfxId.UiClick);
+
+            resolutionText = CreateText(pageRoot, string.Empty, LabelSize, TextAnchor.MiddleCenter, AccentBright);
+            PlaceTopLeft(resolutionText.rectTransform, ControlX + arrowWidth, centerY - 15f, pickerWidth - 2f * arrowWidth, 30f);
+
+            resolutionApplyButton = CreateTerminalButton(pageRoot, "ResolutionApplyButton", "APPLY", 13);
+            PlaceTopLeft(resolutionApplyButton.GetComponent<RectTransform>(), ControlX + 2f * (SegmentWidth + 12f), centerY - 20f, SegmentWidth, 40f);
+            resolutionApplyButton.onClick.AddListener(ApplyResolution);
+            AttachFeedback(resolutionApplyButton, SfxId.UiClick);
+        }
+
+        /// <summary>A button in one of the three control segments of a row (like the CRT style buttons).</summary>
+        private Button CreateSegmentButton(string objectName, string label, int index, float centerY, Action onClick)
+        {
+            Button button = CreateTerminalButton(pageRoot, objectName, label, 13);
+            PlaceTopLeft(button.GetComponent<RectTransform>(), ControlX + index * (SegmentWidth + 12f), centerY - 20f, SegmentWidth, 40f);
+            button.onClick.AddListener(() => onClick());
+            AttachFeedback(button, SfxId.UiClick);
+            return button;
+        }
+
+        /// <summary>The monitor's resolutions (one per size, smallest first) plus the current one; selects the current.</summary>
+        private void SyncResolutions()
+        {
+            Vector2Int current = new Vector2Int(Screen.width, Screen.height);
+            shownScreenSize = current;
+            resolutions.Clear();
+            foreach (Resolution resolution in Screen.resolutions)
+            {
+                var size = new Vector2Int(resolution.width, resolution.height);
+                if (size.y >= 540 && !resolutions.Contains(size)) resolutions.Add(size);
+            }
+            if (!resolutions.Contains(current)) resolutions.Add(current);
+            resolutions.Sort((a, b) => a.x != b.x ? a.x.CompareTo(b.x) : a.y.CompareTo(b.y));
+            resolutionIndex = resolutions.IndexOf(current);
+            RefreshResolution();
+        }
+
+        private void StepResolution(int step)
+        {
+            if (resolutions.Count == 0) return;
+            resolutionIndex = Mathf.Clamp(resolutionIndex + step, 0, resolutions.Count - 1);
+            RefreshResolution();
+        }
+
+        private void ApplyResolution()
+        {
+            if (resolutionIndex < 0 || resolutionIndex >= resolutions.Count) return;
+            Vector2Int size = resolutions[resolutionIndex];
+            if (size == new Vector2Int(Screen.width, Screen.height)) return;
+            Screen.SetResolution(size.x, size.y, Screen.fullScreenMode);
+        }
+
+        private void SetWindowMode(bool fullscreen)
+        {
+            FullScreenMode mode = fullscreen ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
+            if (IsFullscreen(Screen.fullScreenMode) != fullscreen) Screen.SetResolution(Screen.width, Screen.height, mode);
+            RefreshWindowMode(fullscreen);
+        }
+
+        private static bool IsFullscreen(FullScreenMode mode) => mode != FullScreenMode.Windowed;
+
+        private void RefreshResolution()
+        {
+            bool valid = resolutionIndex >= 0 && resolutionIndex < resolutions.Count;
+            Vector2Int picked = valid ? resolutions[resolutionIndex] : new Vector2Int(Screen.width, Screen.height);
+            bool pending = picked != new Vector2Int(Screen.width, Screen.height);
+
+            if (resolutionText != null)
+            {
+                resolutionText.text = picked.x + " x " + picked.y;
+                resolutionText.color = pending ? LabelColor : AccentBright;
+            }
+            SetArrowEnabled(resolutionPrevButton, valid && resolutionIndex > 0);
+            SetArrowEnabled(resolutionNextButton, valid && resolutionIndex < resolutions.Count - 1);
+            if (resolutionApplyButton != null)
+            {
+                resolutionApplyButton.interactable = pending;
+                SetToggleVisual(resolutionApplyButton, pending);
+            }
+            RefreshWindowMode(IsFullscreen(Screen.fullScreenMode));
+        }
+
+        private static void SetArrowEnabled(Button button, bool enabled)
+        {
+            if (button == null) return;
+            button.interactable = enabled;
+            Text label = button.GetComponentInChildren<Text>();
+            if (label != null) label.color = enabled ? LabelColor : new Color(LabelColor.r, LabelColor.g, LabelColor.b, 0.3f);
+        }
+
+        private void RefreshWindowMode(bool fullscreen)
+        {
+            SetToggleVisual(fullscreenButton, fullscreen);
+            SetToggleVisual(windowedButton, !fullscreen);
         }
 
         private void Update()
         {
+            // The screen size changes a frame or so after APPLY (or when the window is resized)
+            if (panel != null && panel.activeSelf && shownScreenSize != new Vector2Int(Screen.width, Screen.height))
+                SyncResolutions();
+
             // Quick pop-in on unscaled time (the panel opens while the game is paused)
             if (panel == null || !panel.activeSelf || showTime >= ShowDuration) return;
 
@@ -172,10 +429,10 @@ namespace TrashTD.Audio
             card.localScale = Vector3.one * Mathf.Lerp(0.94f, 1f, eased);
         }
 
-        private Button CreateStyleButton(string objectName, string label, int index, CrtStyle style)
+        private Button CreateStyleButton(string objectName, string label, int index, CrtStyle style, float centerY)
         {
-            Button button = CreateTerminalButton(card, objectName, label, 13);
-            PlaceTopLeft(button.GetComponent<RectTransform>(), ControlX + index * (SegmentWidth + 12f), 252f, SegmentWidth, 40f);
+            Button button = CreateTerminalButton(pageRoot, objectName, label, 13);
+            PlaceTopLeft(button.GetComponent<RectTransform>(), ControlX + index * (SegmentWidth + 12f), centerY - 20f, SegmentWidth, 40f);
             button.onClick.AddListener(() => SetCrtStyle(style));
             AttachFeedback(button, SfxId.UiClick);
             return button;
@@ -237,17 +494,17 @@ namespace TrashTD.Audio
 
         private void CreateSectionHeader(string label, float y)
         {
-            Text header = CreateText(card, "// " + label, 12, TextAnchor.MiddleLeft, AccentColor);
-            PlaceTopLeft(header.rectTransform, Padding, y - 12f, 200f, 24f);
+            Text header = CreateText(pageRoot, "// " + label, 12, TextAnchor.MiddleLeft, AccentColor);
+            PlaceTopLeft(header.rectTransform, Padding, y - 12f, 400f, 24f);
 
             float lineX = Padding + header.preferredWidth + 16f;
-            Image line = CreateImage(card, label + "Line", new Color(LineColor.r, LineColor.g, LineColor.b, 0.3f));
+            Image line = CreateImage(pageRoot, label + "Line", new Color(LineColor.r, LineColor.g, LineColor.b, 0.3f));
             PlaceTopLeft(line.rectTransform, lineX, y - 1f, CardWidth - Padding - lineX, 2f);
         }
 
         private void CreateRowLabel(string label, float centerY)
         {
-            Text text = CreateText(card, label, LabelSize, TextAnchor.MiddleLeft, LabelColor);
+            Text text = CreateText(pageRoot, label, LabelSize, TextAnchor.MiddleLeft, LabelColor);
             PlaceTopLeft(text.rectTransform, Padding + 4f, centerY - 15f, LabelWidth, 30f);
         }
 
@@ -257,7 +514,7 @@ namespace TrashTD.Audio
             CreateRowLabel(label, centerY);
 
             GameObject sliderObject = new GameObject(label + "Slider", typeof(RectTransform), typeof(Image), typeof(Slider));
-            sliderObject.transform.SetParent(card, false);
+            sliderObject.transform.SetParent(pageRoot, false);
             PlaceTopLeft(sliderObject.GetComponent<RectTransform>(), ControlX, centerY - 14f, ControlWidth, 28f);
 
             // Invisible hit area over the whole row height, so pressing anywhere on the bar jumps the handle
@@ -301,7 +558,7 @@ namespace TrashTD.Audio
             slider.maxValue = max;
             slider.SetValueWithoutNotify(value);
 
-            valueText = CreateText(card, Percent(value), LabelSize, TextAnchor.MiddleRight, AccentBright);
+            valueText = CreateText(pageRoot, Percent(value), LabelSize, TextAnchor.MiddleRight, AccentBright);
             PlaceTopLeft(valueText.rectTransform, CardWidth - Padding - ValueWidth, centerY - 15f, ValueWidth, 30f);
             return slider;
         }
@@ -313,6 +570,10 @@ namespace TrashTD.Audio
             sfxSlider.SetValueWithoutNotify(AudioManager.Instance != null ? AudioManager.Instance.SfxVolume : sfxSlider.value);
             brightnessSlider.SetValueWithoutNotify(GameGraphicsSettings.Brightness);
             RefreshGraphicsControls();
+            RefreshControls();
+            RefreshGameplay();
+            SyncResolutions();
+            SelectTab(lastTab);
 
             panel.transform.SetAsLastSibling();
             panel.SetActive(true);

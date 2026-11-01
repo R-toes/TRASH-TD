@@ -633,7 +633,7 @@ namespace TrashTD.Operators
             if (isStunned || isBound || target == null || target.IsDead || target.IsInsideHole) return false;
             if (data != null && !target.CanBeTargetedBy(data.position)) return false;
             if (!target.CanReceiveDamageFrom(this)) return false;
-            return target.MovementType != EnemyMovementType.Air || CanHitAir;
+            return target.MovementType != EnemyMovementType.Air || CanHitAir || target.IsWithinMeleeReach;
         }
 
         // ========================

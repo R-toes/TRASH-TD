@@ -33,10 +33,10 @@ namespace TrashTD.UI
 
         /// <summary>
         /// The whole game through the chosen CRT style: Full TV (Television), Classic (the first, crisper
-        /// version) or Off (passthrough). Full TV eases off below 1080p so small text stays readable.
-        /// The player's brightness applies on top in every style.
+        /// version) or Off (passthrough). Full TV keeps its 4K look on every screen (see
+        /// CrtScreen.VirtualPictureHeight). The player's brightness applies on top in every style.
         /// </summary>
-        private static CrtScreen.Settings GetActiveSettings(int pictureHeight)
+        private static CrtScreen.Settings GetActiveSettings()
         {
             CrtScreen.Settings baseSettings = GameGraphicsSettings.CrtStyle switch
             {
@@ -45,12 +45,12 @@ namespace TrashTD.UI
                 _ => CrtScreen.Television
             };
             baseSettings.opaque = 1f; // full-screen presenter: never show the backbuffer through the picture
-            return baseSettings.ForPictureHeight(pictureHeight).WithBrightnessScale(GameGraphicsSettings.Brightness);
+            return baseSettings.WithBrightnessScale(GameGraphicsSettings.Brightness);
         }
 
         private void ApplyGraphicsSettings()
         {
-            settings = GetActiveSettings(picture != null ? picture.height : Mathf.Max(16, Screen.height));
+            settings = GetActiveSettings();
             CrtScreen.ApplySettings(material, settings);
         }
         private Material material;
@@ -205,7 +205,7 @@ namespace TrashTD.UI
                 material.SetTexture(UiTexId, uiPicture);
                 material.SetFloat(HasUiId, 1f);
             }
-            CrtScreen.UpdateFrame(material, settings, picture.width, picture.height);
+            CrtScreen.UpdateFrame(material, settings, picture.width, picture.height, CrtScreen.VirtualPictureHeight);
         }
 
         private void SyncTextures()
@@ -225,7 +225,6 @@ namespace TrashTD.UI
             picture = CreateTexture("CRT_Game", width, height);
             uiPicture = CreateTexture("CRT_UI", width, height);
             uiCamera.targetTexture = uiPicture;
-            ApplyGraphicsSettings(); // Full TV depends on the resolution
         }
 
         private static RenderTexture CreateTexture(string textureName, int width, int height)

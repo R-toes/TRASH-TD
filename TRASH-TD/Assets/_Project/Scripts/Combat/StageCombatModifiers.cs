@@ -8,8 +8,17 @@ namespace TrashTD.Combat
         private const float SandstormAttackIntervalMultiplier = 0.95f;
         private const float SandstormMissChance = 0.1f;
 
-        public static bool IsSandstormActive { get; private set; }
-        public static bool IsHeatHazardActive { get; private set; }
+        private static bool sandstormEnvironment;
+        private static bool heatEnvironment;
+
+        /// <summary>
+        /// Master switch for every stage hazard (sandstorm, heat, falling items, traffic, acid rain).
+        /// Always on in real stages; the QA sandbox can turn it off to test units without the environment.
+        /// </summary>
+        public static bool HazardsEnabled { get; set; } = true;
+
+        public static bool IsSandstormActive => sandstormEnvironment && HazardsEnabled;
+        public static bool IsHeatHazardActive => heatEnvironment && HazardsEnabled;
 
         public static void ConfigureForStage(StageData stageData)
         {
@@ -19,8 +28,9 @@ namespace TrashTD.Combat
         /// <summary>Activates the combat modifiers of the given stage's environment (the sandbox passes its map's stage).</summary>
         public static void ConfigureForEnvironment(string environmentStageId)
         {
-            IsSandstormActive = environmentStageId == "STAGE_03";
-            IsHeatHazardActive = environmentStageId == "STAGE_04";
+            sandstormEnvironment = environmentStageId == "STAGE_03";
+            heatEnvironment = environmentStageId == "STAGE_04";
+            HazardsEnabled = true;
         }
 
         public static float GetAttackInterval(float baseInterval)

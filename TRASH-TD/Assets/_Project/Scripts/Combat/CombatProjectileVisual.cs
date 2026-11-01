@@ -21,7 +21,8 @@ namespace TrashTD.Combat
         Bubble,   // Wobbling bubble lobbed to an ally, pops on arrival
         Sludge,   // Lobbed toxic glob that splats (enemy shots; purple for acid)
         Sand,     // Lobbed clod of sand that bursts into dust
-        Glass     // Skyshard's glass shard: glints in flight; the shatter is drawn by the AoE
+        Glass,    // Skyshard's glass shard: glints in flight; the shatter is drawn by the AoE
+        Plasma    // Robodrone's energy bolt: glowing core with a flickering halo, ember trail, spark burst
     }
 
     /// <summary>
@@ -169,7 +170,8 @@ namespace TrashTD.Combat
             visual.body.sprite = GetBodySprite(style, color);
             visual.body.sortingOrder = BodySortingOrder;
 
-            if (style == ProjectileStyle.ArtsOrb || style == ProjectileStyle.FireOrb || style == ProjectileStyle.HeavyRocket)
+            if (style == ProjectileStyle.ArtsOrb || style == ProjectileStyle.FireOrb || style == ProjectileStyle.HeavyRocket ||
+                style == ProjectileStyle.Plasma)
             {
                 var haloObject = new GameObject("Halo");
                 haloObject.transform.SetParent(projectile.transform, false);
@@ -204,6 +206,7 @@ namespace TrashTD.Combat
                 ProjectileStyle.Sludge => CombatFxArt.Glob(color),
                 ProjectileStyle.Sand => CombatFxArt.SandClod(),
                 ProjectileStyle.Glass => CombatFxArt.GlassShard(color),
+                ProjectileStyle.Plasma => CombatFxArt.PlasmaBolt(color),
                 _ => CombatFxArt.Bolt(color)
             };
         }
@@ -225,7 +228,7 @@ namespace TrashTD.Combat
         {
             return style == ProjectileStyle.Bolt || style == ProjectileStyle.Bullet || style == ProjectileStyle.Frost ||
                    style == ProjectileStyle.Rocket || style == ProjectileStyle.HeavyRocket || style == ProjectileStyle.Quill ||
-                   style == ProjectileStyle.Glass;
+                   style == ProjectileStyle.Glass || style == ProjectileStyle.Plasma;
         }
 
         private void ApplyOrientation(Vector2 direction)
@@ -263,6 +266,10 @@ namespace TrashTD.Combat
                     break;
                 case ProjectileStyle.Glass:
                     CombatFx.Flash(muzzle, Color.Lerp(color, Color.white, 0.6f));
+                    break;
+                case ProjectileStyle.Plasma:
+                    CombatFx.Flash(muzzle, Color.Lerp(color, Color.white, 0.4f));
+                    CombatFx.Sparks(muzzle, color, 3, 1.6f, 0.12f, direction: direction, coneDegrees: 70f);
                     break;
             }
         }
@@ -349,6 +356,7 @@ namespace TrashTD.Combat
                 ProjectileStyle.Sludge => 5f,
                 ProjectileStyle.Quill => 0f,
                 ProjectileStyle.Glass => 4f,
+                ProjectileStyle.Plasma => 2f,
                 _ => 3f
             };
         }
@@ -535,6 +543,33 @@ namespace TrashTD.Combat
                     });
                     break;
 
+                case ProjectileStyle.Plasma:
+                    // A glowing streak right behind the bolt, plus the odd ember drifting off it
+                    PixelParticles.Emit(new PixelParticle
+                    {
+                        Position = position - direction * CombatFxArt.Pixel * 3f,
+                        Life = 0.1f,
+                        StartColor = Color.Lerp(color, Color.white, 0.35f),
+                        EndColor = faded,
+                        Sprite = CombatFxArt.Dot2(),
+                        SortingOrder = CombatFx.TrailSortingOrder
+                    });
+                    if (Random.value < 0.35f)
+                    {
+                        PixelParticles.Emit(new PixelParticle
+                        {
+                            Position = position + Random.insideUnitCircle * CombatFxArt.Pixel * 2f,
+                            Velocity = -direction * 0.3f + Random.insideUnitCircle * 0.35f,
+                            Life = Random.Range(0.18f, 0.3f),
+                            Drag = 2f,
+                            StartColor = new Color(1f, 0.9f, 0.5f, 1f),
+                            EndColor = new Color(color.r * 0.8f, color.g * 0.35f, color.b * 0.2f, 0f),
+                            Sprite = CombatFxArt.Dot1(),
+                            SortingOrder = CombatFx.TrailSortingOrder
+                        });
+                    }
+                    break;
+
                 case ProjectileStyle.Sand:
                     PixelParticles.Emit(new PixelParticle
                     {
@@ -591,6 +626,11 @@ namespace TrashTD.Combat
                     break;
                 case ProjectileStyle.Glass:
                     CombatFx.Flash(position, Color.white);
+                    break;
+                case ProjectileStyle.Plasma:
+                    CombatFx.Flash(position, Color.Lerp(color, Color.white, 0.4f));
+                    CombatFx.Pop(position, color);
+                    CombatFx.Sparks(position, color, 6, 2.4f, 0.22f, direction: direction, coneDegrees: 160f);
                     break;
                 case ProjectileStyle.HeavyRocket:
                     CombatFx.Flash(position, color, true);

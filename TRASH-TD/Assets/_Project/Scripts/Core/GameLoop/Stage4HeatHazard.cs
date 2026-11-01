@@ -82,7 +82,7 @@ namespace TrashTD.Core.GameLoop
         /// </summary>
         private void HandleWaveStarted(int currentWave, int totalWaves)
         {
-            if (operatorManager == null) return;
+            if (operatorManager == null || !StageCombatModifiers.IsHeatHazardActive) return;
 
             var deployed = operatorManager.DeployedOperators;
             for (int i = 0; i < deployed.Count; i++)
@@ -97,7 +97,7 @@ namespace TrashTD.Core.GameLoop
 
         private void HandleOperatorDeployed(OperatorBase op)
         {
-            if (op == null) return;
+            if (op == null || !StageCombatModifiers.IsHeatHazardActive) return;
 
             // If deployed mid-wave, it immediately participates in this wave's heat
             if (waveManager != null && waveManager.IsWaveInProgress)
@@ -145,7 +145,7 @@ namespace TrashTD.Core.GameLoop
             }
 
             // Burning overtime damage
-            if (waveManager == null || !waveManager.IsWaveInProgress)
+            if (waveManager == null || !waveManager.IsWaveInProgress || !StageCombatModifiers.IsHeatHazardActive)
             {
                 burnTickTimer = 0f;
                 return;

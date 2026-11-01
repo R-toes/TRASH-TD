@@ -9,6 +9,7 @@ namespace TrashTD.Enemies
         [SerializeField] private float frameDuration = 0.3f;
 
         private SpriteRenderer spriteRenderer;
+        private EnemyBase enemyBase;
         private float frameTimer;
         private int currentFrame;
 
@@ -18,6 +19,7 @@ namespace TrashTD.Enemies
         private void Awake()
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
+            enemyBase = GetComponent<EnemyBase>();
 
             if (frames == null || frames.Length != 3 ||
                 frames[0] == null || frames[1] == null || frames[2] == null ||
@@ -35,6 +37,13 @@ namespace TrashTD.Enemies
 
         private void Update()
         {
+            // Grunts with their own sheet (EnemyData.animationFrames, e.g. Tick-Torque) are animated by EnemyBase
+            if (enemyBase != null && enemyBase.Data != null &&
+                enemyBase.Data.animationFrames != null && enemyBase.Data.animationFrames.Length > 1)
+            {
+                return;
+            }
+
             frameTimer += Time.deltaTime;
             if (frameTimer < frameDuration)
                 return;

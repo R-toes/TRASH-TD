@@ -132,7 +132,7 @@ namespace TrashTD.Core.GameLoop
 
         private void HandleWaveStarted(int currentWave, int totalWaves)
         {
-            if (currentWave < FirstCarWave)
+            if (currentWave < FirstCarWave || !TrashTD.Combat.StageCombatModifiers.HazardsEnabled)
             {
                 return;
             }

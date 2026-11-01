@@ -144,6 +144,11 @@ namespace TrashTD.UI
         private GameObject placementControlsRoot;
         private Button retreatOperatorButton;
         private Button placementConfirmButton;
+        private Button placementCancelButton;
+        // Facing arrows around the previewed tile, in OperatorFacing order (see CreatePlacementControls)
+        private readonly Dictionary<OperatorFacing, Button> placementFacingButtons = new Dictionary<OperatorFacing, Button>();
+        private readonly Dictionary<OperatorFacing, MenuButtonFeedback> placementFacingFeedbacks = new Dictionary<OperatorFacing, MenuButtonFeedback>();
+        private bool isDeckCardDragging;
         private Button startWaveButton;
         private Text startWaveButtonText;
         private Button[] speedButtons;
@@ -192,6 +197,9 @@ namespace TrashTD.UI
         private OperatorManager operatorManager;
         private StageBootstrapper stageBootstrapper;
         private TrashTD.Development.SandboxController sandboxController;
+
+        /// <summary>Running the QA sandbox: no lives, no draft, no next-wave preview; its panel drives the waves.</summary>
+        private bool IsSandbox => sandboxController != null;
 
         private int selectedDeckSlot = -1;
         public bool IsEnvironmentBriefingActive => environmentBriefingPanel != null && environmentBriefingPanel.activeSelf;
@@ -811,10 +819,11 @@ namespace TrashTD.UI
             panelRect.pivot = new Vector2(0.5f, 0.5f);
             panelRect.sizeDelta = Vector2.zero;
 
-            CreateFacingButton("FaceUpButton", "↑", OperatorFacing.Up, new Vector2(0f, 58f));
-            CreateFacingButton("FaceLeftButton", "←", OperatorFacing.Left, new Vector2(-58f, 0f));
-            CreateFacingButton("FaceDownButton", "↓", OperatorFacing.Down, new Vector2(0f, -58f));
-            CreateFacingButton("FaceRightButton", "→", OperatorFacing.Right, new Vector2(58f, 0f));
+            // Positions are set per tile by SetPlacementControlsPosition
+            CreateFacingButton("FaceUpButton", OperatorFacing.Up, 90f);
+            CreateFacingButton("FaceLeftButton", OperatorFacing.Left, 180f);
+            CreateFacingButton("FaceDownButton", OperatorFacing.Down, -90f);
+            CreateFacingButton("FaceRightButton", OperatorFacing.Right, 0f);
 
             var confirmButton = CreateButton(placementControlsRoot.transform, "ConfirmPlacementButton", "PLACE", new Vector2(84f, 34f), ButtonContainerType.Primary);
             SetPlacementButtonPosition(confirmButton, new Vector2(150f, 19f));
@@ -829,16 +838,22 @@ namespace TrashTD.UI
             AttachFeedback(cancelButton, new Color(1f, 0.4f, 0.4f, 1f), 1.08f);
 
             placementConfirmButton = confirmButton;
+            placementCancelButton = cancelButton;
             placementControlsRoot.SetActive(false);
         }
 
-        private void CreateFacingButton(string objectName, string label, OperatorFacing facing, Vector2 position)
+        private void CreateFacingButton(string objectName, OperatorFacing facing, float iconRotation)
         {
-            var button = CreateButton(placementControlsRoot.transform, objectName, label, new Vector2(42f, 42f), ButtonContainerType.IconDark);
-            SetPlacementButtonPosition(button, position);
+            var button = CreateButton(placementControlsRoot.transform, objectName, string.Empty, new Vector2(42f, 42f), ButtonContainerType.IconDark);
             SetPlacementButtonStyle(button, ButtonContainerType.IconDark, 22);
-            button.onClick.AddListener(() => stageBootstrapper?.SetPlacementFacing(facing));
-            AttachFeedback(button, PrepColor, 1.12f);
+            Image icon = CreateIconImage(button.transform, "Arrow", LoadIconSprite("icon_play"), Color.white, Vector2.zero,
+                new Vector2(0.5f, 0.5f), new Vector2(22f, 22f), new Vector2(0.5f, 0.5f));
+            icon.raycastTarget = false;
+            icon.rectTransform.localEulerAngles = new Vector3(0f, 0f, iconRotation);
+            // Precise: sets the facing; Quick: sets it and places the operator (StageBootstrapper.ChoosePlacementFacing)
+            button.onClick.AddListener(() => stageBootstrapper?.ChoosePlacementFacing(facing));
+            placementFacingButtons[facing] = button;
+            placementFacingFeedbacks[facing] = AttachFeedback(button, PrepColor, 1.12f);
         }
 
         private static void SetPlacementButtonPosition(Button button, Vector2 position)
@@ -863,8 +878,23 @@ namespace TrashTD.UI
             }
         }
 
-        public void SetPlacementControls(bool active, bool canConfirm = true)
+        /// <summary>
+        /// Shows the controls around the previewed tile: the facing arrows, plus PLACE / CANCEL when
+        /// <paramref name="showConfirm"/> (the Precise scheme). Hidden while a deck card is still being dragged.
+        /// </summary>
+        public void SetPlacementControls(bool active, bool canConfirm = true, bool showConfirm = true, OperatorFacing? facing = null)
         {
+            active = active && !IsDeckCardDragging;
+            if (placementConfirmButton != null) placementConfirmButton.gameObject.SetActive(showConfirm);
+            if (placementCancelButton != null) placementCancelButton.gameObject.SetActive(showConfirm);
+            foreach (KeyValuePair<OperatorFacing, MenuButtonFeedback> pair in placementFacingFeedbacks)
+            {
+                if (pair.Value == null) continue;
+                bool current = facing.HasValue && pair.Key == facing.Value;
+                pair.Value.SetBaseColor(current ? new Color(0.25f, 0.6f, 0.95f, 1f) : Color.white);
+                pair.Value.glowAlways = current;
+            }
+
             if (placementControlsRoot != null)
             {
                 bool wasActive = placementControlsRoot.activeSelf;
@@ -889,20 +919,49 @@ namespace TrashTD.UI
             }
         }
 
-        public void SetPlacementControlsPosition(Vector3 worldPosition)
+        /// <summary>
+        /// Centres the controls on the tile and spaces them by its on-screen size: each arrow sits just outside the
+        /// tile edge it points through, and PLACE / CANCEL stack to the right of the right arrow.
+        /// </summary>
+        public void SetPlacementControlsPosition(Vector3 worldPosition, float cellSize)
         {
             if (placementControlsRoot == null || canvas == null) return;
 
             Camera gameCamera = Camera.main;
             if (gameCamera == null) return;
 
-            Vector2 screenPosition = RectTransformUtility.WorldToScreenPoint(gameCamera, worldPosition);
             RectTransform canvasRect = canvas.GetComponent<RectTransform>();
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPosition, GetCanvasCamera(), out Vector2 localPosition))
+            Camera uiCamera = GetCanvasCamera();
+            Vector2 screenPosition = RectTransformUtility.WorldToScreenPoint(gameCamera, worldPosition);
+            Vector2 screenEdge = RectTransformUtility.WorldToScreenPoint(gameCamera, worldPosition + Vector3.right * cellSize);
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPosition, uiCamera, out Vector2 localPosition) ||
+                !RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenEdge, uiCamera, out Vector2 localEdge))
+                return;
+
+            placementControlsRoot.GetComponent<RectTransform>().anchoredPosition = localPosition;
+
+            float tile = Mathf.Abs(localEdge.x - localPosition.x);
+            float arrowOffset = tile * 0.5f + 26f; // half tile + half a 42 px button + a small gap
+            foreach (KeyValuePair<OperatorFacing, Button> pair in placementFacingButtons)
             {
-                placementControlsRoot.GetComponent<RectTransform>().anchoredPosition = localPosition;
+                Vector2 direction = pair.Key switch
+                {
+                    OperatorFacing.Up => Vector2.up,
+                    OperatorFacing.Left => Vector2.left,
+                    OperatorFacing.Down => Vector2.down,
+                    _ => Vector2.right
+                };
+                SetPlacementButtonPosition(pair.Value, direction * arrowOffset);
             }
+
+            float buttonsX = arrowOffset + 21f + 12f + 42f;
+            if (placementConfirmButton != null) SetPlacementButtonPosition(placementConfirmButton, new Vector2(buttonsX, 20f));
+            if (placementCancelButton != null) SetPlacementButtonPosition(placementCancelButton, new Vector2(buttonsX, -20f));
         }
+
+        /// <summary>A deck card is being dragged onto the map; the placement controls wait for the drop.</summary>
+        public bool IsDeckCardDragging =>
+            isDeckCardDragging && Mouse.current != null && Mouse.current.leftButton.isPressed; // never stuck if a drag end is lost
 
         public void SetSelectedOperatorName(string operatorName, Vector3 worldPosition)
         {
@@ -1399,7 +1458,7 @@ namespace TrashTD.UI
             if (nextWavePreview == null) return;
 
             WaveData next = null;
-            bool show = sandboxController == null && gameManager != null && waveManager != null
+            bool show = !IsSandbox && gameManager != null && waveManager != null
                 && gameManager.CurrentPhase != StagePhase.WaveActive;
             if (show) next = waveManager.PeekNextWave();
             show = show && WaveManager.CountEnemies(next) > 0;
@@ -1483,7 +1542,7 @@ namespace TrashTD.UI
         {
             if (waveText == null || waveManager == null) return;
 
-            if (sandboxController != null)
+            if (IsSandbox)
             {
                 if (waveLabelText != null) waveLabelText.text = "WAVE";
                 waveText.text = Mathf.Max(1, waveManager.SandboxWaveNumber).ToString("00");
@@ -1506,7 +1565,7 @@ namespace TrashTD.UI
         {
             if (enemyText == null || enemyManager == null) return;
 
-            bool betweenWaves = sandboxController == null && gameManager != null && gameManager.CurrentPhase != StagePhase.WaveActive;
+            bool betweenWaves = !IsSandbox && gameManager != null && gameManager.CurrentPhase != StagePhase.WaveActive;
             int nextWaveSize = betweenWaves && waveManager != null ? WaveManager.CountEnemies(waveManager.PeekNextWave()) : 0;
             if (betweenWaves && enemyManager.ActiveEnemyCount == 0 && nextWaveSize > 0)
             {
@@ -3856,7 +3915,7 @@ namespace TrashTD.UI
             if (gameManager == null) return;
             if (surveillanceOverlay != null) surveillanceOverlay.SetStage(gameManager.CurrentStage);
 
-            if (sandboxController != null)
+            if (IsSandbox)
             {
                 if (phaseText != null) phaseText.text = "QA SANDBOX";
                 phaseColorTarget = PrepColor;
@@ -4038,6 +4097,7 @@ namespace TrashTD.UI
 
         private void FinishDeckCardDrag(int slotIndex, Vector2 screenPosition)
         {
+            isDeckCardDragging = false;
             if (gameManager == null || playerDeck == null) return;
             if (!IsDeckDeployPhase && !IsDeckEditOnly) return;
 
@@ -4079,6 +4139,8 @@ namespace TrashTD.UI
             if (targetCell != null && targetCell.CanDeploy(card.operatorData.position))
             {
                 stageBootstrapper.BeginOperatorPlacement(card, gridPosition);
+                // The drop is where the arrow schemes' controls appear (they stay hidden mid-drag)
+                stageBootstrapper.RefreshPlacement();
             }
             else
             {
@@ -4089,6 +4151,7 @@ namespace TrashTD.UI
         private void HandleDeckCardDrag(int slotIndex, Vector2 screenPosition)
         {
             if (IsDeckEditOnly || playerDeck == null || gridManager == null || stageBootstrapper == null) return;
+            isDeckCardDragging = true;
 
             DraftCard card = playerDeck.GetCard(slotIndex);
             if (card == null) return;
@@ -4164,7 +4227,7 @@ namespace TrashTD.UI
 
         private void StartWave()
         {
-            if (sandboxController != null)
+            if (IsSandbox)
             {
                 sandboxController.ToggleWave();
                 return;
@@ -4233,6 +4296,15 @@ namespace TrashTD.UI
             return null;
         }
         public bool HasConsumedEscapeThisFrame => Time.frameCount == lastEscapeHandledFrame;
+
+        /// <summary>True while a text field (the sandbox search) has keyboard focus: typing mustn't trigger hotkeys.</summary>
+        public static bool IsTypingInTextField()
+        {
+            GameObject selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+            if (selected == null) return false;
+            InputField field = selected.GetComponent<InputField>();
+            return field != null && field.isFocused;
+        }
 
         public void ConsumeEscapeKey()
         {
@@ -4332,7 +4404,7 @@ namespace TrashTD.UI
                 HandleEscapeKey();
             }
 
-            bool pPressed = keyboard != null && keyboard.pKey.wasPressedThisFrame;
+            bool pPressed = keyboard != null && keyboard.pKey.wasPressedThisFrame && !IsTypingInTextField();
 #if ENABLE_LEGACY_INPUT_MANAGER
             if (!pPressed && Input.GetKeyDown(KeyCode.P)) pPressed = true;
 #endif
@@ -4441,7 +4513,7 @@ namespace TrashTD.UI
 
         private void HandleLPChanged(int current, int max)
         {
-            if (sandboxController != null) return;
+            if (IsSandbox) return;
             UpdateLivesDisplay(current, max);
         }
 
@@ -4495,7 +4567,7 @@ namespace TrashTD.UI
             UpdateHostileReadout();
             UpdateWaveReadout();
 
-            if (sandboxController != null)
+            if (IsSandbox)
             {
                 // Sandbox has no wave count, squad cap or life loss; avoid "x/2147483647" style overflow.
                 if (lpText != null)
@@ -4619,7 +4691,9 @@ namespace TrashTD.UI
             }
             if (phaseLed != null)
             {
-                bool waveActive = gameManager != null && gameManager.CurrentPhase == StagePhase.WaveActive && sandboxController == null;
+                bool waveActive = IsSandbox
+                    ? waveManager != null && waveManager.IsWaveInProgress
+                    : gameManager != null && gameManager.CurrentPhase == StagePhase.WaveActive;
                 float blinkRate = waveActive ? 4f : 1.2f;
                 bool on = Mathf.Repeat(time * blinkRate, 1f) < 0.6f;
                 phaseLed.color = new Color(phaseColorTarget.r, phaseColorTarget.g, phaseColorTarget.b, on ? 1f : 0.25f);

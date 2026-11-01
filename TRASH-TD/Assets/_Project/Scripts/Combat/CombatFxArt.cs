@@ -30,6 +30,14 @@ namespace TrashTD.Combat
             "DCLWWWW",
             "..DCLW.");
 
+        // Energy bolt: white-hot nose fading into a tapered glowing tail
+        public static Sprite PlasmaBolt(Color color) => Shaded("plasmabolt", color,
+            "...DCCLL.",
+            ".DCLLWWWL",
+            "DCLWWWWWW",
+            ".DCLLWWWL",
+            "...DCCLL.");
+
         public static Sprite Bullet(Color color) => Shaded("bullet", color,
             "OCLLWWW",
             "OCLLWWW");

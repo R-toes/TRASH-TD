@@ -161,6 +161,12 @@ namespace TrashTD.Enemies
         }
         public float ChillAmount => chillAmount;
         public EnemyMovementType MovementType => data.movementType;
+
+        /// <summary>
+        /// An air enemy low enough for ground melee operators to hit (Talon Rat during its swoop).
+        /// Ground enemies don't need it: they're always targetable by melee.
+        /// </summary>
+        public virtual bool IsWithinMeleeReach => false;
         public float DistanceToGoal
         {
             get
@@ -736,16 +742,17 @@ namespace TrashTD.Enemies
                 return;
             }
 
+            bool plasma = data != null && data.usesPlasmaProjectileVisual;
             CombatProjectileVisual.Fire(
                 ProjectileOrigin,
                 target.transform.position,
                 projectileColor,
-                8f,
+                plasma ? 10f : 8f,
                 0.1f,
                 0.05f,
                 false,
                 onImpact,
-                ProjectileStyle.Sludge);
+                plasma ? ProjectileStyle.Plasma : ProjectileStyle.Sludge);
         }
 
         private void UpdateTrapDamage(float deltaTime)
@@ -1173,10 +1180,19 @@ namespace TrashTD.Enemies
                 }
             }
 
+            int hpBeforeHit = currentHP;
             TakeDamage(damage, damageType);
+            if (attacker != null && OperatorDamageDealt != null && hpBeforeHit > currentHP)
+                OperatorDamageDealt.Invoke(attacker, hpBeforeHit - currentHP);
             attacker?.PlayImpactSound();
             return true;
         }
+
+        /// <summary>
+        /// HP an operator's attack actually removed (after DEF/RES, misses and the Junkernaut aura).
+        /// Read by the QA sandbox's damage meter; nothing subscribes in normal play.
+        /// </summary>
+        public static event System.Action<OperatorBase, int> OperatorDamageDealt;
 
         /// <summary>
         /// Kill immediately without going through damage (sandbox wave clears).

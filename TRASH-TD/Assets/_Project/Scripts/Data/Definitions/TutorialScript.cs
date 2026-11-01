@@ -17,7 +17,9 @@ namespace TrashTD.Data
         Retreat,          // Task: wait until `operatorData` is retreated
         Finish,           // Say; a click ends the tutorial and shows the stage's results screen
         OpenTutorialStage,// Map intro only. Task: open STAGE 00 and press PLAY
-        DefeatChoice      // Defeat only. TRY AGAIN (restart the tutorial) or SKIP TUTORIAL (to the stage map)
+        DefeatChoice,     // Defeat only. TRY AGAIN (restart the tutorial) or SKIP TUTORIAL (to the stage map)
+        ChooseControls,   // Task: the control-style picker (ControlSettings); `text`, if any, is its subtitle
+        CooldownBriefing  // Task: the redeploy-cooldown window, closed with UNDERSTOOD; `text`, if any, replaces its description
     }
 
     /// <summary>What Coalesce points at while a step is shown.</summary>
@@ -60,7 +62,10 @@ namespace TrashTD.Data
         OneLifeLeft,
         OperatorOnField,  // `operatorData` is deployed
         OperatorInDeck,   // Not deployed, but a card of it is in the deck (e.g. recalled earlier)
-        OperatorGone      // Neither: it was knocked out
+        OperatorGone,     // Neither: it was knocked out
+        ControlsPrecise,  // The player's placement scheme (ControlSettings), for instructions that depend on it
+        ControlsSwipe,
+        ControlsQuick
     }
 
     [Serializable]

@@ -1,9 +1,11 @@
 using System.Collections.Generic;
-using System.Text;
+using System.Globalization;
 using UnityEngine;
-using UnityEngine.UI;
+using TrashTD.Combat;
 using TrashTD.Core.GameLoop;
 using TrashTD.Data;
+using TrashTD.Enemies;
+using TrashTD.Operators;
 using TrashTD.Systems;
 using TrashTD.UI;
 
@@ -13,31 +15,37 @@ namespace TrashTD.Development
     /// Development-only controls for the SANDBOX stage. This component is intentionally
     /// enabled only for the explicitly marked sandbox stage.
     ///
-    /// Before a wave: clicking an enemy adds it to the spawn queue; START WAVE deploys the queue
-    /// at the normal stage spawn interval. During a wave: clicking an enemy spawns it instantly;
-    /// END WAVE cancels pending spawns and kills every enemy. Clicking an operator adds its card
-    /// to the deck immediately. The MAP list restarts the sandbox on another stage's map.
+    /// This file holds the sandbox state and actions; SandboxController.UI.cs builds the UI. The UI keeps the map clear:
+    /// a slim toolbar at the top right opens one dropdown at a time.
+    /// ENEMIES:   before a wave, clicking an enemy queues it (x1/x5/x10); during a wave it spawns at once. Right-click removes.
+    /// OPERATORS: adds operator cards to the deck at base rarity.
+    /// WAVES:     loads a real wave of this map's stage (any difficulty) with its own timing and spawn points.
+    /// QUEUE:     edits the queue (counts, order, remove) and whether it stays after START.
+    /// MAP:       turns the map's hazard on/off and restarts the sandbox on another stage's map.
+    /// Toolbar icons kill all enemies, toggle the hazard, show the stats card and hide the sandbox UI.
+    /// The HUD's START/END WAVE button runs the waves (<see cref="ToggleWave"/>). Hovering an enemy shows its live stats.
     /// </summary>
-    public sealed class SandboxController : MonoBehaviour
+    [DefaultExecutionOrder(-100)] // before StageBootstrapper, so Esc closes an open dropdown before it reaches the pause menu
+    public sealed partial class SandboxController : MonoBehaviour
     {
-        private static readonly Color PanelColor = new Color(0.025f, 0.035f, 0.05f, 0.94f);
-        private static readonly Color ListColor = new Color(0.04f, 0.05f, 0.08f, 1f);
-        private static readonly Color RowColor = new Color(0.1f, 0.14f, 0.2f, 1f);
-        private static readonly Color HeaderColor = new Color(0.14f, 0.2f, 0.28f, 1f);
-        private static readonly Color DangerColor = new Color(0.45f, 0.14f, 0.14f, 1f);
-        private static readonly Color AccentColor = new Color(0.35f, 1f, 0.5f, 1f);
-        private static readonly Color AirColor = new Color(0.55f, 0.8f, 1f, 1f);
-        private static readonly Color GroundColor = new Color(1f, 0.8f, 0.45f, 1f);
-        private static readonly Color DimColor = new Color(0.7f, 0.75f, 0.8f, 1f);
+        private const float RefreshSeconds = 0.1f;
+        private const int MaxGroupCount = 99;
+        /// <summary>Wave number hand-built waves report to wave-start hazards: they count as a late wave.</summary>
+        private const int CustomWaveHazardNumber = 99;
+        private static readonly int[] SpawnAmounts = { 1, 5, 10 };
 
-        private const float PanelWidth = 280f;
-        private const float RowHeight = 30f;
-        private const int RowFontSize = 11;
+        // Kept across the scene reload a map switch does
+        private static StageDifficulty waveDifficulty = StageDifficulty.Hard;
+        private static int waveIndex;
+        private static bool keepQueueAfterStart = true;
+        private static int spawnAmountIndex;
 
-        private readonly List<EnemyData> enemyQueue = new List<EnemyData>();
+        private readonly List<SandboxSpawnGroup> queue = new List<SandboxSpawnGroup>();
         private readonly List<EnemyData> availableEnemies = new List<EnemyData>();
         private readonly List<OperatorData> operatorData = new List<OperatorData>();
         private readonly List<StageData> mapStages = new List<StageData>();
+        private readonly Dictionary<OperatorBase, int> damageByOperator = new Dictionary<OperatorBase, int>();
+        private readonly List<KeyValuePair<OperatorBase, int>> damageRanking = new List<KeyValuePair<OperatorBase, int>>();
 
         public IReadOnlyList<EnemyData> AvailableEnemies => availableEnemies;
         public IReadOnlyList<OperatorData> OperatorDataList => operatorData;
@@ -45,21 +53,32 @@ namespace TrashTD.Development
         private StageBootstrapper bootstrapper;
         private WaveManager waveManager;
         private GameManager gameManager;
+        private EnemyManager enemyManager;
         private PlayerDeck playerDeck;
         private GameplayHUDUI gameplayHud;
+        private StageData currentMap;
 
-        private Text modeText;
-        private Text statusText;
-        private Text queueHeaderText;
-        private Text queueListText;
-        private Text deckText;
+        // Stage wave currently in the queue (0 when none)
+        private int loadedWaveNumber;
+        private string loadedWaveLabel;
+
+        // Running wave
         private bool lastWaveState;
+        private bool isClearingEnemies;
+        private float waveTime;
+        private bool waveClearReported;
+        private int waveKills;
+        private int waveLeaks;
+        private int waveLeakLives;
+        private string waveSource = "No wave yet";
+        private float refreshTimer;
 
         public void Initialize(StageBootstrapper stage)
         {
             bootstrapper = stage;
             waveManager = stage.waveManager;
             gameManager = stage.gameManager;
+            enemyManager = stage.enemyManager != null ? stage.enemyManager : EnemyManager.Instance;
             playerDeck = stage.playerDeck;
             gameplayHud = FindAnyObjectByType<GameplayHUDUI>();
             gameplayHud?.RegisterSandboxController(this);
@@ -68,21 +87,69 @@ namespace TrashTD.Development
             LoadMapStages();
             if (gameManager != null && gameManager.CurrentPhase == StagePhase.CardPick)
                 gameManager.EnterPreparationPhase();
-            BuildPanel();
+            BuildUI();
 
             if (playerDeck != null) playerDeck.OnDeckChanged += HandleDeckChanged;
+            if (enemyManager != null)
+            {
+                enemyManager.OnEnemyDied += HandleEnemyDied;
+                enemyManager.OnEnemyReachedExit += HandleEnemyLeaked;
+            }
+            EnemyBase.OperatorDamageDealt += HandleOperatorDamage;
             RefreshAll();
+            SetStatus("Sandbox ready. Queue enemies (ENEMIES or WAVES), then press START WAVE.");
         }
 
         private void OnDestroy()
         {
             if (playerDeck != null) playerDeck.OnDeckChanged -= HandleDeckChanged;
+            if (enemyManager != null)
+            {
+                enemyManager.OnEnemyDied -= HandleEnemyDied;
+                enemyManager.OnEnemyReachedExit -= HandleEnemyLeaked;
+            }
+            EnemyBase.OperatorDamageDealt -= HandleOperatorDamage;
         }
 
         private void Update()
         {
-            bool waveActive = waveManager != null && waveManager.IsWaveInProgress;
+            bool waveActive = IsWaveActive;
             if (waveActive != lastWaveState) RefreshAll();
+            if (waveActive) TrackWaveClock();
+            HandleEscape();
+            UpdateUiFrame();
+
+            refreshTimer -= Time.unscaledDeltaTime;
+            if (refreshTimer > 0f) return;
+            refreshTimer = RefreshSeconds;
+            RefreshLive();
+            RefreshTooltip();
+            if (statsVisible && !uiHidden) RefreshStats();
+        }
+
+        private bool IsWaveActive => waveManager != null && waveManager.IsWaveInProgress;
+
+        private int SpawnAmount => SpawnAmounts[Mathf.Clamp(spawnAmountIndex, 0, SpawnAmounts.Length - 1)];
+
+        /// <summary>
+        /// The wave clock runs while enemies are on the field or still to spawn, so TIME reads as time-to-clear
+        /// even though a sandbox wave stays live until END WAVE. The first clear is reported in a toast.
+        /// </summary>
+        private void TrackWaveClock()
+        {
+            bool busy = waveManager.PendingSpawnCount > 0 || (enemyManager != null && enemyManager.ActiveEnemyCount > 0);
+            if (busy)
+            {
+                waveTime += Time.deltaTime;
+                return;
+            }
+
+            if (!waveClearReported && waveKills + waveLeaks > 0)
+            {
+                waveClearReported = true;
+                SetStatus($"Wave cleared in {FormatTime(waveTime)}: {waveKills} kills, {waveLeaks} leaks." +
+                    (waveLeakLives > 0 ? $" Would cost {waveLeakLives} {(waveLeakLives == 1 ? "life" : "lives")}." : ""), waveLeaks > 0);
+            }
         }
 
         // ============================
@@ -92,15 +159,8 @@ namespace TrashTD.Development
         private void LoadOperatorData()
         {
             operatorData.Clear();
-#if UNITY_EDITOR
-            string[] guids = UnityEditor.AssetDatabase.FindAssets("t:OperatorData", new[] { "Assets/_Project/Data/Operators" });
-            for (int i = 0; i < guids.Length; i++)
-            {
-                OperatorData data = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>(
-                    UnityEditor.AssetDatabase.GUIDToAssetPath(guids[i]));
-                if (data != null) operatorData.Add(data);
-            }
-#endif
+            // Every operator in the project; the registry is saved into builds, so Development Builds get them all too
+            operatorData.AddRange(UnitIntelRegistry.GetOperators());
             if (operatorData.Count == 0 && bootstrapper != null && bootstrapper.operatorPool != null)
                 operatorData.AddRange(bootstrapper.operatorPool);
 
@@ -127,15 +187,8 @@ namespace TrashTD.Development
         private void LoadEnemyData()
         {
             availableEnemies.Clear();
-#if UNITY_EDITOR
-            string[] guids = UnityEditor.AssetDatabase.FindAssets("t:EnemyData", new[] { "Assets/_Project/Data/Enemies" });
-            for (int i = 0; i < guids.Length; i++)
-            {
-                EnemyData data = UnityEditor.AssetDatabase.LoadAssetAtPath<EnemyData>(
-                    UnityEditor.AssetDatabase.GUIDToAssetPath(guids[i]));
-                if (data != null) availableEnemies.Add(data);
-            }
-#endif
+            // Every enemy in the project (see LoadOperatorData)
+            availableEnemies.AddRange(UnitIntelRegistry.GetEnemies());
             if (availableEnemies.Count == 0 && bootstrapper != null && bootstrapper.stageData != null)
             {
                 AddEnemiesFromWaves(bootstrapper.stageData.wavesEasy);
@@ -171,11 +224,15 @@ namespace TrashTD.Development
                     mapStages.Add(stage);
             }
             mapStages.Sort((a, b) => string.Compare(a.stageId, b.stageId, System.StringComparison.OrdinalIgnoreCase));
+            currentMap = mapStages.Find(stage => stage.stageId == StageBootstrapper.SandboxMapStageId);
         }
+
+        private static string GetStageNumber(StageData stage) =>
+            stage.stageId.StartsWith("STAGE_") ? stage.stageId.Substring(6).TrimStart('0') : stage.stageId;
 
         private static string GetMapLabel(StageData stage)
         {
-            string number = stage.stageId.StartsWith("STAGE_") ? stage.stageId.Substring(6).TrimStart('0') : stage.stageId;
+            string number = GetStageNumber(stage);
             return string.IsNullOrEmpty(stage.mapName) ? $"Stage {number}" : $"{number}. {stage.mapName}";
         }
 
@@ -194,6 +251,49 @@ namespace TrashTD.Development
             }
         }
 
+        private WaveData[] GetMapWaves() => currentMap != null ? currentMap.GetWaves(waveDifficulty) : null;
+
+        /// <summary>Enemy count, distinct spawn points and seconds of spawning in a stage wave.</summary>
+        private static void MeasureWave(WaveData wave, out int enemies, out int spawns, out float span)
+        {
+            enemies = 0;
+            span = 0f;
+            var spawnPoints = new HashSet<int>();
+            if (wave?.entries != null)
+            {
+                foreach (WaveEntry entry in wave.entries)
+                {
+                    if (entry == null || entry.enemyData == null || entry.count <= 0) continue;
+                    enemies += entry.count;
+                    spawnPoints.Add(entry.spawnPointIndex);
+                    span = Mathf.Max(span, entry.startDelay + (entry.count - 1) * Mathf.Max(0f, entry.spawnInterval));
+                }
+            }
+            spawns = spawnPoints.Count;
+        }
+
+        /// <summary>What the map's environment does, and whether it has a gameplay hazard at all.</summary>
+        private static string GetHazardDescription(string stageId, out bool hasHazard)
+        {
+            hasHazard = true;
+            switch (stageId)
+            {
+                case "STAGE_02":
+                    return "FALLING ITEMS\nScrap drops on operators and tiles during waves: true damage, some stun.";
+                case "STAGE_03":
+                    return "SANDSTORM\nOperator attacks miss 10% of the time; enemies attack 5% faster.";
+                case "STAGE_04":
+                    return $"FACTORY HEAT\n+1 heat per wave start and per mid-wave deploy. 5 stacks ignite: {Stage4HeatHazard.BurnDamagePerTick} damage/s until retreated.";
+                case "STAGE_05":
+                    return $"TRAFFIC\nFrom wave {Stage5CarEncounter.FirstCarWave}, up to {Stage5CarEncounter.TotalRollsPerWave} cars cross the boulevard each wave. Hand-built waves count as late waves.";
+                case "STAGE_06":
+                    return $"ACID RAIN\n{StageBootstrapper.AcidRainDamagePerTick} true damage every 2s to every operator and enemy (acid-immune enemies excepted).";
+                default:
+                    hasHazard = false;
+                    return "NO HAZARD\nThis map's weather is visual only.";
+            }
+        }
+
         // ============================
         // Actions
         // ============================
@@ -201,40 +301,151 @@ namespace TrashTD.Development
         private void HandleEnemyClicked(EnemyData enemy)
         {
             if (enemy == null || waveManager == null) return;
+            int amount = SpawnAmount;
 
-            if (waveManager.IsWaveInProgress)
+            if (IsWaveActive)
             {
-                SetStatus(waveManager.SpawnSandboxEnemyNow(enemy)
-                    ? $"Spawned {enemy.enemyName}."
-                    : $"Could not spawn {enemy.enemyName} (no path, see Console).");
+                int spawned = 0;
+                for (int i = 0; i < amount; i++)
+                    if (waveManager.SpawnSandboxEnemyNow(enemy)) spawned++;
+                if (spawned > 0)
+                    SetStatus(spawned == 1 ? $"Spawned {enemy.enemyName}." : $"Spawned {spawned}x {enemy.enemyName}.");
+                else
+                    SetStatus($"Could not spawn {enemy.enemyName} (no path, see Console).", true);
                 return;
             }
 
-            enemyQueue.Add(enemy);
-            SetStatus($"Queued {enemy.enemyName}.");
+            // Repeated clicks on the same enemy grow its last queue line instead of adding a new one
+            SandboxSpawnGroup last = queue.Count > 0 ? queue[queue.Count - 1] : null;
+            if (last != null && !last.timed && last.enemy == enemy && last.count < MaxGroupCount)
+                last.count = Mathf.Min(MaxGroupCount, last.count + amount);
+            else
+                queue.Add(new SandboxSpawnGroup { enemy = enemy, count = amount });
+
+            SetStatus($"Queued {amount}x {enemy.enemyName}.");
             RefreshQueue();
         }
 
-        private void UndoLastQueued()
+        /// <summary>Right-click on an enemy tile: takes that enemy back out of the queue, newest lines first.</summary>
+        private void RemoveQueuedEnemy(EnemyData enemy)
         {
-            if (enemyQueue.Count == 0) return;
-            enemyQueue.RemoveAt(enemyQueue.Count - 1);
+            if (enemy == null || IsWaveActive) return;
+
+            int remaining = SpawnAmount;
+            int removed = 0;
+            for (int i = queue.Count - 1; i >= 0 && remaining > 0; i--)
+            {
+                SandboxSpawnGroup group = queue[i];
+                if (group.enemy != enemy) continue;
+                int take = Mathf.Min(remaining, group.count);
+                group.count -= take;
+                remaining -= take;
+                removed += take;
+                if (group.count == 0) queue.RemoveAt(i);
+            }
+            if (removed == 0) return;
+
+            SetStatus($"Removed {removed}x {enemy.enemyName} from the queue.");
+            RefreshQueue();
+        }
+
+        private void SetSpawnAmount(int index)
+        {
+            spawnAmountIndex = Mathf.Clamp(index, 0, SpawnAmounts.Length - 1);
+            RefreshSpawnAmount();
+        }
+
+        private void ChangeGroupCount(SandboxSpawnGroup group, int delta)
+        {
+            group.count = Mathf.Clamp(group.count + delta, 0, MaxGroupCount);
+            if (group.count == 0) queue.Remove(group);
+            RefreshQueue();
+        }
+
+        private void RemoveGroup(SandboxSpawnGroup group)
+        {
+            queue.Remove(group);
+            RefreshQueue();
+        }
+
+        /// <summary>Swaps a hand-queued line with the previous/next hand-queued line (timed lines don't have an order).</summary>
+        private void MoveGroup(SandboxSpawnGroup group, int direction)
+        {
+            int index = queue.IndexOf(group);
+            if (index < 0) return;
+            for (int j = index + direction; j >= 0 && j < queue.Count; j += direction)
+            {
+                if (queue[j].timed) continue;
+                queue[index] = queue[j];
+                queue[j] = group;
+                break;
+            }
             RefreshQueue();
         }
 
         private void ClearQueue()
         {
-            enemyQueue.Clear();
+            queue.Clear();
             RefreshQueue();
+            SetStatus("Queue cleared.");
+        }
+
+        private void ToggleKeepQueue()
+        {
+            keepQueueAfterStart = !keepQueueAfterStart;
+            RefreshQueue();
+            SetStatus(keepQueueAfterStart
+                ? "Queue kept after START, so the same wave can be replayed."
+                : "Queue empties after START.");
+        }
+
+        private void SelectDifficulty(StageDifficulty difficulty)
+        {
+            waveDifficulty = difficulty;
+            RefreshWaves();
+        }
+
+        private void SelectWave(int index)
+        {
+            waveIndex = index;
+            RefreshWaves();
+        }
+
+        /// <summary>Copies the selected stage wave into the queue, keeping each entry's timing and spawn point.</summary>
+        private void LoadSelectedWave(bool replaceQueue)
+        {
+            WaveData[] waves = GetMapWaves();
+            if (waves == null || waveIndex < 0 || waveIndex >= waves.Length || waves[waveIndex]?.entries == null) return;
+
+            if (replaceQueue) queue.Clear();
+            int spawnPoints = waveManager != null ? waveManager.SandboxSpawnPointCount : 0;
+            foreach (WaveEntry entry in waves[waveIndex].entries)
+            {
+                if (entry == null || entry.enemyData == null || entry.count <= 0) continue;
+                queue.Add(new SandboxSpawnGroup
+                {
+                    enemy = entry.enemyData,
+                    count = entry.count,
+                    timed = true,
+                    startDelay = entry.startDelay,
+                    interval = entry.spawnInterval,
+                    spawnPoint = entry.spawnPointIndex < spawnPoints ? entry.spawnPointIndex : -1
+                });
+            }
+
+            loadedWaveNumber = waveIndex + 1;
+            loadedWaveLabel = $"Stage {GetStageNumber(currentMap)} {waveDifficulty} W{loadedWaveNumber}";
+            RefreshQueue();
+            SetStatus($"{(replaceQueue ? "Loaded" : "Added")} {loadedWaveLabel}. Press START WAVE.");
         }
 
         private void AddOperator(OperatorData op)
         {
             if (playerDeck == null || op == null) return;
             if (playerDeck.AddCard(new DraftCard(op, op.baseRarity)))
-                SetStatus($"Added {op.operatorName} to deck.");
+                SetStatus($"Added {op.operatorName} to the deck.");
             else
-                SetStatus($"Deck full ({PlayerDeck.MAX_DECK_SIZE}). Deploy or clear cards first.");
+                SetStatus($"Deck full ({PlayerDeck.MAX_DECK_SIZE}). Deploy or clear cards first.", true);
         }
 
         private void ClearDeck()
@@ -246,7 +457,7 @@ namespace TrashTD.Development
         private void SwitchMap(StageData stage)
         {
             if (stage == null || bootstrapper == null) return;
-            if (stage.stageId == StageBootstrapper.SandboxMapStageId)
+            if (stage == currentMap)
             {
                 SetStatus($"Already on {GetMapLabel(stage)}.");
                 return;
@@ -255,321 +466,132 @@ namespace TrashTD.Development
             bootstrapper.SwitchSandboxMap(stage.stageId);
         }
 
+        private void ToggleHazard()
+        {
+            bool enabled = !StageCombatModifiers.HazardsEnabled;
+            StageCombatModifiers.HazardsEnabled = enabled;
+
+            if (!enabled)
+            {
+                // Drop what the hazard already left behind: heat and fire on deployed operators, cars still to come
+                bool heatMap = bootstrapper != null && bootstrapper.EnvironmentStageId == "STAGE_04";
+                OperatorManager operators = bootstrapper != null ? bootstrapper.operatorManager : null;
+                if (heatMap && operators != null)
+                {
+                    foreach (OperatorBase op in operators.DeployedOperators)
+                    {
+                        if (op == null) continue;
+                        op.HeatStacks = 0;
+                        op.IsBurning = false;
+                        OperatorHeatBar.ShowFor(op);
+                    }
+                }
+                FindAnyObjectByType<Stage5CarEncounter>()?.ClearQueue();
+            }
+
+            RefreshHazard();
+            SetStatus(enabled ? "Hazard ON: the map's environment affects combat." : "Hazard OFF: visuals stay, effects stop.");
+        }
+
+        private void KillAllEnemies()
+        {
+            if (waveManager == null) return;
+            isClearingEnemies = true;
+            waveManager.KillAllSandboxEnemies();
+            isClearingEnemies = false;
+            SetStatus("All enemies killed. The wave is still live.");
+        }
+
         /// <summary>Called by the HUD's Start/End Wave button.</summary>
         public void ToggleWave()
         {
             if (waveManager == null) return;
 
-            if (waveManager.IsWaveInProgress)
+            if (IsWaveActive)
             {
+                isClearingEnemies = true;
                 waveManager.EndSandboxWave();
+                isClearingEnemies = false;
                 SetStatus("Wave ended. All enemies cleared.");
             }
-            else if (waveManager.StartSandboxWave(enemyQueue))
+            else
             {
-                SetStatus(enemyQueue.Count > 0
-                    ? $"Deploying {enemyQueue.Count} queued enemies."
-                    : "Wave live with an empty queue. Click enemies to spawn.");
-                enemyQueue.Clear();
+                bool hasTimed = queue.Exists(group => group.timed);
+                bool hasUntimed = queue.Exists(group => !group.timed);
+                int hazardWave = hasTimed ? loadedWaveNumber : CustomWaveHazardNumber;
+                if (waveManager.StartSandboxWave(queue, hazardWave))
+                {
+                    ResetWaveStats();
+                    int total = CountQueued();
+                    waveSource = hasTimed ? loadedWaveLabel + (hasUntimed ? " + extras" : "") : total > 0 ? "Custom wave" : "Empty wave";
+                    SetStatus(total > 0
+                        ? $"Sending {total} enemies."
+                        : "Wave live with an empty queue. Click enemies to spawn them.");
+                    if (!keepQueueAfterStart) queue.Clear();
+                }
             }
 
             RefreshAll();
         }
 
+        // ============================
+        // Wave stats
+        // ============================
+
+        private void ResetWaveStats()
+        {
+            waveTime = 0f;
+            waveClearReported = false;
+            waveKills = 0;
+            waveLeaks = 0;
+            waveLeakLives = 0;
+            damageByOperator.Clear();
+        }
+
+        private void HandleEnemyDied(EnemyBase enemy)
+        {
+            if (!isClearingEnemies) waveKills++;
+        }
+
+        private void HandleEnemyLeaked(EnemyBase enemy)
+        {
+            waveLeaks++;
+            waveLeakLives += enemy != null && enemy.Data != null ? Mathf.Max(0, enemy.Data.lifePointCost) : 1;
+        }
+
+        private void HandleOperatorDamage(OperatorBase op, int damage)
+        {
+            if (op == null) return;
+            damageByOperator.TryGetValue(op, out int total);
+            damageByOperator[op] = total + damage;
+        }
+
         private void HandleDeckChanged(IReadOnlyList<DraftCard> _) => RefreshDeck();
 
-        // ============================
-        // Refresh
-        // ============================
-
-        private void RefreshAll()
+        private int CountQueued()
         {
-            lastWaveState = waveManager != null && waveManager.IsWaveInProgress;
-            if (modeText != null)
-            {
-                modeText.text = lastWaveState
-                    ? "WAVE LIVE\nClick an enemy to spawn it now."
-                    : "PRE-WAVE\nClick enemies to queue them.";
-                modeText.color = lastWaveState ? new Color(1f, 0.45f, 0.4f) : AccentColor;
-            }
-            RefreshQueue();
-            RefreshDeck();
-            gameplayHud?.SetSandboxWaveButton(lastWaveState);
+            int total = 0;
+            foreach (SandboxSpawnGroup group in queue) total += group.count;
+            return total;
         }
 
-        private void RefreshQueue()
+        private int CountQueued(EnemyData enemy)
         {
-            if (queueHeaderText != null)
-                queueHeaderText.text = $"QUEUE ({enemyQueue.Count})";
-            if (queueListText == null) return;
-
-            if (enemyQueue.Count == 0)
-            {
-                queueListText.text = "(empty)";
-                return;
-            }
-
-            // Collapse consecutive duplicates: "Sludge Grunt x3"
-            var builder = new StringBuilder();
-            for (int i = 0; i < enemyQueue.Count;)
-            {
-                int run = 1;
-                while (i + run < enemyQueue.Count && enemyQueue[i + run] == enemyQueue[i]) run++;
-                if (builder.Length > 0) builder.Append('\n');
-                builder.Append(enemyQueue[i].enemyName);
-                if (run > 1) builder.Append(" x").Append(run);
-                i += run;
-            }
-            queueListText.text = builder.ToString();
+            int total = 0;
+            foreach (SandboxSpawnGroup group in queue)
+                if (group.enemy == enemy) total += group.count;
+            return total;
         }
 
-        private void RefreshDeck()
+        private static string FormatTime(float seconds)
         {
-            if (deckText != null && playerDeck != null)
-                deckText.text = $"DECK {playerDeck.CardCount}/{PlayerDeck.MAX_DECK_SIZE}";
+            int total = Mathf.FloorToInt(seconds);
+            return $"{total / 60}:{total % 60:00}";
         }
 
-        private void SetStatus(string message)
-        {
-            if (statusText != null) statusText.text = message;
-        }
+        private static string FormatSeconds(float seconds) =>
+            seconds.ToString(seconds == Mathf.Floor(seconds) ? "0" : "0.#", CultureInfo.InvariantCulture) + "s";
 
-        // ============================
-        // UI construction
-        // ============================
-
-        private void BuildPanel()
-        {
-            var panel = new GameObject("SandboxControls", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup));
-            RectTransform rect = panel.GetComponent<RectTransform>();
-            if (gameplayHud != null)
-            {
-                gameplayHud.AttachSandboxPanel(rect);
-            }
-            else
-            {
-                Canvas canvas = TrashTD.UI.CrtDisplay.FindGameCanvas();
-                if (canvas == null) return;
-                rect.SetParent(canvas.transform, false);
-            }
-
-            // Left column between the HUD top bar (90px) and the deck bar (170px), in 1920x1080 reference units.
-            rect.anchorMin = new Vector2(0f, 0f);
-            rect.anchorMax = new Vector2(0f, 1f);
-            rect.pivot = new Vector2(0f, 0.5f);
-            rect.offsetMin = new Vector2(10f, 180f);
-            rect.offsetMax = new Vector2(10f + PanelWidth, -100f);
-            panel.GetComponent<Image>().color = PanelColor;
-
-            VerticalLayoutGroup layout = panel.GetComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(10, 10, 10, 10);
-            layout.spacing = 6f;
-            ConfigureColumn(layout);
-
-            Text title = MakeText(panel.transform, "QA SANDBOX", 16, AccentColor, TextAnchor.MiddleLeft);
-            SetHeight(title, 24f);
-            StageData currentMap = mapStages.Find(stage => stage.stageId == StageBootstrapper.SandboxMapStageId);
-            Text mapText = MakeText(panel.transform, "Map: " + (currentMap != null ? GetMapLabel(currentMap) : StageBootstrapper.SandboxMapStageId),
-                10, DimColor, TextAnchor.MiddleLeft);
-            SetHeight(mapText, 16f);
-            modeText = MakeText(panel.transform, "", 10, AccentColor, TextAnchor.UpperLeft);
-            statusText = MakeText(panel.transform, "Ready.", 10, Color.yellow, TextAnchor.UpperLeft);
-
-            // Everything else scrolls inside a masked viewport, so lists can never spill over other controls.
-            Transform content = MakeScrollView(panel.transform);
-
-            // Switching maps restarts the sandbox on that stage's layout, spawns and paths.
-            Transform mapList = MakeSection(content, "MAP", false);
-            for (int i = 0; i < mapStages.Count; i++)
-            {
-                StageData stage = mapStages[i];
-                bool isCurrent = stage.stageId == StageBootstrapper.SandboxMapStageId;
-                MakeRow(mapList, GetMapLabel(stage), isCurrent ? "ON" : null, AccentColor, isCurrent ? HeaderColor : RowColor)
-                    .onClick.AddListener(() => SwitchMap(stage));
-            }
-
-            Transform enemyList = MakeSection(content, "ENEMIES", true);
-            for (int i = 0; i < availableEnemies.Count; i++)
-            {
-                EnemyData enemy = availableEnemies[i];
-                Sprite icon = GameplayHUDUI.GetEnemyClassIconSprite(enemy);
-                MakeRow(enemyList, enemy.enemyName, null, Color.white, RowColor, icon)
-                    .onClick.AddListener(() => HandleEnemyClicked(enemy));
-            }
-
-            queueHeaderText = MakeText(content, "QUEUE (0)", 12, Color.white, TextAnchor.MiddleLeft);
-            SetHeight(queueHeaderText, 22f);
-            queueListText = MakeText(content, "(empty)", 10, DimColor, TextAnchor.UpperLeft);
-            Transform queueButtons = MakeButtonStrip(content);
-            MakeRow(queueButtons, "UNDO", null, Color.white, HeaderColor).onClick.AddListener(UndoLastQueued);
-            MakeRow(queueButtons, "CLEAR", null, Color.white, DangerColor).onClick.AddListener(ClearQueue);
-
-            Transform operatorList = MakeSection(content, "OPERATORS", true);
-            deckText = MakeText(operatorList, "DECK 0/8", 11, AccentColor, TextAnchor.MiddleLeft);
-            SetHeight(deckText, 22f);
-            for (int i = 0; i < operatorData.Count; i++)
-            {
-                OperatorData op = operatorData[i];
-                Sprite icon = GameplayHUDUI.GetClassIconSprite(op.operatorClass);
-                MakeRow(operatorList, op.operatorName, null, Color.white, RowColor, icon)
-                    .onClick.AddListener(() => AddOperator(op));
-            }
-            MakeRow(operatorList, "CLEAR DECK", null, Color.white, DangerColor).onClick.AddListener(ClearDeck);
-        }
-
-        private static void ConfigureColumn(VerticalLayoutGroup layout)
-        {
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = false;
-        }
-
-        private static Transform MakeScrollView(Transform parent)
-        {
-            var root = new GameObject("Scroll", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect), typeof(LayoutElement));
-            root.transform.SetParent(parent, false);
-            root.GetComponent<Image>().color = ListColor;
-            LayoutElement element = root.GetComponent<LayoutElement>();
-            element.flexibleHeight = 1f;
-            element.minHeight = 120f;
-
-            var content = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
-            content.transform.SetParent(root.transform, false);
-            RectTransform contentRect = content.GetComponent<RectTransform>();
-            contentRect.anchorMin = new Vector2(0f, 1f);
-            contentRect.anchorMax = new Vector2(1f, 1f);
-            contentRect.pivot = new Vector2(0.5f, 1f);
-            contentRect.sizeDelta = Vector2.zero;
-
-            VerticalLayoutGroup layout = content.GetComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(6, 6, 6, 6);
-            layout.spacing = 4f;
-            ConfigureColumn(layout);
-            content.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            ScrollRect scroll = root.GetComponent<ScrollRect>();
-            scroll.viewport = root.GetComponent<RectTransform>();
-            scroll.content = contentRect;
-            scroll.horizontal = false;
-            scroll.vertical = true;
-            scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.scrollSensitivity = 30f;
-            return content.transform;
-        }
-
-        /// <summary>Collapsible section: a header button that shows/hides the returned list container.</summary>
-        private static Transform MakeSection(Transform parent, string title, bool expanded)
-        {
-            Button header = MakeRow(parent, "", null, Color.white, HeaderColor);
-            Text headerLabel = header.GetComponentInChildren<Text>();
-
-            var list = new GameObject(title + "List", typeof(RectTransform), typeof(VerticalLayoutGroup));
-            list.transform.SetParent(parent, false);
-            VerticalLayoutGroup layout = list.GetComponent<VerticalLayoutGroup>();
-            layout.spacing = 2f;
-            ConfigureColumn(layout);
-
-            void Apply(bool open)
-            {
-                list.SetActive(open);
-                headerLabel.text = (open ? "v " : "> ") + title;
-            }
-
-            header.onClick.AddListener(() => Apply(!list.activeSelf));
-            Apply(expanded);
-            return list.transform;
-        }
-
-        private static Transform MakeButtonStrip(Transform parent)
-        {
-            var strip = new GameObject("ButtonStrip", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
-            strip.transform.SetParent(parent, false);
-            strip.GetComponent<LayoutElement>().preferredHeight = RowHeight;
-            HorizontalLayoutGroup layout = strip.GetComponent<HorizontalLayoutGroup>();
-            layout.spacing = 4f;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = true;
-            return strip.transform;
-        }
-
-        /// <summary>Clickable row with a left-aligned label and an optional right-aligned tag or icon.</summary>
-        private static Button MakeRow(Transform parent, string label, string tag, Color tagColor, Color background, Sprite icon = null)
-        {
-            var obj = new GameObject(string.IsNullOrEmpty(label) ? "Row" : label,
-                typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
-            obj.transform.SetParent(parent, false);
-            obj.GetComponent<Image>().color = background;
-            obj.GetComponent<LayoutElement>().preferredHeight = RowHeight;
-
-            Button button = obj.GetComponent<Button>();
-            ColorBlock colors = button.colors;
-            colors.highlightedColor = new Color(1.25f, 1.25f, 1.25f, 1f);
-            colors.pressedColor = new Color(0.7f, 0.7f, 0.7f, 1f);
-            button.colors = colors;
-
-            bool hasRightContent = tag != null || icon != null;
-            Text text = MakeText(obj.transform, label, RowFontSize, Color.white,
-                hasRightContent ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter);
-
-            float rightPadding = icon != null ? 34f : (tag != null ? 52f : 8f);
-            Stretch(text.rectTransform, 8f, rightPadding);
-
-            if (icon != null)
-            {
-                var iconObj = new GameObject("Icon", typeof(RectTransform), typeof(Image));
-                iconObj.transform.SetParent(obj.transform, false);
-                Image img = iconObj.GetComponent<Image>();
-                img.sprite = icon;
-                img.preserveAspect = true;
-                img.raycastTarget = false;
-                img.color = Color.white;
-
-                RectTransform rt = iconObj.GetComponent<RectTransform>();
-                rt.anchorMin = new Vector2(1f, 0.5f);
-                rt.anchorMax = new Vector2(1f, 0.5f);
-                rt.pivot = new Vector2(1f, 0.5f);
-                rt.anchoredPosition = new Vector2(-6f, 0f);
-                rt.sizeDelta = new Vector2(20f, 20f);
-            }
-            else if (tag != null)
-            {
-                Text tagText = MakeText(obj.transform, tag, 9, tagColor, TextAnchor.MiddleRight);
-                Stretch(tagText.rectTransform, 8f, 8f);
-            }
-            return button;
-        }
-
-        private static Text MakeText(Transform parent, string value, int size, Color color, TextAnchor alignment)
-        {
-            var obj = new GameObject("Text", typeof(RectTransform), typeof(Text));
-            obj.transform.SetParent(parent, false);
-            Text text = obj.GetComponent<Text>();
-            text.text = value;
-            text.font = UIFontHelper.GetPixelFont();
-            text.fontSize = size;
-            text.color = color;
-            text.alignment = alignment;
-            text.lineSpacing = 1.2f;
-            text.horizontalOverflow = HorizontalWrapMode.Wrap;
-            text.verticalOverflow = VerticalWrapMode.Overflow;
-            text.raycastTarget = false;
-            return text;
-        }
-
-        private static void SetHeight(Text text, float height)
-        {
-            text.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
-        }
-
-        private static void Stretch(RectTransform rect, float left, float right)
-        {
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = new Vector2(left, 0f);
-            rect.offsetMax = new Vector2(-right, 0f);
-        }
+        private static string FormatNumber(int value) => value.ToString("N0", CultureInfo.InvariantCulture);
     }
 }

@@ -136,11 +136,13 @@ namespace TrashTD.Core.GameLoop
 
         private void Update()
         {
-            if (!isInitialized) return;
+            if (!isInitialized || !StageCombatModifiers.HazardsEnabled) return;
 
             GameManager gameManager = GameManager.Instance;
             bool isCombatPaused = gameManager != null && gameManager.IsPaused;
-            bool isWaveActive = gameManager == null || gameManager.CurrentPhase == StagePhase.WaveActive;
+            // The sandbox stays in Preparation, so there items fall while one of its waves is live
+            bool isWaveActive = gameManager == null || gameManager.CurrentPhase == StagePhase.WaveActive ||
+                (gameManager.IsSandbox && waveManager != null && waveManager.IsWaveInProgress);
 
             if (isCombatPaused || !isWaveActive) return;
 

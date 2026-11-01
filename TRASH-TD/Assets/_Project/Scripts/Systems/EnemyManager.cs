@@ -383,7 +383,7 @@ namespace TrashTD.Systems
         private bool MatchesQueryCells(EnemyBase enemy, bool canTargetAir)
         {
             if (enemy == null || enemy.IsDead || enemy.IsInsideHole) return false;
-            if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air) return false;
+            if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air && !enemy.IsWithinMeleeReach) return false;
 
             // 1. Direct discrete grid position check
             Vector2Int pos = gridManager.WorldToGridPosition(enemy.transform.position);
@@ -476,7 +476,7 @@ namespace TrashTD.Systems
         private static bool IsInRadius(EnemyBase enemy, Vector3 center, float sqrRadius, bool canTargetAir)
         {
             if (enemy == null || enemy.IsDead || enemy.IsInsideHole) return false;
-            if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air) return false;
+            if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air && !enemy.IsWithinMeleeReach) return false;
             return (enemy.transform.position - center).sqrMagnitude <= sqrRadius;
         }
 

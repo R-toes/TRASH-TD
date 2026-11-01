@@ -1,5 +1,6 @@
 using UnityEngine;
 using TrashTD.Audio;
+using TrashTD.Core.Grid;
 using TrashTD.Data;
 using TrashTD.Operators;
 
@@ -23,6 +24,12 @@ namespace TrashTD.Enemies
         private const float StrikeHoldTime = 0.09f;
         private const float RiseTime = 0.42f;
         private const float StrikeHeightTiles = 0.3f; // the sprite's centre stops this far above the operator
+        // Melee operators can hit it from halfway down the dive until it's 40% of the way back up
+        private const float MeleeReachDiveFrom = 0.5f;
+        private const float MeleeReachRiseUntil = 0.4f;
+        // Hold point against a ground operator: just past the shared tile edge (0.5), so the rat counts as on the
+        // operator's tile for melee range instead of sitting exactly on the border
+        private const float GroundHoldFraction = 0.52f;
 
         private enum SwoopPhase { None, Diving, Holding, Rising }
 
@@ -50,6 +57,89 @@ namespace TrashTD.Enemies
         protected override bool IsTargetInRange(OperatorBase op)
         {
             return IsOnOrAdjacent(op);
+        }
+
+        /// <summary>Low in its swoop, the rat is in reach of ground melee operators.</summary>
+        public override bool IsWithinMeleeReach
+        {
+            get
+            {
+                if (IsDead || phase == SwoopPhase.None) return false;
+                float k = phaseDuration > 0f ? phaseTimer / phaseDuration : 1f;
+                return phase == SwoopPhase.Holding ||
+                       (phase == SwoopPhase.Diving && k >= MeleeReachDiveFrom) ||
+                       (phase == SwoopPhase.Rising && k <= MeleeReachRiseUntil);
+            }
+        }
+
+        /// <summary>
+        /// Fighting a ground operator, the rat holds where a blocked ground enemy would: on the edge between its tile
+        /// and the operator's (EnemyBase.OnBlocked), instead of creeping over the operator. It isn't blocked: it
+        /// attacks on its own timer and flies on when the target is gone. Against high-ground operators it keeps the
+        /// shared hover-and-creep (AirCombatEnemy).
+        /// </summary>
+        protected override void MoveAlongPath()
+        {
+            OperatorBase target = CurrentAirTarget;
+            if (!TryGetGroundHoldPoint(target, out Vector3 hold))
+            {
+                base.MoveAlongPath();
+                return;
+            }
+
+            if ((transform.position - hold).sqrMagnitude > 0.0001f)
+                transform.position = Vector3.MoveTowards(transform.position, hold, currentMoveSpeed * Time.deltaTime);
+            UpdateFacing(target.transform.position.x - transform.position.x);
+        }
+
+        private bool TryGetGroundHoldPoint(OperatorBase target, out Vector3 hold)
+        {
+            hold = default;
+            GridManager grid = GridManagerCache;
+            if (target == null || grid == null || path == null || path.Count == 0 || target.DeployedCell == null) return false;
+            TileType tileType = target.DeployedCell.TileType;
+            if (tileType != TileType.LowGround && tileType != TileType.EnemyPath) return false;
+
+            Vector2Int targetTile = target.DeployedCell.GridPosition;
+            Vector3 targetCenter = target.DeployedCell.WorldPosition;
+
+            // On the path: the edge it enters the operator's tile through (nearest occurrence, as OnBlocked picks it)
+            int best = -1;
+            int last = Mathf.Min(path.Count - 1, currentPathIndex + 2);
+            for (int i = Mathf.Max(1, currentPathIndex - 1); i <= last; i++)
+            {
+                if (grid.WorldToGridPosition(path[i]) != targetTile) continue;
+                if (best < 0 || Mathf.Abs(i - currentPathIndex) < Mathf.Abs(best - currentPathIndex)) best = i;
+            }
+
+            Vector3 from;
+            if (best > 0)
+            {
+                from = path[best - 1];
+                currentPathIndex = best;
+            }
+            else if (!TryGetAdjacentWaypoint(grid, targetTile, out from))
+            {
+                return false;
+            }
+
+            hold = Vector3.Lerp(from, targetCenter, GroundHoldFraction);
+            hold.z = transform.position.z;
+            return true;
+        }
+
+        /// <summary>Beside the path: the rat's current or previous waypoint, if it's orthogonally next to the operator.</summary>
+        private bool TryGetAdjacentWaypoint(GridManager grid, Vector2Int targetTile, out Vector3 waypoint)
+        {
+            waypoint = default;
+            for (int i = Mathf.Min(currentPathIndex, path.Count - 1); i >= Mathf.Max(0, currentPathIndex - 1); i--)
+            {
+                Vector2Int tile = grid.WorldToGridPosition(path[i]);
+                if (Mathf.Abs(tile.x - targetTile.x) + Mathf.Abs(tile.y - targetTile.y) != 1) continue;
+                waypoint = path[i];
+                return true;
+            }
+            return false;
         }
 
         protected override void Update()

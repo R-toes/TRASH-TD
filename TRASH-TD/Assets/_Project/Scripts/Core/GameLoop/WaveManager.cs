@@ -27,7 +27,7 @@ namespace TrashTD.Core.GameLoop
         private int sandboxSpawnPointCount;
         private int sandboxSpawnCursor;
         private bool isSandboxStage;
-        private Coroutine sandboxSpawnCoroutine;
+        private readonly List<Coroutine> sandboxSpawnCoroutines = new List<Coroutine>();
 
         private const float SandboxQueueSpawnIntervalSeconds = 1f;
 
@@ -95,7 +95,7 @@ namespace TrashTD.Core.GameLoop
             sandboxWaveNumber = 0;
             sandboxSpawnPointCount = stageData.spawnPoints != null ? stageData.spawnPoints.Length : 0;
             sandboxSpawnCursor = 0;
-            sandboxSpawnCoroutine = null;
+            sandboxSpawnCoroutines.Clear();
             currentWaveIndex = -1;
             pathCache.Clear();
 
@@ -205,16 +205,45 @@ namespace TrashTD.Core.GameLoop
             return TrySpawnSandboxEnemy(enemyData);
         }
 
-        public bool StartSandboxWave(IReadOnlyList<EnemyData> queuedEnemies)
+        /// <summary>Number of map spawn points the sandbox can use.</summary>
+        public int SandboxSpawnPointCount => sandboxSpawnPointCount;
+
+        /// <summary>
+        /// Starts a sandbox wave. Timed groups (loaded from a real stage wave) run in parallel with their own
+        /// start delay, interval and spawn point, exactly like a stage wave. Untimed groups (hand-queued) follow
+        /// one after another, one enemy a second, cycling through the spawn points.
+        /// <paramref name="hazardWaveNumber"/> is the wave number reported to wave-start hazards (Stage 4 heat,
+        /// Stage 5 traffic from wave 6), so a loaded wave behaves like that wave of its stage.
+        /// </summary>
+        public bool StartSandboxWave(IReadOnlyList<SandboxSpawnGroup> groups, int hazardWaveNumber)
         {
             if (!isSandboxStage || IsWaveInProgress)
                 return false;
 
             sandboxWaveNumber++;
             IsWaveInProgress = true;
+            sandboxSpawnCoroutines.Clear();
+
+            var untimed = new List<SandboxSpawnGroup>();
+            int pending = 0;
+            if (groups != null)
+            {
+                foreach (SandboxSpawnGroup group in groups)
+                {
+                    if (group == null || group.enemy == null || group.count <= 0) continue;
+                    // Copied so editing the sandbox queue mid-wave can't change what is spawning
+                    SandboxSpawnGroup copy = group.Clone();
+                    pending += copy.count;
+                    if (copy.timed) sandboxSpawnCoroutines.Add(StartCoroutine(SpawnSandboxTimedGroupRoutine(copy)));
+                    else untimed.Add(copy);
+                }
+            }
+            PendingSpawnCount = pending;
+            if (untimed.Count > 0)
+                sandboxSpawnCoroutines.Add(StartCoroutine(SpawnSandboxQueueRoutine(untimed)));
+
+            OnWaveStarted?.Invoke(hazardWaveNumber, 0);
             OperatorManager.Instance?.MarkAllDeployedOperatorsAsFought();
-            sandboxSpawnCoroutine = StartCoroutine(SpawnSandboxQueueRoutine(
-                queuedEnemies != null ? new List<EnemyData>(queuedEnemies) : new List<EnemyData>()));
             return true;
         }
 
@@ -223,34 +252,65 @@ namespace TrashTD.Core.GameLoop
             if (!isSandboxStage)
                 return;
 
-            if (sandboxSpawnCoroutine != null)
-            {
-                StopCoroutine(sandboxSpawnCoroutine);
-                sandboxSpawnCoroutine = null;
-            }
-
+            StopSandboxSpawning();
             IsWaveInProgress = false;
+            KillAllSandboxEnemies();
+        }
+
+        /// <summary>Kills every enemy on the field; the wave stays live and queued spawns keep coming.</summary>
+        public void KillAllSandboxEnemies()
+        {
+            if (!isSandboxStage)
+                return;
+
             if (enemyManager == null)
                 enemyManager = EnemyManager.Instance ?? FindAnyObjectByType<EnemyManager>();
             if (enemyManager != null)
                 enemyManager.ClearAllForSandbox();
         }
 
-        private IEnumerator SpawnSandboxQueueRoutine(List<EnemyData> queuedEnemies)
+        private void StopSandboxSpawning()
         {
-            for (int i = 0; i < queuedEnemies.Count; i++)
+            foreach (Coroutine routine in sandboxSpawnCoroutines)
             {
-                if (queuedEnemies[i] != null)
-                    TrySpawnSandboxEnemy(queuedEnemies[i]);
-
-                if (i < queuedEnemies.Count - 1)
-                    yield return new WaitForSeconds(SandboxQueueSpawnIntervalSeconds);
+                if (routine != null) StopCoroutine(routine);
             }
-
-            sandboxSpawnCoroutine = null;
+            sandboxSpawnCoroutines.Clear();
+            PendingSpawnCount = 0;
         }
 
-        private bool TrySpawnSandboxEnemy(EnemyData enemyData)
+        private IEnumerator SpawnSandboxQueueRoutine(List<SandboxSpawnGroup> groups)
+        {
+            bool first = true;
+            foreach (SandboxSpawnGroup group in groups)
+            {
+                for (int i = 0; i < group.count; i++)
+                {
+                    if (!first)
+                        yield return new WaitForSeconds(SandboxQueueSpawnIntervalSeconds);
+                    first = false;
+                    PendingSpawnCount = Mathf.Max(0, PendingSpawnCount - 1);
+                    TrySpawnSandboxEnemy(group.enemy, group.spawnPoint);
+                }
+            }
+        }
+
+        private IEnumerator SpawnSandboxTimedGroupRoutine(SandboxSpawnGroup group)
+        {
+            if (group.startDelay > 0f)
+                yield return new WaitForSeconds(group.startDelay);
+
+            for (int i = 0; i < group.count; i++)
+            {
+                PendingSpawnCount = Mathf.Max(0, PendingSpawnCount - 1);
+                TrySpawnSandboxEnemy(group.enemy, group.spawnPoint);
+                if (i < group.count - 1 && group.interval > 0f)
+                    yield return new WaitForSeconds(group.interval);
+            }
+        }
+
+        /// <summary>Spawns at <paramref name="spawnPoint"/> when it has a path, otherwise at the next spawn point in turn.</summary>
+        private bool TrySpawnSandboxEnemy(EnemyData enemyData, int spawnPoint = -1)
         {
             if (enemyManager == null)
                 enemyManager = FindAnyObjectByType<EnemyManager>();
@@ -259,6 +319,10 @@ namespace TrashTD.Core.GameLoop
                 Debug.LogError("WaveManager: Cannot spawn sandbox enemy without an EnemyManager.");
                 return false;
             }
+
+            if (spawnPoint >= 0 && pathCache.TryGetValue(GetPathKey(spawnPoint), out List<Vector3> fixedPath) &&
+                fixedPath != null && fixedPath.Count > 0)
+                return enemyManager.SpawnEnemy(enemyData, fixedPath, EnemyLevel) != null;
 
             for (int i = 0; i < sandboxSpawnPointCount; i++)
             {
@@ -425,5 +489,20 @@ namespace TrashTD.Core.GameLoop
             IsActive = false;
             PendingSpawnCount = 0;
         }
+    }
+
+    /// <summary>One line of the QA sandbox's spawn queue (see <see cref="WaveManager.StartSandboxWave"/>).</summary>
+    public sealed class SandboxSpawnGroup
+    {
+        public EnemyData enemy;
+        public int count = 1;
+        /// <summary>True for groups loaded from a stage wave: they keep the wave's own timing and spawn point.</summary>
+        public bool timed;
+        public float startDelay;
+        public float interval;
+        /// <summary>Spawn point index, or -1 to cycle through the spawn points.</summary>
+        public int spawnPoint = -1;
+
+        public SandboxSpawnGroup Clone() => (SandboxSpawnGroup)MemberwiseClone();
     }
 }

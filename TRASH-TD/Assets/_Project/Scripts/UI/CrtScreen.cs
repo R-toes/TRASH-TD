@@ -54,32 +54,14 @@ namespace TrashTD.UI
                 scaled.brightness *= scale;
                 return scaled;
             }
-
-            /// <summary>
-            /// Full TV on screens under 1080 lines. The slot mask, scanline beams, soft sampling and halation are
-            /// sized in screen pixels while the UI shrinks with the screen, so small text blurred into them. They
-            /// fade down below 1080p (clearest at 720p and under), and brightness drops with them because the
-            /// lighter mask no longer darkens the picture as much. Classic and Off are unchanged.
-            /// </summary>
-            public Settings ForPictureHeight(int height)
-            {
-                if (legacy > 0.5f || passthrough > 0.5f) return this;
-
-                float t = Mathf.InverseLerp(1080f, 720f, height);
-                if (t <= 0f) return this;
-
-                Settings clear = this;
-                clear.sharpness = Mathf.Lerp(sharpness, 1f, t);
-                clear.maskStrength = Mathf.Lerp(maskStrength, 0.35f, t);
-                clear.scanlineStrength = Mathf.Lerp(scanlineStrength, 0.45f, t);
-                clear.beamMin = Mathf.Lerp(beamMin, 0.3f, t);
-                clear.beamMax = Mathf.Lerp(beamMax, 0.5f, t);
-                clear.bloom = Mathf.Lerp(bloom, 0.2f, t);
-                clear.chromatic = Mathf.Lerp(chromatic, chromatic * 0.5f, t);
-                clear.brightness = Mathf.Lerp(brightness, 1.1f, t);
-                return clear;
-            }
         }
+
+        /// <summary>
+        /// Lines the Full TV look is designed at (4K). On smaller screens CrtDisplay lays the scanlines, slot mask,
+        /// soft sampling and halation out at this height and the shader filters them down to the real pixels, so
+        /// every resolution gets the 4K look without the effects smearing small text.
+        /// </summary>
+        public const int VirtualPictureHeight = 2160;
 
         /// <summary>
         /// Classic: the first working CRT (originally on the stage selection screen only), kept exactly: sine
@@ -247,6 +229,7 @@ namespace TrashTD.UI
         private static readonly int PassthroughId = Shader.PropertyToID("_Passthrough");
         private static readonly int TimeId = Shader.PropertyToID("_CrtTime");
         private static readonly int ResolutionId = Shader.PropertyToID("_CrtResolution");
+        private static readonly int VirtualScaleId = Shader.PropertyToID("_CrtVirtualScale");
 
         /// <summary>Creates a CRT material, or null if the shader is missing (logs a warning).</summary>
         internal static Material CreateMaterial(string materialName, Object context)
@@ -291,19 +274,26 @@ namespace TrashTD.UI
         }
 
         /// <summary>
-        /// Per-frame values: time, picture size, and the scanline / mask sizes that depend on it
-        /// (about 270 scanlines and one phosphor per pixel at 1080p, scaled up on bigger screens).
+        /// Per-frame values: time, picture size, and the scanline / mask sizes that depend on it (about 270
+        /// scanlines and one phosphor per 1080th of the height). A <paramref name="virtualHeight"/> taller than the
+        /// picture lays those out at that height instead, in virtual pixels (Full TV below 4K; see
+        /// <see cref="VirtualPictureHeight"/>). Classic and Off always use the real pixels.
         /// </summary>
-        internal static void UpdateFrame(Material material, Settings settings, int width, int height)
+        internal static void UpdateFrame(Material material, Settings settings, int width, int height, int virtualHeight = 0)
         {
             if (material == null) return;
+            bool fullLook = settings.legacy < 0.5f && settings.passthrough < 0.5f;
+            float virtualScale = fullLook && virtualHeight > height ? virtualHeight / (float)Mathf.Max(1, height) : 1f;
+            float lines = height * virtualScale;
+
             material.SetFloat(TimeId, Time.unscaledTime);
             material.SetVector(ResolutionId, new Vector4(width, height, 0f, 0f));
+            material.SetFloat(VirtualScaleId, virtualScale);
             float period = settings.scanlinePeriod > 0f
-                ? settings.scanlinePeriod
-                : Mathf.Clamp(Mathf.Round(height / 270f), 2f, 8f);
+                ? settings.scanlinePeriod * virtualScale
+                : Mathf.Clamp(Mathf.Round(lines / 270f), 2f, 8f);
             material.SetFloat(ScanlinePeriodId, period);
-            material.SetFloat(MaskScaleId, Mathf.Max(1f, Mathf.Round(height / 1080f)));
+            material.SetFloat(MaskScaleId, Mathf.Max(1f, Mathf.Round(lines / 1080f)));
         }
 
         /// <summary>A display point at uv shows the picture at Distort(uv). Mirrors Distort in the shader.</summary>

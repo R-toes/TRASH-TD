@@ -67,6 +67,7 @@ namespace TrashTD.Core.GameLoop
         private CardDraftOverlayUI draftOverlay;
         private TutorialDialogueUI dialogue;
         private TutorialStageVisuals visuals;
+        private TutorialPopup window; // control picker or cooldown briefing, while one is open
 
         private bool draftReleased;
         private OperatorData pickTarget;
@@ -120,6 +121,7 @@ namespace TrashTD.Core.GameLoop
                 dialogue.SkipConfirmed -= HandleSkipConfirmed;
                 Destroy(dialogue.gameObject);
             }
+            window?.Close();
         }
 
         /// <summary>
@@ -170,6 +172,7 @@ namespace TrashTD.Core.GameLoop
             // Stay out of the way of the pause menu (it pauses the game itself)
             bool pauseMenu = hud != null && hud.IsPauseMenuOpen;
             dialogue.SetShown(!pauseMenu);
+            window?.SetShown(!pauseMenu);
             if (pauseMenu) return;
 
             // Coalesce talking (or the skip prompt) freezes everything; tasks run at the chosen speed
@@ -343,7 +346,26 @@ namespace TrashTD.Core.GameLoop
                     yield return Talk(step);
                     FinishTutorial();
                     break;
+
+                case TutorialAction.ChooseControls:
+                    yield return WindowStep(TutorialPopup.ShowControlPicker(step.text, _ => advanced = true));
+                    break;
+
+                case TutorialAction.CooldownBriefing:
+                    yield return WindowStep(TutorialPopup.ShowCooldownBriefing(step.text, () => advanced = true));
+                    break;
             }
+        }
+
+        /// <summary>A tutorial window (control picker, cooldown briefing): Coalesce steps aside until it's closed.</summary>
+        private IEnumerator WindowStep(TutorialPopup opened)
+        {
+            advanced = false;
+            window = opened;
+            dialogue.HideBubble();
+            while (!advanced && !ending && window != null && window.IsOpen) yield return null;
+            window?.Close();
+            window = null;
         }
 
         private bool IsStageOver => gameManager.CurrentState == GamePlayState.Victory || gameManager.CurrentState == GamePlayState.Defeat;
@@ -362,6 +384,9 @@ namespace TrashTD.Core.GameLoop
                 case TutorialCondition.OperatorOnField: return FindDeployed(step.operatorData) != null;
                 case TutorialCondition.OperatorInDeck: return FindDeployed(step.operatorData) == null && HasCardInDeck(step.operatorData);
                 case TutorialCondition.OperatorGone: return FindDeployed(step.operatorData) == null && !HasCardInDeck(step.operatorData);
+                case TutorialCondition.ControlsPrecise: return ControlSettings.Scheme == PlacementControlScheme.Precise;
+                case TutorialCondition.ControlsSwipe: return ControlSettings.Scheme == PlacementControlScheme.Swipe;
+                case TutorialCondition.ControlsQuick: return ControlSettings.Scheme == PlacementControlScheme.Quick;
                 default: return true;
             }
         }
@@ -398,7 +423,10 @@ namespace TrashTD.Core.GameLoop
             if (ending) yield break;
 
             pickTarget = step.operatorData;
-            if (step.cards != null && step.cards.Length > 0) draftSystem?.SetScriptedOffer(step.cards);
+            // When Coalesce names a card, only that card is dealt, so there's nothing else to click.
+            // A free pick (no operatorData) deals the step's whole hand.
+            if (pickTarget != null) draftSystem?.SetScriptedOffer(new[] { pickTarget });
+            else if (step.cards != null && step.cards.Length > 0) draftSystem?.SetScriptedOffer(step.cards);
             draftReleased = true;
             draftOverlay?.ReleaseHeldDraft();
 

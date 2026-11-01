@@ -9,6 +9,9 @@
 // _Legacy = 1 keeps the first, crisper version (sine scanlines, light stripe tint, small glow) for the
 // Classic graphics option; _Passthrough = 1 shows the picture with brightness only.
 // CrtScreen.Distort / IsOnScreen mirror Distort and ScreenMask here; keep them in sync.
+// _CrtVirtualScale > 1 (Full TV below 4K): the full-look effects are laid out as if the picture were
+// _CrtVirtualScale times taller (about 2160 lines), then filtered down to the real pixels instead of being
+// redrawn per screen pixel, so low resolutions get the 4K look without the effects smearing small text.
 Shader "TrashTD/UI/CRT"
 {
     Properties
@@ -50,6 +53,7 @@ Shader "TrashTD/UI/CRT"
 
         _CrtTime ("Time (unscaled, set by script)", Float) = 0
         _CrtResolution ("Resolution in px (set by script)", Vector) = (1920, 1080, 0, 0)
+        _CrtVirtualScale ("Virtual resolution scale (set by script)", Float) = 1
 
         _StencilComp ("Stencil Comparison", Float) = 8
         _Stencil ("Stencil ID", Float) = 0
@@ -153,6 +157,7 @@ Shader "TrashTD/UI/CRT"
             fixed4 _BezelColor;
             float _CrtTime;
             float4 _CrtResolution;
+            float _CrtVirtualScale;
 
             v2f vert(appdata_t v)
             {
@@ -218,21 +223,34 @@ Shader "TrashTD/UI/CRT"
                 return color;
             }
 
+            // Sharp bilinear: nearly nearest-pixel inside each texel with a thin blended band at its edges, so
+            // the curvature's resampling keeps 1-pixel strokes crisp. scale 1 = plain bilinear.
+            float2 SharpUv(float2 uv, float scale)
+            {
+                float2 size = max(_CrtResolution.xy, float2(1.0, 1.0));
+                float2 texel = uv * size;
+                float2 base = floor(texel);
+                float2 fromCentre = frac(texel) - 0.5;
+                float region = 0.5 - 0.5 / max(scale, 1.0);
+                float2 f = (fromCentre - clamp(fromCentre, -region, region)) * max(scale, 1.0) + 0.5;
+                return (base + f) / size;
+            }
+
             // Analogue-style horizontal reconstruction: neighbours blend in as sharpness drops
-            float3 SampleSoft(float2 uv, float texelX)
+            float3 SampleSoft(float2 uv, float texelX, float sharpScale)
             {
                 float side = 0.5 * (1.0 - _Sharpness);
-                float3 c = Pic(uv).rgb;
-                float3 l = Pic(uv - float2(texelX, 0.0)).rgb;
-                float3 r = Pic(uv + float2(texelX, 0.0)).rgb;
+                float3 c = Pic(SharpUv(uv, sharpScale)).rgb;
+                float3 l = Pic(SharpUv(uv - float2(texelX, 0.0), sharpScale)).rgb;
+                float3 r = Pic(SharpUv(uv + float2(texelX, 0.0), sharpScale)).rgb;
                 return (c + (l + r) * side) / (1.0 + 2.0 * side);
             }
 
-            // RGB phosphor mask in output pixels. Type 0: aperture grille (vertical RGB stripes).
-            // Type 1: slot mask (RGB triads in short slots, alternate triads offset by half a slot).
-            float3 PhosphorMask(float2 pixel)
+            // RGB phosphor mask; scale = output pixels per phosphor. Type 0: aperture grille (vertical RGB
+            // stripes). Type 1: slot mask (RGB triads in short slots, alternate triads offset by half a slot).
+            float3 PhosphorMask(float2 pixel, float scale)
             {
-                float2 p = floor(pixel / max(_MaskScale, 1.0));
+                float2 p = floor(pixel / max(scale, 1.0));
                 float channel = fmod(p.x, 3.0);
                 float3 lit = float3(channel < 0.5, channel >= 0.5 && channel < 1.5, channel >= 1.5);
                 float3 mask = lerp(_MaskDark.xxx, _MaskLight.xxx, lit);
@@ -245,6 +263,14 @@ Shader "TrashTD/UI/CRT"
                 }
 
                 return lerp(float3(1.0, 1.0, 1.0), mask, _MaskStrength);
+            }
+
+            // What the mask averages to from a distance (the same for every channel)
+            float MaskMean()
+            {
+                float mean = (2.0 * _MaskDark + _MaskLight) / 3.0;
+                if (_MaskType > 0.5) mean *= (3.0 + _MaskDark) / 4.0;
+                return lerp(1.0, mean, _MaskStrength);
             }
 
             fixed4 frag(v2f IN) : SV_Target
@@ -261,11 +287,15 @@ Shader "TrashTD/UI/CRT"
                 float2 res = max(_CrtResolution.xy, float2(1.0, 1.0));
                 float2 texel = 1.0 / res;
                 float period = max(_ScanlinePeriod, 1.0);
+                // Full TV lays its effects out on the virtual (about 4K) picture; 1 for every other style
+                float virtualScale = max(_CrtVirtualScale, 1.0);
+                float2 virtualRes = res * virtualScale;
+                float2 virtualTexel = texel / virtualScale;
 
                 float2 uv = Distort(IN.texcoord);
 
                 // Faint per-line horizontal jitter
-                float lineIndex = floor(uv.y * res.y / period);
+                float lineIndex = floor(uv.y * virtualRes.y / period);
                 uv.x += (Hash(float2(lineIndex, floor(t * 24.0))) - 0.5) * _Jitter;
 
                 float inside = ScreenMask(uv, 0.003);
@@ -301,26 +331,39 @@ Shader "TrashTD/UI/CRT"
                 else
                 {
                     // Picture with colour fringing toward the edges
-                    col.r = SampleSoft(uv + fringe, texel.x).r;
-                    col.g = SampleSoft(uv, texel.x).g;
-                    col.b = SampleSoft(uv - fringe, texel.x).b;
+                    col.r = SampleSoft(uv + fringe, virtualTexel.x, virtualScale).r;
+                    col.g = SampleSoft(uv, virtualTexel.x, virtualScale).g;
+                    col.b = SampleSoft(uv - fringe, virtualTexel.x, virtualScale).b;
                     alpha = Pic(uv).a;
 
                     // Scanline beam: a gaussian across each line, wider for brighter pixels,
-                    // normalised so a line keeps roughly its average brightness
+                    // normalised so a line keeps roughly its average brightness. Averaged over the
+                    // pixel's height, so lines only a few screen pixels tall soften instead of cutting
+                    // through text; under 3 screen pixels a line also fades a little.
                     float luma = dot(col, float3(0.2126, 0.7152, 0.0722));
-                    float f = frac(uv.y * res.y / period) - 0.5;
                     float beam = lerp(_BeamMin, _BeamMax, saturate(luma));
-                    float scan = exp(-(f * f) / (2.0 * beam * beam));
-                    scan *= 1.0 / clamp(beam * 2.5066, 0.4, 1.0);
-                    col *= lerp(1.0, scan, _ScanlineStrength);
+                    float lineCoord = uv.y * virtualRes.y / period;
+                    float linesPerPixel = virtualScale / period;
+                    float scan = 0.0;
+                    [unroll] for (int k = 0; k < 4; k++)
+                    {
+                        float f = frac(lineCoord + ((k + 0.5) * 0.25 - 0.5) * linesPerPixel) - 0.5;
+                        scan += exp(-(f * f) / (2.0 * beam * beam));
+                    }
+                    scan *= 0.25 / clamp(beam * 2.5066, 0.4, 1.0);
+                    float linePixels = period / virtualScale;
+                    col *= lerp(1.0, scan, _ScanlineStrength * saturate((linePixels - 1.5) / 1.5));
 
-                    // RGB phosphors
-                    col *= PhosphorMask(IN.vertex.xy);
+                    // RGB phosphors. A phosphor never gets narrower than one screen pixel (sub-pixel
+                    // stripes alias into colour noise on text); the lost detail fades to the mask's
+                    // average, so the picture keeps the same tone as at 4K.
+                    float phosphorPixels = _MaskScale / virtualScale;
+                    float3 mask = PhosphorMask(IN.vertex.xy, max(phosphorPixels, 1.0));
+                    col *= lerp(MaskMean().xxx, mask, saturate(phosphorPixels));
 
                     // Halation: light spreading in the glass, filling the mask and scanline gaps
-                    float2 r1 = texel * 3.0;
-                    float2 r2 = texel * 7.0;
+                    float2 r1 = virtualTexel * 3.0;
+                    float2 r2 = virtualTexel * 7.0;
                     float3 glow =
                         Pic(uv + float2(r1.x, 0.0)).rgb + Pic(uv - float2(r1.x, 0.0)).rgb +
                         Pic(uv + float2(0.0, r1.y)).rgb + Pic(uv - float2(0.0, r1.y)).rgb +

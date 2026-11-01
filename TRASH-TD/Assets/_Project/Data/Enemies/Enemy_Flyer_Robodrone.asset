@@ -21,6 +21,9 @@ MonoBehaviour:
   baseRES: 10
   moveSpeed: 1.25
   damageType: 0
+  attackProjectileColor: {r: 1, g: 0.58, b: 0.16, a: 1}
+  usesPlasmaProjectileVisual: 1
+  projectileOrigin: {x: 0, y: -0.28}
   attackInterval: 2
   attackRange: 0
   isUnblockable: 1

@@ -45,6 +45,9 @@ namespace TrashTD.Data
         [Tooltip("Use a thick, granular sand projectile for enemy attacks")]
         public bool usesSandProjectileVisual;
 
+        [Tooltip("Fire glowing plasma bolts (tinted by attackProjectileColor) instead of lobbed globs")]
+        public bool usesPlasmaProjectileVisual;
+
         [Tooltip("Attack interval in seconds (for enemies that attack)")]
         public float attackInterval = 2.0f;
 

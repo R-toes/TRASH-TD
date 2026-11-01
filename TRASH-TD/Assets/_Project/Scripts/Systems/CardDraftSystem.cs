@@ -91,6 +91,12 @@ namespace TrashTD.Systems
 
         public IReadOnlyList<DraftCard> CurrentOfferedCards => currentOfferedCards;
         public int CurrentRound => currentRound;
+
+        /// <summary>
+        /// The first draft of a stage run (rerolls included). It deals 1★ operators only, so restarting the stage
+        /// to fish for an early 3★ doesn't pay off.
+        /// </summary>
+        public bool IsOpeningDraft => currentRound == 1;
         public int RerollsRemaining => rerollsRemaining;
 #if UNITY_EDITOR || DEBUG
         public IReadOnlyList<OperatorData> AvailableOperatorPool => availableOperatorPool;
@@ -247,7 +253,7 @@ namespace TrashTD.Systems
         /// Generates a new draft offering of 3 cards respecting all GDD constraints:
         /// - Exactly 3 cards
         /// - No duplicate classes
-        /// - 1★ to 3★ only
+        /// - 1★ to 3★ only (1★ only in the opening draft, <see cref="IsOpeningDraft"/>)
         /// </summary>
         public List<DraftCard> GenerateDraftOffer()
         {
@@ -270,13 +276,14 @@ namespace TrashTD.Systems
             }
 
             var selectedClasses = new HashSet<OperatorClass>();
+            OperatorRarity maxRarity = IsOpeningDraft ? OperatorRarity.Star1 : OperatorRarity.Star3;
             for (int i = 0; i < 3; i++)
             {
                 var candidatesByRarity = new Dictionary<OperatorRarity, List<OperatorData>>();
                 foreach (var op in availableOperatorPool)
                 {
                     if (op == null || selectedClasses.Contains(op.operatorClass)) continue;
-                    if (op.baseRarity < OperatorRarity.Star1 || op.baseRarity > OperatorRarity.Star3) continue;
+                    if (op.baseRarity < OperatorRarity.Star1 || op.baseRarity > maxRarity) continue;
 
                     if (!candidatesByRarity.TryGetValue(op.baseRarity, out var candidates))
                     {

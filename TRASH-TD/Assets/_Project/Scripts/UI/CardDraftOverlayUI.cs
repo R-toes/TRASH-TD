@@ -251,6 +251,13 @@ namespace TrashTD.UI
         private MenuButtonFeedback rerollFeedback;
         private Button skipButton;
         private MenuButtonFeedback skipFeedback;
+        private RectTransform skipAnimationToggleRect;
+
+        // --- Opening draft reroll notice (built on first use) ---
+        private GameObject rerollNoticeRoot;
+        private Image rerollNoticeCheck;
+        private bool rerollNoticeDontShow;
+        private bool rerollNoticeAcknowledged; // shown once per opening draft
 #if UNITY_EDITOR || DEBUG
         private Button developerPickButton;
         private GameObject developerPickerRoot;
@@ -469,6 +476,21 @@ namespace TrashTD.UI
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             if (keyboard == null) return;
 
+            if (rerollNoticeRoot != null && rerollNoticeRoot.activeSelf)
+            {
+                if (keyboard.escapeKey.wasPressedThisFrame)
+                {
+                    CloseRerollNotice(false);
+                    gameplayHudUI?.ConsumeEscapeKey();
+                }
+                else if (keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame ||
+                         keyboard.rKey.wasPressedThisFrame)
+                {
+                    CloseRerollNotice(true);
+                }
+                return;
+            }
+
 #if UNITY_EDITOR || DEBUG
             if (developerPickerRoot != null && developerPickerRoot.activeSelf)
             {
@@ -566,6 +588,8 @@ namespace TrashTD.UI
             waitingForEnvironmentBriefing = false;
             pickConfirmed = false;
             ResetMinimized();
+            rerollNoticeAcknowledged = false;
+            if (rerollNoticeRoot != null) rerollNoticeRoot.SetActive(false);
 
 #if UNITY_EDITOR || DEBUG
             if (developerPickerRoot != null) developerPickerRoot.SetActive(false);
@@ -600,6 +624,7 @@ namespace TrashTD.UI
             if (rerollButton != null) rerollButton.gameObject.SetActive(extras);
             if (skipButton != null) skipButton.gameObject.SetActive(extras);
             if (minimizeButton != null) minimizeButton.gameObject.SetActive(extras);
+            if (skipAnimationToggleRect != null) skipAnimationToggleRect.gameObject.SetActive(extras);
 #if UNITY_EDITOR || DEBUG
             if (developerPickButton != null) developerPickButton.gameObject.SetActive(extras);
 #endif
@@ -1655,6 +1680,18 @@ namespace TrashTD.UI
             // Wait for the current shuffle to finish before shuffling again.
             if (isShuffling) return;
 
+            if (draftSystem.IsOpeningDraft && draftSystem.RerollsRemaining > 0 && !rerollNoticeAcknowledged &&
+                GameplaySettings.ShowOpeningRerollNotice)
+            {
+                ShowRerollNotice();
+                return;
+            }
+
+            Reroll();
+        }
+
+        private void Reroll()
+        {
             var newOffer = draftSystem.RerollOffer();
             if (newOffer == null)
             {
@@ -2152,6 +2189,7 @@ namespace TrashTD.UI
 
             // "Skip card animation" checkbox, under the deck count
             RectTransform skipToggleRect = BuildSkipAnimationToggle(overlayRoot.transform);
+            skipAnimationToggleRect = skipToggleRect;
 
             // Card container (left side of the screen). Cards are positioned manually
             // (not by a layout group) so the shuffle/deal animation can move them freely.
@@ -2324,6 +2362,143 @@ namespace TrashTD.UI
         {
             yield return new WaitForEndOfFrame();
             SetMinimized(true);
+        }
+
+        /// <summary>
+        /// Shown the first time REROLL is pressed in an opening draft (CardDraftSystem.IsOpeningDraft): that draft
+        /// only deals 1★ operators, rerolls included. REROLL goes ahead, CANCEL keeps the hand. "Don't show this
+        /// again" turns GameplaySettings.ShowOpeningRerollNotice off (back on in Settings → Gameplay).
+        /// </summary>
+        private void ShowRerollNotice()
+        {
+            if (rerollNoticeRoot == null) BuildRerollNotice();
+            rerollNoticeDontShow = false;
+            RefreshRerollNoticeCheck();
+            rerollNoticeRoot.transform.SetAsLastSibling();
+            rerollNoticeRoot.SetActive(true);
+            PlayClick();
+        }
+
+        private void CloseRerollNotice(bool reroll)
+        {
+            ClearUiSelection();
+            if (rerollNoticeRoot != null) rerollNoticeRoot.SetActive(false);
+            if (rerollNoticeDontShow) GameplaySettings.ShowOpeningRerollNotice = false;
+            if (!reroll)
+            {
+                PlayClick();
+                return;
+            }
+
+            rerollNoticeAcknowledged = true;
+            if (draftSystem != null && IsActiveGameplayCardPick() && !isShuffling) Reroll();
+        }
+
+        private void RefreshRerollNoticeCheck()
+        {
+            if (rerollNoticeCheck == null) return;
+            Sprite sprite = LoadUiSprite(rerollNoticeDontShow ? "UI/controls/checkbox_on" : "UI/controls/checkbox_off", Vector4.zero);
+            rerollNoticeCheck.sprite = sprite;
+            rerollNoticeCheck.color = sprite != null ? Color.white : (rerollNoticeDontShow ? ACCENT_COLOR : new Color(1f, 1f, 1f, 0.25f));
+        }
+
+        private void BuildRerollNotice()
+        {
+            const float panelWidth = 760f;
+            const float panelHeight = 390f;
+            const float textWidth = panelWidth - 80f;
+
+            // Full-screen dimmer: blocks the draft underneath while the notice is up
+            rerollNoticeRoot = new GameObject("OpeningRerollNotice", typeof(RectTransform), typeof(Image));
+            rerollNoticeRoot.transform.SetParent(overlayRoot.transform, false);
+            StretchFill(rerollNoticeRoot.GetComponent<RectTransform>());
+            rerollNoticeRoot.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.72f);
+
+            var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
+            panel.transform.SetParent(rerollNoticeRoot.transform, false);
+            PositionRT(panel.GetComponent<RectTransform>(), Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(panelWidth, panelHeight));
+            GameplayHUDUI.ApplyPanelContainer(panel, GameplayHUDUI.PanelContainerType.Metal);
+
+            void PlaceTop(RectTransform rect, float top, float width, float height)
+            {
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
+                rect.pivot = new Vector2(0.5f, 1f);
+                rect.anchoredPosition = new Vector2(0f, -top);
+                rect.sizeDelta = new Vector2(width, height);
+            }
+
+            Text title = MakeText(panel.transform, "Title", "OPENING DRAFT", 24, TextAnchor.MiddleCenter, HAZARD_YELLOW);
+            title.fontStyle = FontStyle.Bold;
+            PlaceTop(title.rectTransform, 28f, textWidth, 40f);
+
+            Sprite warningSprite = GameplayHUDUI.LoadIconSprite("icon_warning");
+            if (warningSprite != null)
+            {
+                Image icon = CreatePlainImage(panel.transform, "WarningIcon", HAZARD_YELLOW);
+                icon.sprite = warningSprite;
+                icon.preserveAspect = true;
+                PlaceTop(icon.rectTransform, 30f, 36f, 36f);
+                icon.rectTransform.anchoredPosition = new Vector2(-("OPENING DRAFT".Length * 24f) * 0.5f - 34f, -30f);
+            }
+
+            Text body = MakeText(panel.transform, "Body",
+                "The first draft of every run only deals 1-star operators, so restarting for a better hand won't " +
+                "help. Rerolling now will only show other 1-star operators too.",
+                14, TextAnchor.UpperCenter, STAT_VALUE_COLOR);
+            body.horizontalOverflow = HorizontalWrapMode.Wrap;
+            body.verticalOverflow = VerticalWrapMode.Overflow;
+            body.lineSpacing = 1.5f;
+            PlaceTop(body.rectTransform, 96f, textWidth, 120f);
+
+            // "Don't show this again" checkbox
+            const float boxSize = 24f;
+            const int checkFontSize = 12;
+            const string checkLabel = "DON'T SHOW THIS AGAIN";
+            var toggleObj = new GameObject("DontShowAgainToggle", typeof(RectTransform), typeof(Image), typeof(Button));
+            toggleObj.transform.SetParent(panel.transform, false);
+            toggleObj.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f); // invisible hit area over box + label
+            PlaceTop(toggleObj.GetComponent<RectTransform>(), 226f, boxSize + 10f + checkLabel.Length * checkFontSize + 8f, 32f);
+
+            rerollNoticeCheck = CreatePlainImage(toggleObj.transform, "Box", Color.white);
+            rerollNoticeCheck.preserveAspect = true;
+            var boxRect = rerollNoticeCheck.rectTransform;
+            boxRect.anchorMin = boxRect.anchorMax = new Vector2(0f, 0.5f);
+            boxRect.pivot = new Vector2(0f, 0.5f);
+            boxRect.anchoredPosition = Vector2.zero;
+            boxRect.sizeDelta = new Vector2(boxSize, boxSize);
+
+            Text checkText = MakeText(toggleObj.transform, "Label", checkLabel, checkFontSize, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
+            StretchFill(checkText.rectTransform);
+            checkText.rectTransform.offsetMin = new Vector2(boxSize + 10f, 0f);
+
+            var toggle = toggleObj.GetComponent<Button>();
+            toggle.onClick.AddListener(() =>
+            {
+                rerollNoticeDontShow = !rerollNoticeDontShow;
+                RefreshRerollNoticeCheck();
+                PlayClick();
+            });
+            AttachFeedback(toggle, ACCENT_BRIGHT, 1.04f);
+
+            Text settingsHint = MakeText(panel.transform, "SettingsHint", "Turn it back on in SETTINGS > GAMEPLAY.", 10,
+                TextAnchor.MiddleCenter, new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.7f));
+            PlaceTop(settingsHint.rectTransform, 262f, textWidth, 20f);
+
+            Button reroll = MakeButton(panel.transform, "NoticeRerollButton", "REROLL", new Vector2(220f, 56f),
+                GameplayHUDUI.ButtonContainerType.Warning);
+            PlaceTop(reroll.GetComponent<RectTransform>(), panelHeight - 84f, 220f, 56f);
+            reroll.GetComponent<RectTransform>().anchoredPosition = new Vector2(-125f, -(panelHeight - 84f));
+            reroll.onClick.AddListener(() => CloseRerollNotice(true));
+            AttachFeedback(reroll, new Color(1f, 0.85f, 0.35f, 1f), 1.05f);
+
+            Button cancel = MakeButton(panel.transform, "NoticeCancelButton", "CANCEL", new Vector2(220f, 56f),
+                GameplayHUDUI.ButtonContainerType.Dark);
+            PlaceTop(cancel.GetComponent<RectTransform>(), panelHeight - 84f, 220f, 56f);
+            cancel.GetComponent<RectTransform>().anchoredPosition = new Vector2(125f, -(panelHeight - 84f));
+            cancel.onClick.AddListener(() => CloseRerollNotice(false));
+            AttachFeedback(cancel, Color.white, 1.05f);
+
+            rerollNoticeRoot.SetActive(false);
         }
 
 #if UNITY_EDITOR || DEBUG
