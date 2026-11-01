@@ -24,7 +24,7 @@ MonoBehaviour:
   attackProjectileColor: {r: 1, g: 0.95, b: 0.5, a: 1}
   usesSandProjectileVisual: 0
   attackInterval: 5
-  attackRange: 0
+  attackRange: 2
   frontAreaAttackTiles: 0
   isUnblockable: 0
   operatorAttackMissChance: 0

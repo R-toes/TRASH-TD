@@ -31,9 +31,9 @@ namespace TrashTD.Enemies
     ///   - Prioritizes deployed operator with the lowest DEF.
     /// 
     /// - State 2 (Laser):
-    ///   - Engages when a valid operator is within the State 2 pattern centered on Askalaser:
-    ///     - Yellow tiles (Ground & Ranged units): (0, 2), (-1, 1), (0, 1), (1, 1), (-2, 0), (-1, 0), (1, 0), (2, 0), (-1, -1), (0, -1), (1, -1), (0, -2)
-    ///     - Green tiles (Ranged units ONLY): (-1, 2), (1, 2), (-2, 1), (2, 1), (-2, -1), (2, -1), (-1, -2), (1, -2)
+    ///   - Engages when a valid operator is within the State 2 pattern centered on Askalaser (up to 2 tiles away):
+    ///     - Yellow tiles (Ground & Ranged units, Manhattan distance 1): (0, 1), (-1, 0), (1, 0), (0, -1)
+    ///     - Green tiles (Ranged units ONLY, Manhattan distance 2): (0, 2), (-1, 1), (1, 1), (-2, 0), (2, 0), (-1, -1), (1, -1), (0, -2)
     ///   - Continuous light magic laser locking onto one target.
     ///   - Completely stops moving while lasering.
     ///   - Ticks every 0.375 seconds.
@@ -218,38 +218,30 @@ namespace TrashTD.Enemies
 
         public static readonly Vector2Int[] YellowOffsets = new Vector2Int[]
         {
-            new Vector2Int(0, 2),
-            new Vector2Int(-1, 1), new Vector2Int(0, 1), new Vector2Int(1, 1),
-            new Vector2Int(-2, 0), new Vector2Int(-1, 0), new Vector2Int(1, 0), new Vector2Int(2, 0),
-            new Vector2Int(-1, -1), new Vector2Int(0, -1), new Vector2Int(1, -1),
-            new Vector2Int(0, -2)
+            new Vector2Int(0, 1),
+            new Vector2Int(-1, 0), new Vector2Int(1, 0),
+            new Vector2Int(0, -1)
         };
 
         public static readonly Vector2Int[] GreenOffsets = new Vector2Int[]
         {
-            new Vector2Int(-1, 2), new Vector2Int(1, 2),
-            new Vector2Int(-2, 1), new Vector2Int(2, 1),
-            new Vector2Int(-2, -1), new Vector2Int(2, -1),
-            new Vector2Int(-1, -2), new Vector2Int(1, -2)
+            new Vector2Int(0, 2),
+            new Vector2Int(-1, 1), new Vector2Int(1, 1),
+            new Vector2Int(-2, 0), new Vector2Int(2, 0),
+            new Vector2Int(-1, -1), new Vector2Int(1, -1),
+            new Vector2Int(0, -2)
         };
 
         public static bool IsInYellowPattern(Vector2Int offset)
         {
-            if (offset.y == 2 && offset.x == 0) return true;
-            if (offset.y == 1 && offset.x >= -1 && offset.x <= 1) return true;
-            if (offset.y == 0 && ((offset.x >= -2 && offset.x <= -1) || (offset.x >= 1 && offset.x <= 2))) return true;
-            if (offset.y == -1 && offset.x >= -1 && offset.x <= 1) return true;
-            if (offset.y == -2 && offset.x == 0) return true;
-            return false;
+            int manhattan = Mathf.Abs(offset.x) + Mathf.Abs(offset.y);
+            return manhattan == 1;
         }
 
         public static bool IsInGreenPattern(Vector2Int offset)
         {
-            if (offset.y == 2 && (offset.x == -1 || offset.x == 1)) return true;
-            if (offset.y == 1 && (offset.x == -2 || offset.x == 2)) return true;
-            if (offset.y == -1 && (offset.x == -2 || offset.x == 2)) return true;
-            if (offset.y == -2 && (offset.x == -1 || offset.x == 1)) return true;
-            return false;
+            int manhattan = Mathf.Abs(offset.x) + Mathf.Abs(offset.y);
+            return manhattan == 2;
         }
 
         public static int GetLaserDamageForDuration(float duration)
