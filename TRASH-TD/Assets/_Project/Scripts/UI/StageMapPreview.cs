@@ -234,6 +234,13 @@ namespace TrashTD.UI
                     AddLayer(layers, upper, true, mapSprite, mapOrigin, pixelsPerTile);
                 }
             }
+            if (stage.midgroundVisualSprites != null)
+            {
+                foreach (Sprite mid in stage.midgroundVisualSprites)
+                {
+                    AddLayer(layers, mid, false, mapSprite, mapOrigin, pixelsPerTile);
+                }
+            }
             AddLayer(layers, stage.foregroundVisualSprite, false, mapSprite, mapOrigin, pixelsPerTile);
 
             // Frame the art, falling back to the bare grid

@@ -23,6 +23,8 @@ MonoBehaviour:
   upperBackgroundVisualSprites: []
   visualTilePixelSize: 32
   visualTileOffset: {x: 0, y: -1}
+  midgroundVisualSprites:
+  - {fileID: -215299754494390219, guid: 75b5fdf88dcd3ee4481a554fc2d99b2a, type: 3}
   foregroundVisualSprite: {fileID: -7348133737525038051, guid: fcaf61630a3c5104aa46af6251bbaf52, type: 3}
   spawnPoints:
   - {x: 11, y: 4}

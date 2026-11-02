@@ -84,6 +84,9 @@ namespace TrashTD.Data
         [Tooltip("Offset in tiles for the visual sprite relative to grid bottom-left origin (x, y). Default (0,0) aligns sprite bottom-left to cell (0,0)")]
         public Vector2 visualTileOffset = Vector2.zero;
 
+        [Tooltip("Optional midground/obstacle overlays rendered above ground units (operators and walking enemies) but below flying units")]
+        public Sprite[] midgroundVisualSprites;
+
         [Tooltip("Optional foreground artwork displayed in front of units (e.g. fence/trees overlay)")]
         public Sprite foregroundVisualSprite;
 

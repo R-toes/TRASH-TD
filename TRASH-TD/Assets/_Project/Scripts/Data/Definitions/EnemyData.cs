@@ -58,6 +58,9 @@ namespace TrashTD.Data
         [Tooltip("For tanks, attack operators in this many tiles directly ahead")]
         public int frontAreaAttackTiles;
 
+        [Tooltip("Custom range pattern relative to forward direction (e.g. leap range)")]
+        public Vector2Int[] rangePattern;
+
         [Header("Blocking")]
         [Tooltip("If true, this enemy cannot be blocked by operators")]
         public bool isUnblockable = false;

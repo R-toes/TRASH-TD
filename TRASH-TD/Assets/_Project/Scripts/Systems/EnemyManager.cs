@@ -182,6 +182,8 @@ namespace TrashTD.Systems
                     enemyComp = enemyObj.AddComponent<Enemies.OcculormEnemy>();
                 else if (enemyData != null && (enemyData.enemyName == "Junkernaut" || enemyData.enemyName == "The Junkernaut"))
                     enemyComp = enemyObj.AddComponent<Enemies.JunkernautEnemy>();
+                else if (enemyData != null && (enemyData.enemyName == "O.F.O" || enemyData.enemyName.Contains("O.F.O") || enemyData.enemyName.Contains("Occu Flying Object")))
+                    enemyComp = enemyObj.AddComponent<Enemies.OfoEnemy>();
                 else
                     enemyComp = AddArchetypeComponent(enemyObj, enemyData.archetype);
             }

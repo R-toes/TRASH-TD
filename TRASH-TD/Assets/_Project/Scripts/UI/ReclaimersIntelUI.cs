@@ -1394,6 +1394,11 @@ namespace TrashTD.UI
                             if ((x != 0 || y != 0) && x * x + y * y <= reach * reach) hitCells.Add(new Vector2Int(x, y));
                     rangeReadout.text = "RANGED, " + reach.ToString("0.#") + " TILES";
                 }
+                else if (enemy.rangePattern != null && enemy.rangePattern.Length > 0)
+                {
+                    foreach (Vector2Int cell in enemy.rangePattern) hitCells.Add(cell);
+                    rangeReadout.text = "LEAP, 3 TILES AHEAD";
+                }
                 else if (enemy.frontAreaAttackTiles > 0)
                 {
                     for (int x = 1; x <= enemy.frontAreaAttackTiles; x++) hitCells.Add(new Vector2Int(x, 0));

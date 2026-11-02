@@ -1,6 +1,6 @@
-using System.Collections.Generic;
 using UnityEngine;
 using TrashTD.Combat;
+using TrashTD.Core.Grid;
 using TrashTD.Data;
 using TrashTD.Operators;
 using TrashTD.Systems;
@@ -8,77 +8,61 @@ using TrashTD.Systems;
 namespace TrashTD.Enemies
 {
     /// <summary>
-    /// Occulorm — Enemy Caster archetype.
+    /// Occuworm (Occulorm) — Enemy Rusher archetype.
     /// Characteristics:
-    /// - Arts ranged attack (normal caster range 2.5f, red projectile).
+    /// - Aggressive, high-durability rusher with high ATK (around 65) and 0.5s attack interval.
+    /// - Leaping ability: Detects deployed ground operators in the 3 tiles in front of it (like Proxishot's range pattern)
+    ///   and leaps/pounces onto them to strike and engage.
     /// - Immune to acid pools and acid rain.
-    /// - When leaving the spawn point, pauses on the first tile outside the spawn point for 10 seconds.
-    ///   While waiting, continues to attack operators in range and summon minions.
-    /// - Summons 2 Oculite Spawns every 5 seconds.
-    /// - Upon death, spawns 2 Oculite Spawns.
+    /// - Lifesteal: heals itself for 20% of the damage dealt when attacking operators.
     /// </summary>
-    public class OcculormEnemy : EnemyBase
+    public class OcculormEnemy : RusherEnemy
     {
-        public const float DefaultFirstTileWaitDuration = 10.0f;
-        public const float DefaultSummonInterval = 5.0f;
-        public const int DefaultSummonCount = 2;
-        public const int DefaultDeathSpawnCount = 2;
-        public static readonly Color RedProjectileColor = new Color(1f, 0.15f, 0.15f, 1f);
+        public const float DefaultLifestealRatio = 0.2f;
+        public const float DefaultLeapCooldown = 60.0f;
+        public const float DefaultLeapDuration = 0.35f;
+        public const float DefaultLeapArcHeight = 0.5f;
 
-        [Header("Occulorm Mechanics")]
-        [SerializeField] private float firstTileWaitDuration = DefaultFirstTileWaitDuration;
-        [SerializeField] private float summonInterval = DefaultSummonInterval;
-        [SerializeField] private int summonCount = DefaultSummonCount;
-        [SerializeField] private int deathSpawnCount = DefaultDeathSpawnCount;
-        [SerializeField] private EnemyData oculiteSpawnData;
+        [Header("Occuworm Mechanics")]
+        [SerializeField] private float lifestealRatio = DefaultLifestealRatio;
+        [SerializeField] private float leapCooldown = DefaultLeapCooldown;
+        [SerializeField] private float leapDuration = DefaultLeapDuration;
+        [SerializeField] private float leapArcHeight = DefaultLeapArcHeight;
 
-        private float firstTileWaitTimer;
-        private bool hasTriggeredFirstTileWait;
-        private bool isWaitingOnFirstTile;
-        private bool hasFinishedFirstTileWait;
-
-        private float summonTimer;
-        private bool hasDeathSpawned;
+        private float leapCooldownTimer;
+        private bool isLeaping;
+        private float leapElapsed;
+        private Vector3 leapStartPos;
+        private Vector3 leapTargetPos;
+        private OperatorBase leapTargetOperator;
 
         public override bool IsImmuneToAcidRain => true;
         public override bool IsImmuneToAcidTiles => true;
 
-        public float FirstTileWaitDuration
+        public float LifestealRatio
         {
-            get => firstTileWaitDuration;
-            set => firstTileWaitDuration = value;
+            get => lifestealRatio;
+            set => lifestealRatio = value;
         }
 
-        public float FirstTileWaitTimer => firstTileWaitTimer;
-        public bool IsWaitingOnFirstTile => isWaitingOnFirstTile;
-        public bool HasTriggeredFirstTileWait => hasTriggeredFirstTileWait;
-        public bool HasFinishedFirstTileWait => hasFinishedFirstTileWait;
-        public float SummonInterval => summonInterval;
-        public float SummonTimer => summonTimer;
-        public int SummonCount => summonCount;
-        public int DeathSpawnCount => deathSpawnCount;
-
-        public void SetOculiteSpawnData(EnemyData data)
+        public float LeapCooldown
         {
-            oculiteSpawnData = data;
+            get => leapCooldown;
+            set => leapCooldown = value;
         }
+
+        public float LeapCooldownTimer => leapCooldownTimer;
+        public bool IsLeaping => isLeaping;
+        public float LeapDuration { get => leapDuration; set => leapDuration = value; }
+        public float LeapArcHeight { get => leapArcHeight; set => leapArcHeight = value; }
 
         public override void Initialize(EnemyData enemyData, int difficultyLevel)
         {
             base.Initialize(enemyData, difficultyLevel);
-            firstTileWaitTimer = 0f;
-            hasTriggeredFirstTileWait = false;
-            isWaitingOnFirstTile = false;
-            hasFinishedFirstTileWait = false;
-            summonTimer = 0f;
-            hasDeathSpawned = false;
-        }
-
-        public void TriggerFirstTileWaitManually()
-        {
-            isWaitingOnFirstTile = true;
-            firstTileWaitTimer = firstTileWaitDuration;
-            hasTriggeredFirstTileWait = true;
+            leapCooldownTimer = 0f;
+            isLeaping = false;
+            leapElapsed = 0f;
+            leapTargetOperator = null;
         }
 
         protected override void Update()
@@ -87,158 +71,181 @@ namespace TrashTD.Enemies
 
             float deltaTime = Time.deltaTime;
 
-            if (!IsFrozen && !IsStunned)
+            if (leapCooldownTimer > 0f)
             {
-                // Upkeep first-tile wait timer
-                if (isWaitingOnFirstTile)
-                {
-                    firstTileWaitTimer -= deltaTime;
-                    if (firstTileWaitTimer <= 0f)
-                    {
-                        firstTileWaitTimer = 0f;
-                        isWaitingOnFirstTile = false;
-                        hasFinishedFirstTileWait = true;
-                    }
-                }
-
-                // Upkeep periodic summoning
-                summonTimer += deltaTime;
-                if (summonTimer >= summonInterval)
-                {
-                    summonTimer = 0f;
-                    SpawnOculites(summonCount);
-                }
+                leapCooldownTimer -= deltaTime;
             }
 
-            // Standard ranged caster behavior (attacks operators in range, holds when blocked, moves when free)
-            UpdateRangedBehavior(prioritizeRangedOperators: false);
-        }
-
-        protected override void MoveAlongPath()
-        {
-            if (isWaitingOnFirstTile)
+            if (isLeaping)
             {
+                UpdateLeapMotion(deltaTime);
                 return;
             }
 
-            // Check if we reached the first tile outside the spawn point (path[1], or path[0] if path.Count == 1)
-            if (!hasTriggeredFirstTileWait && !hasFinishedFirstTileWait && path != null && path.Count > 0)
+            if (!isBlocked && !IsFrozen && !IsStunned && !IsPushingBack && leapCooldownTimer <= 0f)
             {
-                int targetIndex = path.Count > 1 ? 1 : 0;
-                Vector3 firstTilePos = path[targetIndex];
-
-                if (currentPathIndex >= targetIndex && Vector3.Distance(transform.position, firstTilePos) <= 0.05f)
+                OperatorBase target = FindGroundOperatorInLeapRange();
+                if (target != null)
                 {
-                    transform.position = firstTilePos;
-                    isWaitingOnFirstTile = true;
-                    firstTileWaitTimer = firstTileWaitDuration;
-                    hasTriggeredFirstTileWait = true;
+                    StartLeap(target);
                     return;
                 }
             }
 
-            base.MoveAlongPath();
-
-            // Re-check after movement step
-            if (!hasTriggeredFirstTileWait && !hasFinishedFirstTileWait && path != null && path.Count > 0)
-            {
-                int targetIndex = path.Count > 1 ? 1 : 0;
-                Vector3 firstTilePos = path[targetIndex];
-
-                if (currentPathIndex >= targetIndex && Vector3.Distance(transform.position, firstTilePos) <= 0.05f)
-                {
-                    transform.position = firstTilePos;
-                    isWaitingOnFirstTile = true;
-                    firstTileWaitTimer = firstTileWaitDuration;
-                    hasTriggeredFirstTileWait = true;
-                }
-            }
+            base.Update();
         }
 
-        public void SpawnOculites(int count)
+        public OperatorBase FindGroundOperatorInLeapRange()
         {
-            if (count <= 0) return;
+            GridManager grid = CurrentGrid ?? FindAnyObjectByType<GridManager>();
+            if (grid == null || OperatorManager.Instance == null) return null;
 
-            EnemyData childData = ResolveOculiteData();
-            if (childData == null)
+            Vector2Int currentCell = grid.WorldToGridPosition(transform.position);
+            Vector2Int forward = GetPathForwardDirection();
+            if (forward == Vector2Int.zero)
             {
-                Debug.LogWarning("[Occulorm] No OculiteSpawn EnemyData assigned or found to spawn!");
-                return;
+                forward = isFacingLeft ? Vector2Int.left : Vector2Int.right;
             }
+            Vector2Int perp = new Vector2Int(-forward.y, forward.x);
 
-            var remainingPath = new List<Vector3>();
-            remainingPath.Add(transform.position);
-
-            if (path != null)
+            // 3 tiles in front of Occuworm (center, left flank, right flank)
+            Vector2Int[] leapCells = new Vector2Int[]
             {
-                for (int i = currentPathIndex; i < path.Count; i++)
-                {
-                    remainingPath.Add(path[i]);
-                }
-            }
-
-            if (remainingPath.Count == 1)
-            {
-                remainingPath.Add(transform.position + Vector3.right * 0.1f);
-            }
-
-            EnemyManager em = EnemyManager.Instance ?? FindAnyObjectByType<EnemyManager>();
-            if (em == null) return;
-
-            Vector3[] offsets =
-            {
-                new Vector3(-0.18f, 0.08f, 0f),
-                new Vector3(0.18f, -0.08f, 0f),
-                new Vector3(0f, 0.14f, 0f),
-                new Vector3(0f, -0.14f, 0f)
+                currentCell + forward,
+                currentCell + forward + perp,
+                currentCell + forward - perp
             };
 
-            for (int i = 0; i < count; i++)
-            {
-                Vector3 offset = offsets[i % offsets.Length];
-                var childPath = new List<Vector3>(remainingPath);
-                childPath[0] = transform.position + offset;
-                em.SpawnEnemy(childData, childPath, difficultyLevel);
-            }
-        }
+            var deployed = OperatorManager.Instance.DeployedOperators;
+            OperatorBase bestTarget = null;
+            float bestDistSqr = float.MaxValue;
 
-        private EnemyData ResolveOculiteData()
-        {
-            if (oculiteSpawnData != null) return oculiteSpawnData;
+            for (int i = 0; i < deployed.Count; i++)
+            {
+                var op = deployed[i];
+                if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || op.IsCamouflaged) continue;
 
-            oculiteSpawnData = Resources.Load<EnemyData>("Enemies/Enemy_Grunt_OculiteSpawn");
-            if (oculiteSpawnData == null)
-            {
-                oculiteSpawnData = Resources.Load<EnemyData>("Enemy_Grunt_OculiteSpawn");
-            }
-#if UNITY_EDITOR
-            if (oculiteSpawnData == null)
-            {
-                string[] guids = UnityEditor.AssetDatabase.FindAssets("t:EnemyData OculiteSpawn");
-                if (guids.Length > 0)
+                // Must be a ground operator (e.g. Guard, Defender, Specialist)
+                if (op.Data != null && op.Data.position == OperatorPosition.Ranged) continue;
+
+                Vector2Int opCell = op.DeployedCell != null
+                    ? op.DeployedCell.GridPosition
+                    : grid.WorldToGridPosition(op.transform.position);
+
+                for (int c = 0; c < leapCells.Length; c++)
                 {
-                    string p = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
-                    oculiteSpawnData = UnityEditor.AssetDatabase.LoadAssetAtPath<EnemyData>(p);
+                    if (opCell == leapCells[c])
+                    {
+                        float distSqr = (op.transform.position - transform.position).sqrMagnitude;
+                        if (distSqr < bestDistSqr)
+                        {
+                            bestDistSqr = distSqr;
+                            bestTarget = op;
+                        }
+                        break;
+                    }
                 }
             }
-#endif
-            return oculiteSpawnData;
+
+            return bestTarget;
         }
 
-        public override void ForceKill()
+        public void StartLeap(OperatorBase target)
         {
-            hasDeathSpawned = true;
-            base.ForceKill();
+            if (target == null) return;
+            isLeaping = true;
+            leapElapsed = 0f;
+            leapStartPos = transform.position;
+            leapTargetPos = target.transform.position;
+            leapTargetOperator = target;
+            PlayAttackSound();
+            UpdateFacing(leapTargetPos.x - leapStartPos.x);
         }
 
-        protected override void Die()
+        public void StepLeapMotion(float deltaTime) => UpdateLeapMotion(deltaTime);
+
+        private void UpdateLeapMotion(float deltaTime)
         {
-            if (!hasDeathSpawned)
+            leapElapsed += deltaTime;
+            float t = leapDuration > 0f ? Mathf.Clamp01(leapElapsed / leapDuration) : 1f;
+
+            Vector3 horizontalPos = Vector3.Lerp(leapStartPos, leapTargetPos, t);
+            float arc = Mathf.Sin(t * Mathf.PI) * leapArcHeight;
+            transform.position = horizontalPos + new Vector3(0f, arc, 0f);
+            UpdateFacing(leapTargetPos.x - leapStartPos.x);
+
+            if (t >= 1f)
             {
-                hasDeathSpawned = true;
-                SpawnOculites(deathSpawnCount);
+                CompleteLeap();
             }
-            base.Die();
+        }
+
+        private void CompleteLeap()
+        {
+            isLeaping = false;
+            transform.position = leapTargetPos;
+            leapCooldownTimer = leapCooldown;
+
+            if (leapTargetOperator != null && leapTargetOperator.IsDeployed && leapTargetOperator.CurrentHP > 0)
+            {
+                PlayImpactSound();
+                // Attempt to engage block with the landed operator so it starts attacking
+                BlockingSystem.TryEngageBlock(leapTargetOperator, this);
+                // When it leaps it starts attacking immediately
+                attackTimer = GetEffectiveAttackInterval();
+            }
+
+            SyncPathIndexToPosition();
+        }
+
+        private void SyncPathIndexToPosition()
+        {
+            if (path == null || path.Count == 0) return;
+            float bestDist = float.MaxValue;
+            int bestIdx = currentPathIndex;
+            for (int i = currentPathIndex; i < path.Count; i++)
+            {
+                float d = Vector3.Distance(transform.position, path[i]);
+                if (d < bestDist)
+                {
+                    bestDist = d;
+                    bestIdx = i;
+                }
+            }
+            currentPathIndex = bestIdx;
+        }
+
+        protected override void MoveAlongPath()
+        {
+            if (isLeaping) return;
+            base.MoveAlongPath();
+        }
+
+        protected override void AttackBlocker()
+        {
+            if (blockingOperator == null) return;
+
+            attackTimer += Time.deltaTime;
+            if (attackTimer >= GetEffectiveAttackInterval())
+            {
+                attackTimer = 0f;
+                PlayAttackSound();
+                MeleeSwipeVisual.Play(
+                    VisualPosition,
+                    blockingOperator.transform.position,
+                    new Color(0.85f, 0.12f, 0.28f, 1f),
+                    1.2f,
+                    MeleeStyle.Claw);
+
+                int hpBefore = blockingOperator.CurrentHP;
+                bool hit = blockingOperator.TryTakeAttackDamage(currentATK, data != null ? data.damageType : DamageType.Physical, this);
+                if (hit)
+                {
+                    int actualDamage = Mathf.Max(0, hpBefore - blockingOperator.CurrentHP);
+                    int healAmount = Mathf.Max(1, Mathf.FloorToInt(actualDamage * lifestealRatio));
+                    Heal(healAmount);
+                }
+            }
         }
     }
 }

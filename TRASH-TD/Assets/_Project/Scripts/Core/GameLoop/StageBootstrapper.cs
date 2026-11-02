@@ -184,6 +184,7 @@ namespace TrashTD.Core.GameLoop
                     stageData.mapVisualSprite = mapSource.mapVisualSprite;
                     stageData.backgroundVisualSprite = mapSource.backgroundVisualSprite;
                     stageData.upperBackgroundVisualSprites = mapSource.upperBackgroundVisualSprites;
+                    stageData.midgroundVisualSprites = mapSource.midgroundVisualSprites;
                     stageData.foregroundVisualSprite = mapSource.foregroundVisualSprite;
                     stageData.visualTilePixelSize = mapSource.visualTilePixelSize;
                     stageData.visualTileOffset = mapSource.visualTileOffset;
@@ -350,10 +351,34 @@ namespace TrashTD.Core.GameLoop
                 }
             }
 
+            if (stageData.midgroundVisualSprites != null)
+            {
+                for (int i = 0; i < stageData.midgroundVisualSprites.Length; i++)
+                {
+                    DrawMapArtworkLayer(
+                        gridContainer.transform,
+                        stageData.midgroundVisualSprites[i],
+                        $"MidgroundArtwork_{i}",
+                        GridSpriteSorter.AirBandStart / 2,
+                        targetBottomLeft,
+                        false,
+                        onGround: false,
+                        sortingLayerId: GridSorting.UnitsLayerId);
+                }
+            }
+
             Sprite fgSprite = stageData.foregroundVisualSprite;
             if (fgSprite != null)
             {
-                DrawMapArtworkLayer(gridContainer.transform, fgSprite, "ForegroundArtwork", 10, targetBottomLeft, false, onGround: false);
+                DrawMapArtworkLayer(
+                    gridContainer.transform,
+                    fgSprite,
+                    "ForegroundArtwork",
+                    20000,
+                    targetBottomLeft,
+                    false,
+                    onGround: false,
+                    sortingLayerId: GridSorting.DefaultLayerId);
             }
 
             for (int y = 0; y < stageData.gridHeight; y++)
@@ -391,7 +416,8 @@ namespace TrashTD.Core.GameLoop
             Vector3 targetBottomLeft,
             bool alignToSourceRect,
             bool animateAsSpriteSheet = false,
-            bool onGround = true)
+            bool onGround = true,
+            int? sortingLayerId = null)
         {
             if (sprite == null) return;
 
@@ -400,7 +426,14 @@ namespace TrashTD.Core.GameLoop
 
             var spriteRenderer = artworkObject.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = sprite;
-            if (onGround) GridSorting.PlaceOnGround(spriteRenderer);
+            if (sortingLayerId.HasValue)
+            {
+                spriteRenderer.sortingLayerID = sortingLayerId.Value;
+            }
+            else if (onGround)
+            {
+                GridSorting.PlaceOnGround(spriteRenderer);
+            }
             spriteRenderer.sortingOrder = sortingOrder;
 
             if (animateAsSpriteSheet)

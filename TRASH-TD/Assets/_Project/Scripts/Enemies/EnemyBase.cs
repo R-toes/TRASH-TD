@@ -1132,6 +1132,21 @@ namespace TrashTD.Enemies
         }
 
         /// <summary>
+        /// Restore health to this enemy up to its maximum HP.
+        /// </summary>
+        public virtual void Heal(int amount)
+        {
+            if (isDead || amount <= 0) return;
+            int previousHP = currentHP;
+            currentHP = Mathf.Min(maxHP, currentHP + amount);
+            int healed = currentHP - previousHP;
+            if (healed > 0)
+            {
+                WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
+            }
+        }
+
+        /// <summary>
         /// Check if this enemy can receive damage from the specified attacker.
         /// Overridden by specialized enemies like Gooelist (only receives damage from its blocker when blocked).
         /// </summary>

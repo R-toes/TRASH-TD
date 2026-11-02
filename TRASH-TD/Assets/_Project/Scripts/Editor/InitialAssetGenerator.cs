@@ -2320,6 +2320,23 @@ namespace TrashTD.Editor
                     }
                 }
             }
+
+            var midSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 6 Sign-Barrel.png");
+            if (midSprites == null || midSprites.Length == 0)
+                midSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 6 Sign-Barrel.png");
+
+            if (midSprites != null)
+            {
+                foreach (var obj in midSprites)
+                {
+                    if (obj is Sprite s)
+                    {
+                        stage.midgroundVisualSprites = new Sprite[] { s };
+                        break;
+                    }
+                }
+            }
+
             stage.backgroundVisualSprite = null;
             stage.upperBackgroundVisualSprites = null;
             stage.squadSizeLimit = 8;

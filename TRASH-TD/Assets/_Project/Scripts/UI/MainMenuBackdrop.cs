@@ -218,6 +218,13 @@ namespace TrashTD.UI
                     if (upper != null) SetLayer(slide, used++, upper);
                 }
             }
+            if (stage.midgroundVisualSprites != null)
+            {
+                foreach (Sprite mid in stage.midgroundVisualSprites)
+                {
+                    if (mid != null) SetLayer(slide, used++, mid);
+                }
+            }
             if (stage.foregroundVisualSprite != null) SetLayer(slide, used++, stage.foregroundVisualSprite);
             for (int i = used; i < slide.layers.Count; i++) slide.layers[i].gameObject.SetActive(false);
 

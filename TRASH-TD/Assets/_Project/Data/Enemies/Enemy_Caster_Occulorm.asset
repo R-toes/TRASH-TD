@@ -13,19 +13,23 @@ MonoBehaviour:
   m_Name: Enemy_Caster_Occulorm
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.EnemyData
   enemyName: Occulorm
-  archetype: 3
+  archetype: 1
   movementType: 0
-  baseHP: 180
+  baseHP: 250
   baseATK: 35
   baseDEF: 15
-  baseRES: 25
-  moveSpeed: 0.8
-  damageType: 1
-  attackProjectileColor: {r: 1, g: 0.15, b: 0.15, a: 1}
+  baseRES: 15
+  moveSpeed: 1.7
+  damageType: 0
+  attackProjectileColor: {r: 0.85, g: 0.12, b: 0.28, a: 1}
   usesSandProjectileVisual: 0
-  attackInterval: 2
+  attackInterval: 1
   attackRange: 0
   frontAreaAttackTiles: 0
+  rangePattern:
+  - {x: 1, y: -1}
+  - {x: 1, y: 0}
+  - {x: 1, y: 1}
   isUnblockable: 0
   operatorAttackMissChance: 0
   blockWeight: 1
@@ -46,6 +50,6 @@ MonoBehaviour:
   visualScale: 1
   visualOffset: {x: 0, y: 0, z: 0}
   enemyPrefab: {fileID: 5123456789012345678, guid: 8617c8bd7d5043b7afc5c58c85780dc4, type: 3}
-  abilityDescription: "Enemy Caster. Immune to acid rain and pools. Pauses on the first tile outside the spawn point for 10 seconds. Summons 2 Oculite Spawns every 5 seconds, and 2 upon death."
-  intelQuote: "*chittering from the darkness*"
-  intelLore: "A worm-like caster entity swarming with eyes. It halts just after emerging to summon waves of oculite spawns while hurling crimson arts bolts at any operator within range."
+  abilityDescription: "Enemy Rusher. Leaps into ground operators within 3 tiles ahead and starts attacking with 20% Lifesteal. Immune to acid rain and pools."
+  intelQuote: "*ravenous chittering*"
+  intelLore: "A swift, voracious worm entity that dashes down lanes. When blocked, it tears into operators and absorbs their vitality to heal itself."
