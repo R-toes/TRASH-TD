@@ -72,7 +72,13 @@ namespace TrashTD.UI
             if (!string.IsNullOrEmpty(stage.stageId))
             {
                 string id = stage.stageId.ToUpperInvariant();
-                if (id.Contains("STAGE_05") || id.Contains("STAGE 05") || id.Contains("STAGE-05") || id.Contains("STAGE5"))
+                if (id.Contains("STAGE_05") || id.Contains("STAGE 05") || id.Contains("STAGE-05") || id.Contains("STAGE5") || id.Contains("STAGE 5"))
+                    return true;
+            }
+            if (!string.IsNullOrEmpty(stage.name))
+            {
+                string name = stage.name.ToUpperInvariant();
+                if (name.Contains("STAGE_05") || name.Contains("STAGE 05") || name.Contains("STAGE-05") || name.Contains("STAGE5") || name.Contains("STAGE 5"))
                     return true;
             }
             return stage.trafficVehicleSprites != null && stage.trafficVehicleSprites.Length > 0;
@@ -709,13 +715,18 @@ namespace TrashTD.UI
                 }
             }
 
-            // 4. Stage 5 Damage Badges pop in
+            // 4. Stage 5 Damage Badges pop in and breathe
             foreach (DamageBadge badge in damageBadges)
             {
                 float pop = PathPreviewArt.Pop(t, badge.appearAt);
                 badge.group.alpha = pop;
                 badge.root.gameObject.SetActive(pop > 0f);
-                badge.root.localScale = Vector3.one * PathPreviewArt.PopScale(pop);
+                float scale = PathPreviewArt.PopScale(pop);
+                if (pop >= 1f)
+                {
+                    scale = 1f + 0.04f * Mathf.Sin((t - badge.appearAt) * 3f);
+                }
+                badge.root.localScale = Vector3.one * scale;
             }
         }
 
@@ -857,7 +868,9 @@ namespace TrashTD.UI
             Stretch(text.rectTransform);
 
             float padding = Mathf.Max(3f, artPixel * 2f);
-            Vector2 plateSize = new Vector2(text.preferredWidth + padding * 2.5f, text.fontSize + padding * 1.5f);
+            float charWidth = text.fontSize * 0.7f;
+            float textWidth = Mathf.Max(text.preferredWidth, labelText.Length * charWidth);
+            Vector2 plateSize = new Vector2(textWidth + padding * 2.5f, text.fontSize + padding * 1.5f);
             PlaceCentered(plate.rectTransform, Vector2.zero, plateSize);
 
             // Accent underline at the bottom of plate just like spawn text

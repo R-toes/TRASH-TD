@@ -23,6 +23,7 @@ namespace TrashTD.UI
         private const int JunctionSortingOrder = 46;
         private const int TracerSortingOrder = 47;
         private const int MarkerSortingOrder = 48;   // Ping 48, body 49, icon 50, label 51-52
+        private const int DamageBadgeSortingOrder = 20050; // Above ForegroundArtwork (20000)
 
         private const float DimAlpha = 0.16f;
         private const float GridAlpha = 0.11f;
@@ -94,7 +95,13 @@ namespace TrashTD.UI
             if (!string.IsNullOrEmpty(stage.stageId))
             {
                 string id = stage.stageId.ToUpperInvariant();
-                if (id.Contains("STAGE_05") || id.Contains("STAGE 05") || id.Contains("STAGE-05") || id.Contains("STAGE5"))
+                if (id.Contains("STAGE_05") || id.Contains("STAGE 05") || id.Contains("STAGE-05") || id.Contains("STAGE5") || id.Contains("STAGE 5"))
+                    return true;
+            }
+            if (!string.IsNullOrEmpty(stage.name))
+            {
+                string name = stage.name.ToUpperInvariant();
+                if (name.Contains("STAGE_05") || name.Contains("STAGE 05") || name.Contains("STAGE-05") || name.Contains("STAGE5") || name.Contains("STAGE 5"))
                     return true;
             }
             return stage.trafficVehicleSprites != null && stage.trafficVehicleSprites.Length > 0;
@@ -546,7 +553,7 @@ namespace TrashTD.UI
 
                 var meshRenderer = textGo.GetComponent<MeshRenderer>();
                 if (font != null) meshRenderer.sharedMaterial = font.material;
-                ApplySorting(meshRenderer, MarkerSortingOrder + 4);
+                ApplySorting(meshRenderer, DamageBadgeSortingOrder + 2);
 
                 Vector2 textSize = new Vector2(text.Length * textHeight, textHeight);
                 Vector3 measured = meshRenderer.bounds.size;
@@ -561,12 +568,12 @@ namespace TrashTD.UI
                 Vector3 center = Vector3.zero;
                 textGo.transform.localPosition = center + new Vector3(0f, artPixel * 0.5f, 0f);
 
-                var plate = CreateSprite("Plate", badgeGo.transform, PathPreviewArt.GetPixel(), new Color(0.01f, 0.03f, 0.02f, 0.95f), MarkerSortingOrder + 3);
+                var plate = CreateSprite("Plate", badgeGo.transform, PathPreviewArt.GetPixel(), new Color(0.01f, 0.03f, 0.02f, 0.95f), DamageBadgeSortingOrder);
                 plate.transform.localPosition = center;
                 plate.transform.localScale = new Vector3(plateSize.x, plateSize.y, 1f);
 
                 // Accent underline at the bottom of the plate just like the spawn text
-                var accent = CreateSprite("Accent", badgeGo.transform, PathPreviewArt.GetPixel(), lineColor, MarkerSortingOrder + 3);
+                var accent = CreateSprite("Accent", badgeGo.transform, PathPreviewArt.GetPixel(), lineColor, DamageBadgeSortingOrder + 1);
                 accent.transform.localPosition = center + new Vector3(0f, (artPixel - plateSize.y) * 0.5f, 0f);
                 accent.transform.localScale = new Vector3(plateSize.x, artPixel, 1f);
 
@@ -612,6 +619,7 @@ namespace TrashTD.UI
             }
             else
             {
+                renderer.sortingLayerID = GridSorting.DefaultLayerId;
                 renderer.sortingOrder = sortingOrder;
             }
         }
@@ -691,12 +699,17 @@ namespace TrashTD.UI
                 }
             }
 
-            // 4. Stage 5 Damage Badges pop in
+            // 4. Stage 5 Damage Badges pop in and animate with gentle idle breath
             foreach (DamageBadgeVisual badge in damageBadges)
             {
                 float pop = PathPreviewArt.Pop(t, badge.appearAt);
                 badge.root.gameObject.SetActive(pop > 0f);
-                badge.root.localScale = Vector3.one * PathPreviewArt.PopScale(pop);
+                float scale = PathPreviewArt.PopScale(pop);
+                if (pop >= 1f)
+                {
+                    scale = 1f + 0.04f * Mathf.Sin((t - badge.appearAt) * 3f);
+                }
+                badge.root.localScale = Vector3.one * scale;
                 badge.plate.color = PathPreviewArt.WithAlpha(new Color(0.01f, 0.03f, 0.02f, 0.95f), 0.95f * pop);
                 badge.accent.color = PathPreviewArt.WithAlpha(badge.color, pop);
                 badge.label.color = PathPreviewArt.WithAlpha(Color.white, pop);

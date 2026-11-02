@@ -8,6 +8,7 @@ using TrashTD.Data;
 using TrashTD.Enemies;
 using TrashTD.Operators;
 using TrashTD.Systems;
+using TrashTD.UI;
 
 namespace TrashTD.Tests
 {
@@ -1553,6 +1554,41 @@ namespace TrashTD.Tests
                 Object.DestroyImmediate(deckObj);
                 Object.DestroyImmediate(gridObj);
             }
+        }
+         [Test]
+        public void Stage5TrafficCar_CalculateDamage_MatchesExpectedRamp()
+        {
+            Assert.AreEqual(40, Stage5TrafficCar.CalculateDamage(0));
+            Assert.AreEqual(60, Stage5TrafficCar.CalculateDamage(2));
+            Assert.AreEqual(80, Stage5TrafficCar.CalculateDamage(4));
+            Assert.AreEqual(100, Stage5TrafficCar.CalculateDamage(6));
+            Assert.AreEqual(120, Stage5TrafficCar.CalculateDamage(8));
+            Assert.AreEqual(140, Stage5TrafficCar.CalculateDamage(10));
+            Assert.AreEqual(160, Stage5TrafficCar.CalculateDamage(12));
+        }
+
+        [Test]
+        public void Stage5_Preview_IdentifiesStage5Correctly()
+        {
+            var stage = ScriptableObject.CreateInstance<StageData>();
+            stage.stageId = "STAGE_05";
+            stage.gridWidth = 13;
+            stage.gridHeight = 8;
+
+            Assert.IsTrue(StageMapPreview.IsStage5(stage));
+            Assert.IsTrue(GameplayPathPreviewOverlay.IsStage5(stage));
+
+            stage.stageId = "STAGE_01";
+            stage.name = "STAGE_05";
+            Assert.IsTrue(StageMapPreview.IsStage5(stage));
+            Assert.IsTrue(GameplayPathPreviewOverlay.IsStage5(stage));
+
+            stage.name = "STAGE_01";
+            stage.trafficVehicleSprites = new Sprite[1];
+            Assert.IsTrue(StageMapPreview.IsStage5(stage));
+            Assert.IsTrue(GameplayPathPreviewOverlay.IsStage5(stage));
+
+            Object.DestroyImmediate(stage);
         }
     }
 }
