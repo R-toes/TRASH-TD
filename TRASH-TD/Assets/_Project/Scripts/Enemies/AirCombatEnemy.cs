@@ -59,17 +59,20 @@ namespace TrashTD.Enemies
             if (IsFrozen || IsStunned) return;
 
             // Re-evaluated every frame so the flyer slows down as soon as something is in range.
-            lockedTarget = FindTarget();
+            lockedTarget = SelectTarget();
 
             float interval = GetEffectiveAttackInterval();
             attackTimer = Mathf.Min(attackTimer + Time.deltaTime, interval);
-            if (attackTimer < interval || lockedTarget == null) return;
+            if (attackTimer < interval || lockedTarget == null || !CanAttack) return;
 
             attackTimer = 0f;
             attackPauseTimer = GetAttackPause(interval);
             PlayAirAttackSound();
             PerformAirAttack(lockedTarget);
         }
+
+        /// <summary>False while the flyer holds fire (Robodrone reloading). It still tracks targets and slows over them.</summary>
+        protected virtual bool CanAttack => true;
 
         /// <summary>Plays as each attack starts. Talon Rat plays its own when the claws land instead.</summary>
         protected virtual void PlayAirAttackSound() => PlayAttackSound();
@@ -96,6 +99,9 @@ namespace TrashTD.Enemies
 
         /// <summary>Movement speed multiplier while a valid target is in range.</summary>
         protected virtual float EngagedSpeed => EngagedSpeedMultiplier;
+
+        /// <summary>Picks this frame's target. Default: FindTarget (priority, then a point just ahead on the path).</summary>
+        protected virtual OperatorBase SelectTarget() => FindTarget();
 
         /// <summary>
         /// Keeps the current target while it stays valid and in range, unless a higher-priority

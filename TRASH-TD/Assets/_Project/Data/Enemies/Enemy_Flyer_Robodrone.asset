@@ -16,7 +16,7 @@ MonoBehaviour:
   archetype: 4
   movementType: 1
   baseHP: 80
-  baseATK: 25
+  baseATK: 10
   baseDEF: 5
   baseRES: 10
   moveSpeed: 1.25
@@ -24,7 +24,7 @@ MonoBehaviour:
   attackProjectileColor: {r: 1, g: 0.58, b: 0.16, a: 1}
   usesPlasmaProjectileVisual: 1
   projectileOrigin: {x: 0, y: -0.28}
-  attackInterval: 2
+  attackInterval: 0.15
   attackRange: 0
   isUnblockable: 1
   blockWeight: 1
@@ -37,8 +37,8 @@ MonoBehaviour:
   - {fileID: -1550913442, guid: 26876a2c76cc2de428dc4dd1e2d9af72, type: 3}
   animationFrameRate: 8
   visualOffset: {x: 0, y: 0.75, z: 0}
-  enemyPrefab: {fileID: 9005451285246291141, guid: e4d1d87d2bc16634c81d7c93e58b8db0, type: 3}
-  abilityDescription: "Flying and unblockable. Hovers over lanes and fires at operators from range, targeting ranged operators first."
+  enemyPrefab: {fileID: 9005451285246291141, guid: 839341ea73484daaac1db80e6678db18, type: 3}
+  abilityDescription: "Flying and unblockable. Sprays rapid, weak plasma rounds at the nearest operator within 2.5 tiles, crawling while it fires. Fires for 5 s, then reloads for 2 s at half speed. High DEF shrugs off most of each round."
   intelQuote: "*BZZZT*"
   intelLore: "A salvaged industrial drone retrofitted with a jury-rigged weapon mount. Robodrone doesn't land, doesn't stop, and doesn't care who it hits. Field teams report it prefers to take potshots at operators in elevated positions."
 
