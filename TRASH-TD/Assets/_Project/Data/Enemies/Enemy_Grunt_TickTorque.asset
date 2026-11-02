@@ -37,6 +37,7 @@ MonoBehaviour:
   - {fileID: 1345103211, guid: 4fd3b8325847b744ea15d1c877df3982, type: 3}
   - {fileID: 1801693942, guid: 4fd3b8325847b744ea15d1c877df3982, type: 3}
   animationFrameRate: 8
+  visualScale: 0.6666667
   visualOffset: {x: 0, y: 0.2, z: 0}
   enemyPrefab: {fileID: 8358608267878886893, guid: fe7cdba075a50ac4b811cf1bad17646d, type: 3}
   abilityDescription: "Drills into whatever blocks it: light hits every 0.6 s that keep chipping even heavily armoured Defenders."
