@@ -232,6 +232,8 @@ namespace TrashTD.Operators
             }
 
             // Standalone fallback for unit tests without OperatorManager
+            int harmonyStacks = HarmonyStacks;
+            SetHarmonyStacks(0);
             isCopied = true;
             data = targetData;
             currentRarity = effectiveRarity;
@@ -240,6 +242,7 @@ namespace TrashTD.Operators
             currentATK = targetData.GetScaledATK(effectiveRarity);
             currentDEF = targetData.GetScaledDEF(effectiveRarity);
             currentRES = targetData.GetScaledRES(effectiveRarity);
+            SetHarmonyStacks(harmonyStacks); // Re-applied for the copied class
 
             IsCopiedFromFramiliar = true;
             ApplyGrayscale(gameObject);

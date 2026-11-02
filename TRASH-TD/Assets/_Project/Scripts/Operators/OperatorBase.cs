@@ -78,7 +78,7 @@ namespace TrashTD.Operators
         public OperatorRarity CurrentRarity => currentRarity;
         public OperatorFacing Facing => facing;
         public OperatorClass OperatorClass => data.operatorClass;
-        public virtual bool CanReceiveHealing => true;
+        public virtual bool CanReceiveHealing => data == null || !data.cannotBeHealed;
         public virtual bool CanHitAir => data != null && (data.position == OperatorPosition.Ranged || data.position == OperatorPosition.Any || data.operatorClass == OperatorClass.Caster);
         public virtual bool IgnoresMissMechanic => false;
         public virtual bool IsCamouflaged => false;
@@ -386,7 +386,64 @@ namespace TrashTD.Operators
 
         public Vector2Int[] GetRangePattern() => data.rangePattern;
         public virtual Vector2Int[] GetTalentRangePattern() => data != null ? data.GetTalentRangePattern() : null;
-        public virtual float GetAttackInterval() => Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval);
+        public virtual float GetAttackInterval() =>
+            Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval) / HarmonyAttackSpeedMultiplier;
+
+        // ========================
+        // Harmony (Flurmonica's buff, see HarmonyBuff)
+        // ========================
+
+        private int harmonyStacks;
+        private int harmonyDEF;
+        private int harmonyRES;
+        private int harmonyHP;
+
+        public int HarmonyStacks => harmonyStacks;
+        private float HarmonyBonus => HarmonyBuff.BonusPerStack * harmonyStacks;
+
+        /// <summary>Snipers and Medics attack (heal) 4% faster per Harmony stack: the interval is divided by this.</summary>
+        public float HarmonyAttackSpeedMultiplier =>
+            data != null && (data.operatorClass == OperatorClass.Sniper || data.operatorClass == OperatorClass.Medic)
+                ? 1f + HarmonyBonus
+                : 1f;
+
+        /// <summary>Casters deal 4% more Arts damage per Harmony stack, after RES (applied in EnemyBase.TryTakeAttackDamage).</summary>
+        public float OutgoingArtsDamageMultiplier =>
+            data != null && data.operatorClass == OperatorClass.Caster ? 1f + HarmonyBonus : 1f;
+
+        /// <summary>
+        /// Sets the Harmony stack count (HarmonyBuff calls this). Each stack adds 4% of the rarity-scaled base
+        /// stat for this operator's class: Guard RES, Defender DEF, Specialist max HP (current HP rises with it
+        /// and is clamped when it drops). Snipers, Medics and Casters read the count through the multipliers above.
+        /// A Framiliar copy is the copied operator's class, so it gets that class's bonus.
+        /// </summary>
+        public void SetHarmonyStacks(int stacks)
+        {
+            if (data == null) return;
+
+            harmonyStacks = Mathf.Clamp(stacks, 0, HarmonyBuff.MaxStacks);
+            float bonus = HarmonyBonus;
+            OperatorClass operatorClass = data.operatorClass;
+
+            int newDEF = operatorClass == OperatorClass.Defender ? Mathf.RoundToInt(data.GetScaledDEF(currentRarity) * bonus) : 0;
+            int newRES = operatorClass == OperatorClass.Guard ? Mathf.RoundToInt(data.GetScaledRES(currentRarity) * bonus) : 0;
+            int newHP = operatorClass == OperatorClass.Specialist ? Mathf.RoundToInt(data.GetScaledHP(currentRarity) * bonus) : 0;
+
+            currentDEF += newDEF - harmonyDEF;
+            currentRES += newRES - harmonyRES;
+            harmonyDEF = newDEF;
+            harmonyRES = newRES;
+
+            int hpDelta = newHP - harmonyHP;
+            harmonyHP = newHP;
+            if (hpDelta == 0) return;
+
+            maxHP += hpDelta;
+            if (currentHP <= 0) return;
+            currentHP = hpDelta > 0 ? currentHP + hpDelta : Mathf.Max(1, Mathf.Min(currentHP, maxHP));
+            if (currentHP < maxHP || GetComponent<WorldHealthBar>() != null)
+                TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
+        }
         public DamageType GetDamageType() => data.damageType;
 
         /// <summary>
@@ -808,6 +865,8 @@ namespace TrashTD.Operators
         /// <summary>Called after retreat.</summary>
         protected virtual void OnRetreated()
         {
+            HarmonyBuff harmony = GetComponent<HarmonyBuff>();
+            if (harmony != null) harmony.Clear();
             isStunned = false;
             stunTimer = 0f;
             isBound = false;
@@ -835,9 +894,9 @@ namespace TrashTD.Operators
             {
                 if (currentRarity >= OperatorRarity.Star2)
                 {
-                    return "When Drawgoo dies, draw 1 (60%) or 2 (40%) random 3-star operator cards from the pool.";
+                    return "When Drawgoo dies, draw 1 (60%) or 2 (40%) random 3-star operator cards from the pool. Cannot be healed by other operators.";
                 }
-                return "When Drawgoo dies, draw two random operator cards from the pool.";
+                return "When Drawgoo dies, draw two random operator cards from the pool. Cannot be healed by other operators.";
             }
             return data.skillDescription;
         }

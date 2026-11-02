@@ -520,6 +520,10 @@ namespace TrashTD.Development
 
             RectTransform panelRect = (RectTransform)panel.transform;
             LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+            // The panel rebuild stops at the Viewport (no layout component), so the list is its own
+            // layout root. Rebuild it too, or a panel opened for the first time measures a list that was
+            // never laid out and comes out cut off until it is reopened.
+            LayoutRebuilder.ForceRebuildLayoutImmediate(scroll.content);
             float contentHeight = LayoutUtility.GetPreferredHeight(scroll.content);
 
             VerticalLayoutGroup layout = panel.GetComponent<VerticalLayoutGroup>();

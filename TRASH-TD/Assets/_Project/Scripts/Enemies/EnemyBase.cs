@@ -1173,6 +1173,13 @@ namespace TrashTD.Enemies
 
             if (attacker != null)
             {
+                // Flurmonica's Harmony on a Caster: +4% Arts damage per stack
+                float harmony = damageType == DamageType.Arts ? attacker.OutgoingArtsDamageMultiplier : 1f;
+                if (harmony > 1f)
+                {
+                    damage = Mathf.Max(1, Mathf.RoundToInt(damage * harmony));
+                }
+
                 float junkernautReduction = JunkernautEnemy.GetDamageReductionPercent(this);
                 if (junkernautReduction > 0f)
                 {

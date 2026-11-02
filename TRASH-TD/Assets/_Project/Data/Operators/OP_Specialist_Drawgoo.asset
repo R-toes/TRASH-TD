@@ -30,9 +30,10 @@ MonoBehaviour:
   rangePattern: []
   damageType: 0
   drawTwoCardsOnDeath: 1
+  cannotBeHealed: 1
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'When Drawgoo dies, draw two random operator cards from the pool. (If upgraded, draws 1 (60%) or 2 (40%) random 3-star operators instead.)'
+  skillDescription: 'When Drawgoo dies, draw two random operator cards from the pool. (If upgraded, draws 1 (60%) or 2 (40%) random 3-star operators instead.) Cannot be healed by other operators.'
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5

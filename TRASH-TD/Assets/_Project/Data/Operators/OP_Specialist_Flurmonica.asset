@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
+  m_Name: OP_Specialist_Flurmonica
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
+  operatorName: Flurmonica
+  operatorClass: 5
+  baseRarity: 2
+  position: 1
+  roleTags:
+  - Buffer
+  - Support
+  baseHP: 95
+  baseATK: 0
+  baseDEF: 12
+  baseRES: 12
+  blockCount: 0
+  attackRange: 2
+  attackInterval: 2
+  rangePattern:
+  - {x: 1, y: 0}
+  - {x: 2, y: 0}
+  - {x: 1, y: 1}
+  - {x: 2, y: 1}
+  - {x: 1, y: -1}
+  - {x: 2, y: -1}
+  - {x: 0, y: 1}
+  - {x: 0, y: -1}
+  damageType: 0
+  drawTwoCardsOnDeath: 0
+  bonusWhenIsolated: 0
+  isolatedAttackMultiplier: 1.5
+  skillDescription: 'Passive - Harmony: Does not heal. Every 2s, gives 1 Harmony stack to a random ally in range with the fewest stacks (max 3, each lasts 8s). Each stack: Guard +4% RES, Defender +4% DEF, Sniper and Medic +4% attack speed, Caster +4% Arts damage, Specialist +4% max HP.'
+  chillPerHit: 0
+  chillSlowMultiplier: 0.65
+  chillSlowDuration: 2.5
+  chillFreezeThreshold: 100
+  chillFreezeDuration: 1.5
+  portrait: {fileID: -891138565378821540, guid: df71c3b8c16ac8f4188674a40ec5b071, type: 3}
+  operatorPrefab: {fileID: 6071398537635181288, guid: 4e3df73e9ce9412f9027514194fa9407, type: 3}
+  projectileOrigin: {x: -0.3, y: 0.06}
+  intelQuote: 
+  intelLore: 

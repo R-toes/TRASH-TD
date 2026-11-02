@@ -59,6 +59,10 @@ namespace TrashTD.Data
         [Tooltip("Draw two random cards from the operator pool when this operator dies")]
         public bool drawTwoCardsOnDeath;
 
+        [Header("Healing")]
+        [Tooltip("Healers skip this operator: Medics, Panacea, Mossmo's reactive heal (Drawgoo). Self-healing still works.")]
+        public bool cannotBeHealed;
+
         [Header("Isolation")]
         [Tooltip("Enable an attack bonus when no other deployed operator is in an adjacent grid cell")]
         public bool bonusWhenIsolated;
