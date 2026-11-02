@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using TrashTD.Core.GameLoop;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
 
@@ -63,6 +64,16 @@ namespace TrashTD.UI
             public TextMesh label;
         }
 
+        private sealed class DamageBadgeVisual
+        {
+            public Transform root;
+            public float appearAt;
+            public SpriteRenderer plate;
+            public SpriteRenderer accent;
+            public TextMesh label;
+            public Color color;
+        }
+
         private GridManager gridManager;
         private StageData stageData;
 
@@ -73,6 +84,21 @@ namespace TrashTD.UI
         private GameObject visualRoot;
         private readonly List<RouteVisual> routes = new List<RouteVisual>();
         private readonly List<MarkerVisual> markers = new List<MarkerVisual>();
+        private readonly List<DamageBadgeVisual> damageBadges = new List<DamageBadgeVisual>();
+
+        public int DamageBadgeCount => damageBadges.Count;
+
+        public static bool IsStage5(StageData stage)
+        {
+            if (stage == null) return false;
+            if (!string.IsNullOrEmpty(stage.stageId))
+            {
+                string id = stage.stageId.ToUpperInvariant();
+                if (id.Contains("STAGE_05") || id.Contains("STAGE 05") || id.Contains("STAGE-05") || id.Contains("STAGE5"))
+                    return true;
+            }
+            return stage.trafficVehicleSprites != null && stage.trafficVehicleSprites.Length > 0;
+        }
         private readonly List<SpriteRenderer> gridLines = new List<SpriteRenderer>();
         private readonly List<Material> createdMaterials = new List<Material>();
         private SpriteRenderer dim;
@@ -161,6 +187,7 @@ namespace TrashTD.UI
         {
             routes.Clear();
             markers.Clear();
+            damageBadges.Clear();
             gridLines.Clear();
             dim = null;
 
@@ -233,7 +260,14 @@ namespace TrashTD.UI
             float pixelsPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
             artPixel = cellSize / pixelsPerTile;
 
-            if (!drawUnderUnits) BuildDimAndGrid();
+            if (!drawUnderUnits)
+            {
+                BuildDimAndGrid();
+                if (IsStage5(stageData))
+                {
+                    BuildStage5DamageNumbers();
+                }
+            }
 
             List<(int spawn, List<Vector2Int> cells)> cellRoutes = StageMapPreview.ComputeRoutes(stageData);
             int routeCount = cellRoutes.Count;
@@ -471,6 +505,85 @@ namespace TrashTD.UI
             marker.labelUnderline.transform.localScale = new Vector3(plateSize.x, artPixel, 1f);
         }
 
+        /// <summary>
+        /// Stage 5 traffic car damage indicators at the bottom of the map (row y = -1, below grid boxes).
+        /// Shows the true damage ramp (40, 60, 80, 100, 120, 140, 160) under columns 0, 2, 4, 6, 8, 10, 12.
+        /// </summary>
+        private void BuildStage5DamageNumbers()
+        {
+            if (gridManager == null || stageData == null) return;
+
+            Font font = UIFontHelper.GetPixelFont();
+            float textHeight = LabelHeightPx * artPixel;
+            float padding = 2f * artPixel;
+            Color lineColor = Color.white;
+            Color textColor = Color.white;
+
+            int bottomRow = stageData.visualTileOffset.y < 0 ? Mathf.RoundToInt(stageData.visualTileOffset.y) : -1;
+            int maxCol = stageData.gridWidth;
+
+            for (int col = 0; col < maxCol; col += 2)
+            {
+                int dmg = Stage5TrafficCar.CalculateDamage(col);
+                string text = dmg.ToString();
+
+                Vector3 pos = gridManager.GridToWorldPosition(col, bottomRow);
+
+                var badgeGo = new GameObject("DamageBadge_" + col);
+                badgeGo.transform.SetParent(visualRoot.transform, false);
+                badgeGo.transform.position = new Vector3(pos.x, pos.y, 0f);
+
+                var textGo = new GameObject("Label");
+                textGo.transform.SetParent(badgeGo.transform, false);
+                var label = textGo.AddComponent<TextMesh>();
+                label.font = font;
+                label.fontSize = LabelFontSize;
+                label.characterSize = textHeight * 10f / LabelFontSize;
+                label.anchor = TextAnchor.MiddleCenter;
+                label.alignment = TextAlignment.Center;
+                label.text = text;
+                label.color = textColor;
+
+                var meshRenderer = textGo.GetComponent<MeshRenderer>();
+                if (font != null) meshRenderer.sharedMaterial = font.material;
+                ApplySorting(meshRenderer, MarkerSortingOrder + 4);
+
+                Vector2 textSize = new Vector2(text.Length * textHeight, textHeight);
+                Vector3 measured = meshRenderer.bounds.size;
+                if (measured.y > 0.0001f)
+                {
+                    float correction = textHeight / measured.y;
+                    label.characterSize *= correction;
+                    textSize = new Vector2(measured.x * correction, textHeight);
+                }
+
+                Vector2 plateSize = new Vector2(textSize.x + padding * 2.5f, textSize.y + padding * 2f);
+                Vector3 center = Vector3.zero;
+                textGo.transform.localPosition = center + new Vector3(0f, artPixel * 0.5f, 0f);
+
+                var plate = CreateSprite("Plate", badgeGo.transform, PathPreviewArt.GetPixel(), new Color(0.01f, 0.03f, 0.02f, 0.95f), MarkerSortingOrder + 3);
+                plate.transform.localPosition = center;
+                plate.transform.localScale = new Vector3(plateSize.x, plateSize.y, 1f);
+
+                // Accent underline at the bottom of the plate just like the spawn text
+                var accent = CreateSprite("Accent", badgeGo.transform, PathPreviewArt.GetPixel(), lineColor, MarkerSortingOrder + 3);
+                accent.transform.localPosition = center + new Vector3(0f, (artPixel - plateSize.y) * 0.5f, 0f);
+                accent.transform.localScale = new Vector3(plateSize.x, artPixel, 1f);
+
+                float appearAt = 0.10f + (col / 2) * 0.04f;
+
+                damageBadges.Add(new DamageBadgeVisual
+                {
+                    root = badgeGo.transform,
+                    appearAt = appearAt,
+                    plate = plate,
+                    accent = accent,
+                    label = label,
+                    color = lineColor
+                });
+            }
+        }
+
         private SpriteRenderer CreatePixelRect(string objectName, Vector2 center, Vector2 size, Color color, int sortingOrder)
         {
             SpriteRenderer renderer = CreateSprite(objectName, visualRoot.transform, PathPreviewArt.GetPixel(), color, sortingOrder);
@@ -576,6 +689,17 @@ namespace TrashTD.UI
                     marker.brackets.color = PathPreviewArt.WithAlpha(marker.color, pop);
                     marker.icon.color = PathPreviewArt.WithAlpha(marker.color, pop);
                 }
+            }
+
+            // 4. Stage 5 Damage Badges pop in
+            foreach (DamageBadgeVisual badge in damageBadges)
+            {
+                float pop = PathPreviewArt.Pop(t, badge.appearAt);
+                badge.root.gameObject.SetActive(pop > 0f);
+                badge.root.localScale = Vector3.one * PathPreviewArt.PopScale(pop);
+                badge.plate.color = PathPreviewArt.WithAlpha(new Color(0.01f, 0.03f, 0.02f, 0.95f), 0.95f * pop);
+                badge.accent.color = PathPreviewArt.WithAlpha(badge.color, pop);
+                badge.label.color = PathPreviewArt.WithAlpha(Color.white, pop);
             }
         }
 

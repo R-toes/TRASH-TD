@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TrashTD.Core.GameLoop;
 using TrashTD.Core.Grid;
 using TrashTD.Core.Pathfinding;
 using TrashTD.Data;
@@ -61,6 +62,21 @@ namespace TrashTD.UI
         private readonly List<Route> routes = new List<Route>();
         private readonly List<Marker> markers = new List<Marker>();
         private readonly List<SheetAnimation> sheets = new List<SheetAnimation>();
+        private readonly List<DamageBadge> damageBadges = new List<DamageBadge>();
+
+        public int DamageBadgeCount => damageBadges.Count;
+
+        public static bool IsStage5(StageData stage)
+        {
+            if (stage == null) return false;
+            if (!string.IsNullOrEmpty(stage.stageId))
+            {
+                string id = stage.stageId.ToUpperInvariant();
+                if (id.Contains("STAGE_05") || id.Contains("STAGE 05") || id.Contains("STAGE-05") || id.Contains("STAGE5"))
+                    return true;
+            }
+            return stage.trafficVehicleSprites != null && stage.trafficVehicleSprites.Length > 0;
+        }
 
         /// <summary>Number of distinct enemy routes in the stage shown last.</summary>
         public int RouteCount => routes.Count;
@@ -97,6 +113,13 @@ namespace TrashTD.UI
             public Image icon;
             public Image brackets; // exit only
             public Image ping;
+        }
+
+        private sealed class DamageBadge
+        {
+            public RectTransform root;
+            public CanvasGroup group;
+            public float appearAt;
         }
 
         private sealed class SheetAnimation
@@ -185,6 +208,7 @@ namespace TrashTD.UI
 
             routes.Clear();
             markers.Clear();
+            damageBadges.Clear();
             sheets.Clear();
             content = null;
             gridGroup = null;
@@ -302,6 +326,11 @@ namespace TrashTD.UI
                 {
                     AddMarker(ToUi(CellCenter(stage.exitPoints[e])), PathPreviewArt.ExitColor, "EXIT", false, exitsAppear + e * 0.08f);
                 }
+            }
+
+            if (IsStage5(stage))
+            {
+                BuildStage5DamageNumbers(ToUi, routesStart);
             }
 
             BuildBootOverlay();
@@ -672,6 +701,15 @@ namespace TrashTD.UI
                     marker.brackets.rectTransform.localScale = new Vector3(breathe, breathe, 1f);
                 }
             }
+
+            // 4. Stage 5 Damage Badges pop in
+            foreach (DamageBadge badge in damageBadges)
+            {
+                float pop = PathPreviewArt.Pop(t, badge.appearAt);
+                badge.group.alpha = pop;
+                badge.root.gameObject.SetActive(pop > 0f);
+                badge.root.localScale = Vector3.one * PathPreviewArt.PopScale(pop);
+            }
         }
 
         /// <summary>Tracer head at the given distance with its trail behind it; a negative distance hides it.</summary>
@@ -776,6 +814,54 @@ namespace TrashTD.UI
 
             foreach (KeyValuePair<int, List<Vector2Int>> entry in bySpawn) result.Add((entry.Key, entry.Value));
             return result;
+        }
+
+        private void BuildStage5DamageNumbers(System.Func<Vector2, Vector2> toUi, float appearBase)
+        {
+            for (int col = 0; col < stage.gridWidth; col += 2)
+            {
+                int dmg = Stage5TrafficCar.CalculateDamage(col);
+                Vector2 uiPos = toUi(new Vector2(col + 0.5f, -0.5f));
+                AddDamageBadge(uiPos, dmg.ToString(), appearBase + (col / 2) * 0.04f);
+            }
+        }
+
+        private void AddDamageBadge(Vector2 position, string labelText, float appearAt)
+        {
+            var badgeGo = new GameObject("DamageBadge_" + labelText, typeof(RectTransform), typeof(CanvasGroup));
+            badgeGo.transform.SetParent(content, false);
+            var badgeRt = badgeGo.GetComponent<RectTransform>();
+            PlaceCentered(badgeRt, position, Vector2.zero);
+            var group = badgeGo.GetComponent<CanvasGroup>();
+            group.alpha = 0f;
+
+            Color badgeColor = Color.white;
+            var plate = CreateImage(badgeRt, "Plate", PathPreviewArt.GetPixel(), new Color(0.01f, 0.03f, 0.02f, 0.95f));
+            var text = new GameObject("Label", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
+            text.transform.SetParent(plate.transform, false);
+            text.font = UIFontHelper.GetPixelFont();
+            text.fontSize = Mathf.Clamp(Mathf.RoundToInt(tileScale * 0.22f), 8, 13);
+            text.alignment = TextAnchor.MiddleCenter;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.color = Color.white;
+            text.text = labelText;
+            text.raycastTarget = false;
+            Stretch(text.rectTransform);
+
+            float padding = Mathf.Max(3f, artPixel * 2f);
+            Vector2 plateSize = new Vector2(text.preferredWidth + padding * 2.5f, text.fontSize + padding * 1.5f);
+            PlaceCentered(plate.rectTransform, Vector2.zero, plateSize);
+
+            // Accent underline at the bottom of plate just like spawn text
+            Image accent = CreateImage(plate.transform, "Accent", PathPreviewArt.GetPixel(), badgeColor);
+            accent.rectTransform.anchorMin = Vector2.zero;
+            accent.rectTransform.anchorMax = new Vector2(1f, 0f);
+            accent.rectTransform.pivot = new Vector2(0.5f, 0f);
+            accent.rectTransform.sizeDelta = new Vector2(0f, Mathf.Max(1f, artPixel));
+            accent.rectTransform.anchoredPosition = Vector2.zero;
+
+            damageBadges.Add(new DamageBadge { root = badgeRt, group = group, appearAt = appearAt });
         }
 
         // ─────────────────────────────────────────────────────
