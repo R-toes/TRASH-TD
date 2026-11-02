@@ -294,9 +294,10 @@ namespace TrashTD.Enemies
 
             if (isBlocked)
             {
+                UpdateFacingTowardsBlocker();
+
                 if (Vector3.Distance(transform.position, blockedPosition) > 0.02f)
                 {
-                    UpdateFacing(blockedPosition.x - transform.position.x);
                     transform.position = Vector3.MoveTowards(transform.position, blockedPosition, currentMoveSpeed * Time.deltaTime);
                 }
                 else
@@ -355,12 +356,29 @@ namespace TrashTD.Enemies
             return true;
         }
 
+        /// <summary>
+        /// Ensures the blocked enemy always faces the operator blocking it.
+        /// Prevents mirroring bugs when fast enemies (like Rushers) overshoot and nudge back into blockedPosition.
+        /// </summary>
+        protected void UpdateFacingTowardsBlocker()
+        {
+            if (blockingOperator != null)
+            {
+                float dirX = blockingOperator.transform.position.x - transform.position.x;
+                if (Mathf.Abs(dirX) > 0.01f)
+                {
+                    UpdateFacing(dirX);
+                }
+            }
+        }
+
         /// <summary>Walks into (and then holds) the stopping point in front of the blocker.</summary>
         protected void HoldBlockedPosition(float deltaTime)
         {
+            UpdateFacingTowardsBlocker();
+
             if (Vector3.Distance(transform.position, blockedPosition) > 0.02f)
             {
-                UpdateFacing(blockedPosition.x - transform.position.x);
                 transform.position = Vector3.MoveTowards(transform.position, blockedPosition, currentMoveSpeed * deltaTime);
             }
             else
@@ -491,9 +509,10 @@ namespace TrashTD.Enemies
 
             if (isBlocked)
             {
+                UpdateFacingTowardsBlocker();
+
                 if (Vector3.Distance(transform.position, blockedPosition) > 0.02f)
                 {
-                    UpdateFacing(blockedPosition.x - transform.position.x);
                     transform.position = Vector3.MoveTowards(transform.position, blockedPosition, currentMoveSpeed * deltaTime);
                 }
                 else
@@ -1341,6 +1360,8 @@ namespace TrashTD.Enemies
             {
                 transform.position = blockedPosition;
             }
+
+            UpdateFacingTowardsBlocker();
         }
 
         /// <summary>
