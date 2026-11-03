@@ -50,4 +50,4 @@ MonoBehaviour:
 
   abilityDescription: "Faded and untargetable by ranged operators until it binds. Binds the first operator that comes close for up to 15 seconds, dealing Arts damage every second. Afterwards it can be targeted by everyone and hits much harder."
   intelQuote: "*crackle* Stay. Plugged. In."
-  intelLore: "A knot of extension cords that crawled out of a collapsed substation and kept growing. Hextension slips along the lane half unseen, then lashes a live wire around one operator and drains it. Stun it, freeze it or push it back to cut the wire."
+  intelLore: "A phantom covered in tangled wires and frayed high-voltage cables drifting silently down the lane. Unseen until it strikes, Hextension snares nearby operators with live, humming cords to siphon their life force."

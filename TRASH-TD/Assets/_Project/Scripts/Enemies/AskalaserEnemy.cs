@@ -36,8 +36,9 @@ namespace TrashTD.Enemies
     ///     - Green tiles (Ranged units ONLY, Manhattan distance 2): (0, 2), (-1, 1), (1, 1), (-2, 0), (2, 0), (-1, -1), (1, -1), (0, -2)
     ///   - Continuous light magic laser locking onto one target.
     ///   - Completely stops moving while lasering.
-    ///   - Ticks every 0.375 seconds.
-    ///   - Damage ramps every 1.5 seconds: 5 -> 15 -> 30 -> 80 -> 100 -> 150.
+    ///   - Ticks every 0.5 seconds.
+    ///   - Damage ramps every 1.5 seconds: 5 -> 15 -> 30 -> 50 -> 70 -> 90.
+    ///   - At 70 and 90 damage, it takes 5% of its Max HP per tick.
     ///   - Continuously attacks the operator until it dies, becomes camouflaged (Proxyshot), or leaves range.
     ///   - Prioritizes target with lowest DEF.
     ///   - When lock breaks: switches to another target in range (ramp resets to 5) or transitions back to State 1.
@@ -48,7 +49,7 @@ namespace TrashTD.Enemies
         public const int State1Damage = 20;
         public const float State1StopDuration = 0.75f;
 
-        public const float LaserTickInterval = 0.375f;
+        public const float LaserTickInterval = 0.5f;
         public const float LaserStepDuration = 1.5f;
 
         public static readonly Color LaserColor = new Color(1f, 0.2f, 0.16f, 1f);
@@ -249,9 +250,9 @@ namespace TrashTD.Enemies
             if (duration < LaserStepDuration) return 5;
             if (duration < LaserStepDuration * 2f) return 15;
             if (duration < LaserStepDuration * 3f) return 30;
-            if (duration < LaserStepDuration * 4f) return 80;
-            if (duration < LaserStepDuration * 5f) return 100;
-            return 150;
+            if (duration < LaserStepDuration * 4f) return 50;
+            if (duration < LaserStepDuration * 5f) return 70;
+            return 90;
         }
 
         /// <summary>Ramp stage 0-5 (one per damage step), shown by the laser visual.</summary>
@@ -620,6 +621,19 @@ namespace TrashTD.Enemies
             lockedTarget.TryTakeAttackDamage(damage, DamageType.Arts, this);
             if (laserVisual != null)
                 laserVisual.OnDamageTick();
+
+            // When at 70 and 90 damage, it takes 5% of its Max HP per tick
+            if (damage >= 70)
+            {
+                int maxHp = maxHP > 0 ? maxHP : (data != null ? data.baseHP : 100);
+                int selfDamage = Mathf.Max(1, Mathf.RoundToInt(maxHp * 0.05f));
+                TakeTrueDamage(selfDamage);
+                if (IsDead)
+                {
+                    ResetLock();
+                    return;
+                }
+            }
 
             // Check if target died, retreated, or activated Camouflage (e.g. Proxyshot)
             if (lockedTarget == null || !lockedTarget.IsDeployed || lockedTarget.CurrentHP <= 0 ||
