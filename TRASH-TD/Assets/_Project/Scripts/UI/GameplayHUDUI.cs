@@ -99,8 +99,15 @@ namespace TrashTD.UI
         private Text lpText;
         private readonly List<Image> topScreenGlows = new List<Image>();
         private GameObject nextWavePreview;
-        private Text nextWaveLabel;
+        private Button nextWavePreviewButton;
         private readonly List<GameObject> nextWavePreviewItems = new List<GameObject>();
+        // The next wave's enemy types (spawn-list order) and counts, kept so a click can re-lay the rows
+        private readonly List<EnemyData> nextWaveOrder = new List<EnemyData>();
+        private readonly Dictionary<EnemyData, int> nextWaveCounts = new Dictionary<EnemyData, int>();
+        private string nextWaveTitle;
+        private Color nextWaveTitleColor;
+        private bool nextWavePreviewExpanded;
+        private int nextWavePreviewNumber = -1;
         private Text phaseText;
         private Text squadCountText;
         private GameObject selectedOperatorLabelRoot;
@@ -1466,36 +1473,65 @@ namespace TrashTD.UI
         }
 
         /// <summary>
-        /// "NEXT WAVE 08" tab hanging under the bar (centred under the hostiles screen) between waves:
-        /// each enemy type in the next wave with its count (first sprite frame + "x8").
+        /// "NEXT WAVE 08" tab hanging a little under the bar (centred under the hostiles screen) between waves:
+        /// each enemy type in the next wave with its count (first sprite frame + "x8"). One row of up to
+        /// NextWavePreviewMaxTypes types; with more, "+N MORE" makes the tab clickable, and a click expands it to
+        /// extra rows of the same size (and back).
         /// </summary>
         private void CreateNextWavePreview()
         {
-            nextWavePreview = new GameObject("NextWavePreview", typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
+            nextWavePreview = new GameObject("NextWavePreview", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter), typeof(Button));
             nextWavePreview.transform.SetParent(stageInfoPanel.transform, false);
             var rect = nextWavePreview.GetComponent<RectTransform>();
             float centerX = (300f + 335f) * 0.5f / TopArtWidth;
-            SetPosition(rect, new Vector2(0f, 2f), new Vector2(centerX, 0f), new Vector2(0f, 46f), new Vector2(0.5f, 1f));
+            // 10 px gap under the bar; the height follows the rows
+            SetPosition(rect, new Vector2(0f, -NextWavePreviewGap), new Vector2(centerX, 0f), new Vector2(0f, 0f), new Vector2(0.5f, 1f));
             ApplyPanelContainer(nextWavePreview, PanelContainerType.Dark);
             nextWavePreview.GetComponent<Image>().raycastTarget = false;
 
-            var layout = nextWavePreview.GetComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(14, 14, 6, 6);
-            layout.spacing = 14f;
-            layout.childAlignment = TextAnchor.MiddleLeft;
+            // Stand out from the map: an amber rim and a drop shadow
+            var rim = nextWavePreview.AddComponent<Outline>();
+            rim.effectColor = new Color(DraftColor.r, DraftColor.g, DraftColor.b, 0.55f);
+            rim.effectDistance = new Vector2(2f, -2f);
+            var shadow = nextWavePreview.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.6f);
+            shadow.effectDistance = new Vector2(0f, -5f);
+
+            var layout = nextWavePreview.GetComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(16, 16, 7, 7);
+            layout.spacing = 4f;
+            layout.childAlignment = TextAnchor.UpperLeft;
             layout.childControlWidth = true;
             layout.childControlHeight = true;
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = false;
-            nextWavePreview.GetComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var fitter = nextWavePreview.GetComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            nextWaveLabel = CreateText(nextWavePreview.transform, "NextWaveLabel", "NEXT WAVE", 10, TextAnchor.MiddleLeft);
-            nextWaveLabel.color = DraftColor;
-            nextWaveLabel.raycastTarget = false;
+            nextWavePreviewButton = nextWavePreview.GetComponent<Button>();
+            nextWavePreviewButton.targetGraphic = nextWavePreview.GetComponent<Image>();
+            nextWavePreviewButton.transition = Selectable.Transition.ColorTint;
+            // Hover brightens an expandable tab; a tab that can't expand (not interactable) looks the same as normal
+            Color rest = new Color(0.88f, 0.88f, 0.88f, 1f);
+            ColorBlock colors = nextWavePreviewButton.colors;
+            colors.normalColor = rest;
+            colors.highlightedColor = Color.white;
+            colors.pressedColor = new Color(0.75f, 0.75f, 0.75f, 1f);
+            colors.selectedColor = rest;
+            colors.disabledColor = rest;
+            colors.colorMultiplier = 1f;
+            colors.fadeDuration = 0.08f;
+            nextWavePreviewButton.colors = colors;
+            nextWavePreviewButton.navigation = new Navigation { mode = Navigation.Mode.None };
+            nextWavePreviewButton.onClick.AddListener(ToggleNextWavePreview);
+            nextWavePreviewButton.interactable = false;
             nextWavePreview.SetActive(false);
         }
 
         private const int NextWavePreviewMaxTypes = 6;
+        private const float NextWavePreviewGap = 10f;
+        private const float NextWaveIconSize = 40f;
 
         private void RefreshNextWavePreview()
         {
@@ -1507,52 +1543,116 @@ namespace TrashTD.UI
             if (show) next = waveManager.PeekNextWave();
             show = show && WaveManager.CountEnemies(next) > 0;
             nextWavePreview.SetActive(show);
-            if (!show) return;
-
-            foreach (GameObject item in nextWavePreviewItems)
+            if (!show)
             {
-                if (item != null) Destroy(item);
+                nextWavePreviewExpanded = false;
+                return;
             }
-            nextWavePreviewItems.Clear();
 
             int total = waveManager.TotalWaves;
             int number = gameManager.GetCurrentWaveIndex() + 1;
             bool final = total > 0 && number >= total;
-            nextWaveLabel.text = final ? "FINAL WAVE" : $"NEXT WAVE {number:00}";
-            nextWaveLabel.color = final ? LifeColor : DraftColor;
+            nextWaveTitle = final ? "FINAL WAVE" : $"NEXT WAVE {number:00}";
+            nextWaveTitleColor = final ? LifeColor : DraftColor;
+            // A new wave starts collapsed
+            if (number != nextWavePreviewNumber) nextWavePreviewExpanded = false;
+            nextWavePreviewNumber = number;
 
             // Enemy types in spawn-list order, with their total counts
-            var order = new List<EnemyData>();
-            var counts = new Dictionary<EnemyData, int>();
+            nextWaveOrder.Clear();
+            nextWaveCounts.Clear();
             foreach (WaveEntry entry in next.entries)
             {
                 if (entry == null || entry.enemyData == null || entry.count <= 0) continue;
-                if (!counts.ContainsKey(entry.enemyData))
+                if (!nextWaveCounts.ContainsKey(entry.enemyData))
                 {
-                    counts[entry.enemyData] = 0;
-                    order.Add(entry.enemyData);
+                    nextWaveCounts[entry.enemyData] = 0;
+                    nextWaveOrder.Add(entry.enemyData);
                 }
-                counts[entry.enemyData] += entry.count;
+                nextWaveCounts[entry.enemyData] += entry.count;
             }
 
-            for (int i = 0; i < order.Count && i < NextWavePreviewMaxTypes; i++)
+            BuildNextWaveRows();
+        }
+
+        private void ToggleNextWavePreview()
+        {
+            if (nextWaveOrder.Count <= NextWavePreviewMaxTypes) return;
+            nextWavePreviewExpanded = !nextWavePreviewExpanded;
+            BuildNextWaveRows();
+        }
+
+        /// <summary>
+        /// Lays out the rows: the title and the first NextWavePreviewMaxTypes types, then (expanded) the rest in
+        /// rows of the same width. A "+N MORE" / "LESS" hint ends the last row when the tab can expand.
+        /// </summary>
+        private void BuildNextWaveRows()
+        {
+            foreach (GameObject item in nextWavePreviewItems)
             {
-                nextWavePreviewItems.Add(CreateNextWaveItem(order[i], counts[order[i]]));
+                if (item == null) continue;
+                item.SetActive(false); // out of this frame's layout; Destroy waits for the end of the frame
+                Destroy(item);
+            }
+            nextWavePreviewItems.Clear();
+
+            bool expandable = nextWaveOrder.Count > NextWavePreviewMaxTypes;
+            if (!expandable) nextWavePreviewExpanded = false;
+            nextWavePreviewButton.interactable = expandable;
+            // Only an expandable tab takes clicks; otherwise clicks fall through to the map
+            nextWavePreview.GetComponent<Image>().raycastTarget = expandable;
+
+            int shown = nextWavePreviewExpanded ? nextWaveOrder.Count : Mathf.Min(nextWaveOrder.Count, NextWavePreviewMaxTypes);
+            Transform row = CreateNextWaveRow();
+            Text title = CreateText(row, "NextWaveLabel", nextWaveTitle, 12, TextAnchor.MiddleLeft);
+            title.fontStyle = FontStyle.Bold;
+            title.color = nextWaveTitleColor;
+            title.raycastTarget = false;
+            var titleLayout = title.gameObject.AddComponent<LayoutElement>();
+            titleLayout.minWidth = 150f; // later rows indent past the title, so the icons line up in columns
+
+            for (int i = 0; i < shown; i++)
+            {
+                if (i > 0 && i % NextWavePreviewMaxTypes == 0)
+                {
+                    row = CreateNextWaveRow();
+                    var indent = new GameObject("Indent", typeof(RectTransform), typeof(LayoutElement));
+                    indent.transform.SetParent(row, false);
+                    indent.GetComponent<LayoutElement>().minWidth = titleLayout.minWidth;
+                }
+                CreateNextWaveItem(row, nextWaveOrder[i], nextWaveCounts[nextWaveOrder[i]]);
             }
 
-            if (order.Count > NextWavePreviewMaxTypes)
+            if (expandable)
             {
-                Text more = CreateText(nextWavePreview.transform, "More", "+" + (order.Count - NextWavePreviewMaxTypes), 11, TextAnchor.MiddleLeft);
-                more.color = TextDim;
+                string hint = nextWavePreviewExpanded ? "LESS" : $"+{nextWaveOrder.Count - shown} MORE";
+                Text more = CreateText(row, "More", hint, 11, TextAnchor.MiddleLeft);
+                more.fontStyle = FontStyle.Bold;
+                more.color = DraftColor;
                 more.raycastTarget = false;
-                nextWavePreviewItems.Add(more.gameObject);
             }
         }
 
-        private GameObject CreateNextWaveItem(EnemyData enemy, int count)
+        private Transform CreateNextWaveRow()
+        {
+            var row = new GameObject("Row", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            row.transform.SetParent(nextWavePreview.transform, false);
+            var layout = row.GetComponent<HorizontalLayoutGroup>();
+            layout.spacing = 12f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            row.GetComponent<LayoutElement>().minHeight = NextWaveIconSize;
+            nextWavePreviewItems.Add(row);
+            return row.transform;
+        }
+
+        private GameObject CreateNextWaveItem(Transform row, EnemyData enemy, int count)
         {
             var item = new GameObject("Next_" + enemy.enemyName, typeof(RectTransform), typeof(HorizontalLayoutGroup));
-            item.transform.SetParent(nextWavePreview.transform, false);
+            item.transform.SetParent(row, false);
             var layout = item.GetComponent<HorizontalLayoutGroup>();
             layout.spacing = 4f;
             layout.childAlignment = TextAnchor.MiddleLeft;
@@ -1573,11 +1673,15 @@ namespace TrashTD.UI
             iconImage.preserveAspect = true;
             iconImage.raycastTarget = false;
             var iconLayout = iconObj.GetComponent<LayoutElement>();
-            iconLayout.preferredWidth = 32f;
-            iconLayout.preferredHeight = 32f;
+            iconLayout.preferredWidth = NextWaveIconSize;
+            iconLayout.preferredHeight = NextWaveIconSize;
 
-            Text countText = CreateText(item.transform, "Count", "x" + count, 11, TextAnchor.MiddleLeft);
+            Text countText = CreateText(item.transform, "Count", "x" + count, 13, TextAnchor.MiddleLeft);
+            countText.fontStyle = FontStyle.Bold;
+            countText.color = Color.white;
             countText.raycastTarget = false;
+            var countLayout = countText.gameObject.AddComponent<LayoutElement>();
+            countLayout.minWidth = 44f; // "x88" wide, so the expanded rows keep their columns
             return item;
         }
 
