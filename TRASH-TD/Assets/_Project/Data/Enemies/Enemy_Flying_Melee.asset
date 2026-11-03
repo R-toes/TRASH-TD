@@ -21,10 +21,18 @@ MonoBehaviour:
   baseRES: 35
   moveSpeed: 0.75
   damageType: 1
-  attackInterval: 1.38
+  attackProjectileColor: {r: 0.55, g: 0.9, b: 0.3, a: 1}
+  usesSandProjectileVisual: 0
+  usesPlasmaProjectileVisual: 0
+  attackInterval: 1.3
   attackRange: 0
+  frontAreaAttackTiles: 0
+  rangePattern: []
   isUnblockable: 1
+  operatorAttackMissChance: 0
   blockWeight: 1
+  isAcidRainImmune: 0
+  isAcidTileImmune: 0
   lifePointCost: 1
   sprite: {fileID: -2138393494417482310, guid: 28d9f1c701a054641a6caa8e8100ccc1, type: 3}
   animationFrames:
@@ -41,6 +49,6 @@ MonoBehaviour:
   visualOffset: {x: 0, y: 0.75, z: 0}
   projectileOrigin: {x: -0.03, y: -0.31}
   enemyPrefab: {fileID: 9005451285246291143, guid: 8f2d6b4a1c9e47a5b3d7e0f2c6a8d1b5, type: 3}
-  abilityDescription: "Flying and unblockable. Swoops at operators along its route, pausing briefly over each attack. High DEF and RES."
-  intelQuote: "*SCREEEECH*"
-  intelLore: "A rat that learned to glide on a stolen tarp and never came back down. Talon Rat is heavily plated and dives at operators from above. Field teams recommend looking up."
+  abilityDescription: Flying and unblockable. Swoops at operators along its route, pausing briefly over each attack. High DEF and RES.
+  intelQuote: '*SCREEEECH*'
+  intelLore: A rat that learned to glide on a stolen tarp and never came back down. Talon Rat is heavily plated and dives at operators from above. Field teams recommend looking up.

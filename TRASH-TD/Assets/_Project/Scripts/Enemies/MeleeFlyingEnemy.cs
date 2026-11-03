@@ -26,6 +26,8 @@ namespace TrashTD.Enemies
         // Melee operators can hit it from halfway down the dive until it's 40% of the way back up
         private const float MeleeReachDiveFrom = 0.5f;
         private const float MeleeReachRiseUntil = 0.4f;
+        // Speed multiplier between swoops while a target is in range (raise it for a bigger step per attack)
+        private const float GapMoveSpeedMultiplier = 1f;
 
         private enum SwoopPhase { None, Diving, Holding, Rising }
 
@@ -69,9 +71,8 @@ namespace TrashTD.Enemies
         }
 
         /// <summary>
-        /// Stops still only for the swoop (dive, strike, climb), against every target. Between swoops it creeps a bit
-        /// forward along its path at the shared engaged speed (AirCombatEnemy), so each attack lands a little further
-        /// on; it flies on at full speed once nothing is in range. It isn't blocked and attacks on its own timer.
+        /// Stops still only for the swoop (dive, strike, climb), against every target. Between swoops it moves forward along
+        /// its path at full speed (EngagedSpeed), so each attack lands about half a tile further on; it flies on at full speed once nothing is in range. It isn't blocked and attacks on its own timer.
         /// </summary>
         protected override void MoveAlongPath()
         {
@@ -79,6 +80,12 @@ namespace TrashTD.Enemies
             if (phase != SwoopPhase.None) return;
             base.MoveAlongPath();
         }
+
+        /// <summary>
+        /// Full speed in the gap between swoops (~0.63 s at the 1.38 s interval, about half a tile per attack). The
+        /// shared 0.5× creep moved it only a quarter tile, which the hover bob hid, so it looked like it never moved.
+        /// </summary>
+        protected override float EngagedSpeed => GapMoveSpeedMultiplier;
 
         /// <summary>The swoop already holds it still (MoveAlongPath); without a raised sprite, pause for as long.</summary>
         protected override float GetAttackPause(float attackInterval) =>
