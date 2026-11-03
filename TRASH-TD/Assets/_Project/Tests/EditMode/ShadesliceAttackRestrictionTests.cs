@@ -149,6 +149,18 @@ namespace TrashTD.Tests
         }
 
         [Test]
+        public void RoboflameConeAttack_IgnoresShadesliceUntilBlocked()
+        {
+            RoboflameEnemy attacker = CreateEnemy<RoboflameEnemy>(EnemyArchetype.Caster);
+            attacker.SetGridManager(gridManager);
+            attacker.transform.position = gridManager.GridToWorldPosition(0, 0);
+
+            Assert.IsEmpty(attacker.GetOperatorsInCone(Vector2Int.right));
+            Assert.IsTrue(shadeslice.TryBlock(attacker));
+            CollectionAssert.Contains(attacker.GetOperatorsInCone(Vector2Int.right), shadeslice);
+        }
+
+        [Test]
         public void ExplodingBugDeathBlast_DamagesShadeslice()
         {
             ExplodingBugEnemy attacker = CreateEnemy<ExplodingBugEnemy>(EnemyArchetype.Rusher);

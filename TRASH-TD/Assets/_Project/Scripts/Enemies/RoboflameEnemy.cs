@@ -118,7 +118,8 @@ namespace TrashTD.Enemies
             for (int i = 0; i < deployed.Count; i++)
             {
                 OperatorBase op = deployed[i];
-                if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || !op.IsTargetable || op.DeployedCell == null)
+                if (op == null || !op.IsDeployed || op.CurrentHP <= 0 ||
+                    !op.CanBeTargetedByEnemy(this) || op.DeployedCell == null)
                     continue;
 
                 if (cells.Contains(op.DeployedCell.GridPosition))
@@ -178,7 +179,7 @@ namespace TrashTD.Enemies
             for (int i = 0; i < targets.Count; i++)
             {
                 OperatorBase op = targets[i];
-                if (!op.TryTakeAreaAttackDamage(currentATK, data.damageType, this)) continue;
+                if (!op.TryTakeAttackDamage(currentATK, data.damageType, this)) continue;
                 PlayImpactSound();
                 FlamethrowerVisual.Ignite(op.transform.position);
                 RegisterHeatTick(op);
