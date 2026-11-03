@@ -168,7 +168,7 @@ namespace TrashTD.Operators
                 0.09f,
                 false,
                 () => ApplyDeadeyeDamage(target, isAir),
-                ProjectileStyle.Bullet);
+                ProjectileStyle.Pea);
         }
 
         private void ApplyDeadeyeDamage(EnemyBase target, bool isAir)

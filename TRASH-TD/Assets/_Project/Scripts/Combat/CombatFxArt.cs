@@ -46,6 +46,13 @@ namespace TrashTD.Combat
             "LW",
             "WL");
 
+        public static Sprite Pea(Color color) => Shaded("pea", color,
+            ".OOO.",
+            "OCLCO",
+            "OCLWO",
+            "OCLCO",
+            ".OOO.");
+
         public static Sprite Orb(Color color) => Shaded("orb", color,
             "...OOO...",
             ".OOCCCOO.",

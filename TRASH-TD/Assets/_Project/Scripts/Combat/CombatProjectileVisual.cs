@@ -11,6 +11,7 @@ namespace TrashTD.Combat
         Bolt,     // Basic ranged attack: a glowing dart
         Bullet,   // Sniper round: hot slug with a tracer streak
         Pellet,   // Shotgun pellet
+        Pea,      // Small, round sniper shot
         ArtsOrb,  // Caster magic: shaded orb with a flickering halo and sparkles
         FireOrb,  // Fire magic: orb shedding flames, bursts into a small fireball
         Frost,    // Ice shard trailing frost, shatters on impact
@@ -195,6 +196,7 @@ namespace TrashTD.Combat
             {
                 ProjectileStyle.Bullet => CombatFxArt.Bullet(color),
                 ProjectileStyle.Pellet => CombatFxArt.Pellet(color),
+                ProjectileStyle.Pea => CombatFxArt.Pea(color),
                 ProjectileStyle.ArtsOrb => CombatFxArt.Orb(color),
                 ProjectileStyle.FireOrb => CombatFxArt.Orb(color),
                 ProjectileStyle.Frost => CombatFxArt.Shard(color),
@@ -347,6 +349,7 @@ namespace TrashTD.Combat
             return style switch
             {
                 ProjectileStyle.Bullet => 1f,
+                ProjectileStyle.Pea => 2f,
                 ProjectileStyle.FireOrb => 2f,
                 ProjectileStyle.HeavyRocket => 2f,
                 ProjectileStyle.Bolt => 2f,
@@ -385,6 +388,7 @@ namespace TrashTD.Combat
             {
                 case ProjectileStyle.Bullet:
                 case ProjectileStyle.Pellet:
+                case ProjectileStyle.Pea:
                 case ProjectileStyle.Bolt:
                     PixelParticles.Emit(new PixelParticle
                     {
@@ -604,6 +608,9 @@ namespace TrashTD.Combat
                     break;
                 case ProjectileStyle.Pellet:
                     CombatFx.Sparks(position, color, 2, 1.8f, 0.12f, direction: direction, coneDegrees: 120f);
+                    break;
+                case ProjectileStyle.Pea:
+                    CombatFx.Sparks(position, color, 2, 1.2f, 0.08f, direction: direction, coneDegrees: 100f);
                     break;
                 case ProjectileStyle.Quill:
                     CombatFx.Sparks(position, color, 3, 1.5f, 0.15f);
