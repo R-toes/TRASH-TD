@@ -244,9 +244,10 @@ namespace TrashTD.Systems
         }
 
         /// <summary>
-        /// Checks if any unblocked ground enemy is on a cell with an available blocker.
+        /// Checks if any unblocked ground enemy is on a cell with an available blocker,
+        /// or is slightly past an operator on their path who now has an available block slot freed.
         /// </summary>
-        private void CheckBlockingInteractions()
+        public void CheckBlockingInteractions()
         {
             if (gridManager == null) return;
 
@@ -259,12 +260,41 @@ namespace TrashTD.Systems
 
                 Vector2Int gridPos = gridManager.WorldToGridPosition(enemy.transform.position);
                 GridCell cell = gridManager.GetCell(gridPos);
+                bool blocked = false;
                 if (cell != null && cell.IsOccupied && cell.OccupantOperator != null)
                 {
                     var op = cell.OccupantOperator.GetComponent<OperatorBase>();
                     if (op != null && BlockingSystem.CanBlock(op, enemy))
                     {
-                        BlockingSystem.TryEngageBlock(op, enemy);
+                        blocked = BlockingSystem.TryEngageBlock(op, enemy);
+                    }
+                }
+
+                // If not blocked by an occupant on the current cell, check if an operator the enemy
+                // recently passed on their path now has an available block slot freed and can catch them.
+                if (!blocked && enemy.Path != null && enemy.Path.Count > 0)
+                {
+                    float catchRadius = 0.85f * gridManager.CellSize;
+                    int checkIdx = Mathf.Clamp(enemy.CurrentPathIndex - 1, 0, enemy.Path.Count - 1);
+                    for (int w = checkIdx; w >= Mathf.Max(0, checkIdx - 1); w--)
+                    {
+                        Vector2Int passedGridPos = gridManager.WorldToGridPosition(enemy.Path[w]);
+                        if (passedGridPos == gridPos) continue;
+
+                        GridCell passedCell = gridManager.GetCell(passedGridPos);
+                        if (passedCell != null && passedCell.IsOccupied && passedCell.OccupantOperator != null)
+                        {
+                            var passedOp = passedCell.OccupantOperator.GetComponent<OperatorBase>();
+                            if (passedOp != null && BlockingSystem.CanBlock(passedOp, enemy))
+                            {
+                                float dist = Vector3.Distance(passedOp.transform.position, enemy.transform.position);
+                                if (dist <= catchRadius)
+                                {
+                                    BlockingSystem.TryEngageBlock(passedOp, enemy);
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
             }

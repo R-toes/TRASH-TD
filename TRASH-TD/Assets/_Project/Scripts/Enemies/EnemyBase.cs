@@ -1318,17 +1318,58 @@ namespace TrashTD.Enemies
                     // When blocked, the enemy is stopped in front of the blocker (on the incoming/entrance boundary).
                     if (bestIdx > 0)
                     {
-                        blockedAdjacentGridPos = gridManager != null
-                            ? gridManager.WorldToGridPosition(path[bestIdx - 1])
-                            : blockerGridPos;
-                        blockedPosition = (path[bestIdx - 1] + path[bestIdx]) * 0.5f;
-                        currentPathIndex = bestIdx;
+                        Vector3 normalStopPos = (path[bestIdx - 1] + path[bestIdx]) * 0.5f;
+                        Vector3 incomingDir = (path[bestIdx] - path[bestIdx - 1]).normalized;
+                        Vector3 blockerPos = blocker != null ? blocker.transform.position : path[bestIdx];
+
+                        bool isPastBlocker = false;
+                        if (currentPathIndex > bestIdx)
+                        {
+                            isPastBlocker = true;
+                        }
+                        else
+                        {
+                            float progressPastBlocker = Vector3.Dot(transform.position - blockerPos, incomingDir);
+                            float progressPastStop = Vector3.Dot(transform.position - normalStopPos, incomingDir);
+
+                            if (progressPastBlocker > 0.05f || progressPastStop > 0.05f)
+                            {
+                                isPastBlocker = true;
+                            }
+                        }
+
+                        if (isPastBlocker)
+                        {
+                            // Enemy is already past the entrance stopping point or past the operator.
+                            // Don't push them backwards; stop them right where they are.
+                            blockedPosition = transform.position;
+                            blockedAdjacentGridPos = gridManager != null
+                                ? gridManager.WorldToGridPosition(transform.position)
+                                : blockerGridPos;
+
+                            if (currentPathIndex > bestIdx || Vector3.Dot(transform.position - blockerPos, incomingDir) > 0.05f)
+                            {
+                                currentPathIndex = Mathf.Min(path.Count - 1, Mathf.Max(currentPathIndex, bestIdx + 1));
+                            }
+                            else
+                            {
+                                currentPathIndex = bestIdx;
+                            }
+                        }
+                        else
+                        {
+                            blockedAdjacentGridPos = gridManager != null
+                                ? gridManager.WorldToGridPosition(path[bestIdx - 1])
+                                : blockerGridPos;
+                            blockedPosition = normalStopPos;
+                            currentPathIndex = bestIdx;
+                        }
                     }
                     else
                     {
                         // Blocker is on the very first waypoint (spawn)
                         blockedAdjacentGridPos = blockerGridPos;
-                        blockedPosition = path[bestIdx];
+                        blockedPosition = transform.position;
                         currentPathIndex = bestIdx;
                     }
                 }
@@ -1340,14 +1381,28 @@ namespace TrashTD.Enemies
                 {
                     Vector2Int forwardOffset = blocker.Facing.ToOffset();
                     blockedAdjacentGridPos = blockerGridPos + forwardOffset;
+                    Vector3 defaultStop;
                     if (gridManager != null)
                     {
                         Vector3 forwardWorld = gridManager.GridToWorldPosition(blockedAdjacentGridPos);
-                        blockedPosition = (blocker.transform.position + forwardWorld) * 0.5f;
+                        defaultStop = (blocker.transform.position + forwardWorld) * 0.5f;
                     }
                     else
                     {
-                        blockedPosition = blocker.transform.position + (Vector3)(Vector2)forwardOffset * 0.5f;
+                        defaultStop = blocker.transform.position + (Vector3)(Vector2)forwardOffset * 0.5f;
+                    }
+
+                    Vector3 forwardDir = (Vector3)(Vector2)forwardOffset;
+                    if (forwardDir != Vector3.zero) forwardDir.Normalize();
+
+                    if (Vector3.Dot(transform.position - blocker.transform.position, -forwardDir) > 0.05f ||
+                        Vector3.Distance(transform.position, blocker.transform.position) < Vector3.Distance(defaultStop, blocker.transform.position))
+                    {
+                        blockedPosition = transform.position;
+                    }
+                    else
+                    {
+                        blockedPosition = defaultStop;
                     }
                 }
                 else
