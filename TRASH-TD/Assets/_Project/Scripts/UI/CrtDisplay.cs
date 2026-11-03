@@ -28,6 +28,7 @@ namespace TrashTD.UI
 
         private static readonly int UiTexId = Shader.PropertyToID("_UiTex");
         private static readonly int HasUiId = Shader.PropertyToID("_HasUi");
+        private static readonly int HeatBlurId = Shader.PropertyToID("_HeatBlur");
 
         private CrtScreen.Settings settings = CrtScreen.Television;
 
@@ -73,6 +74,13 @@ namespace TrashTD.UI
 
         /// <summary>True while the game is being shown through the CRT.</summary>
         public static bool IsActive => instance != null && instance.isActiveAndEnabled && instance.picture != null;
+
+        /// <summary>Sets the brief Stage 4 heat distortion blur without softening the composited UI.</summary>
+        public static void SetHeatBlur(float amount)
+        {
+            if (instance == null || instance.material == null) return;
+            instance.material.SetFloat(HeatBlurId, Mathf.Clamp01(amount));
+        }
 
         /// <summary>
         /// Converts a real screen position (mouse, PointerEventData) to the matching position in the game

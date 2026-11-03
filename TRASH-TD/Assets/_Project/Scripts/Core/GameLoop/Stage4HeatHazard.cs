@@ -23,6 +23,9 @@ namespace TrashTD.Core.GameLoop
         public const int MaxHeatStacks = 5;
         public const float BurnIntervalSeconds = 1.0f;
         public const int BurnDamagePerTick = 2;
+        public const float HeatFlareDurationSeconds = 1.0f;
+        private const float NormalEmberEmissionRate = 10f;
+        private const int FlareEmberBurstCount = 42;
 
         private GridManager gridManager;
         private WaveManager waveManager;
@@ -31,7 +34,16 @@ namespace TrashTD.Core.GameLoop
         private StageData stageData;
 
         private float burnTickTimer;
+        private float heatFlareTimer;
         private SpriteRenderer furnaceUnderglowRenderer;
+        private SpriteRenderer heatFlareRenderer;
+        private Sprite heatFlareSprite;
+        private Camera heatFlareCamera;
+        private ParticleSystem emberParticleSystem;
+        private float emberFlareMinX;
+        private float emberFlareMaxX;
+        private float emberFlareY;
+        private float emberFlareZ;
 
         public void Initialize(
             GridManager grid,
@@ -58,6 +70,7 @@ namespace TrashTD.Core.GameLoop
             }
 
             ApplyWarmMapAtmosphere();
+            CreateHeatFlareOverlay();
             CreateDriftingEmbers();
             CreateIndustrialSteam();
             CreateHeatDistortionEffect();
@@ -75,6 +88,64 @@ namespace TrashTD.Core.GameLoop
                 operatorManager.OnOperatorDeployed -= HandleOperatorDeployed;
                 operatorManager.OnOperatorRetreated -= HandleOperatorRetreated;
             }
+
+            if (heatFlareRenderer != null)
+                Destroy(heatFlareRenderer.gameObject);
+            if (heatFlareSprite != null)
+                Destroy(heatFlareSprite);
+            CrtDisplay.SetHeatBlur(0f);
+        }
+
+        private void CreateHeatFlareOverlay()
+        {
+            heatFlareCamera = Camera.main;
+            if (heatFlareCamera == null) return;
+
+            var overlayObject = new GameObject("Stage4HeatFlareOverlay");
+            overlayObject.transform.SetParent(heatFlareCamera.transform, false);
+            overlayObject.transform.localPosition = Vector3.forward * (heatFlareCamera.nearClipPlane + 0.01f);
+
+            heatFlareRenderer = overlayObject.AddComponent<SpriteRenderer>();
+            heatFlareSprite = Sprite.Create(
+                Texture2D.whiteTexture,
+                new Rect(0f, 0f, 1f, 1f),
+                new Vector2(0.5f, 0.5f),
+                1f);
+            heatFlareRenderer.sprite = heatFlareSprite;
+            heatFlareRenderer.sortingLayerName = GridSorting.DefaultLayerName;
+            heatFlareRenderer.sortingOrder = short.MaxValue;
+            heatFlareRenderer.color = new Color(1f, 0.34f, 0.12f, 0f);
+        }
+
+        private float UpdateHeatFlare()
+        {
+            float flare = GetHeatFlareIntensity();
+            CrtDisplay.SetHeatBlur(flare * 0.8f);
+            if (heatFlareTimer > 0f)
+                heatFlareTimer = Mathf.Max(0f, heatFlareTimer - Time.deltaTime);
+
+            if (heatFlareCamera == null)
+                heatFlareCamera = Camera.main;
+            if (heatFlareRenderer == null && heatFlareCamera != null)
+                CreateHeatFlareOverlay();
+            if (heatFlareRenderer == null) return flare;
+
+            heatFlareRenderer.transform.localPosition =
+                Vector3.forward * (heatFlareCamera.nearClipPlane + 0.01f);
+            heatFlareRenderer.transform.localScale = new Vector3(
+                heatFlareCamera.orthographicSize * 2f * heatFlareCamera.aspect,
+                heatFlareCamera.orthographicSize * 2f,
+                1f);
+            heatFlareRenderer.color = new Color(1f, 0.30f, 0.08f, 0.20f * flare);
+            return flare;
+        }
+
+        private float GetHeatFlareIntensity()
+        {
+            if (heatFlareTimer <= 0f) return 0f;
+
+            float progress = 1f - heatFlareTimer / HeatFlareDurationSeconds;
+            return 1f - Mathf.SmoothStep(0f, 1f, progress);
         }
 
         /// <summary>
@@ -85,13 +156,22 @@ namespace TrashTD.Core.GameLoop
             if (operatorManager == null || !StageCombatModifiers.IsHeatHazardActive) return;
 
             var deployed = operatorManager.DeployedOperators;
+            bool heatStackAdded = false;
             for (int i = 0; i < deployed.Count; i++)
             {
                 OperatorBase op = deployed[i];
                 if (op == null || !op.IsDeployed || op.CurrentHP <= 0) continue;
 
+                int previousStacks = op.HeatStacks;
                 AddHeatStack(op);
+                heatStackAdded |= op.HeatStacks > previousStacks;
                 OperatorHeatBar.ShowFor(op);
+            }
+
+            if (heatStackAdded)
+            {
+                heatFlareTimer = HeatFlareDurationSeconds;
+                EmitHeatFlareEmbers();
             }
         }
 
@@ -137,10 +217,12 @@ namespace TrashTD.Core.GameLoop
 
         private void Update()
         {
+            float flare = UpdateHeatFlare();
+
             // Subtle breathing shimmer only on the bottom furnace glow
             if (furnaceUnderglowRenderer != null)
             {
-                float glow = 0.18f + 0.03f * Mathf.Sin(Time.time * 1.1f);
+                float glow = 0.18f + 0.03f * Mathf.Sin(Time.time * 1.1f) + 0.50f * flare;
                 furnaceUnderglowRenderer.color = new Color(1f, 0.44f, 0.10f, glow);
             }
 
@@ -234,6 +316,9 @@ namespace TrashTD.Core.GameLoop
             Vector3 gridBottomLeft = gridManager.GridToWorldPosition(0, 0)
                 - new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f);
             Vector3 mapCenter = gridBottomLeft + new Vector3(mapWidth * 0.5f, mapHeight * 0.5f, 0f);
+            emberFlareMinX = mapCenter.x - mapWidth * 0.5f;
+            emberFlareMaxX = mapCenter.x + mapWidth * 0.5f;
+            emberFlareY = mapCenter.y - mapHeight * 0.42f;
 
             var embersRoot = new GameObject("Stage4DriftingEmbers");
             embersRoot.transform.SetParent(transform, false);
@@ -242,8 +327,10 @@ namespace TrashTD.Core.GameLoop
             emberObj.transform.SetParent(embersRoot.transform, false);
             // Spawn origin near the bottom of the map
             emberObj.transform.position = mapCenter + new Vector3(0f, -mapHeight * 0.42f, -0.1f);
+            emberFlareZ = emberObj.transform.position.z;
 
             ParticleSystem ps = emberObj.AddComponent<ParticleSystem>();
+            emberParticleSystem = ps;
 
             // Main module
             var main = ps.main;
@@ -255,11 +342,11 @@ namespace TrashTD.Core.GameLoop
             main.startSize = new ParticleSystem.MinMaxCurve(0.045f, 0.095f);
             main.startColor = new Color(1f, 0.80f, 0.30f, 0.9f);
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 85;
+            main.maxParticles = 300;
 
             // Emission
             var emission = ps.emission;
-            emission.rateOverTime = 10f;
+            emission.rateOverTime = NormalEmberEmissionRate;
 
             // Shape: horizontal emitter bar along the bottom of the map
             var shape = ps.shape;
@@ -324,6 +411,27 @@ namespace TrashTD.Core.GameLoop
             renderer.sharedMaterial = GetEmberMaterial();
 
             ps.Play();
+        }
+
+        private void EmitHeatFlareEmbers()
+        {
+            if (emberParticleSystem == null) return;
+
+            for (int i = 0; i < FlareEmberBurstCount; i++)
+            {
+                var ember = new ParticleSystem.EmitParams
+                {
+                    position = new Vector3(
+                        Random.Range(emberFlareMinX, emberFlareMaxX),
+                        emberFlareY,
+                        emberFlareZ),
+                    velocity = new Vector3(Random.Range(-0.2f, 0.2f), Random.Range(0.8f, 1.4f), 0f),
+                    startLifetime = Random.Range(0.55f, 0.95f),
+                    startSize = Random.Range(0.12f, 0.20f),
+                    startColor = new Color(1f, 0.96f, 0.68f, 1f)
+                };
+                emberParticleSystem.Emit(ember, 1);
+            }
         }
 
         private static Material emberMaterial;

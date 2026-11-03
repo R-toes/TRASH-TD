@@ -21,6 +21,7 @@ Shader "TrashTD/UI/CRT"
         _HasUi ("Composite UI Layer", Float) = 0
         _Legacy ("Classic (first version) look", Float) = 0
         _Passthrough ("Passthrough (brightness only)", Float) = 0
+        _HeatBlur ("Heat Flare Blur", Range(0, 1)) = 0
         _Color ("Tint", Color) = (1,1,1,1)
 
         _Curvature ("Curvature", Range(0, 0.5)) = 0.06
@@ -128,6 +129,7 @@ Shader "TrashTD/UI/CRT"
             float _HasUi;
             float _Legacy;
             float _Passthrough;
+            float _HeatBlur;
             fixed4 _Color;
             float4 _ClipRect;
 
@@ -177,6 +179,29 @@ Shader "TrashTD/UI/CRT"
             float4 Pic(float2 uv)
             {
                 float4 picture = tex2D(_MainTex, uv);
+                if (_HasUi > 0.5)
+                {
+                    float4 ui = tex2D(_UiTex, uv);
+                    float coverage = sqrt(saturate(ui.a));
+                    picture.rgb = ui.rgb + picture.rgb * (1.0 - coverage);
+                    picture.a = max(picture.a, coverage);
+                }
+                return picture;
+            }
+
+            float4 HeatPic(float2 uv)
+            {
+                float4 picture = tex2D(_MainTex, uv);
+                if (_HeatBlur > 0.001)
+                {
+                    float2 offset = _HeatBlur * 1.5 / max(_CrtResolution.xy, float2(1.0, 1.0));
+                    picture.rgb = picture.rgb * 0.4
+                        + tex2D(_MainTex, uv + float2(offset.x, 0.0)).rgb * 0.15
+                        + tex2D(_MainTex, uv - float2(offset.x, 0.0)).rgb * 0.15
+                        + tex2D(_MainTex, uv + float2(0.0, offset.y)).rgb * 0.15
+                        + tex2D(_MainTex, uv - float2(0.0, offset.y)).rgb * 0.15;
+                }
+
                 if (_HasUi > 0.5)
                 {
                     float4 ui = tex2D(_UiTex, uv);
@@ -279,6 +304,8 @@ Shader "TrashTD/UI/CRT"
                 if (_Passthrough > 0.5)
                 {
                     float4 plain = Pic(IN.texcoord);
+                    if (_HeatBlur > 0.001)
+                        plain = HeatPic(IN.texcoord);
                     fixed4 plainColor = fixed4(saturate(plain.rgb * _Brightness), lerp(plain.a, 1.0, _Opaque)) * IN.color;
                     return FinishUi(plainColor, IN);
                 }
@@ -371,6 +398,9 @@ Shader "TrashTD/UI/CRT"
                         Pic(uv + float2(r2.x, -r2.y)).rgb + Pic(uv + float2(-r2.x, r2.y)).rgb;
                     col += glow * (0.125 * _Bloom);
                 }
+
+                if (_HeatBlur > 0.001)
+                    col = lerp(col, HeatPic(uv).rgb, _HeatBlur * 0.55);
 
                 col *= _Brightness;
 

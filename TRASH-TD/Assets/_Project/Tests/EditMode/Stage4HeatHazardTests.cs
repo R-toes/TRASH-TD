@@ -18,6 +18,7 @@ namespace TrashTD.Tests
         private OperatorManager operatorManager;
         private GameObject hazardObj;
         private GameObject operatorObj;
+        private GameObject emberObj;
         private OperatorData operatorData;
 
         [SetUp]
@@ -40,6 +41,7 @@ namespace TrashTD.Tests
                 Object.DestroyImmediate(playerDeckObj);
             }
             if (operatorObj != null) Object.DestroyImmediate(operatorObj);
+            if (emberObj != null) Object.DestroyImmediate(emberObj);
             if (operatorData != null) Object.DestroyImmediate(operatorData);
             if (hazardObj != null) Object.DestroyImmediate(hazardObj);
             if (operatorManagerObj != null) Object.DestroyImmediate(operatorManagerObj);
@@ -141,5 +143,55 @@ namespace TrashTD.Tests
 
             Assert.AreEqual(startingHP - 2, op.CurrentHP);
         }
+
+        [Test]
+        public void WaveStartHeatStackGain_StartsOneSecondMapFlare()
+        {
+            StageCombatModifiers.ConfigureForEnvironment("STAGE_04");
+
+            operatorData = ScriptableObject.CreateInstance<OperatorData>();
+            operatorData.operatorName = "HeatFlareGuard";
+            operatorData.baseHP = 100;
+
+            operatorObj = new GameObject("HeatFlareOperator");
+            GuardOperator op = operatorObj.AddComponent<GuardOperator>();
+            op.Initialize(operatorData, OperatorRarity.Star1, OperatorFacing.Right);
+            op.Deploy(new GridCell(0, 0, TileType.LowGround, Vector3.zero));
+            operatorManager.RegisterOperator(op);
+
+            Stage4HeatHazard hazard = hazardObj.AddComponent<Stage4HeatHazard>();
+            emberObj = new GameObject("TestEmbers");
+            ParticleSystem embers = emberObj.AddComponent<ParticleSystem>();
+            var emberMain = embers.main;
+            emberMain.playOnAwake = false;
+            var emission = embers.emission;
+            emission.rateOverTime = 10f;
+            typeof(Stage4HeatHazard)
+                .GetField("emberParticleSystem", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(hazard, embers);
+            typeof(Stage4HeatHazard)
+                .GetField("operatorManager", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(hazard, operatorManager);
+            typeof(Stage4HeatHazard)
+                .GetMethod("HandleWaveStarted", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(hazard, new object[] { 1, 5 });
+
+            float flareTimer = (float)typeof(Stage4HeatHazard)
+                .GetField("heatFlareTimer", BindingFlags.Instance | BindingFlags.NonPublic)
+                .GetValue(hazard);
+            float flareIntensity = (float)typeof(Stage4HeatHazard)
+                .GetMethod("GetHeatFlareIntensity", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(hazard, null);
+            var particles = new ParticleSystem.Particle[FlareParticleCapacity];
+            int particleCount = embers.GetParticles(particles);
+
+            Assert.AreEqual(1, op.HeatStacks);
+            Assert.AreEqual(Stage4HeatHazard.HeatFlareDurationSeconds, flareTimer);
+            Assert.AreEqual(1f, flareIntensity, "The map flare should peak with the round-start ember burst.");
+            Assert.Greater(particleCount, 0, "Round-start heat should emit an immediate ember burst.");
+            Assert.LessOrEqual(particles[0].remainingLifetime, 0.95f, "Flare embers should fade with the flare rather than linger.");
+        }
+
+        private const int FlareParticleCapacity = 64;
     }
 }
