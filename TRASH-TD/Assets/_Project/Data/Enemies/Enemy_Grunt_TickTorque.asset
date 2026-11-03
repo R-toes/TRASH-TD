@@ -41,5 +41,5 @@ MonoBehaviour:
   visualOffset: {x: 0, y: 0.2, z: 0}
   enemyPrefab: {fileID: 8358608267878886893, guid: fe7cdba075a50ac4b811cf1bad17646d, type: 3}
   abilityDescription: "Drills into whatever blocks it: light hits every 0.6 s that keep chipping even heavily armoured Defenders."
-  intelQuote: 
-  intelLore: 
+  intelQuote: "*whirrr-clack-clack-clack*"
+  intelLore: "A mechanical bug that has an industrial drill tool as its body. Skittering aggressively down the lane, it bores directly into anything in its way with rapid-fire torque strikes."
