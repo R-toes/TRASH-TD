@@ -23,9 +23,11 @@ MonoBehaviour:
   damageType: 1
   attackProjectileColor: {r: 1, g: 0.95, b: 0.5, a: 1}
   usesSandProjectileVisual: 0
+  usesPlasmaProjectileVisual: 0
   attackInterval: 5
   attackRange: 2
   frontAreaAttackTiles: 0
+  rangePattern: []
   isUnblockable: 0
   operatorAttackMissChance: 0
   blockWeight: 1
@@ -45,8 +47,8 @@ MonoBehaviour:
   animationFrameRate: 8
   visualScale: 1
   visualOffset: {x: 0, y: 0, z: 0}
+  projectileOrigin: {x: 0, y: 0}
   enemyPrefab: {fileID: 4017071742725256548, guid: 500eadbf86b446f6bc2ed9a18c924b4a, type: 3}
-
-  abilityDescription: "Every 5s, stops and zaps the deployed operator with the lowest DEF globally for 20 Arts damage. When an operator is within 2 tiles, channels a ramping laser (5 -> 15 -> 30 -> 50 -> 70 -> 90 Arts damage every 0.5s). At 70 and 90 damage, the overheating weapon consumes 5% of its Max HP per tick."
-  intelQuote: "*bark* ...*BZZZT*"
-  intelLore: "A stray dog that acquired a high-tech military laser in the ruins of Calder Basin. It roams the battlefield picking off soft targets from afar, but once an operator steps within reach, it plants its paws and fires an escalating beam. When pushed to its highest output, the overheating laser begins burning through the dog's own body."
+  abilityDescription: Every 5s, stops and zaps the deployed operator with the lowest DEF globally for 20 Arts damage. When an operator is within 2 tiles, channels a ramping laser (5 -> 15 -> 30 -> 50 -> 70 -> 90 Arts damage every 0.5s). At 70 and 90 damage, the overheating weapon consumes 5% of its Max HP per tick.
+  intelQuote: 
+  intelLore: A stray dog that acquired a high-tech military laser in the ruins of Calder Basin. It roams the battlefield picking off soft targets from afar, but once an operator steps within reach, it plants its paws and fires an escalating beam. When pushed to its highest output, the overheating laser begins burning through the dog's own body.
