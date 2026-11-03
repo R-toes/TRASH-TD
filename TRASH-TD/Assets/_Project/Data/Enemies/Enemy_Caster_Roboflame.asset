@@ -16,7 +16,7 @@ MonoBehaviour:
   archetype: 3
   movementType: 0
   baseHP: 400
-  baseATK: 20
+  baseATK: 15
   baseDEF: 20
   baseRES: 25
   moveSpeed: 0.7

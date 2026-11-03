@@ -178,7 +178,7 @@ namespace TrashTD.Enemies
             for (int i = 0; i < targets.Count; i++)
             {
                 OperatorBase op = targets[i];
-                if (!op.TryTakeAttackDamage(currentATK, data.damageType, this)) continue;
+                if (!op.TryTakeAreaAttackDamage(currentATK, data.damageType, this)) continue;
                 PlayImpactSound();
                 FlamethrowerVisual.Ignite(op.transform.position);
                 RegisterHeatTick(op);

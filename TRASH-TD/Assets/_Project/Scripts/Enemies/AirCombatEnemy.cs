@@ -148,7 +148,7 @@ namespace TrashTD.Enemies
 
         private bool IsValidTarget(OperatorBase op)
         {
-            if (op == null || !op.IsDeployed || !op.IsTargetable || !IsTargetInRange(op)) return false;
+            if (op == null || !op.IsDeployed || !op.CanBeTargetedByEnemy(this) || !IsTargetInRange(op)) return false;
             if (op.ShouldTauntAttacker(transform.position, GridManagerCache)) return true;
             return IsTargetable(op);
         }
@@ -251,7 +251,7 @@ namespace TrashTD.Enemies
                 Vector3 offset = collateral.transform.position - impactPoint;
                 offset.z = 0f;
                 if (offset.sqrMagnitude <= radius * radius)
-                    collateral.TryTakeAttackDamage(collateralATK, Data.damageType, this);
+                    collateral.TryTakeAreaAttackDamage(collateralATK, Data.damageType, this);
             }
         }
     }

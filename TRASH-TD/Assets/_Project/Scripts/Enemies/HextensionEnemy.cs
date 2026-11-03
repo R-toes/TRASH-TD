@@ -198,7 +198,7 @@ namespace TrashTD.Enemies
 
         public bool IsTargetInBindRange(OperatorBase op)
         {
-            if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || !op.IsTargetable || op.IsCamouflaged || op.IsBound)
+            if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || !op.CanBeTargetedByEnemy(this) || op.IsCamouflaged || op.IsBound)
                 return false;
 
             Vector2Int opPos = GetOperatorGridPos(op);
@@ -237,7 +237,7 @@ namespace TrashTD.Enemies
             for (int i = 0; i < deployed.Count; i++)
             {
                 OperatorBase op = deployed[i];
-                if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || op.IsBound) continue;
+                if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || op.IsBound || !op.CanBeTargetedByEnemy(this)) continue;
                 if (!IsTargetInBindRange(op)) continue;
 
                 float dist = (op.transform.position - transform.position).sqrMagnitude;
@@ -266,7 +266,7 @@ namespace TrashTD.Enemies
 
         public void StartBind(OperatorBase target)
         {
-            if (target == null || target.IsBound) return;
+            if (target == null || target.IsBound || !target.CanBeTargetedByEnemy(this)) return;
 
             // Turn Hextension to face the operator being bound so its wire arm aligns properly
             float dx = target.transform.position.x - transform.position.x;
@@ -391,7 +391,7 @@ namespace TrashTD.Enemies
                 chipDamageTimer -= ChipDamageInterval;
                 if (boundTarget != null && boundTarget.IsDeployed && boundTarget.CurrentHP > 0)
                 {
-                    boundTarget.TakeDamage(ChipDamageAmount, DamageType.Arts, this);
+                    boundTarget.TryTakeAttackDamage(ChipDamageAmount, DamageType.Arts, this);
                     if (boundTarget == null || !boundTarget.IsDeployed || boundTarget.CurrentHP <= 0)
                     {
                         StopBindAndTransition();

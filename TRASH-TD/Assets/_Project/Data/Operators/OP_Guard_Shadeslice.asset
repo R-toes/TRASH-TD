@@ -32,7 +32,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 1
   isolatedAttackMultiplier: 2
-  skillDescription: 'Deals 2.0x damage while no allied operator is in range. When not attacked for 5 seconds restore 2.5% of max hp every second.'
+  skillDescription: 'Only enemies he blocks (and Tanks) can target him directly. Deals 2.0x damage while isolated; restores 2.5% max HP every second after 5 seconds without damage.'
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5

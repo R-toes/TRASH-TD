@@ -50,11 +50,32 @@ namespace TrashTD.Operators
             ResetNotAttackedTimer();
         }
 
+        public override bool TryTakeAttackDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
+        {
+            if (!CanBeTargetedByEnemy(attacker)) return false;
+            return base.TryTakeAttackDamage(rawATK, damageType, attacker);
+        }
+
+        public override bool CanBeTargetedByEnemy(EnemyBase attacker)
+        {
+            return IsTargetable && CanBeAttackedBy(attacker);
+        }
+
         public override bool TakeTrueDamage(int damage, bool ignoreShieldNegation = false, bool canDodge = false)
         {
             bool dealt = base.TakeTrueDamage(damage, ignoreShieldNegation, canDodge);
             ResetNotAttackedTimer();
             return dealt;
+        }
+
+        private bool CanBeAttackedBy(EnemyBase attacker)
+        {
+            if (attacker == null) return true;
+            if (attacker.Data != null && attacker.Data.archetype == EnemyArchetype.Tank) return true;
+
+            return blockedEnemies.Contains(attacker) &&
+                   attacker.IsBlocked &&
+                   attacker.BlockingOperator == this;
         }
 
         protected override void Update()
@@ -102,4 +123,3 @@ namespace TrashTD.Operators
         }
     }
 }
-

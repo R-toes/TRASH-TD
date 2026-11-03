@@ -83,6 +83,8 @@ namespace TrashTD.Operators
         public virtual bool IgnoresMissMechanic => false;
         public virtual bool IsCamouflaged => false;
         public virtual bool IsTargetable => !IsCamouflaged;
+
+        public virtual bool CanBeTargetedByEnemy(EnemyBase attacker) => IsTargetable;
         public virtual bool HasTaunt => false;
 
         // --- Deployment & Combat Phase Tracking ---
@@ -779,7 +781,17 @@ namespace TrashTD.Operators
             return actualDamage > 0;
         }
 
-        public bool TryTakeAttackDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
+        public virtual bool TryTakeAttackDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
+        {
+            if (IsCombatPaused) return false;
+            if (!Combat.StageCombatModifiers.TryAttackHit(transform.position))
+                return false;
+
+            TakeDamage(rawATK, damageType, attacker);
+            return true;
+        }
+
+        public virtual bool TryTakeAreaAttackDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
         {
             if (IsCombatPaused) return false;
             if (!Combat.StageCombatModifiers.TryAttackHit(transform.position))

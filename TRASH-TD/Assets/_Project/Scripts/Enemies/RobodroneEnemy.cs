@@ -84,7 +84,7 @@ namespace TrashTD.Enemies
             for (int i = 0; i < operators.Count; i++)
             {
                 OperatorBase op = operators[i];
-                if (op == null || !op.IsDeployed || !op.IsTargetable || !IsTargetInRange(op)) continue;
+                if (op == null || !op.IsDeployed || !op.CanBeTargetedByEnemy(this) || !IsTargetInRange(op)) continue;
                 if (op.ShouldTauntAttacker(transform.position, GridManagerCache)) return op;
 
                 Vector3 offset = op.transform.position - transform.position;

@@ -290,7 +290,7 @@ namespace TrashTD.Enemies
 
         public bool IsTargetInState2Range(OperatorBase op)
         {
-            if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || !op.IsTargetable || op.IsCamouflaged)
+            if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || !op.CanBeTargetedByEnemy(this) || op.IsCamouflaged)
                 return false;
 
             Vector2Int opPos = GetOperatorGridPos(op);
@@ -370,7 +370,7 @@ namespace TrashTD.Enemies
             for (int i = 0; i < deployed.Count; i++)
             {
                 OperatorBase op = deployed[i];
-                if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || !op.IsTargetable || op.IsCamouflaged)
+                if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || !op.CanBeTargetedByEnemy(this) || op.IsCamouflaged)
                     continue;
 
                 float dist = (op.transform.position - transform.position).sqrMagnitude;
@@ -623,7 +623,7 @@ namespace TrashTD.Enemies
 
             // Check if target died, retreated, or activated Camouflage (e.g. Proxyshot)
             if (lockedTarget == null || !lockedTarget.IsDeployed || lockedTarget.CurrentHP <= 0 ||
-                !lockedTarget.IsTargetable || lockedTarget.IsCamouflaged)
+                !lockedTarget.CanBeTargetedByEnemy(this) || lockedTarget.IsCamouflaged)
             {
                 ResetLock();
                 OperatorBase next = FindState2Target();
@@ -636,7 +636,7 @@ namespace TrashTD.Enemies
 
         public void PerformState1Attack(OperatorBase target, bool applyImmediately = false)
         {
-            if (target == null || !target.IsDeployed || !target.IsTargetable || target.IsCamouflaged)
+            if (target == null || !target.IsDeployed || !target.CanBeTargetedByEnemy(this) || target.IsCamouflaged)
                 return;
 
             PlayAttackSound();
@@ -699,4 +699,3 @@ namespace TrashTD.Enemies
         }
     }
 }
-

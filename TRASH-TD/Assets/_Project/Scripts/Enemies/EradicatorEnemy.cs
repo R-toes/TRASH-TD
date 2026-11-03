@@ -132,7 +132,7 @@ namespace TrashTD.Enemies
             for (int i = 0; i < deployed.Count; i++)
             {
                 OperatorBase op = deployed[i];
-                if (!IsGroundOperator(op) || !op.IsTargetable) continue;
+                if (!IsGroundOperator(op) || !op.CanBeTargetedByEnemy(this)) continue;
 
                 Vector2Int offset = op.DeployedCell.GridPosition - selfCell;
                 if (System.Array.IndexOf(MeleeOffsets, offset) < 0) continue;
@@ -180,7 +180,7 @@ namespace TrashTD.Enemies
             for (int i = 0; i < deployed.Count; i++)
             {
                 OperatorBase op = deployed[i];
-                if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || !op.IsTargetable || op.DeployedCell == null)
+                if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || !op.CanBeTargetedByEnemy(this) || op.DeployedCell == null)
                     continue;
                 if ((op.transform.position - transform.position).sqrMagnitude > sqrRange) continue;
 
@@ -244,7 +244,7 @@ namespace TrashTD.Enemies
                 if (op == null || !op.IsDeployed || op.CurrentHP <= 0 || op.DeployedCell == null) continue;
                 if ((op.transform.position - center).sqrMagnitude > radius * radius) continue;
 
-                bool landed = op.TryTakeAttackDamage(damage, data.damageType, this);
+                bool landed = op.TryTakeAreaAttackDamage(damage, data.damageType, this);
                 if (landed && addHeat && op.IsDeployed && op.CurrentHP > 0)
                     Stage4HeatHazard.AddHeatStack(op);
             }
