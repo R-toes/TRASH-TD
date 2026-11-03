@@ -71,6 +71,9 @@ namespace TrashTD.Data
         [Tooltip("Optional full-map artwork displayed behind the logical grid")]
         public Sprite mapVisualSprite;
 
+        [Tooltip("Optional artwork override used only by the loading screen")]
+        public Sprite loadingScreenMapSprite;
+
         [Tooltip("Optional background artwork rendered behind the main map artwork")]
         public Sprite backgroundVisualSprite;
 
