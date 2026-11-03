@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TrashTD.Systems;
 using Random = UnityEngine.Random;
 
 namespace TrashTD.UI
@@ -14,7 +15,10 @@ namespace TrashTD.UI
     /// 3. Burst: a flash and a ring of pixel sparks in the new rarity's colour; the upgraded card pops in (the real slot
     ///    stays hidden until now) and a "RANK UP" label with the new stars rises above it.
     /// Merges queue and play one after another (a chain 1★→2★→3★ plays twice), and wait while the full draft screen
-    /// covers the deck bar. All visuals are UI images built in code on a layer above the HUD.
+    /// covers the deck bar. The deck has already reached its final state when they play, so each source card is a
+    /// snapshot of its deck slot taken when it merged (GameplayHUDUI.SnapshotDeckSlot). Snapshots stay on screen as
+    /// placeholders until their merge plays; a card made by an earlier merge in the queue (the 2★ of a 1★→2★→3★
+    /// chain) shows up only when that merge bursts. The snapshots themselves fly in, so they look like the real cards.
     /// </summary>
     public sealed class DeckMergeAnimator : MonoBehaviour
     {
@@ -29,6 +33,10 @@ namespace TrashTD.UI
         {
             public List<int> SourceSlots = new List<int>();   // -1 for a copy that had no slot
             public List<Sprite> SourcePortraits = new List<Sprite>();
+            public List<DraftCard> SourceCards = new List<DraftCard>();
+            /// <summary>Copies of the source deck slots as they looked at the merge (null where there is none).</summary>
+            public List<GameObject> SourceSnapshots = new List<GameObject>();
+            public DraftCard ResultCard;
             public int ResultSlot;
             public Sprite ResultPortrait;
             public int NewStars;
@@ -40,6 +48,7 @@ namespace TrashTD.UI
         {
             public RectTransform Rect;
             public Image Frame;
+            public bool GlowOnly;   // a slot snapshot: Frame is a glow behind it, not its body
             public Vector2 Start;
             public float ArcHeight;
             public float Spin;
@@ -67,6 +76,19 @@ namespace TrashTD.UI
         private readonly List<Ghost> ghosts = new List<Ghost>();
         private readonly List<Spark> sparks = new List<Spark>();
         private readonly List<GameObject> transients = new List<GameObject>();
+
+        /// <summary>A source card waiting in its slot (as a snapshot) for its merge to play.</summary>
+        private sealed class Placeholder
+        {
+            public Request Owner;
+            public int SourceIndex;
+            public int Slot;
+            public RectTransform Rect;
+            public Request WaitFor; // an earlier merge that makes this card; it appears when that one bursts
+            public bool Shown;
+        }
+
+        private readonly List<Placeholder> placeholders = new List<Placeholder>();
 
         private Request current;
         private float elapsed;
@@ -98,15 +120,75 @@ namespace TrashTD.UI
         public void Enqueue(Request request)
         {
             if (request == null || layer == null) return;
-            hiddenSlotCounts.TryGetValue(request.ResultSlot, out int count);
-            hiddenSlotCounts[request.ResultSlot] = count + 1;
-            setSlotHidden?.Invoke(request.ResultSlot, true);
+
+            for (int i = 0; i < request.SourceSnapshots.Count; i++)
+            {
+                GameObject snapshot = request.SourceSnapshots[i];
+                if (snapshot == null) continue;
+
+                // Onto the effects layer, centre-anchored, exactly where the slot is
+                var rect = snapshot.GetComponent<RectTransform>();
+                Vector2 position = ToLayer(rect);
+                rect.SetParent(layer, true);
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = position;
+                rect.localScale = Vector3.one;
+                rect.localRotation = Quaternion.identity;
+
+                var placeholder = new Placeholder
+                {
+                    Owner = request,
+                    SourceIndex = i,
+                    Slot = request.SourceSlots[i],
+                    Rect = rect,
+                    WaitFor = FindMergeMaking(i < request.SourceCards.Count ? request.SourceCards[i] : null)
+                };
+                placeholders.Add(placeholder);
+                if (placeholder.WaitFor == null) Show(placeholder);
+                else snapshot.SetActive(false);
+            }
+
+            Hide(request.ResultSlot);
             queue.Enqueue(request);
+        }
+
+        /// <summary>The queued (or playing, not yet burst) merge whose result is this card, if any.</summary>
+        private Request FindMergeMaking(DraftCard card)
+        {
+            if (card == null) return null;
+            Request found = null;
+            if (current != null && !burst && ReferenceEquals(current.ResultCard, card)) found = current;
+            foreach (Request queued in queue)
+            {
+                if (ReferenceEquals(queued.ResultCard, card)) found = queued;
+            }
+            return found;
+        }
+
+        /// <summary>Shows a waiting snapshot, hiding whatever the real slot holds now underneath it.</summary>
+        private void Show(Placeholder placeholder)
+        {
+            placeholder.Shown = true;
+            placeholder.Rect.gameObject.SetActive(true);
+            Hide(placeholder.Slot);
+        }
+
+        private void Hide(int slot)
+        {
+            if (slot < 0) return;
+            hiddenSlotCounts.TryGetValue(slot, out int count);
+            hiddenSlotCounts[slot] = count + 1;
+            setSlotHidden?.Invoke(slot, true);
         }
 
         private void OnDestroy()
         {
             ClearCurrent();
+            foreach (Placeholder placeholder in placeholders)
+            {
+                if (placeholder.Rect != null) Destroy(placeholder.Rect.gameObject);
+            }
+            placeholders.Clear();
             foreach (int slot in hiddenSlotCounts.Keys) setSlotHidden?.Invoke(slot, false);
             hiddenSlotCounts.Clear();
         }
@@ -155,15 +237,55 @@ namespace TrashTD.UI
 
             for (int i = 0; i < request.SourceSlots.Count; i++)
             {
-                RectTransform source = getSlotRect?.Invoke(request.SourceSlots[i]);
-                // A copy without a slot drops in from above the result slot
-                Vector2 start = source != null ? ToLayer(source) : target + new Vector2(0f, slotSize.y * 1.6f);
-                Ghost ghost = CreateGhost(request.SourcePortraits[i], request.OldColor, start);
-                ghost.ArcHeight = Mathf.Lerp(40f, 90f, Mathf.Clamp01(Mathf.Abs(start.x - target.x) / 600f));
-                ghost.Spin = (start.x < target.x ? -1f : 1f) * Random.Range(160f, 260f);
-                if (source == null) ghost.Rect.GetComponent<CanvasGroup>().alpha = 0f;
+                int index = i;
+                Placeholder placeholder = placeholders.Find(p => p.Owner == request && p.SourceIndex == index);
+                Ghost ghost;
+                if (placeholder != null && placeholder.Rect != null)
+                {
+                    // The snapshot itself lifts out; the real slot underneath shows what it holds now
+                    placeholders.Remove(placeholder);
+                    if (placeholder.Shown) Release(placeholder.Slot);
+                    placeholder.Rect.gameObject.SetActive(true);
+                    ghost = GhostFromSnapshot(placeholder.Rect);
+                }
+                else
+                {
+                    RectTransform source = getSlotRect?.Invoke(request.SourceSlots[i]);
+                    // A copy without a slot drops in from above the result slot
+                    Vector2 start = source != null ? ToLayer(source) : target + new Vector2(0f, slotSize.y * 1.6f);
+                    ghost = CreateGhost(request.SourcePortraits[i], request.OldColor, start);
+                    if (source == null) ghost.Rect.GetComponent<CanvasGroup>().alpha = 0f;
+                }
+
+                Vector2 from = ghost.Start;
+                ghost.ArcHeight = Mathf.Lerp(40f, 90f, Mathf.Clamp01(Mathf.Abs(from.x - target.x) / 600f));
+                ghost.Spin = (from.x < target.x ? -1f : 1f) * Random.Range(160f, 260f);
                 ghosts.Add(ghost);
             }
+        }
+
+        /// <summary>Turns a slot snapshot into a flying ghost, with a rarity-coloured glow behind it.</summary>
+        private Ghost GhostFromSnapshot(RectTransform rect)
+        {
+            transients.Add(rect.gameObject);
+            CanvasGroup group = rect.GetComponent<CanvasGroup>();
+            if (group == null) group = rect.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 1f;
+            group.blocksRaycasts = false;
+
+            var glowObject = new GameObject("MergeGlow", typeof(RectTransform), typeof(Image));
+            var glowRect = glowObject.GetComponent<RectTransform>();
+            glowRect.SetParent(rect, false);
+            glowRect.SetAsFirstSibling();
+            glowRect.anchorMin = Vector2.zero;
+            glowRect.anchorMax = Vector2.one;
+            glowRect.offsetMin = new Vector2(-6f, -6f);
+            glowRect.offsetMax = new Vector2(6f, 6f);
+            var glow = glowObject.GetComponent<Image>();
+            glow.raycastTarget = false;
+            glow.color = Color.clear;
+
+            return new Ghost { Rect = rect, Frame = glow, GlowOnly = true, Start = rect.anchoredPosition, TrailTimer = TrailInterval };
         }
 
         private void UpdateGhosts(float dt)
@@ -181,7 +303,9 @@ namespace TrashTD.UI
                     Vector2 shiver = new Vector2(Mathf.Sin(elapsed * 90f + i * 2f), 0f) * 2f * k;
                     ghost.Rect.anchoredPosition = ghost.Start + new Vector2(0f, lift) + shiver;
                     ghost.Rect.localScale = Vector3.one * Mathf.Lerp(1f, 1.08f, k);
-                    ghost.Frame.color = Color.Lerp(current.OldColor, Color.white, 0.5f * k);
+                    Color glowing = Color.Lerp(current.OldColor, Color.white, 0.5f * k);
+                    if (ghost.GlowOnly) glowing.a = 0.7f * k;
+                    ghost.Frame.color = glowing;
                     group.alpha = Mathf.Max(group.alpha, k);
                     continue;
                 }
@@ -194,7 +318,9 @@ namespace TrashTD.UI
                 ghost.Rect.anchoredPosition = position;
                 ghost.Rect.localEulerAngles = new Vector3(0f, 0f, ghost.Spin * e);
                 ghost.Rect.localScale = Vector3.one * Mathf.Lerp(1.08f, 0.35f, e);
-                ghost.Frame.color = Color.Lerp(Color.Lerp(current.OldColor, Color.white, 0.5f), current.NewColor, t);
+                Color fusing = Color.Lerp(Color.Lerp(current.OldColor, Color.white, 0.5f), current.NewColor, t);
+                if (ghost.GlowOnly) fusing.a = 0.7f + 0.3f * t;
+                ghost.Frame.color = fusing;
                 group.alpha = 1f;
 
                 ghost.TrailTimer -= dt;
@@ -214,6 +340,13 @@ namespace TrashTD.UI
             elapsed = 0f;
             foreach (Ghost ghost in ghosts) Destroy(ghost.Rect.gameObject);
             ghosts.Clear();
+
+            // Cards this merge made for later merges appear in their slots now (before the result slot is released,
+            // so it never shows for a frame)
+            foreach (Placeholder placeholder in placeholders)
+            {
+                if (placeholder.WaitFor == current && !placeholder.Shown) Show(placeholder);
+            }
 
             // The real slot comes back now (the pop copy covers it while it settles)
             Release(current.ResultSlot);

@@ -4188,6 +4188,7 @@ namespace TrashTD.UI
             var request = new DeckMergeAnimator.Request
             {
                 ResultSlot = merge.ResultSlot,
+                ResultCard = merge.Result,
                 ResultPortrait = merge.Result.operatorData.portrait,
                 NewStars = Mathf.Clamp((int)merge.Result.rarity, 1, 5),
                 OldColor = GetOperatorRarityColor(Mathf.Clamp((int)merge.Result.rarity - 1, 1, 5)),
@@ -4198,14 +4199,49 @@ namespace TrashTD.UI
                 DraftCard card = i < merge.SourceCards.Count ? merge.SourceCards[i] : null;
                 request.SourceSlots.Add(merge.SourceSlots[i]);
                 request.SourcePortraits.Add(card != null && card.operatorData != null ? card.operatorData.portrait : request.ResultPortrait);
+                request.SourceCards.Add(card);
+                // The deck bar still shows these cards (OnDeckChanged comes after this event): copy them now, since
+                // the deck has already moved on by the time their animation plays
+                request.SourceSnapshots.Add(SnapshotDeckSlot(merge.SourceSlots[i]));
             }
             if (merge.IncomingCard != null)
             {
                 request.SourceSlots.Add(-1);
                 request.SourcePortraits.Add(merge.IncomingCard.operatorData != null ? merge.IncomingCard.operatorData.portrait : request.ResultPortrait);
+                request.SourceCards.Add(merge.IncomingCard);
+                request.SourceSnapshots.Add(null);
             }
 
             deckMergeAnimator.Enqueue(request);
+        }
+
+        /// <summary>
+        /// A static copy of a deck slot as it looks now (portrait, name, stars, badges), for the merge animation. It
+        /// takes no input: the button, drag and hover components are stripped.
+        /// </summary>
+        private GameObject SnapshotDeckSlot(int slot)
+        {
+            if (deckButtons == null || slot < 0 || slot >= deckButtons.Length || deckButtons[slot] == null) return null;
+
+            GameObject source = deckButtons[slot].gameObject;
+            GameObject copy = Instantiate(source, source.transform.parent);
+            copy.name = $"MergeSnapshot_{slot + 1}";
+            foreach (Behaviour behaviour in copy.GetComponentsInChildren<Behaviour>(true))
+            {
+                if (behaviour is Selectable || behaviour is MenuButtonFeedback || behaviour is DeckSlotDragHandler)
+                {
+                    behaviour.enabled = false;
+                    Destroy(behaviour);
+                }
+            }
+
+            CanvasGroup group = copy.GetComponent<CanvasGroup>();
+            if (group == null) group = copy.AddComponent<CanvasGroup>();
+            group.alpha = 1f; // the real slot may be hidden by an earlier merge
+            group.blocksRaycasts = false;
+            group.interactable = false;
+            copy.transform.localScale = Vector3.one;
+            return copy;
         }
 
         /// <summary>Hides a deck slot's content while a merge animation flies into it.</summary>
