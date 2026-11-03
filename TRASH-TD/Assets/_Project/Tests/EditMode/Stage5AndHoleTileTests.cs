@@ -955,10 +955,17 @@ namespace TrashTD.Tests
                 Assert.IsNotNull(anim, "Bulkhead prefab must have BulkheadSpriteAnimation component.");
                 Assert.IsNotNull(anim.Frames, "Bulkhead animation frames must not be null.");
                 Assert.AreEqual(8, anim.Frames.Length, "Bulkhead animation must have 8 frames.");
+                Assert.IsNotNull(anim.AttackFrames, "Bulkhead attack frames must not be null.");
+                Assert.AreEqual(10, anim.AttackFrames.Length, "Bulkhead attack animation must have 10 frames.");
+                Assert.IsTrue(anim.HasAttackAnimation, "Bulkhead attack animation must be available.");
                 Assert.AreEqual(0.125f, anim.FrameDuration, 0.001f, "Bulkhead animation frame duration should be 0.125s (8 FPS).");
                 for (int i = 0; i < anim.Frames.Length; i++)
                 {
                     Assert.IsNotNull(anim.Frames[i], $"Bulkhead frame {i} must be assigned.");
+                }
+                for (int i = 0; i < anim.AttackFrames.Length; i++)
+                {
+                    Assert.IsNotNull(anim.AttackFrames[i], $"Bulkhead attack frame {i} must be assigned.");
                 }
             }
         }
@@ -979,12 +986,19 @@ namespace TrashTD.Tests
             var framesField = typeof(BulkheadSpriteAnimation).GetField("frames",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             framesField.SetValue(anim, sprites);
+            var attackFramesField = typeof(BulkheadSpriteAnimation).GetField("attackFrames",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            attackFramesField.SetValue(anim, sprites);
 
             TestUtility.CallAwake(anim);
 
             Assert.AreEqual(sprites[0], sr.sprite);
             Assert.AreEqual(8, anim.Frames.Length);
             Assert.AreEqual(0.125f, anim.FrameDuration, 0.001f);
+
+            anim.Strike();
+            Assert.AreSame(sprites[BulkheadSpriteAnimation.StrikeFrame], sr.sprite,
+                "Bulkhead's attack frame must display as soon as its attack is triggered.");
 
             Object.DestroyImmediate(animObj);
             for (int i = 0; i < 8; i++)
