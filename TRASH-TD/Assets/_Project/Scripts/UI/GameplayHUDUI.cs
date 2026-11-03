@@ -141,6 +141,10 @@ namespace TrashTD.UI
         private Text selectedOperatorDetailsSkillHeading;
         private Text selectedOperatorDetailsSkill;
         private OperatorBase selectedOperatorDetailsTarget;
+        // A clicked deck card shows the same info tab as a field operator, above its slot (-1 = none)
+        private int deckInfoSlot = -1;
+        private DraftCard deckInfoCard;
+        private readonly Vector3[] deckInfoSlotCorners = new Vector3[4];
         private GameObject placementControlsRoot;
         private Button retreatOperatorButton;
         private Button placementConfirmButton;
@@ -987,38 +991,48 @@ namespace TrashTD.UI
             RectTransform canvasRect = canvas.GetComponent<RectTransform>();
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPosition, GetCanvasCamera(), out Vector2 localPosition))
             {
-                RectTransform labelRect = selectedOperatorLabelRoot.GetComponent<RectTransform>();
-                RectTransform retreatRect = retreatOperatorButton.GetComponent<RectTransform>();
+                PlaceSelectedOperatorLabel(localPosition, true);
+            }
+        }
 
-                float halfW = labelRect.sizeDelta.x * 0.5f;
-                float panelH = labelRect.sizeDelta.y;
+        /// <summary>
+        /// Shows the info tab with its bottom-centre at a canvas point, clamped on-screen. Deck cards show it
+        /// without the retreat button.
+        /// </summary>
+        private void PlaceSelectedOperatorLabel(Vector2 localPosition, bool showRetreat)
+        {
+            RectTransform canvasRect = canvas.GetComponent<RectTransform>();
+            RectTransform labelRect = selectedOperatorLabelRoot.GetComponent<RectTransform>();
+            RectTransform retreatRect = retreatOperatorButton.GetComponent<RectTransform>();
 
-                // Screen clamping: keep the panel and retreat button entirely on-screen
-                float minX = -canvasRect.rect.width * 0.5f + halfW + 10f;
-                float maxX = canvasRect.rect.width * 0.5f - halfW - 60f;
-                float minY = -canvasRect.rect.height * 0.5f + 10f;
-                float maxY = canvasRect.rect.height * 0.5f - panelH - 10f;
+            float halfW = labelRect.sizeDelta.x * 0.5f;
+            float panelH = labelRect.sizeDelta.y;
 
-                localPosition.x = Mathf.Clamp(localPosition.x, minX, maxX);
-                localPosition.y = Mathf.Clamp(localPosition.y, minY, maxY);
+            // Screen clamping: keep the panel and retreat button entirely on-screen
+            float minX = -canvasRect.rect.width * 0.5f + halfW + 10f;
+            float maxX = canvasRect.rect.width * 0.5f - halfW - 60f;
+            float minY = -canvasRect.rect.height * 0.5f + 10f;
+            float maxY = canvasRect.rect.height * 0.5f - panelH - 10f;
 
-                labelRect.anchoredPosition = localPosition;
-                selectedOperatorLabelRoot.SetActive(true);
-                selectedOperatorShowMoreButton.gameObject.SetActive(true);
+            localPosition.x = Mathf.Clamp(localPosition.x, minX, maxX);
+            localPosition.y = Mathf.Clamp(localPosition.y, minY, maxY);
 
-                // Retreat button positioned to the right of the tab, vertically aligned with Row 1-4
-                float retreatX = localPosition.x + halfW + 28f;
-                float retreatY = localPosition.y + panelH - 53f;
-                retreatRect.anchoredPosition = new Vector2(retreatX, retreatY);
-                retreatOperatorButton.gameObject.SetActive(true);
+            labelRect.anchoredPosition = localPosition;
+            selectedOperatorLabelRoot.SetActive(true);
+            selectedOperatorShowMoreButton.gameObject.SetActive(true);
 
-                if (!selectedLabelShown)
-                {
-                    selectedLabelShown = true;
-                    labelPopTime = 0f;
-                    snapHealthFill = true;
-                    ApplyLabelPop(0f);
-                }
+            // Retreat button positioned to the right of the tab, vertically aligned with Row 1-4
+            float retreatX = localPosition.x + halfW + 28f;
+            float retreatY = localPosition.y + panelH - 53f;
+            retreatRect.anchoredPosition = new Vector2(retreatX, retreatY);
+            retreatOperatorButton.gameObject.SetActive(showRetreat);
+
+            if (!selectedLabelShown)
+            {
+                selectedLabelShown = true;
+                labelPopTime = 0f;
+                snapHealthFill = true;
+                ApplyLabelPop(0f);
             }
         }
 
@@ -1034,7 +1048,11 @@ namespace TrashTD.UI
             // The skill text lives only in the SHOW MORE details panel (RefreshSelectedOperatorDetails).
             SetSelectedOperatorName(operatorName, worldPosition);
             if (string.IsNullOrEmpty(operatorName)) return;
+            ApplySelectedOperatorStats(currentHP, maxHP, currentATK, rarity, baseRarity);
+        }
 
+        private void ApplySelectedOperatorStats(int currentHP, int maxHP, int currentATK, OperatorRarity rarity, OperatorRarity baseRarity)
+        {
             int upgradeLevels = Mathf.Clamp((int)rarity - (int)baseRarity, 0, 2);
             selectedOperatorUpgradeBadgeGraphic.SetArrowCount(upgradeLevels);
             selectedOperatorUpgradeBadge.SetActive(upgradeLevels > 0);
@@ -1090,10 +1108,13 @@ namespace TrashTD.UI
             OperatorBase selectedOperator = operatorManager != null ? operatorManager.SelectedOperator : null;
             if (selectedOperator == null || !selectedOperator.IsDeployed || selectedOperator.DeployedCell == null || gridManager == null)
             {
-                SetSelectedOperatorName(string.Empty, Vector3.zero);
                 HideFramiliarCopyMenu();
+                if (!RefreshDeckCardInfo()) SetSelectedOperatorName(string.Empty, Vector3.zero);
                 return;
             }
+
+            // A field operator was selected: its tab replaces the deck card's
+            if (deckInfoSlot >= 0) ClearDeckCardInfo();
 
             if (selectedOperator is TrashTD.Operators.FramiliarOperator framiliar && !framiliar.IsCopied)
             {
@@ -1118,20 +1139,41 @@ namespace TrashTD.UI
 
         private void ToggleSelectedOperatorDetails()
         {
+            if (selectedOperatorDetailsPanel == null) return;
             OperatorBase selectedOperator = operatorManager != null ? operatorManager.SelectedOperator : null;
-            if (selectedOperator == null || selectedOperator.Data == null || selectedOperatorDetailsPanel == null) return;
+            bool hasOperator = selectedOperator != null && selectedOperator.Data != null;
+            bool hasDeckCard = !hasOperator && deckInfoCard != null && deckInfoCard.operatorData != null;
+            if (!hasOperator && !hasDeckCard) return;
 
             bool show = !selectedOperatorDetailsPanel.activeSelf;
             selectedOperatorDetailsPanel.SetActive(show);
-            if (show) UpdateSelectedOperatorDetails(selectedOperator);
+            if (!show) return;
+            if (hasOperator) UpdateSelectedOperatorDetails(selectedOperator);
+            else UpdateDeckCardDetails(deckInfoCard);
         }
 
         private void UpdateSelectedOperatorDetails(OperatorBase op)
         {
             if (op == null || op.Data == null) return;
 
-            OperatorData data = op.Data;
             selectedOperatorDetailsTarget = op;
+            UpdateOperatorDetails(op.Data, op.CurrentRarity, op.GetSkillDescription());
+        }
+
+        private void UpdateDeckCardDetails(DraftCard card)
+        {
+            if (card == null || card.operatorData == null) return;
+
+            selectedOperatorDetailsTarget = null;
+            UpdateOperatorDetails(
+                card.operatorData,
+                card.rarity,
+                OperatorBase.GetSkillDescription(card.operatorData, card.rarity));
+        }
+
+        /// <summary>Fills the SHOW MORE panel. Shared by field operators and deck cards.</summary>
+        private void UpdateOperatorDetails(OperatorData data, OperatorRarity rarity, string skillDesc)
+        {
             selectedOperatorDetailsPortrait.sprite = data.portrait;
             selectedOperatorDetailsPortrait.enabled = data.portrait != null;
             selectedOperatorDetailsPortrait.color = Color.white;
@@ -1158,21 +1200,20 @@ namespace TrashTD.UI
                 selectedOperatorDetailsChipOutlines[i].effectColor = new Color(chipColors[i].r, chipColors[i].g, chipColors[i].b, 0.55f);
             }
 
-            int stars = Mathf.Clamp((int)op.CurrentRarity, 1, 5);
+            int stars = Mathf.Clamp((int)rarity, 1, 5);
             Color rarityColor = GetOperatorRarityColor(stars);
             selectedOperatorDetailsAccent.color = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.35f);
             selectedOperatorDetailsRarity.color = rarityColor;
             selectedOperatorDetailsRarity.text = new string('★', stars) + "<color=#3C424D>" + new string('☆', 5 - stars) + "</color>";
-            selectedOperatorDetailsStatValues[0].text = data.GetScaledHP(op.CurrentRarity).ToString();
-            selectedOperatorDetailsStatValues[1].text = data.GetScaledATK(op.CurrentRarity).ToString();
-            selectedOperatorDetailsStatValues[2].text = data.GetScaledDEF(op.CurrentRarity).ToString();
-            selectedOperatorDetailsStatValues[3].text = data.GetScaledRES(op.CurrentRarity).ToString();
+            selectedOperatorDetailsStatValues[0].text = data.GetScaledHP(rarity).ToString();
+            selectedOperatorDetailsStatValues[1].text = data.GetScaledATK(rarity).ToString();
+            selectedOperatorDetailsStatValues[2].text = data.GetScaledDEF(rarity).ToString();
+            selectedOperatorDetailsStatValues[3].text = data.GetScaledRES(rarity).ToString();
             selectedOperatorDetailsStatValues[4].text = data.blockCount.ToString();
             selectedOperatorDetailsStatValues[5].text = $"{data.attackInterval:0.##}s";
             selectedOperatorDetailsRoles.text = data.roleTags != null && data.roleTags.Length > 0
                 ? string.Join(" / ", data.roleTags)
                 : GetOperatorDraftDescription(data.operatorClass);
-            string skillDesc = op.GetSkillDescription();
             bool hasSkill = !string.IsNullOrWhiteSpace(skillDesc);
             selectedOperatorDetailsSkillHeading.gameObject.SetActive(hasSkill);
             selectedOperatorDetailsSkill.gameObject.SetActive(hasSkill);
@@ -4199,6 +4240,10 @@ namespace TrashTD.UI
 
             var card = playerDeck.GetCard(index);
             if (card == null) return;
+
+            // Every click on a card toggles its info tab, in any phase and cooldown or not
+            ToggleDeckCardInfo(index, card);
+
             if (IsOnCooldown(card))
             {
                 ShowCooldownWarning(
@@ -4225,6 +4270,76 @@ namespace TrashTD.UI
         {
             selectedDeckSlot = index;
             UpdateDeckSelectionVisuals();
+        }
+
+        private bool IsDeckCardInfoOpen => deckInfoSlot >= 0;
+
+        private void ToggleDeckCardInfo(int index, DraftCard card)
+        {
+            if (deckInfoSlot == index && ReferenceEquals(deckInfoCard, card))
+            {
+                ClearDeckCardInfo();
+                return;
+            }
+
+            // One info tab at a time: drop the field selection first (its handler clears the map previews,
+            // so this must run before the card is selected for deployment and draws its tile hints)
+            if (operatorManager != null && operatorManager.SelectedOperator != null) operatorManager.SelectOperator(null);
+            HideFramiliarCopyMenu();
+
+            deckInfoSlot = index;
+            deckInfoCard = card;
+            snapHealthFill = true;
+            if (selectedOperatorDetailsPanel != null && selectedOperatorDetailsPanel.activeSelf) UpdateDeckCardDetails(card);
+            // Shown from Update (RefreshSelectedOperatorInfo): selecting the card for deployment, right after this,
+            // may still hide another card's placement preview, which would close the tab if checked now.
+        }
+
+        private void ClearDeckCardInfo()
+        {
+            if (deckInfoSlot < 0) return;
+            deckInfoSlot = -1;
+            deckInfoCard = null;
+            SetSelectedOperatorName(string.Empty, Vector3.zero); // also closes the SHOW MORE panel
+        }
+
+        /// <summary>
+        /// Keeps the deck card's info tab above its slot. Closes it when the card leaves the slot (moved,
+        /// discarded, deployed), when it goes onto the map, or on a click outside the UI. False when no tab shows.
+        /// </summary>
+        private bool RefreshDeckCardInfo()
+        {
+            if (deckInfoSlot < 0) return false;
+
+            bool clickedOutside = Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame &&
+                (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject());
+            DraftCard card = playerDeck != null ? playerDeck.GetCard(deckInfoSlot) : null;
+            if (card == null || card.operatorData == null || !ReferenceEquals(card, deckInfoCard) ||
+                deckButtons == null || deckInfoSlot >= deckButtons.Length || canvas == null ||
+                clickedOutside || IsDeckCardDragging ||
+                (stageBootstrapper != null && stageBootstrapper.IsPlacementPreviewActive))
+            {
+                ClearDeckCardInfo();
+                return false;
+            }
+
+            // Bottom-centre of the tab sits just above the slot's top edge
+            RectTransform slotRect = deckButtons[deckInfoSlot].GetComponent<RectTransform>();
+            slotRect.GetWorldCorners(deckInfoSlotCorners);
+            Vector3 topCentre = (deckInfoSlotCorners[1] + deckInfoSlotCorners[2]) * 0.5f;
+            Camera canvasCamera = GetCanvasCamera();
+            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(canvasCamera, topCentre);
+            RectTransform canvasRect = canvas.GetComponent<RectTransform>();
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, canvasCamera, out Vector2 localPosition))
+                return false;
+
+            OperatorData data = card.operatorData;
+            int maxHP = data.GetScaledHP(card.rarity);
+            int currentHP = card.savedHP >= 0 ? Mathf.Min(card.savedHP, maxHP) : maxHP;
+            selectedOperatorNameText.text = data.operatorName;
+            PlaceSelectedOperatorLabel(localPosition + new Vector2(0f, 8f), false);
+            ApplySelectedOperatorStats(currentHP, maxHP, data.GetScaledATK(card.rarity), card.rarity, data.baseRarity);
+            return true;
         }
 
         // ============================
@@ -4386,11 +4501,17 @@ namespace TrashTD.UI
                 return;
             }
 
+            // Closing a deck card's info tab also cancels that card's selection, if any, in the same press
+            bool closedDeckInfo = IsDeckCardInfoOpen;
+            if (closedDeckInfo) ClearDeckCardInfo();
+
             if (stageBootstrapper != null && stageBootstrapper.IsPlacementOrSelectionActive())
             {
                 stageBootstrapper.CancelPlacementOrSelection();
                 return;
             }
+
+            if (closedDeckInfo) return;
 
             if (gameManager != null && gameManager.CurrentState == GamePlayState.Playing)
             {

@@ -899,7 +899,10 @@ namespace TrashTD.Operators
         /// <summary>
         /// Gets the skill description for this operator, which may vary depending on rarity/upgrades.
         /// </summary>
-        public virtual string GetSkillDescription()
+        public virtual string GetSkillDescription() => GetSkillDescription(data, currentRarity);
+
+        /// <summary>The skill text for an operator at a rarity, for cards not on the field (deck details).</summary>
+        public static string GetSkillDescription(OperatorData data, OperatorRarity currentRarity)
         {
             if (data == null) return string.Empty;
             if (data.drawTwoCardsOnDeath)
