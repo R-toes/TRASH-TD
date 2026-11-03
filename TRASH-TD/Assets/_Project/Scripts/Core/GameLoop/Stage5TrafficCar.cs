@@ -20,21 +20,23 @@ namespace TrashTD.Core.GameLoop
     public class Stage5TrafficCar : MonoBehaviour
     {
         public const float DefaultSpeed = 5.0f;
-        public const int BaseTrueDamage = 40;
-        public const int DamageRampPerTwoTiles = 20;
+        public const int BaseTrueDamage = 20;
+        public static readonly int[] DamageRamp = new int[] { 20, 40, 60, 80, 100, 120, 140 };
         public const int StunRampDamageThreshold = 80;
         public const float ImpactSlowdownRatio = 0.3f;
         public const float ImpactSlowdownDuration = 0.7f;
 
         /// <summary>
         /// Calculates true damage based on distance travelled:
-        /// Starts at 40 and ramps up by 20 every 2 tiles (40, 60, 80, 100, 120, 140, 160...).
+        /// 20, 40, 60, 80, 100, 120, 140 (every 2 tiles).
         /// </summary>
         public static int CalculateDamage(float tilesTravelled)
         {
             float dist = Mathf.Max(0f, tilesTravelled);
             int steps = Mathf.FloorToInt((dist + 0.001f) / 2.0f);
-            return BaseTrueDamage + (steps * DamageRampPerTwoTiles);
+            if (steps <= 0) return DamageRamp[0];
+            if (steps >= DamageRamp.Length) return DamageRamp[DamageRamp.Length - 1];
+            return DamageRamp[steps];
         }
 
         [Header("Car Properties")]

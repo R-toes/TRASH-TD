@@ -514,7 +514,7 @@ namespace TrashTD.UI
 
         /// <summary>
         /// Stage 5 traffic car damage indicators at the bottom of the map (row y = -1, below grid boxes).
-        /// Shows the true damage ramp (40, 60, 80, 100, 120, 140, 160) under columns 0, 2, 4, 6, 8, 10, 12.
+        /// Shows the true damage ramp (20, 40, 60, 80, 100, 120, 140) under columns 0, 2, 4, 6, 8, 10, 12.
         /// </summary>
         private void BuildStage5DamageNumbers()
         {
@@ -527,10 +527,11 @@ namespace TrashTD.UI
             Color textColor = Color.white;
 
             int bottomRow = stageData.visualTileOffset.y < 0 ? Mathf.RoundToInt(stageData.visualTileOffset.y) : -1;
-            int maxCol = stageData.gridWidth;
+            int maxBadges = Stage5TrafficCar.DamageRamp.Length;
 
-            for (int col = 0; col < maxCol; col += 2)
+            for (int i = 0; i < maxBadges && (i * 2) < stageData.gridWidth; i++)
             {
+                int col = i * 2;
                 int dmg = Stage5TrafficCar.CalculateDamage(col);
                 string text = dmg.ToString();
 

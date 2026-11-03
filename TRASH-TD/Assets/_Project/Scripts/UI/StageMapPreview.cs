@@ -836,11 +836,13 @@ namespace TrashTD.UI
 
         private void BuildStage5DamageNumbers(System.Func<Vector2, Vector2> toUi, float appearBase)
         {
-            for (int col = 0; col < stage.gridWidth; col += 2)
+            int maxBadges = Stage5TrafficCar.DamageRamp.Length;
+            for (int i = 0; i < maxBadges && (i * 2) < stage.gridWidth; i++)
             {
+                int col = i * 2;
                 int dmg = Stage5TrafficCar.CalculateDamage(col);
                 Vector2 uiPos = toUi(new Vector2(col + 0.5f, -0.5f));
-                AddDamageBadge(uiPos, dmg.ToString(), appearBase + (col / 2) * 0.04f);
+                AddDamageBadge(uiPos, dmg.ToString(), appearBase + i * 0.04f);
             }
         }
 

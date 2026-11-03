@@ -3649,11 +3649,11 @@ namespace TrashTD.UI
                         stage5TrafficBodyText.text =
                             "Fast Vehicles drive across the 2 middle highway road lanes starting at wave 6.\n" +
                             "They crash into both enemies and operators in their way.\n\n" +
-                            "Starts at 40 true damage (+20 every 2 tiles):\n" +
-                            "<color=#FFD040>40 → 60 → 80 → 100 → 120 → 140 → 160</color>\n" +
+                            "Starts at 20 true damage (+20 every 2 tiles):\n" +
+                            "<color=#FFD040>20 → 40 → 60 → 80 → 100 → 120 → 140</color>\n" +
                             "Longer distance = heavier hit when unblocked by an operator.\n\n" +
                             "Hitting an operator slows the car down, then it recovers.\n" +
-                            "Stuns the operator for 5 seconds and resets damage to 40.";
+                            "Stuns the operator for 5 seconds and resets damage to 20.";
                     }
                 }
             }
