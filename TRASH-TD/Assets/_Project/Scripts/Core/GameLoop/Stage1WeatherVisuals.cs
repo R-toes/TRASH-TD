@@ -612,7 +612,8 @@ namespace TrashTD.Core.GameLoop
         /// depth instead of reading as solid shapes) is eroded by domain-warped noise into curling tendrils
         /// and holes. It is lit from above: billow tops are bright, undersides a cool shadow.
         /// </summary>
-        private static Sprite CreateMistSprite(int seed)
+        /// <remarks>Also used by Stage 6's toxic fog (tinted green there). The caller owns and destroys the sprite.</remarks>
+        internal static Sprite CreateMistSprite(int seed)
         {
             const int width = 128;
             const int height = 64;

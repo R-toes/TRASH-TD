@@ -22,11 +22,9 @@ namespace TrashTD.Core.GameLoop
     {
         private const float AcidRainDamageIntervalSeconds = 2f;
         public const int AcidRainDamagePerTick = 3;
-        private const int AcidRainDropCount = 140;
         private const int Stage3BackgroundFrameWidth = 448;
         private const int Stage3BackgroundFrameHeight = 224;
         private const float Stage3BackgroundAnimationFrameDuration = 0.12f;
-        private static Sprite weatherDotSprite;
         private static readonly Color TalentRangeColor = new Color(1f, 0.55f, 0.08f, 0.45f);
 
         private const string DefaultSandboxMapStageId = "STAGE_01";
@@ -84,13 +82,10 @@ namespace TrashTD.Core.GameLoop
         private GameplayHUDUI gameplayHudUI;
         private SandboxController sandboxController;
         private readonly List<GameObject> placementPreviewVisuals = new List<GameObject>();
-        private readonly List<Transform> acidRainDrops = new List<Transform>();
         private readonly List<SpriteSheetAnimationState> backgroundAnimations = new List<SpriteSheetAnimationState>();
         private Material placementPreviewMaterial;
         private float weatherDamageTimer;
-        private Vector2 acidRainBoundsMin;
-        private Vector2 acidRainBoundsMax;
-        private Vector2 acidRainVelocity;
+        private Stage6AcidRainVisuals stage6AcidRainVisuals;
         private Vector2Int placementGridPosition;
         private OperatorFacing placementFacing = OperatorFacing.Right;
         private bool isPlacementPreviewActive;
@@ -835,7 +830,6 @@ namespace TrashTD.Core.GameLoop
         private void Update()
         {
             UpdateBackgroundAnimations();
-            UpdateAcidRainDrops();
             UpdateStage6AcidRainDamage();
 
             if (gameManager == null || gameManager.CurrentState != GamePlayState.Playing)
@@ -1102,18 +1096,13 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
+        /// <summary>The Stage 6 storm visuals (rain, fog, acid pools, flashes); the damage stays here.</summary>
         private void CreateStage6AcidRain()
         {
-            float cellSize = gridManager.CellSize;
-            float mapWidth = stageData.gridWidth * cellSize;
-            float mapHeight = stageData.gridHeight * cellSize;
-            Vector3 gridBottomLeft = gridManager.GridToWorldPosition(0, 0)
-                - new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f);
-
-            var weatherRoot = new GameObject("Stage6AcidRain");
-            weatherRoot.transform.SetParent(transform, false);
-
-            CreateAcidRainDrops(weatherRoot.transform, gridBottomLeft, mapWidth, mapHeight, cellSize);
+            var weatherObject = new GameObject("Stage6AcidRain");
+            weatherObject.transform.SetParent(transform, false);
+            stage6AcidRainVisuals = weatherObject.AddComponent<Stage6AcidRainVisuals>();
+            stage6AcidRainVisuals.Initialize(gridManager, stageData);
         }
 
         private void CreateStage3SandstormVisuals()
@@ -1121,68 +1110,6 @@ namespace TrashTD.Core.GameLoop
             GameObject weatherObj = new GameObject("Stage3SandstormVisuals");
             weatherObj.transform.SetParent(transform, false);
             weatherObj.AddComponent<Stage3SandstormVisuals>().Initialize(gridManager, stageData);
-        }
-
-        private void CreateAcidRainDrops(Transform parent, Vector3 gridBottomLeft, float mapWidth, float mapHeight, float cellSize)
-        {
-            float minX = gridBottomLeft.x;
-            float maxX = gridBottomLeft.x + mapWidth;
-            float minY = gridBottomLeft.y;
-            float maxY = gridBottomLeft.y + mapHeight;
-
-            if (stageData.mapVisualSprite != null)
-            {
-                float pixelPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
-                float spriteTilesX = stageData.mapVisualSprite.rect.width / pixelPerTile;
-                float spriteTilesY = stageData.mapVisualSprite.rect.height / pixelPerTile;
-
-                float spriteLeft = gridBottomLeft.x + stageData.visualTileOffset.x * cellSize;
-                float spriteRight = spriteLeft + spriteTilesX * cellSize;
-                float spriteBottom = gridBottomLeft.y + stageData.visualTileOffset.y * cellSize;
-                float spriteTop = spriteBottom + spriteTilesY * cellSize;
-
-                minX = Mathf.Min(minX, spriteLeft);
-                maxX = Mathf.Max(maxX, spriteRight);
-                minY = Mathf.Min(minY, spriteBottom);
-                maxY = Mathf.Max(maxY, spriteTop);
-            }
-
-            acidRainBoundsMin = new Vector2(minX, minY);
-            acidRainBoundsMax = new Vector2(maxX, maxY);
-            acidRainVelocity = new Vector2(0.5f, -6f);
-            float pixelSize = cellSize / 32f;
-            Sprite dotSprite = GetWeatherDotSprite();
-
-            for (int i = 0; i < AcidRainDropCount; i++)
-            {
-                var dropObject = new GameObject($"AcidRainDrop_{i}");
-                dropObject.transform.SetParent(parent, false);
-                dropObject.transform.position = new Vector3(
-                    Random.Range(acidRainBoundsMin.x, acidRainBoundsMax.x),
-                    Random.Range(acidRainBoundsMin.y, acidRainBoundsMax.y),
-                    0f);
-                dropObject.transform.localScale = Vector3.one * pixelSize;
-
-                var renderer = dropObject.AddComponent<SpriteRenderer>();
-                renderer.sprite = dotSprite;
-                renderer.color = new Color(0.2f, 1f, 0.04f, 0.9f);
-                renderer.sortingOrder = 25;
-                acidRainDrops.Add(dropObject.transform);
-            }
-        }
-
-        private static Sprite GetWeatherDotSprite()
-        {
-            if (weatherDotSprite == null)
-            {
-                weatherDotSprite = Sprite.Create(
-                    Texture2D.whiteTexture,
-                    new Rect(0f, 0f, 1f, 1f),
-                    new Vector2(0.5f, 0.5f),
-                    1f);
-            }
-
-            return weatherDotSprite;
         }
 
         private void UpdateStage6AcidRainDamage()
@@ -1209,29 +1136,6 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
-        private void UpdateAcidRainDrops()
-        {
-            if (acidRainDrops.Count == 0) return;
-
-            float deltaTime = Time.deltaTime;
-            for (int i = 0; i < acidRainDrops.Count; i++)
-            {
-                Transform drop = acidRainDrops[i];
-                if (drop == null) continue;
-
-                Vector3 position = drop.position;
-                position.x += acidRainVelocity.x * deltaTime;
-                position.y += acidRainVelocity.y * deltaTime;
-                if (position.y < acidRainBoundsMin.y || position.x > acidRainBoundsMax.x)
-                {
-                    position.x = Random.Range(acidRainBoundsMin.x, acidRainBoundsMax.x);
-                    position.y = acidRainBoundsMax.y + Random.Range(0f, 0.5f);
-                }
-
-                drop.position = position;
-            }
-        }
-
         /// <summary>Stage music plus looping weather/factory ambience for the current environment.</summary>
         private void PlayEnvironmentAudio()
         {
@@ -1245,6 +1149,7 @@ namespace TrashTD.Core.GameLoop
         private void ApplyStage6AcidRainDamage()
         {
             AudioManager.Instance?.PlaySfx(SfxId.Stage6AcidTick, 0.6f);
+            if (stage6AcidRainVisuals != null) stage6AcidRainVisuals.PlayAcidTick();
 
             if (operatorManager != null)
             {
