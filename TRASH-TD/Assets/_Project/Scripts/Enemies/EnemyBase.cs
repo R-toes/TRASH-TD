@@ -792,7 +792,7 @@ namespace TrashTD.Enemies
                 trapDamageTimer -= TrapTileRules.DamageIntervalSeconds;
                 AcidDamageFlash.Flash(gameObject);
                 AudioManager.Instance?.PlaySfx(SfxId.TileTrapTick, 0.6f);
-                TakeTrueDamage(TrapTileRules.DamagePerTick);
+                TakeTrueDamage(cell.AcidDamagePerTick);
             }
         }
 

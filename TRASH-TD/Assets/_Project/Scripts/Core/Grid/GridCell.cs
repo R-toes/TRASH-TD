@@ -58,13 +58,17 @@ namespace TrashTD.Core.Grid
         }
 
         /// <summary>
-        /// A temporary acid puddle (Stage 6 downpours, Stage6AcidRainVisuals) is on this tile. It doesn't change the
-        /// tile type, so deployment and pathing are untouched; it only hurts like a Trap tile while set.
+        /// True damage per second from a temporary acid puddle on this tile (Stage 6 downpours, Stage6AcidRainVisuals),
+        /// 0 when there is none. It rises and falls with the puddle's stage. It doesn't change the tile type, so
+        /// deployment and pathing are untouched.
         /// </summary>
-        public bool HasAcidPuddle { get; set; }
+        public int AcidPuddleDamage { get; set; }
 
-        /// <summary>Units here take Trap damage (TrapTileRules): a Trap tile, or a temporary acid puddle.</summary>
-        public bool IsAcidHazard => TileType == TileType.Trap || HasAcidPuddle;
+        /// <summary>Units here take acid damage every TrapTileRules.DamageIntervalSeconds: a Trap tile, or a puddle.</summary>
+        public bool IsAcidHazard => TileType == TileType.Trap || AcidPuddleDamage > 0;
+
+        /// <summary>Acid damage per tick here: the Trap tile's TrapTileRules.DamagePerTick, else the puddle's.</summary>
+        public int AcidDamagePerTick => TileType == TileType.Trap ? TrapTileRules.DamagePerTick : AcidPuddleDamage;
 
         /// <summary>
         /// Check if a specific operator position type is compatible with this tile (GDD 1.4.1),

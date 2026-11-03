@@ -14,11 +14,12 @@ namespace TrashTD.Core.GameLoop
     ///   between a drizzle and a downpour. Drops splash on the ground, throw up droplets and sometimes hiss off fumes.
     /// - Toxic fog: pixel-art clouds (dithered edges, never scaled, snapped to the art grid, like Stage 3's dust) in
     ///   two layers, thin over the enemy lane and thick off the grid, plus a green cast over the map.
-    /// - Acid pools (Trap tiles): animated pixel-art acid that joins up across neighbouring pool tiles, with bubbles.
-    /// - Storm flashes: a pixel lightning bolt in the sky with a flash from the top of the map, sometimes striking twice.
+    /// - The map's own acid pool (the Trap tiles) gets bubbles that swell and pop on top of the art.
+    /// - Storm flashes: a flash from the top of the map, sometimes twice.
     /// - Downpour puddles (gameplay): during a downpour, while the acid is live (a wave, or the sandbox), acid seeps up
-    ///   on random tiles. A puddle builds up for 1.6 s, hurts like a Trap tile for 6 s (GridCell.HasAcidPuddle, so
-    ///   operators and enemies take TrapTileRules damage; acid-tile-immune enemies don't), then fades out over 1.6 s.
+    ///   on random tiles, drawn in the map pool's own colours. Each puddle grows through 4 stages and shrinks back
+    ///   through them (1-2-3-4-3-2-1), 6 s of wave time each; its damage follows the stage (GridCell.AcidPuddleDamage,
+    ///   dealt like Trap damage to operators and enemies; acid-tile-immune enemies don't take it).
     /// Everything is clipped to the map art and runs on scaled time, so it freezes while paused.
     /// Generated sprites belong to this instance and are destroyed with it (domain reload is off).
     /// </summary>
@@ -26,8 +27,7 @@ namespace TrashTD.Core.GameLoop
     {
         // Ground layer (beneath every unit), back to front
         private const int TintSortingOrder = 2;       // map artwork is 1
-        private const int BoltSortingOrder = 3;
-        private const int PoolSortingOrder = 4;
+        private const int PuddleSortingOrder = 4;
         private const int GroundFxSortingOrder = 5;   // splash dashes, bubbles
         private const int BackFogSortingOrder = 6;
         // Default layer
@@ -49,17 +49,21 @@ namespace TrashTD.Core.GameLoop
         private const float SplashDuration = 0.14f;
         private const float FumeChance = 0.16f;
         private const float SprayGravity = 9f;        // tiles / s²
-        private const float PoolFrameSeconds = 0.2f;
 
         // Downpour puddles
-        public const float PuddleGrowSeconds = 1.6f;
-        public const float PuddleActiveSeconds = 6f;
-        public const float PuddleFadeSeconds = 1.6f;
-        private const int MaxPuddles = 3;                         // at once, not counting ones fading out
+        public const float PuddleStageSeconds = 6f;              // wave time per stage
+        public const float PuddleSeepSeconds = 0.8f;              // fades in before stage 1, no damage yet
+        public const float PuddleDrySeconds = 0.8f;               // fades out after the last stage 1, no damage
+        /// <summary>True damage per TrapTileRules tick at stages 1-4 (stage 4 matches the map's acid pool).</summary>
+        public static readonly int[] PuddleStageDamage = { 3, 5, 8, TrapTileRules.DamagePerTick };
+        /// <summary>The stages a puddle goes through: up to the peak and back down.</summary>
+        private static readonly int[] PuddleStageOrder = { 0, 1, 2, 3, 2, 1, 0 };
+        private const int MaxPuddles = 3;
         private const float PuddleDownpourThreshold = 0.85f;      // rain intensity needed for puddles to form
-        private const int PuddleVariants = 3;
-        private const int PuddleGrowthStages = 5;
-        private const int PoolFrames = 4;
+        private const int PuddleVariants = 4;
+        private const int PuddleStages = 4;
+        private const int PuddleFrames = 2;
+        private const float PuddleFrameSeconds = 0.55f;
 
         private static readonly Color RainColor = new Color(0.66f, 1f, 0.22f, 0.62f);
         private static readonly Color HeavyRainColor = new Color(0.86f, 1f, 0.5f, 0.85f);
@@ -67,17 +71,16 @@ namespace TrashTD.Core.GameLoop
         private static readonly Color SprayColor = new Color(0.78f, 1f, 0.38f, 0.9f);
         private static readonly Color TintColor = new Color(0.22f, 0.45f, 0.06f, 1f);
         private static readonly Color FlashColor = new Color(0.82f, 1f, 0.66f, 1f);
-        private static readonly Color BubbleColor = new Color(0.75f, 1f, 0.35f, 0.95f);
 
-        // Pixel-art fog tones (lit from above) and acid tones
+        // The map's acid pool palette (level 6 complete.png): flat lime body, 1 px olive edge, pale bubble arcs
+        private static readonly Color PoolBody = new Color32(191, 218, 64, 255);
+        private static readonly Color PoolEdge = new Color32(112, 136, 0, 255);
+        private static readonly Color PoolHighlight = new Color32(226, 252, 101, 255);
+
+        // Pixel-art fog tones (lit from above)
         private static readonly Color FogLight = new Color(0.74f, 0.88f, 0.5f);
         private static readonly Color FogMid = new Color(0.54f, 0.7f, 0.34f);
         private static readonly Color FogShadow = new Color(0.36f, 0.48f, 0.22f);
-        private static readonly Color AcidRim = new Color(0.14f, 0.34f, 0.05f, 0.95f);
-        private static readonly Color AcidShallow = new Color(0.6f, 0.96f, 0.2f, 0.92f);
-        private static readonly Color AcidBody = new Color(0.38f, 0.8f, 0.1f, 0.88f);
-        private static readonly Color AcidDeep = new Color(0.25f, 0.6f, 0.07f, 0.9f);
-        private static readonly Color AcidGlint = new Color(0.9f, 1f, 0.62f, 1f);
 
         /// <summary>Fog cloud sizes in art pixels; clouds never scale, so they stay crisp.</summary>
         private static readonly Vector2Int[] FogSizes =
@@ -95,6 +98,20 @@ namespace TrashTD.Core.GameLoop
             new Vector2Int(14, 10),
             new Vector2Int(19, 13)
         };
+
+        /// <summary>
+        /// Puddle shapes as metaballs (x, y, radius) in art pixels from the tile centre at the peak stage: a lopsided
+        /// lobed pool, a wide oval, a pool with splash drops running off it, and a diagonal kidney. Smaller stages
+        /// scale them in. At the peak they nearly fill the tile but stay round-edged, never square.
+        /// </summary>
+        private static readonly Vector3[][] PuddleShapes =
+        {
+            new[] { new Vector3(0f, 0f, 9f), new Vector3(5f, 5f, 7f), new Vector3(-6f, -2f, 7.5f), new Vector3(4f, -6f, 5.5f), new Vector3(-4f, 7f, 4f), new Vector3(9f, -1f, 4f) },
+            new[] { new Vector3(-7f, -1f, 7f), new Vector3(6f, 1f, 7f), new Vector3(0f, 0f, 7.5f), new Vector3(-1f, -4f, 5.5f), new Vector3(9f, -3f, 4.5f), new Vector3(-10f, 2f, 4f) },
+            new[] { new Vector3(-3f, -1f, 9.5f), new Vector3(3f, 3f, 7f), new Vector3(-7f, 5f, 4.5f), new Vector3(10f, -9f, 3.2f), new Vector3(11f, 8f, 2.4f) },
+            new[] { new Vector3(-7f, -6f, 6.5f), new Vector3(-2f, -1f, 7.5f), new Vector3(4f, 4f, 7f), new Vector3(8f, 9f, 4.5f), new Vector3(5f, -3f, 4.5f) }
+        };
+        private static readonly float[] PuddleStageScale = { 0.42f, 0.62f, 0.82f, 1f };
 
         private enum Storm { Drizzle, Downpour }
 
@@ -170,14 +187,7 @@ namespace TrashTD.Core.GameLoop
             public float Delay;   // waits this long before the next bubble rises
         }
 
-        private sealed class Pool
-        {
-            public SpriteRenderer Renderer;
-            public Sprite[] Frames;
-            public float Phase;
-        }
-
-        private enum PuddleState { Idle, Growing, Active, Fading }
+        private enum PuddleState { Idle, Seeping, Staged, Drying }
 
         private sealed class Puddle
         {
@@ -186,7 +196,8 @@ namespace TrashTD.Core.GameLoop
             public PuddleState State;
             public GridCell Cell;
             public int Variant;
-            public float StateTime;
+            public int Step;        // index into PuddleStageOrder while Staged
+            public float StateTime; // wave time in the current state or step
             public float FumeTimer;
         }
 
@@ -205,14 +216,12 @@ namespace TrashTD.Core.GameLoop
         private readonly List<Particle> sprays = new List<Particle>();
         private readonly List<Particle> fumes = new List<Particle>();
         private readonly List<Bubble> bubbles = new List<Bubble>();
-        private readonly List<Pool> pools = new List<Pool>();
         private readonly List<Vector3> poolCentres = new List<Vector3>();
         private readonly List<Puddle> puddles = new List<Puddle>();
         private readonly List<GridCell> puddleCandidates = new List<GridCell>();
         private readonly List<Vector3> bubbleSites = new List<Vector3>();
         private SpriteRenderer tint;
         private SpriteRenderer skyFlash;
-        private SpriteRenderer bolt;
 
         private Storm storm = Storm.Drizzle;
         private float stormTimeLeft;
@@ -222,19 +231,17 @@ namespace TrashTD.Core.GameLoop
         private float tickPulse;           // 1 on a damage tick, fades quickly
         private float flashTimer;          // counts down to the next storm flash
         private float flashElapsed = -1f;  // time into the current flash, < 0 when none
-        private bool flashStrikesTwice;
+        private bool flashTwice;
         private float puddleTimer;
         private float sprayBudget;         // droplets still allowed this frame
 
         private Sprite whiteSprite;
         private Sprite streakSprite;
         private Sprite skyFlashSprite;
-        private Sprite boltSprite;
         private Sprite[] fogSprites;
         private Sprite[] fumeSprites;
         private Sprite[] ringSprites;
-        private Sprite[][] puddleGrowth;   // [variant][stage], small to full
-        private Sprite[][] puddleShimmer;  // [variant][frame]
+        private Sprite[][][] puddleSprites; // [variant][stage][frame]
         private readonly List<Sprite> generatedSprites = new List<Sprite>();
 
         public void Initialize(GridManager grid, StageData stage, Func<bool> acidActive = null)
@@ -253,7 +260,7 @@ namespace TrashTD.Core.GameLoop
             CreateArtMask();
             CreateTintAndFlash();
             CreateFog();
-            CreateAcidPools();
+            CreatePoolBubbles();
             CreatePuddles();
             CreateRainDrops();
             CreateParticles();
@@ -277,12 +284,11 @@ namespace TrashTD.Core.GameLoop
         {
             for (int i = 0; i < puddles.Count; i++)
             {
-                if (puddles[i].Cell != null) puddles[i].Cell.HasAcidPuddle = false;
+                if (puddles[i].Cell != null) puddles[i].Cell.AcidPuddleDamage = 0;
             }
 
             // whiteSprite wraps Texture2D.whiteTexture, which is built in: destroy the sprite only
             if (whiteSprite != null) Destroy(whiteSprite);
-            DestroyGeneratedSprite(boltSprite);
             foreach (Sprite sprite in generatedSprites) DestroyGeneratedSprite(sprite);
             generatedSprites.Clear();
         }
@@ -306,7 +312,7 @@ namespace TrashTD.Core.GameLoop
             UpdateFog(deltaTime);
             UpdateRain(deltaTime);
             UpdatePuddles(deltaTime);
-            UpdatePools(deltaTime);
+            UpdateBubbles(deltaTime);
             UpdateSprays(deltaTime);
             UpdateFumes(deltaTime);
             UpdateTintAndFlash(deltaTime);
@@ -384,7 +390,7 @@ namespace TrashTD.Core.GameLoop
             {
                 TileType.HighGround => 0.5f,
                 TileType.Blocked => 0.85f,
-                TileType.Trap => 0.75f, // fumes gather over the acid pools
+                TileType.Trap => 0.75f, // fumes gather over the acid pool
                 _ => 0.25f              // enemy lane, melee ground, spawns, exits, holes
             };
         }
@@ -454,10 +460,6 @@ namespace TrashTD.Core.GameLoop
             skyFlash.transform.localScale = new Vector3(
                 size.x / skyFlashSprite.bounds.size.x, size.y / skyFlashSprite.bounds.size.y, 1f);
             skyFlash.color = Color.clear;
-
-            bolt = CreateRenderer(transform, "Stage6LightningBolt", null, true, BoltSortingOrder);
-            bolt.transform.localScale = Vector3.one * cellSize;
-            bolt.enabled = false;
         }
 
         private void CreateFog()
@@ -499,61 +501,31 @@ namespace TrashTD.Core.GameLoop
             cloud.FadeIn = anywhere ? 1f : 0f;
         }
 
-        /// <summary>Animated pixel-art acid on each Trap tile. Neighbouring pool tiles join into one pool.</summary>
-        private void CreateAcidPools()
+        /// <summary>
+        /// Bubbles for the acid pool painted in the map art (the Trap tiles). The art itself is left alone; the
+        /// barrels and sign in the middle are midground art drawn over these, so bubbles never show on top of them.
+        /// </summary>
+        private void CreatePoolBubbles()
         {
-            var poolRoot = new GameObject("Stage6AcidPools");
-            poolRoot.transform.SetParent(transform, false);
-
             for (int x = 0; x < stageData.gridWidth; x++)
             {
                 for (int y = 0; y < stageData.gridHeight; y++)
                 {
                     GridCell cell = gridManager.GetCell(x, y);
-                    if (cell == null || cell.TileType != TileType.Trap) continue;
-
-                    bool left = IsTrap(x - 1, y), right = IsTrap(x + 1, y), down = IsTrap(x, y - 1), up = IsTrap(x, y + 1);
-                    // Grid y may run the other way to world y: orient the open sides by the neighbours' world positions
-                    if (!IsWorldAbove(x, y + 1, cell)) (up, down) = (down, up);
-
-                    // Noise in world pixels with one shared seed, so joined pool tiles line up at their seams
-                    Vector2Int noiseOffset = new Vector2Int(
-                        Mathf.RoundToInt(cell.WorldPosition.x / cellSize) * ArtPixelsPerTile,
-                        Mathf.RoundToInt(cell.WorldPosition.y / cellSize) * ArtPixelsPerTile);
-                    var frames = new Sprite[PoolFrames];
-                    for (int f = 0; f < PoolFrames; f++)
-                    {
-                        frames[f] = Track(CreateAcidSprite(left, right, down, up, 3f, 1f, 7001, noiseOffset, f, $"Stage6 Pool {x},{y} #{f}"));
-                    }
-
-                    SpriteRenderer renderer = CreateRenderer(poolRoot.transform, $"AcidPool_{x}_{y}", frames[0], true, PoolSortingOrder);
-                    renderer.transform.position = Snap(cell.WorldPosition.x, cell.WorldPosition.y);
-                    renderer.transform.localScale = Vector3.one * cellSize;
-                    pools.Add(new Pool { Renderer = renderer, Frames = frames, Phase = Random.Range(0f, PoolFrames * PoolFrameSeconds) });
-                    poolCentres.Add(cell.WorldPosition);
+                    if (cell != null && cell.TileType == TileType.Trap) poolCentres.Add(cell.WorldPosition);
                 }
             }
 
+            var bubbleRoot = new GameObject("Stage6AcidBubbles");
+            bubbleRoot.transform.SetParent(transform, false);
             for (int i = 0; i < MaxBubbles; i++)
             {
-                SpriteRenderer renderer = CreateRenderer(poolRoot.transform, $"Bubble_{i}", ringSprites[0], true, GroundFxSortingOrder);
+                SpriteRenderer renderer = CreateRenderer(bubbleRoot.transform, $"Bubble_{i}", ringSprites[0], true, GroundFxSortingOrder);
                 renderer.transform.localScale = Vector3.one * cellSize;
                 renderer.gameObject.SetActive(false);
-                // Staggered so the pools don't all bubble at once
+                // Staggered so the pool doesn't all bubble at once
                 bubbles.Add(new Bubble { Transform = renderer.transform, Renderer = renderer, Delay = Random.Range(0f, 2.5f) });
             }
-        }
-
-        private bool IsTrap(int x, int y)
-        {
-            GridCell cell = gridManager.GetCell(x, y);
-            return cell != null && cell.TileType == TileType.Trap;
-        }
-
-        private bool IsWorldAbove(int x, int y, GridCell from)
-        {
-            Vector3 other = gridManager.GridToWorldPosition(x, y);
-            return other.y > from.WorldPosition.y;
         }
 
         /// <summary>Downpour puddles: the candidate tiles and a small pool of renderers.</summary>
@@ -565,7 +537,7 @@ namespace TrashTD.Core.GameLoop
                 {
                     GridCell cell = gridManager.GetCell(x, y);
                     if (cell == null) continue;
-                    // Ground and high ground; never pools, spawns, exits, holes or blocked tiles
+                    // Ground and high ground; never the pool, spawns, exits, holes or blocked tiles
                     if (cell.TileType == TileType.LowGround || cell.TileType == TileType.EnemyPath || cell.TileType == TileType.HighGround)
                         puddleCandidates.Add(cell);
                 }
@@ -573,9 +545,9 @@ namespace TrashTD.Core.GameLoop
 
             var puddleRoot = new GameObject("Stage6AcidPuddles");
             puddleRoot.transform.SetParent(transform, false);
-            for (int i = 0; i < MaxPuddles + 2; i++)
+            for (int i = 0; i < MaxPuddles; i++)
             {
-                SpriteRenderer renderer = CreateRenderer(puddleRoot.transform, $"AcidPuddle_{i}", null, true, PoolSortingOrder);
+                SpriteRenderer renderer = CreateRenderer(puddleRoot.transform, $"AcidPuddle_{i}", null, true, PuddleSortingOrder);
                 renderer.transform.localScale = Vector3.one * cellSize;
                 renderer.gameObject.SetActive(false);
                 puddles.Add(new Puddle { Transform = renderer.transform, Renderer = renderer, State = PuddleState.Idle });
@@ -851,28 +823,18 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
-        // ---------- Acid pools and bubbles ----------
+        // ---------- Bubbles ----------
 
-        private void UpdatePools(float deltaTime)
+        /// <summary>Bubbles rise in the map's acid pool and in any wet puddle, swelling through ring sprites and popping.</summary>
+        private void UpdateBubbles(float deltaTime)
         {
-            float time = Time.time;
-            for (int i = 0; i < pools.Count; i++)
-            {
-                Pool pool = pools[i];
-                int frame = (int)((time + pool.Phase) / PoolFrameSeconds) % pool.Frames.Length;
-                pool.Renderer.sprite = pool.Frames[frame];
-                // Each pool breathes out of step with the others; damage ticks brighten them all
-                float pulse = 0.5f + 0.5f * Mathf.Sin(time * 1.6f + i * 1.7f);
-                float shade = Mathf.Clamp01(0.84f + 0.1f * pulse + 0.16f * tickPulse);
-                pool.Renderer.color = new Color(shade, shade, shade, 1f);
-            }
-
-            // Bubbles rise in the fixed pools and in any live puddle
             bubbleSites.Clear();
             bubbleSites.AddRange(poolCentres);
             for (int i = 0; i < puddles.Count; i++)
             {
-                if (puddles[i].State == PuddleState.Active) bubbleSites.Add(puddles[i].Cell.WorldPosition);
+                // Only puddles big enough (stage 2+) to hold a bubble
+                Puddle puddle = puddles[i];
+                if (puddle.State == PuddleState.Staged && PuddleStageOrder[puddle.Step] >= 1) bubbleSites.Add(puddle.Cell.WorldPosition);
             }
 
             for (int i = 0; i < bubbles.Count; i++)
@@ -893,11 +855,10 @@ namespace TrashTD.Core.GameLoop
                     continue;
                 }
 
-                // Swells through the ring sprites (no scaling), then pops
                 int stage = Mathf.Min(bubble.MaxStage, (int)(k * (bubble.MaxStage + 1)));
                 bubble.Renderer.sprite = ringSprites[stage];
-                Color color = BubbleColor;
-                color.a *= Mathf.Clamp01(k * 4f);
+                Color color = PoolHighlight;
+                color.a = Mathf.Clamp01(k * 4f);
                 bubble.Renderer.color = color;
             }
         }
@@ -905,9 +866,10 @@ namespace TrashTD.Core.GameLoop
         private void StartBubble(Bubble bubble)
         {
             Vector3 site = bubbleSites[Random.Range(0, bubbleSites.Count)];
+            // Kept near the middle of the tile, which is inside the pool art (and inside a stage 2+ puddle)
             bubble.Transform.position = Snap(
-                site.x + Random.Range(-0.3f, 0.3f) * cellSize,
-                site.y + Random.Range(-0.26f, 0.26f) * cellSize);
+                site.x + Random.Range(-0.22f, 0.22f) * cellSize,
+                site.y + Random.Range(-0.2f, 0.2f) * cellSize);
             bubble.Active = true;
             bubble.Age = 0f;
             bubble.Lifetime = Random.Range(0.6f, 1.3f);
@@ -930,11 +892,17 @@ namespace TrashTD.Core.GameLoop
 
         // ---------- Downpour puddles ----------
 
+        /// <summary>
+        /// Puddles form only in a downpour while the acid is live, and all their timers run on wave time: between
+        /// waves they hold still (operators take no damage then anyway). Each puddle seeps in, then steps through
+        /// PuddleStageOrder (stages 1-2-3-4-3-2-1, PuddleStageSeconds each, damage following the stage), then dries up.
+        /// </summary>
         private void UpdatePuddles(float deltaTime)
         {
             bool acidLive = isAcidActive == null || isAcidActive();
+            if (!acidLive) return;
 
-            if (acidLive && storm == Storm.Downpour && rainIntensity >= PuddleDownpourThreshold)
+            if (storm == Storm.Downpour && rainIntensity >= PuddleDownpourThreshold)
             {
                 puddleTimer -= deltaTime;
                 if (puddleTimer <= 0f)
@@ -948,55 +916,45 @@ namespace TrashTD.Core.GameLoop
             {
                 Puddle puddle = puddles[i];
                 if (puddle.State == PuddleState.Idle) continue;
-
-                // The wave ended (or hazards went off): every puddle drains away and stops hurting
-                if (!acidLive && puddle.State != PuddleState.Fading) BeginFade(puddle);
-
                 puddle.StateTime += deltaTime;
+
                 switch (puddle.State)
                 {
-                    case PuddleState.Growing:
+                    case PuddleState.Seeping:
                     {
-                        float k = Mathf.Clamp01(puddle.StateTime / PuddleGrowSeconds);
-                        int stage = Mathf.Min(PuddleGrowthStages - 1, (int)(k * PuddleGrowthStages));
-                        puddle.Renderer.sprite = puddleGrowth[puddle.Variant][stage];
-                        puddle.Renderer.color = new Color(1f, 1f, 1f, Mathf.Lerp(0.45f, 1f, k));
-                        if (k >= 1f)
-                        {
-                            puddle.State = PuddleState.Active;
-                            puddle.StateTime = 0f;
-                            puddle.Cell.HasAcidPuddle = true;
-                            Vector3 centre = puddle.Cell.WorldPosition;
-                            for (int s = 0; s < 4; s++) EmitSpray(centre, 0.8f);
-                            EmitFume(centre);
-                        }
+                        float k = Mathf.Clamp01(puddle.StateTime / PuddleSeepSeconds);
+                        puddle.Renderer.sprite = puddleSprites[puddle.Variant][0][0];
+                        puddle.Renderer.color = new Color(1f, 1f, 1f, k);
+                        if (k >= 1f) EnterStep(puddle, 0);
                         break;
                     }
-                    case PuddleState.Active:
+                    case PuddleState.Staged:
                     {
-                        Sprite[] frames = puddleShimmer[puddle.Variant];
-                        puddle.Renderer.sprite = frames[(int)(puddle.StateTime / PoolFrameSeconds) % frames.Length];
-                        float shade = Mathf.Clamp01(0.88f + 0.12f * tickPulse);
-                        puddle.Renderer.color = new Color(shade, shade, shade, 1f);
+                        int stage = PuddleStageOrder[puddle.Step];
+                        Sprite[] frames = puddleSprites[puddle.Variant][stage];
+                        puddle.Renderer.sprite = frames[(int)(puddle.StateTime / PuddleFrameSeconds) % frames.Length];
+                        puddle.Renderer.color = Color.white;
 
-                        // Seethes: a fume now and then
+                        // Seethes: bigger puddles fume more often
                         puddle.FumeTimer -= deltaTime;
                         if (puddle.FumeTimer <= 0f)
                         {
-                            puddle.FumeTimer = Random.Range(0.6f, 1.2f);
+                            puddle.FumeTimer = Random.Range(1.4f, 2.4f) / (1f + stage * 0.5f);
                             Vector3 centre = puddle.Cell.WorldPosition;
-                            EmitFume(centre + new Vector3(Random.Range(-0.25f, 0.25f), Random.Range(-0.2f, 0.2f), 0f) * cellSize);
+                            float reach = 0.1f + 0.06f * stage;
+                            EmitFume(centre + new Vector3(Random.Range(-reach, reach), Random.Range(-reach, reach), 0f) * cellSize);
                         }
 
-                        if (puddle.StateTime >= PuddleActiveSeconds) BeginFade(puddle);
+                        if (puddle.StateTime >= PuddleStageSeconds)
+                        {
+                            if (puddle.Step + 1 < PuddleStageOrder.Length) EnterStep(puddle, puddle.Step + 1);
+                            else BeginDrying(puddle);
+                        }
                         break;
                     }
-                    case PuddleState.Fading:
+                    case PuddleState.Drying:
                     {
-                        float k = Mathf.Clamp01(puddle.StateTime / PuddleFadeSeconds);
-                        // Shrinks back through the growth stages as it soaks away
-                        int stage = Mathf.Clamp((int)((1f - k) * PuddleGrowthStages), 0, PuddleGrowthStages - 1);
-                        puddle.Renderer.sprite = puddleGrowth[puddle.Variant][stage];
+                        float k = Mathf.Clamp01(puddle.StateTime / PuddleDrySeconds);
                         puddle.Renderer.color = new Color(1f, 1f, 1f, 1f - k);
                         if (k >= 1f)
                         {
@@ -1010,21 +968,37 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
+        /// <summary>Moves a puddle to a step of PuddleStageOrder: its size and damage change together, with a splash.</summary>
+        private void EnterStep(Puddle puddle, int step)
+        {
+            puddle.State = PuddleState.Staged;
+            puddle.Step = step;
+            puddle.StateTime = 0f;
+            int stage = PuddleStageOrder[step];
+            puddle.Cell.AcidPuddleDamage = PuddleStageDamage[stage];
+            puddle.Renderer.sprite = puddleSprites[puddle.Variant][stage][0];
+
+            Vector3 centre = puddle.Cell.WorldPosition;
+            int droplets = 2 + stage;
+            for (int s = 0; s < droplets; s++) EmitSpray(centre, 0.8f);
+            if (step == 0 || stage == PuddleStages - 1) EmitFume(centre);
+        }
+
+        private static void BeginDrying(Puddle puddle)
+        {
+            puddle.State = PuddleState.Drying;
+            puddle.StateTime = 0f;
+            if (puddle.Cell != null) puddle.Cell.AcidPuddleDamage = 0;
+        }
+
         private void TrySpawnPuddle()
         {
-            int live = 0;
-            for (int i = 0; i < puddles.Count; i++)
-            {
-                if (puddles[i].State == PuddleState.Growing || puddles[i].State == PuddleState.Active) live++;
-            }
-            if (live >= MaxPuddles || puddleCandidates.Count == 0) return;
-
             Puddle free = null;
             for (int i = 0; i < puddles.Count; i++)
             {
                 if (puddles[i].State == PuddleState.Idle) { free = puddles[i]; break; }
             }
-            if (free == null) return;
+            if (free == null || puddleCandidates.Count == 0) return;
 
             // A few tries for a tile without a puddle already on it
             for (int attempt = 0; attempt < 8; attempt++)
@@ -1033,13 +1007,15 @@ namespace TrashTD.Core.GameLoop
                 if (HasPuddle(cell)) continue;
 
                 free.Cell = cell;
-                free.State = PuddleState.Growing;
+                free.State = PuddleState.Seeping;
                 free.StateTime = 0f;
-                free.FumeTimer = Random.Range(0.2f, 0.6f);
+                free.FumeTimer = Random.Range(0.5f, 1.2f);
                 free.Variant = Random.Range(0, PuddleVariants);
                 free.Transform.position = Snap(cell.WorldPosition.x, cell.WorldPosition.y);
                 free.Renderer.flipX = Random.value < 0.5f;
-                free.Renderer.sprite = puddleGrowth[free.Variant][0];
+                free.Renderer.flipY = Random.value < 0.5f;
+                free.Renderer.sprite = puddleSprites[free.Variant][0][0];
+                free.Renderer.color = Color.clear;
                 free.Transform.gameObject.SetActive(true);
                 return;
             }
@@ -1052,13 +1028,6 @@ namespace TrashTD.Core.GameLoop
                 if (puddles[i].State != PuddleState.Idle && puddles[i].Cell == cell) return true;
             }
             return false;
-        }
-
-        private static void BeginFade(Puddle puddle)
-        {
-            puddle.State = PuddleState.Fading;
-            puddle.StateTime = 0f;
-            if (puddle.Cell != null) puddle.Cell.HasAcidPuddle = false;
         }
 
         // ---------- Tint and storm flashes ----------
@@ -1083,8 +1052,8 @@ namespace TrashTD.Core.GameLoop
         }
 
         /// <summary>
-        /// Runs the current flash: a faint pre-flicker, the strike (bolt and sky flash, flickering), and a fading
-        /// afterglow; sometimes a second strike follows. Returns the sky flash strength 0-1.
+        /// Runs the current flash: a faint pre-flicker, a flickering flash and a fading afterglow; sometimes a second
+        /// flash follows. Returns the flash strength 0-1.
         /// </summary>
         private float UpdateFlash(float deltaTime)
         {
@@ -1096,124 +1065,26 @@ namespace TrashTD.Core.GameLoop
                 // Downpours flash more often
                 flashTimer = storm == Storm.Downpour ? Random.Range(9f, 18f) : Random.Range(14f, 28f);
                 flashElapsed = 0f;
-                flashStrikesTwice = Random.value < 0.45f;
-                CreateBolt();
+                flashTwice = Random.value < 0.45f;
             }
 
             flashElapsed += deltaTime;
             float t = flashElapsed;
             float flicker = 0.8f + 0.2f * Mathf.PerlinNoise(t * 40f, 0.5f);
             float strength;
-            float boltAlpha;
+            if (t < 0.05f) strength = 0.3f;
+            else if (t < 0.1f) strength = 0.04f;
+            else if (t < 0.3f) strength = flicker;
+            else strength = Mathf.Exp(-(t - 0.3f) * 4.5f);
 
-            if (t < 0.05f) { strength = 0.3f; boltAlpha = 0f; }
-            else if (t < 0.1f) { strength = 0.04f; boltAlpha = 0f; }
-            else if (t < 0.3f) { strength = flicker; boltAlpha = t < 0.16f || t > 0.2f ? 1f : 0.35f; }
-            else
-            {
-                strength = Mathf.Exp(-(t - 0.3f) * 4.5f);
-                boltAlpha = Mathf.Clamp01(1f - (t - 0.3f) / 0.18f) * 0.7f;
-            }
-
-            if (flashStrikesTwice && t >= 0.5f && t < 0.62f)
-            {
-                strength = Mathf.Max(strength, 0.75f * flicker);
-                boltAlpha = 0.9f;
-            }
-
-            if (bolt != null)
-            {
-                bolt.enabled = boltAlpha > 0.01f;
-                bolt.color = new Color(1f, 1f, 1f, boltAlpha);
-            }
+            if (flashTwice && t >= 0.5f && t < 0.62f) strength = Mathf.Max(strength, 0.75f * flicker);
 
             if (t >= 1.2f)
             {
                 flashElapsed = -1f;
-                if (bolt != null) bolt.enabled = false;
                 return 0f;
             }
             return Mathf.Clamp01(strength);
-        }
-
-        /// <summary>
-        /// A fresh pixel lightning bolt for this flash: a jagged 1 px core with a soft 1 px glow and a fork or two,
-        /// striking down from the top of the map somewhere across it.
-        /// </summary>
-        private void CreateBolt()
-        {
-            if (bolt == null) return;
-
-            int artHeightPx = Mathf.Max(32, Mathf.RoundToInt((artMax.y - artMin.y) / pixelSize));
-            int height = Mathf.RoundToInt(artHeightPx * Random.Range(0.35f, 0.6f));
-            const int width = 48;
-            var core = new bool[width, height];
-
-            int x = width / 2;
-            int y = height - 1;
-            var forkStarts = new List<Vector2Int>();
-            while (y > 0)
-            {
-                int nextY = Mathf.Max(0, y - Random.Range(4, 9));
-                int nextX = Mathf.Clamp(x + Random.Range(-5, 6), 2, width - 3);
-                DrawLine(core, x, y, nextX, nextY);
-                if (forkStarts.Count < 2 && y < height - 6 && Random.value < 0.25f) forkStarts.Add(new Vector2Int(x, y));
-                x = nextX;
-                y = nextY;
-            }
-
-            foreach (Vector2Int start in forkStarts)
-            {
-                int fx = start.x, fy = start.y;
-                int direction = Random.value < 0.5f ? -1 : 1;
-                int steps = Random.Range(2, 5);
-                for (int s = 0; s < steps && fy > 0; s++)
-                {
-                    int nextY = Mathf.Max(0, fy - Random.Range(3, 7));
-                    int nextX = Mathf.Clamp(fx + direction * Random.Range(2, 6), 1, width - 2);
-                    DrawLine(core, fx, fy, nextX, nextY);
-                    fx = nextX;
-                    fy = nextY;
-                }
-            }
-
-            var pixels = new Color[width * height];
-            Color coreColor = new Color(0.94f, 1f, 0.84f, 1f);
-            Color glowColor = new Color(0.62f, 1f, 0.4f, 0.45f);
-            for (int py = 0; py < height; py++)
-            {
-                for (int px = 0; px < width; px++)
-                {
-                    if (core[px, py]) { pixels[py * width + px] = coreColor; continue; }
-                    bool nearCore = (px > 0 && core[px - 1, py]) || (px < width - 1 && core[px + 1, py]) ||
-                                    (py > 0 && core[px, py - 1]) || (py < height - 1 && core[px, py + 1]);
-                    pixels[py * width + px] = nearCore ? glowColor : Color.clear;
-                }
-            }
-
-            DestroyGeneratedSprite(boltSprite);
-            boltSprite = MakeSprite(pixels, width, height, "Stage6 Lightning Bolt", new Vector2(0.5f, 1f));
-            bolt.sprite = boltSprite;
-
-            float halfWidth = width * 0.5f * pixelSize;
-            float boltX = Random.Range(artMin.x + halfWidth, artMax.x - halfWidth);
-            bolt.transform.position = Snap(boltX, artMax.y);
-            bolt.flipX = Random.value < 0.5f;
-        }
-
-        private static void DrawLine(bool[,] grid, int x0, int y0, int x1, int y1)
-        {
-            int dx = Mathf.Abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-            int dy = -Mathf.Abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
-            int error = dx + dy;
-            while (true)
-            {
-                if (x0 >= 0 && x0 < grid.GetLength(0) && y0 >= 0 && y0 < grid.GetLength(1)) grid[x0, y0] = true;
-                if (x0 == x1 && y0 == y1) break;
-                int e2 = 2 * error;
-                if (e2 >= dy) { error += dy; x0 += sx; }
-                if (e2 <= dx) { error += dx; y0 += sy; }
-            }
         }
 
         // ---------- Generated sprites ----------
@@ -1254,21 +1125,16 @@ namespace TrashTD.Core.GameLoop
 
             ringSprites = new[] { Track(CreateRingSprite(3)), Track(CreateRingSprite(5)), Track(CreateRingSprite(7)) };
 
-            puddleGrowth = new Sprite[PuddleVariants][];
-            puddleShimmer = new Sprite[PuddleVariants][];
+            puddleSprites = new Sprite[PuddleVariants][][];
             for (int v = 0; v < PuddleVariants; v++)
             {
-                int seed = 8300 + v * 577;
-                puddleGrowth[v] = new Sprite[PuddleGrowthStages];
-                for (int s = 0; s < PuddleGrowthStages; s++)
+                puddleSprites[v] = new Sprite[PuddleStages][];
+                for (int s = 0; s < PuddleStages; s++)
                 {
-                    float coverage = (s + 1f) / PuddleGrowthStages;
-                    puddleGrowth[v][s] = Track(CreateAcidSprite(false, false, false, false, 6f, coverage, seed, Vector2Int.zero, 0, $"Stage6 Puddle {v} grow {s}"));
+                    puddleSprites[v][s] = new Sprite[PuddleFrames];
+                    for (int f = 0; f < PuddleFrames; f++)
+                        puddleSprites[v][s][f] = Track(CreatePuddleSprite(v, s, f));
                 }
-
-                puddleShimmer[v] = new Sprite[3];
-                for (int f = 0; f < 3; f++)
-                    puddleShimmer[v][f] = Track(CreateAcidSprite(false, false, false, false, 6f, 1f, seed, Vector2Int.zero, f, $"Stage6 Puddle {v} #{f}"));
             }
         }
 
@@ -1383,7 +1249,7 @@ namespace TrashTD.Core.GameLoop
             return MakeSprite(pixels, width, height, $"Stage6 Fog {width}x{height}", new Vector2(0.5f, 0.5f));
         }
 
-        /// <summary>A pixel ring of the given size with a glint on its upper left, for bubbles.</summary>
+        /// <summary>A pixel ring of the given size, for bubbles (tinted the pool's highlight colour).</summary>
         private static Sprite CreateRingSprite(int size)
         {
             var pixels = new Color[size * size];
@@ -1396,90 +1262,92 @@ namespace TrashTD.Core.GameLoop
                 {
                     float d = Mathf.Sqrt((x - centre) * (x - centre) + (y - centre) * (y - centre));
                     Color color = Color.clear;
-                    if (d <= outer && d > inner) color = new Color(1f, 1f, 1f, 0.95f); // rim
-                    else if (d <= inner) color = new Color(1f, 1f, 1f, 0.2f);          // thin film
+                    if (d <= outer && d > inner) color = Color.white;                    // rim
+                    else if (d <= inner) color = new Color(1f, 1f, 1f, 0.25f);          // thin film
                     pixels[y * size + x] = color;
                 }
             }
-            if (size >= 5) pixels[(size - 2) * size + 1] = Color.white; // glint
             return MakeSprite(pixels, size, size, $"Stage6 Bubble {size}", new Vector2(0.5f, 0.5f));
         }
 
         /// <summary>
-        /// One tile (32x32) of pixel-art acid. The shape is a rounded blob with a wobbly edge, inset from the tile
-        /// edges, except towards open sides (neighbouring pool tiles), where it runs past the edge so pools join up.
-        /// Tones: a dark rim, a bright shallow band, the body, a dithered deeper middle and per-frame surface glints.
-        /// coverage below 1 shrinks the blob towards its middle (puddles growing and drying).
+        /// One 32x32 puddle in the map pool's style: a flat lime blob with a 1 px olive edge and a few pale bubble
+        /// arcs (".hh." over "h..h", like the painted pool). The shape is a set of metaballs (PuddleShapes) scaled by
+        /// the stage, with a little noise on the edge so it steps like hand-placed pixels; it is never square.
+        /// The two frames move the arcs, so a sitting puddle shimmers.
         /// </summary>
-        private static Sprite CreateAcidSprite(bool openLeft, bool openRight, bool openDown, bool openUp,
-            float baseInset, float coverage, int seed, Vector2Int noiseOffset, int frame, string name)
+        private static Sprite CreatePuddleSprite(int variant, int stage, int frame)
         {
             const int size = ArtPixelsPerTile;
-            var random = new System.Random(seed);
-            float ox = (float)random.NextDouble() * 100f;
-            float oy = (float)random.NextDouble() * 100f;
-            const float cornerRadius = 7f;
+            Vector3[] balls = PuddleShapes[variant];
+            float scale = PuddleStageScale[stage];
+            float centre = (size - 1) * 0.5f;
+            var random = new System.Random(9100 + variant * 131);
+            float ox = (float)random.NextDouble() * 50f;
+            float oy = (float)random.NextDouble() * 50f;
 
-            float insetL = openLeft ? -6f : baseInset;
-            float insetR = openRight ? -6f : baseInset;
-            float insetB = openDown ? -6f : baseInset;
-            float insetT = openUp ? -6f : baseInset;
-            // Grows from the middle: coverage 1 is the full shape, lower values need a deeper field to show
-            float threshold = (1f - coverage) * 11f;
+            var inside = new bool[size, size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float field = 0f;
+                    for (int i = 0; i < balls.Length; i++)
+                    {
+                        float dx = x - (centre + balls[i].x * scale);
+                        float dy = y - (centre + balls[i].y * scale);
+                        float r = balls[i].z * scale;
+                        // (r/d)^4: a sharp falloff, so the shape follows its lobes instead of swelling into one blob
+                        float q = r * r / Mathf.Max(0.25f, dx * dx + dy * dy);
+                        field += q * q;
+                    }
+                    // Same noise at every stage, so the edge keeps its character as the puddle grows
+                    float wobble = (Mathf.PerlinNoise(ox + x * 0.3f, oy + y * 0.3f) - 0.5f) * 0.6f;
+                    inside[x, y] = field + wobble >= 1f && x > 0 && y > 0 && x < size - 1 && y < size - 1;
+                }
+            }
 
             var pixels = new Color[size * size];
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
                 {
-                    float left = x - insetL, right = (size - 1 - x) - insetR;
-                    float bottom = y - insetB, top = (size - 1 - y) - insetT;
-                    float field = Mathf.Min(Mathf.Min(left, right), Mathf.Min(bottom, top));
-
-                    // Round the corners between two closed sides
-                    if (!openLeft && !openDown) field = Mathf.Min(field, CornerField(left, bottom, cornerRadius));
-                    if (!openRight && !openDown) field = Mathf.Min(field, CornerField(right, bottom, cornerRadius));
-                    if (!openLeft && !openUp) field = Mathf.Min(field, CornerField(left, top, cornerRadius));
-                    if (!openRight && !openUp) field = Mathf.Min(field, CornerField(right, top, cornerRadius));
-
-                    // A wobbly, organic edge
-                    int wx = x + noiseOffset.x, wy = y + noiseOffset.y;
-                    field += (Mathf.PerlinNoise(ox + wx * 0.19f, oy + wy * 0.19f) - 0.5f) * 6f;
-                    field -= threshold;
-
-                    if (field < 0f)
-                    {
-                        pixels[y * size + x] = Color.clear;
-                        continue;
-                    }
-
-                    Color color;
-                    if (field < 1.2f) color = AcidRim;
-                    else if (field < 3.2f) color = AcidShallow;
-                    else if (field < 6.5f) color = AcidBody;
-                    else if (field < 8f) color = (wx + wy) % 2 == 0 ? AcidDeep : AcidBody;
-                    else color = AcidDeep;
-
-                    // Surface glints that move between frames
-                    if (field > 2.5f)
-                    {
-                        float glint = Mathf.PerlinNoise(ox + wx * 0.33f + frame * 2.3f, oy + wy * 0.55f + frame * 0.9f);
-                        if (glint > 0.8f) color = AcidGlint;
-                        else if (glint > 0.74f && (wx + wy + frame) % 2 == 0) color = AcidShallow;
-                    }
-                    pixels[y * size + x] = color;
+                    if (!inside[x, y]) { pixels[y * size + x] = Color.clear; continue; }
+                    bool edge = !inside[x - 1, y] || !inside[x + 1, y] || !inside[x, y - 1] || !inside[x, y + 1];
+                    pixels[y * size + x] = edge ? PoolEdge : PoolBody;
                 }
             }
-            return MakeSprite(pixels, size, size, name, new Vector2(0.5f, 0.5f));
+
+            // Bubble arcs: more on bigger puddles, placed only where the whole 4x3 patch is body
+            var arcRandom = new System.Random(9300 + variant * 53 + stage * 7 + frame * 997);
+            int arcs = 1 + stage;
+            for (int attempt = 0; attempt < 60 && arcs > 0; attempt++)
+            {
+                int ax = arcRandom.Next(1, size - 5);
+                int ay = arcRandom.Next(1, size - 4);
+                if (!PatchIsBody(pixels, size, ax - 1, ay - 1, 6, 4)) continue;
+                // Bottom row "h..h", top row ".hh." (y grows upwards)
+                pixels[ay * size + ax] = PoolHighlight;
+                pixels[ay * size + ax + 3] = PoolHighlight;
+                pixels[(ay + 1) * size + ax + 1] = PoolHighlight;
+                pixels[(ay + 1) * size + ax + 2] = PoolHighlight;
+                arcs--;
+            }
+
+            return MakeSprite(pixels, size, size, $"Stage6 Puddle v{variant} s{stage} f{frame}", new Vector2(0.5f, 0.5f));
         }
 
-        /// <summary>Distance inside a rounded corner: positive inside the quarter circle, matching the edge distances.</summary>
-        private static float CornerField(float a, float b, float radius)
+        private static bool PatchIsBody(Color[] pixels, int size, int x0, int y0, int width, int height)
         {
-            if (a >= radius || b >= radius) return float.MaxValue;
-            float dx = radius - a;
-            float dy = radius - b;
-            return radius - Mathf.Sqrt(dx * dx + dy * dy);
+            for (int y = y0; y < y0 + height; y++)
+            {
+                for (int x = x0; x < x0 + width; x++)
+                {
+                    if (x < 0 || y < 0 || x >= size || y >= size) return false;
+                    if (pixels[y * size + x] != PoolBody) return false;
+                }
+            }
+            return true;
         }
     }
 }

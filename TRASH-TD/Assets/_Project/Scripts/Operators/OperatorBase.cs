@@ -653,7 +653,7 @@ namespace TrashTD.Operators
                     trapDamageTimer -= TrapTileRules.DamageIntervalSeconds;
                     TrashTD.Combat.AcidDamageFlash.Flash(gameObject);
                     AudioManager.Instance?.PlaySfx(SfxId.TileTrapTick, 0.6f);
-                    TakeTrueDamage(TrapTileRules.DamagePerTick);
+                    TakeTrueDamage(deployedCell.AcidDamagePerTick);
                 }
                 if (!isDeployed) return;
             }
