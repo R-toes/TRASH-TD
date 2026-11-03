@@ -58,6 +58,15 @@ namespace TrashTD.Core.Grid
         }
 
         /// <summary>
+        /// A temporary acid puddle (Stage 6 downpours, Stage6AcidRainVisuals) is on this tile. It doesn't change the
+        /// tile type, so deployment and pathing are untouched; it only hurts like a Trap tile while set.
+        /// </summary>
+        public bool HasAcidPuddle { get; set; }
+
+        /// <summary>Units here take Trap damage (TrapTileRules): a Trap tile, or a temporary acid puddle.</summary>
+        public bool IsAcidHazard => TileType == TileType.Trap || HasAcidPuddle;
+
+        /// <summary>
         /// Check if a specific operator position type is compatible with this tile (GDD 1.4.1),
         /// regardless of whether the cell is currently occupied.
         /// </summary>

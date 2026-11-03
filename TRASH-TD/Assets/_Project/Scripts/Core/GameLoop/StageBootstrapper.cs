@@ -1096,13 +1096,23 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
-        /// <summary>The Stage 6 storm visuals (rain, fog, acid pools, flashes); the damage stays here.</summary>
+        /// <summary>
+        /// The Stage 6 storm (rain, fog, acid pools, flashes, and the downpour acid puddles). The rain damage stays
+        /// here; the puddles form only while IsStage6AcidActive.
+        /// </summary>
         private void CreateStage6AcidRain()
         {
             var weatherObject = new GameObject("Stage6AcidRain");
             weatherObject.transform.SetParent(transform, false);
             stage6AcidRainVisuals = weatherObject.AddComponent<Stage6AcidRainVisuals>();
-            stage6AcidRainVisuals.Initialize(gridManager, stageData);
+            stage6AcidRainVisuals.Initialize(gridManager, stageData, IsStage6AcidActive);
+        }
+
+        /// <summary>The acid can hurt right now: Stage 6 hazards on, during a wave (always in the sandbox).</summary>
+        private bool IsStage6AcidActive()
+        {
+            return EnvironmentStageId == "STAGE_06" && TrashTD.Combat.StageCombatModifiers.HazardsEnabled &&
+                   gameManager != null && (IsSandbox || gameManager.CurrentPhase == StagePhase.WaveActive);
         }
 
         private void CreateStage3SandstormVisuals()

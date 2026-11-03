@@ -780,7 +780,7 @@ namespace TrashTD.Enemies
 
             Vector2Int gridPosition = gridManager.WorldToGridPosition(transform.position);
             GridCell cell = gridManager.GetCell(gridPosition);
-            if (cell == null || cell.TileType != TileType.Trap)
+            if (cell == null || !cell.IsAcidHazard)
             {
                 trapDamageTimer = 0f;
                 return;

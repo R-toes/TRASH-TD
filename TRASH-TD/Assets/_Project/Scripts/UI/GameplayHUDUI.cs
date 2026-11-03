@@ -3842,7 +3842,8 @@ namespace TrashTD.UI
                     case "STAGE_06":
                         effectDescription =
                             "Acid rain periodically deals 3 true damage to deployed operators " +
-                            "and active enemies every 2 seconds while a wave is running. Operators are protected between waves.";
+                            "and active enemies every 2 seconds while a wave is running. Operators are protected between waves. " +
+                            "In heavy downpours, acid pools seep up on random tiles for about 6 seconds and burn anyone standing in them.";
                         break;
                     default:
                         yield break;

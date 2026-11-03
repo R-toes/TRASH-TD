@@ -645,7 +645,7 @@ namespace TrashTD.Operators
                 return;
             }
 
-            if (deployedCell != null && deployedCell.TileType == TileType.Trap)
+            if (deployedCell != null && deployedCell.IsAcidHazard)
             {
                 trapDamageTimer += Time.deltaTime;
                 while (trapDamageTimer >= TrapTileRules.DamageIntervalSeconds && isDeployed)
