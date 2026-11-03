@@ -202,6 +202,10 @@ namespace TrashTD.Editor
             if (existing != null) return existing;
 
             var go = new GameObject(prefabName);
+            if (prefabName == "Prefab_OP_Pompoth")
+            {
+                go.transform.localScale = Vector3.one * 0.75f;
+            }
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = sprite;
             sr.sortingOrder = 5;
