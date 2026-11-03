@@ -242,7 +242,9 @@ namespace TrashTD.UI
         /// <summary>The stage's map art filling the screen (cover fit), tinted and darkened.</summary>
         private void BuildMapArt(RectTransform root, StageData stage)
         {
-            Sprite art = stage != null ? stage.mapVisualSprite : null;
+            Sprite art = stage != null
+                ? (stage.loadingScreenMapSprite != null ? stage.loadingScreenMapSprite : stage.mapVisualSprite)
+                : null;
             if (art == null) return;
 
             Image image = CreateImage(root, "MapArt", MapTint);

@@ -1800,6 +1800,9 @@ namespace TrashTD.Editor
                 }
             }
 
+            stage.loadingScreenMapSprite = AssetDatabase.LoadAssetAtPath<Sprite>(
+                "Assets/_Project/Art/Levels/Level3 Complete.png");
+
             var upperBackgroundSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level3-UpperBackgroundt.png");
             var upperBackgroundLayers = new List<Sprite>();
             if (upperBackgroundSprites != null)
