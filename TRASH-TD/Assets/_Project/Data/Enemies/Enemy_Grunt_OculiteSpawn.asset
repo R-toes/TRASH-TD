@@ -23,9 +23,11 @@ MonoBehaviour:
   damageType: 0
   attackProjectileColor: {r: 0.55, g: 0.9, b: 0.3, a: 1}
   usesSandProjectileVisual: 0
+  usesPlasmaProjectileVisual: 0
   attackInterval: 1.5
   attackRange: 0
   frontAreaAttackTiles: 0
+  rangePattern: []
   isUnblockable: 0
   operatorAttackMissChance: 0
   blockWeight: 1
@@ -41,8 +43,8 @@ MonoBehaviour:
   animationFrameRate: 8
   visualScale: 1
   visualOffset: {x: 0, y: 0, z: 0}
+  projectileOrigin: {x: 0, y: 0}
   enemyPrefab: {fileID: 8358608267878886893, guid: a1b2c3d4e5f60718293a4b5c6d7e8f22, type: 3}
-
-  abilityDescription: "Released in threes when an Oculoid Carrier dies, and summoned by Occulorm. Immune to acid rain and acid tiles."
-  intelQuote: "*blink* *blink*"
-  intelLore: "An unknown alien creature with multiple blinking eyes that was experimented on in Calder Basin. Closely related to the other 'Ocu' organisms, these skittering parasites burst forth from carriers to swarm the exit."
+  abilityDescription: Small, skittering alien parasite spawned in swarms from broken carriers. Immune to acid rain and hazard pools.
+  intelQuote: 
+  intelLore: An unknown alien creature with multiple blinking eyes that was experimented on in Calder Basin. Closely related to the other 'Ocu' organisms, these skittering parasites burst forth from carriers to swarm the exit.

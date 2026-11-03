@@ -23,9 +23,11 @@ MonoBehaviour:
   damageType: 0
   attackProjectileColor: {r: 0.55, g: 0.9, b: 0.3, a: 1}
   usesSandProjectileVisual: 0
+  usesPlasmaProjectileVisual: 0
   attackInterval: 2
   attackRange: 0
   frontAreaAttackTiles: 0
+  rangePattern: []
   isUnblockable: 0
   operatorAttackMissChance: 0
   blockWeight: 1
@@ -41,8 +43,8 @@ MonoBehaviour:
   animationFrameRate: 6
   visualScale: 1
   visualOffset: {x: 0, y: 0, z: 0}
+  projectileOrigin: {x: 0, y: 0}
   enemyPrefab: {fileID: 4017071742725256548, guid: a1b2c3d4e5f60718293a4b5c6d7e8f21, type: 3}
-
-  abilityDescription: "Reduces its blocker's block count by 1. Immune to acid rain and acid tiles. On death, releases 3 Oculite Spawns."
-  intelQuote: "*many eyes open*"
-  intelLore: "An abomination of a clump of Occulites stuffed inside a high-tech canister. One of the grotesque 'Ocu' entities experimented on in Calder Basin, its crushing bulk exhausts blockers, and shattering its shell only unleashes the writhing brood within."
+  abilityDescription: Reduces its blocker's block count by 1. Immune to acid rain and hazard pools. On death, bursts open to release 3 Occulites.
+  intelQuote: 
+  intelLore: An abomination of a clump of Occulites stuffed inside a high-tech canister. One of the grotesque 'Ocu' entities experimented on in Calder Basin, its crushing bulk exhausts blockers, and shattering its shell only unleashes the writhing brood within.

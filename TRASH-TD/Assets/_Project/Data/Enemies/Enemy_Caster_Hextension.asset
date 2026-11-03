@@ -23,9 +23,11 @@ MonoBehaviour:
   damageType: 1
   attackProjectileColor: {r: 0.72, g: 0.45, b: 0.95, a: 1}
   usesSandProjectileVisual: 0
+  usesPlasmaProjectileVisual: 0
   attackInterval: 2.2
   attackRange: 0
   frontAreaAttackTiles: 0
+  rangePattern: []
   isUnblockable: 0
   operatorAttackMissChance: 0
   blockWeight: 1
@@ -47,7 +49,6 @@ MonoBehaviour:
   visualOffset: {x: 0, y: 0, z: 0}
   projectileOrigin: {x: 0.03, y: 0.16}
   enemyPrefab: {fileID: 4017071742725256548, guid: 35bf92c72f2b45cea93d4e746f0f3ee0, type: 3}
-
-  abilityDescription: "Faded and untargetable by ranged operators until it binds. Binds the first operator that comes close for up to 15 seconds, dealing Arts damage every second. Afterwards it can be targeted by everyone and hits much harder."
-  intelQuote: "*crackle* Stay. Plugged. In."
-  intelLore: "A phantom covered in tangled wires and frayed high-voltage cables drifting silently down the lane. Unseen until it strikes, Hextension snares nearby operators with live, humming cords to siphon their life force."
+  abilityDescription: "Translucent and untargetable by ranged operators until it binds. Binds the lowest-RES operator in range for up to 15s with live wires, disabling their attacks, blocking, and skills while dealing 25 Arts damage every second. Afterwards, it becomes fully visible, gains +60% ATK, and attacks as a ranged caster."
+  intelQuote: "*high-voltage humming*"
+  intelLore: A phantom covered in tangled wires and frayed high-voltage cables drifting silently down the lane. Unseen until it strikes, Hextension snares nearby operators with live, humming cords to siphon their life force.
