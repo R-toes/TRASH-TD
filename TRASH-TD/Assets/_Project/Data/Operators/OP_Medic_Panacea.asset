@@ -29,6 +29,7 @@ MonoBehaviour:
   rangePattern: []
   damageType: 0
   drawTwoCardsOnDeath: 0
+  cannotBeHealed: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
   skillDescription: 'Passive - Panacea: Global range. Every 5s, heals the operator with the lowest HP% anywhere on the field.'
@@ -41,4 +42,5 @@ MonoBehaviour:
   operatorPrefab: {fileID: 727589208885156909, guid: 9e1fbbc36ca44f4e8e15501db61ed4be, type: 3}
   projectileOrigin: {x: -0.1, y: -0.12}
   intelQuote: 
-  intelLore: 
+  intelLore: "True to its name meaning \"cure-all,\" Panacea belongs to an elusive species of nine-tailed foxes roaming the barren wasteland loaded with survival gear and apothecary flasks. It took great personal offense when Drawgoo stubbornly refused to be healed. Don't ask how they brew their potions\u2014we have no idea."
+  talentRangePattern: []

@@ -34,9 +34,10 @@ MonoBehaviour:
   - {x: 0, y: -1}
   damageType: 0
   drawTwoCardsOnDeath: 0
+  cannotBeHealed: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Mossmo does not attack and is likely to be attacked but when taking damage he heals up to 2 operators in its range including itself'
+  skillDescription: Mossmo does not attack and is likely to be attacked but when taking damage he heals up to 2 operators in its range including itself
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
@@ -44,5 +45,7 @@ MonoBehaviour:
   chillFreezeDuration: 1.5
   portrait: {fileID: -6106041438205602732, guid: 5e115e17c5c350c4ea8d0eb47e7bcf67, type: 3}
   operatorPrefab: {fileID: 4120733290429841632, guid: d7c3b8a1e2f4509618a3b2c1d4e5f6a7, type: 3}
-  intelQuote: "Go on, hit me. It helps."
-  intelLore: "A walking patch of moss with antlers, grown from a flooded culvert in Railyard Drain. Mossmo never attacks, but enemies can't seem to stop swinging at it, and every blow makes it bloom and heal whoever is nearby. Unbothered by almost everything."
+  projectileOrigin: {x: 0, y: 0}
+  intelQuote: Go on, hit me. It helps.
+  intelLore: "A massive, gentle moose whose pelt and antlers have completely fused with living moss and fungal flora from a flooded culvert in Railyard Drain. Completely unbothered by the apocalyptic ruins, Mossmo never raises a hoof to attack, yet enemies can't resist charging it\u2014only for every blow against its thick hide to disperse soothing blooms that mend nearby allies."
+  talentRangePattern: []

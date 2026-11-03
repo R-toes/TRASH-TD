@@ -36,9 +36,10 @@ MonoBehaviour:
   - {x: 1, y: -1}
   damageType: 1
   drawTwoCardsOnDeath: 0
+  cannotBeHealed: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Stores a charge every 5 seconds (up to 3). Attacks fire 1 projectile per charge that bounces to up to 4 targets, dealing less damage each bounce.'
+  skillDescription: Stores a charge every 5 seconds (up to 3). Attacks fire 1 projectile per charge that bounces to up to 4 targets, dealing less damage each bounce.
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
@@ -47,6 +48,6 @@ MonoBehaviour:
   portrait: {fileID: 2980719167767112441, guid: 5ab48ae432237224bbd8440a926669c8, type: 3}
   operatorPrefab: {fileID: 4120733290429841632, guid: d7e8f9a0b1c234567890abcdef123456, type: 3}
   projectileOrigin: {x: -0.41, y: 0.11}
-
-  intelQuote: "Wait for it... wait for it..."
-  intelLore: "A living ember that stores charge between shots like a capacitor. Resicochet lets its sparks build, then lets loose bolts that ricochet from enemy to enemy and leave them sluggish. Patience is the whole trick, and it is very proud of its patience."
+  intelQuote: 
+  intelLore: '"Is it an amber? Is it a resin? NO, it''s not a fire!" A quirky caster that hoards hardened clumps of prehistoric resin and slings them into enemy lines. It changes it''s color based on it''s rarity and its resin shifts into higher-energy colors to strike harder and bounce with greater force.'
+  talentRangePattern: []
