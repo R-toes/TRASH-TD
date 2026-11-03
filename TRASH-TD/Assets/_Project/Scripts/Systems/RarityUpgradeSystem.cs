@@ -125,7 +125,7 @@ namespace TrashTD.Systems
                 ? Mathf.Max(1, Mathf.RoundToInt(healthRatio * opData.GetScaledHP(nextRarity)))
                 : -1;
 
-            deck.ReplaceMergedCopies(slots, new DraftCard(opData, nextRarity, cooldownRounds, heatStacks, savedHP));
+            deck.ReplaceMergedCopies(slots, new DraftCard(opData, nextRarity, cooldownRounds, heatStacks, savedHP), incomingCard);
             return true;
         }
 

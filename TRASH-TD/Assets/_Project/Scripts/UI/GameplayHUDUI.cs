@@ -169,6 +169,7 @@ namespace TrashTD.UI
         private DraftCard pendingDiscardCard;
         private int pendingDiscardSlot = -1;
         private Button[] deckButtons;
+        private DeckMergeAnimator deckMergeAnimator;
         private Text[] deckButtonLabels;
         private Image[] deckButtonImages;
         private Image[] deckPortraitImages;
@@ -410,6 +411,7 @@ namespace TrashTD.UI
             if (playerDeck != null)
             {
                 playerDeck.OnDeckChanged += HandleDeckChanged;
+                playerDeck.OnCardsMerged += HandleCardsMerged;
             }
 
             RefreshCounters();
@@ -461,6 +463,7 @@ namespace TrashTD.UI
             if (playerDeck != null)
             {
                 playerDeck.OnDeckChanged -= HandleDeckChanged;
+                playerDeck.OnCardsMerged -= HandleCardsMerged;
             }
         }
 
@@ -486,6 +489,7 @@ namespace TrashTD.UI
             CreatePathPreviewOverlay(root);
             CreateTopBar(root);
             CreateDeckBar(root);
+            CreateDeckMergeAnimator(root);
             // Trash drop zone is created and parented inside CreateDeckBar to align with the deck background
             CreateDiscardConfirmationPanel(root);
             CreatePhaseBanner(root);
@@ -4154,6 +4158,63 @@ namespace TrashTD.UI
         private void HandleDeckChanged(IReadOnlyList<DraftCard> deck)
         {
             RefreshDeckSlots();
+        }
+
+        /// <summary>The merge animation's layer (above the deck bar; it moves itself to the top while playing).</summary>
+        private void CreateDeckMergeAnimator(Transform root)
+        {
+            var layerObject = new GameObject("DeckMergeFx", typeof(RectTransform));
+            layerObject.transform.SetParent(root, false);
+            var layer = layerObject.GetComponent<RectTransform>();
+            layer.anchorMin = Vector2.zero;
+            layer.anchorMax = Vector2.one;
+            layer.offsetMin = Vector2.zero;
+            layer.offsetMax = Vector2.zero;
+
+            deckMergeAnimator = layerObject.AddComponent<DeckMergeAnimator>();
+            deckMergeAnimator.Initialize(
+                layer,
+                slot => deckButtons != null && slot >= 0 && slot < deckButtons.Length ? deckButtons[slot].GetComponent<RectTransform>() : null,
+                SetDeckSlotHidden,
+                // The full draft screen covers the deck bar: wait until it is minimized or closed
+                () => draftOverlayUI == null || !draftOverlayUI.IsShowing);
+        }
+
+        /// <summary>Three copies merged: queue the merge animation (the deck has already changed).</summary>
+        private void HandleCardsMerged(DeckMerge merge)
+        {
+            if (deckMergeAnimator == null || merge?.Result?.operatorData == null) return;
+
+            var request = new DeckMergeAnimator.Request
+            {
+                ResultSlot = merge.ResultSlot,
+                ResultPortrait = merge.Result.operatorData.portrait,
+                NewStars = Mathf.Clamp((int)merge.Result.rarity, 1, 5),
+                OldColor = GetOperatorRarityColor(Mathf.Clamp((int)merge.Result.rarity - 1, 1, 5)),
+                NewColor = GetOperatorRarityColor(Mathf.Clamp((int)merge.Result.rarity, 1, 5))
+            };
+            for (int i = 0; i < merge.SourceSlots.Count; i++)
+            {
+                DraftCard card = i < merge.SourceCards.Count ? merge.SourceCards[i] : null;
+                request.SourceSlots.Add(merge.SourceSlots[i]);
+                request.SourcePortraits.Add(card != null && card.operatorData != null ? card.operatorData.portrait : request.ResultPortrait);
+            }
+            if (merge.IncomingCard != null)
+            {
+                request.SourceSlots.Add(-1);
+                request.SourcePortraits.Add(merge.IncomingCard.operatorData != null ? merge.IncomingCard.operatorData.portrait : request.ResultPortrait);
+            }
+
+            deckMergeAnimator.Enqueue(request);
+        }
+
+        /// <summary>Hides a deck slot's content while a merge animation flies into it.</summary>
+        private void SetDeckSlotHidden(int slot, bool hidden)
+        {
+            if (deckButtons == null || slot < 0 || slot >= deckButtons.Length || deckButtons[slot] == null) return;
+            CanvasGroup group = deckButtons[slot].GetComponent<CanvasGroup>();
+            if (group == null) group = deckButtons[slot].gameObject.AddComponent<CanvasGroup>();
+            group.alpha = hidden ? 0f : 1f;
         }
 
         private void RefreshDeckSlots()

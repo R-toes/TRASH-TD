@@ -38,6 +38,8 @@ namespace TrashTD.Systems
         public event Action<DraftCard> OnCardAdded;
         public event Action<int> OnCardRemoved; // slot index
         public event Action<DraftCard> OnCardSelectedForDeployment;
+        /// <summary>Three copies just merged (fired before OnDeckChanged, so the HUD can animate it).</summary>
+        public event Action<DeckMerge> OnCardsMerged;
 
         /// <summary>
         /// Select a card from the deck for deployment onto the grid.
@@ -171,10 +173,21 @@ namespace TrashTD.Systems
 
         /// <summary>
         /// Removes the merged copies in the given slots. The upgraded card takes the first freed slot.
+        /// incomingCard is the copy that merged without taking a slot (a full deck), if any.
         /// </summary>
-        public void ReplaceMergedCopies(IReadOnlyList<int> slots, DraftCard upgradedCard)
+        public void ReplaceMergedCopies(IReadOnlyList<int> slots, DraftCard upgradedCard, DraftCard incomingCard = null)
         {
             if (slots == null || slots.Count == 0) return;
+
+            var merge = new DeckMerge
+            {
+                SourceSlots = new List<int>(slots),
+                SourceCards = new List<DraftCard>(),
+                IncomingCard = incomingCard,
+                ResultSlot = slots[0],
+                Result = upgradedCard
+            };
+            foreach (int slot in slots) merge.SourceCards.Add(deckSlots[slot]);
 
             foreach (int slot in slots)
             {
@@ -193,6 +206,7 @@ namespace TrashTD.Systems
                 FillVacatedSlotWithReturnedCard(slot);
             }
 
+            OnCardsMerged?.Invoke(merge);
             OnDeckChanged?.Invoke(deckSlots);
         }
 
@@ -366,5 +380,18 @@ namespace TrashTD.Systems
             OnCardAdded?.Invoke(returnedCard);
             RarityUpgradeSystem.Instance?.ProcessAddedCard(this, returnedCard);
         }
+    }
+
+    /// <summary>One merge of three copies into the next rarity, for the HUD's merge animation.</summary>
+    public sealed class DeckMerge
+    {
+        /// <summary>Deck slots the copies were in (the result takes the first).</summary>
+        public List<int> SourceSlots;
+        /// <summary>The copies that were in SourceSlots, same order.</summary>
+        public List<DraftCard> SourceCards;
+        /// <summary>A third copy that merged on arrival without taking a slot (full deck), else null.</summary>
+        public DraftCard IncomingCard;
+        public int ResultSlot;
+        public DraftCard Result;
     }
 }
