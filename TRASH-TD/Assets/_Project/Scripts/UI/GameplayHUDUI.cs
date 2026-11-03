@@ -374,6 +374,9 @@ namespace TrashTD.UI
 
         private void Start()
         {
+            // StageBootstrapper adds this HUD before the draft overlay, so Awake can't find it yet
+            if (draftOverlayUI == null) draftOverlayUI = FindAnyObjectByType<CardDraftOverlayUI>();
+
             if (waveManager != null)
             {
                 waveManager.OnWaveStarted += HandleWaveStarted;
@@ -3167,21 +3170,22 @@ namespace TrashTD.UI
             (gameManager.CurrentPhase == StagePhase.Preparation ||
              (gameManager.CurrentPhase == StagePhase.CardPick && IsDraftMinimized));
 
-        // During Card Pick with the full draft screen up, the deck can only be rearranged and discarded from.
-        private bool IsDeckEditOnly => gameManager != null && gameManager.CurrentPhase == StagePhase.CardPick && !IsDraftMinimized;
+        // During Card Pick with the full draft screen up, and during a wave, the deck can only be rearranged and
+        // discarded from.
+        private bool IsDeckEditOnly => gameManager != null &&
+            ((gameManager.CurrentPhase == StagePhase.CardPick && !IsDraftMinimized) ||
+             gameManager.CurrentPhase == StagePhase.WaveActive);
 
+        // Any card can be dragged to rearrange or discard it, cards on cooldown included. Cooldown cards just don't
+        // preview or deploy on the map; the cooldown warning comes from clicking them (SelectDeckSlot).
         private bool CanDragDeckCard(int slotIndex)
         {
             if (gameManager == null || playerDeck == null) return false;
             if (!IsDeckDeployPhase && !IsDeckEditOnly) return false;
-
-            DraftCard card = playerDeck.GetCard(slotIndex);
-            if (card == null) return false;
-            if (card.cooldownRoundsRemaining <= 0 || IsDeckEditOnly) return true;
-
-            ShowCooldownWarning(card.operatorData != null ? card.operatorData.operatorName : null, card.cooldownRoundsRemaining);
-            return false;
+            return playerDeck.GetCard(slotIndex) != null;
         }
+
+        private static bool IsOnCooldown(DraftCard card) => card != null && card.cooldownRoundsRemaining > 0;
 
         private GameObject CreateUpgradeBadge(Transform parent, string objectName, Vector2 size, Vector2 position)
         {
@@ -4123,7 +4127,8 @@ namespace TrashTD.UI
                 return;
             }
 
-            if (IsDeckEditOnly || gridManager == null || stageBootstrapper == null) return;
+            // Edit-only phases and cooldown cards don't deploy: dropped anywhere else, the card stays in its slot
+            if (IsDeckEditOnly || IsOnCooldown(card) || gridManager == null || stageBootstrapper == null) return;
             Camera gameCamera = Camera.main;
             if (gameCamera == null) return;
 
@@ -4154,7 +4159,7 @@ namespace TrashTD.UI
             isDeckCardDragging = true;
 
             DraftCard card = playerDeck.GetCard(slotIndex);
-            if (card == null) return;
+            if (card == null || IsOnCooldown(card)) return;
 
             Camera gameCamera = Camera.main;
             if (gameCamera == null) return;
@@ -4190,17 +4195,18 @@ namespace TrashTD.UI
 
         private void SelectDeckSlot(int index)
         {
-            if (playerDeck == null || IsDeckEditOnly) return;
+            if (playerDeck == null) return;
 
             var card = playerDeck.GetCard(index);
             if (card == null) return;
-            if (card.cooldownRoundsRemaining > 0)
+            if (IsOnCooldown(card))
             {
                 ShowCooldownWarning(
                     card.operatorData != null ? card.operatorData.operatorName : null,
                     card.cooldownRoundsRemaining);
                 return;
             }
+            if (IsDeckEditOnly) return;
 
             // Notify deck and draft system that this card was selected for deployment
             playerDeck.SelectCardForDeployment(index);
