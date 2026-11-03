@@ -202,7 +202,7 @@ namespace TrashTD.Editor
             if (existing != null) return existing;
 
             var go = new GameObject(prefabName);
-            if (prefabName == "Prefab_OP_Pompoth")
+            if (prefabName == "Prefab_OP_Pompoth" || prefabName == "Prefab_OP_Deadeye")
             {
                 go.transform.localScale = Vector3.one * 0.75f;
             }
