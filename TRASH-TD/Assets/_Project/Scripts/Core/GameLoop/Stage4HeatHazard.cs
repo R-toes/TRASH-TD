@@ -22,7 +22,7 @@ namespace TrashTD.Core.GameLoop
     {
         public const int MaxHeatStacks = 5;
         public const float BurnIntervalSeconds = 1.0f;
-        public const int BurnDamagePerTick = 15;
+        public const int BurnDamagePerTick = 2;
 
         private GridManager gridManager;
         private WaveManager waveManager;
@@ -176,7 +176,7 @@ namespace TrashTD.Core.GameLoop
                 BurnDamageFlash.Flash(op.gameObject);
                 // Several burning operators tick together; the shared-sound throttle plays this once.
                 AudioManager.Instance?.PlaySfx(SfxId.Stage4BurnTick, 0.6f);
-                op.TakeDamage(BurnDamagePerTick, DamageType.Arts);
+                op.TakeTrueDamage(BurnDamagePerTick);
             }
         }
 

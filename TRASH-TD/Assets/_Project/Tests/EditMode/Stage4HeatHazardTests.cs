@@ -1,6 +1,9 @@
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using TrashTD.Combat;
+using TrashTD.Core.GameLoop;
+using TrashTD.Core.Grid;
 using TrashTD.Data;
 using TrashTD.Operators;
 using TrashTD.Systems;
@@ -11,6 +14,11 @@ namespace TrashTD.Tests
     {
         private GameObject playerDeckObj;
         private PlayerDeck deck;
+        private GameObject operatorManagerObj;
+        private OperatorManager operatorManager;
+        private GameObject hazardObj;
+        private GameObject operatorObj;
+        private OperatorData operatorData;
 
         [SetUp]
         public void SetUp()
@@ -18,6 +26,10 @@ namespace TrashTD.Tests
             StageCombatModifiers.ConfigureForStage(null);
             playerDeckObj = new GameObject("PlayerDeckTest");
             deck = playerDeckObj.AddComponent<PlayerDeck>();
+
+            operatorManagerObj = new GameObject("OperatorManagerTest");
+            operatorManager = TestUtility.AddAwakened<OperatorManager>(operatorManagerObj);
+            hazardObj = new GameObject("Stage4HeatHazardTest");
         }
 
         [TearDown]
@@ -27,6 +39,11 @@ namespace TrashTD.Tests
             {
                 Object.DestroyImmediate(playerDeckObj);
             }
+            if (operatorObj != null) Object.DestroyImmediate(operatorObj);
+            if (operatorData != null) Object.DestroyImmediate(operatorData);
+            if (hazardObj != null) Object.DestroyImmediate(hazardObj);
+            if (operatorManagerObj != null) Object.DestroyImmediate(operatorManagerObj);
+            TestUtility.ClearSingletons();
             StageCombatModifiers.ConfigureForStage(null);
         }
 
@@ -93,6 +110,36 @@ namespace TrashTD.Tests
 
             Object.DestroyImmediate(opObj);
             Object.DestroyImmediate(opData);
+        }
+
+        [Test]
+        public void BurningOperator_TakesTwoTrueDamageEveryTick()
+        {
+            StageCombatModifiers.ConfigureForEnvironment("STAGE_04");
+
+            operatorData = ScriptableObject.CreateInstance<OperatorData>();
+            operatorData.operatorName = "HighDefenseGuard";
+            operatorData.baseHP = 100;
+            operatorData.baseDEF = 100;
+
+            operatorObj = new GameObject("BurningOperator");
+            GuardOperator op = operatorObj.AddComponent<GuardOperator>();
+            op.Initialize(operatorData, OperatorRarity.Star1, OperatorFacing.Right);
+            op.Deploy(new GridCell(0, 0, TileType.LowGround, Vector3.zero));
+            op.IsBurning = true;
+            operatorManager.RegisterOperator(op);
+
+            Stage4HeatHazard hazard = hazardObj.AddComponent<Stage4HeatHazard>();
+            typeof(Stage4HeatHazard)
+                .GetField("operatorManager", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(hazard, operatorManager);
+
+            int startingHP = op.CurrentHP;
+            typeof(Stage4HeatHazard)
+                .GetMethod("ApplyBurningDamage", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(hazard, null);
+
+            Assert.AreEqual(startingHP - 2, op.CurrentHP);
         }
     }
 }
