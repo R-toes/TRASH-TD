@@ -145,7 +145,7 @@ namespace TrashTD.Tests
         }
 
         [Test]
-        public void WaveStartHeatStackGain_StartsOneSecondMapFlare()
+        public void WaveStartHeatStackGain_StartsMapFlare()
         {
             StageCombatModifiers.ConfigureForEnvironment("STAGE_04");
 
@@ -189,9 +189,9 @@ namespace TrashTD.Tests
             Assert.AreEqual(Stage4HeatHazard.HeatFlareDurationSeconds, flareTimer);
             Assert.AreEqual(1f, flareIntensity, "The map flare should peak with the round-start ember burst.");
             Assert.Greater(particleCount, 0, "Round-start heat should emit an immediate ember burst.");
-            Assert.LessOrEqual(particles[0].remainingLifetime, 0.95f, "Flare embers should fade with the flare rather than linger.");
+            Assert.LessOrEqual(particles[0].remainingLifetime, Stage4HeatHazard.FlareEmberMaxLifetime, "Flare embers should fade with the flare rather than linger.");
         }
 
-        private const int FlareParticleCapacity = 64;
+        private const int FlareParticleCapacity = 128; // the burst is 96 embers
     }
 }

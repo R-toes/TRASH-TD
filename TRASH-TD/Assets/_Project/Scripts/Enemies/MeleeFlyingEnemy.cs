@@ -17,7 +17,7 @@ namespace TrashTD.Enemies
     /// </summary>
     public sealed class MeleeFlyingEnemy : AirCombatEnemy
     {
-        // Whole swoop ≈ 0.75 s (dive + hold + rise), inside the 1.38 s attack interval; it creeps forward for the rest
+        // Whole swoop ≈ 0.75 s (dive + hold + rise), inside the 1.45 s attack interval; it creeps forward for the rest
         private const float DiveTime = 0.24f;
         private const float LateDiveTime = 0.12f;     // dive when the strike comes with no warning
         private const float StrikeHoldTime = 0.09f;
@@ -82,7 +82,7 @@ namespace TrashTD.Enemies
         }
 
         /// <summary>
-        /// Full speed in the gap between swoops (~0.63 s at the 1.38 s interval, about half a tile per attack). The
+        /// Full speed in the gap between swoops (~0.70 s at the 1.45 s interval, about half a tile per attack). The
         /// shared 0.5× creep moved it only a quarter tile, which the hover bob hid, so it looked like it never moved.
         /// </summary>
         protected override float EngagedSpeed => GapMoveSpeedMultiplier;

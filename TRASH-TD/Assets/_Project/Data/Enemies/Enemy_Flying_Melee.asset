@@ -24,7 +24,7 @@ MonoBehaviour:
   attackProjectileColor: {r: 0.55, g: 0.9, b: 0.3, a: 1}
   usesSandProjectileVisual: 0
   usesPlasmaProjectileVisual: 0
-  attackInterval: 1.3
+  attackInterval: 1.45
   attackRange: 0
   frontAreaAttackTiles: 0
   rangePattern: []

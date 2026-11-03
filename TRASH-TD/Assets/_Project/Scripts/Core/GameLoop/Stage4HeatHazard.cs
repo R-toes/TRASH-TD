@@ -23,9 +23,16 @@ namespace TrashTD.Core.GameLoop
         public const int MaxHeatStacks = 5;
         public const float BurnIntervalSeconds = 1.0f;
         public const int BurnDamagePerTick = 2;
-        public const float HeatFlareDurationSeconds = 1.0f;
+        // Round-start furnace blast: glow, blur, embers, sparks, steam jets and smoke (see EmitHeatFlareBurst)
+        public const float HeatFlareDurationSeconds = 2.2f;
+        public const float FlareEmberMaxLifetime = 2.0f;
         private const float NormalEmberEmissionRate = 10f;
-        private const int FlareEmberBurstCount = 42;
+        private const int FlareEmberBurstCount = 96;
+        private const float FlareEmberStreamRate = 70f;   // embers per second at full flare, fading with it
+        private const int FlareSparkCount = 40;
+        private const int FlareSmokeCount = 26;
+        private const int FlareSteamPuffsPerVent = 8;
+        private const int FlareFloorSteamCount = 14;
 
         private GridManager gridManager;
         private WaveManager waveManager;
@@ -44,6 +51,12 @@ namespace TrashTD.Core.GameLoop
         private float emberFlareMaxX;
         private float emberFlareY;
         private float emberFlareZ;
+        private float emberStreamAccumulator;
+        private SpriteRenderer heatFlareGlowRenderer;   // bottom-heavy furnace glow over the view
+        private ParticleSystem flareSparkSystem;
+        private ParticleSystem flareSteamSystem;
+        private ParticleSystem flareSmokeSystem;
+        private readonly List<Vector3> steamVentPositions = new List<Vector3>();
 
         public void Initialize(
             GridManager grid,
@@ -74,6 +87,7 @@ namespace TrashTD.Core.GameLoop
             CreateDriftingEmbers();
             CreateIndustrialSteam();
             CreateHeatDistortionEffect();
+            CreateHeatFlareParticles();
         }
 
         private void OnDestroy()
@@ -89,8 +103,11 @@ namespace TrashTD.Core.GameLoop
                 operatorManager.OnOperatorRetreated -= HandleOperatorRetreated;
             }
 
+            // The overlays hang off the camera, not this object
             if (heatFlareRenderer != null)
                 Destroy(heatFlareRenderer.gameObject);
+            if (heatFlareGlowRenderer != null)
+                Destroy(heatFlareGlowRenderer.gameObject);
             if (heatFlareSprite != null)
                 Destroy(heatFlareSprite);
             CrtDisplay.SetHeatBlur(0f);
@@ -115,37 +132,74 @@ namespace TrashTD.Core.GameLoop
             heatFlareRenderer.sortingLayerName = GridSorting.DefaultLayerName;
             heatFlareRenderer.sortingOrder = short.MaxValue;
             heatFlareRenderer.color = new Color(1f, 0.34f, 0.12f, 0f);
+
+            // Furnace glow rising from the bottom of the view (the map's thermal gradient, stretched over it)
+            var glowObject = new GameObject("Stage4HeatFlareGlow");
+            glowObject.transform.SetParent(heatFlareCamera.transform, false);
+            heatFlareGlowRenderer = glowObject.AddComponent<SpriteRenderer>();
+            heatFlareGlowRenderer.sprite = GetVerticalThermalGradientSprite();
+            heatFlareGlowRenderer.sortingLayerName = GridSorting.DefaultLayerName;
+            heatFlareGlowRenderer.sortingOrder = short.MaxValue - 1;
+            heatFlareGlowRenderer.color = new Color(1f, 0.38f, 0.08f, 0f);
         }
 
         private float UpdateHeatFlare()
         {
             float flare = GetHeatFlareIntensity();
-            CrtDisplay.SetHeatBlur(flare * 0.8f);
+            // The blur eases off sooner than the glow, so the picture is readable for most of the blast
+            CrtDisplay.SetHeatBlur(0.8f * flare * flare);
             if (heatFlareTimer > 0f)
+            {
                 heatFlareTimer = Mathf.Max(0f, heatFlareTimer - Time.deltaTime);
+                StreamHeatFlareEmbers(flare);
+            }
 
             if (heatFlareCamera == null)
                 heatFlareCamera = Camera.main;
-            if (heatFlareRenderer == null && heatFlareCamera != null)
+            if ((heatFlareRenderer == null || heatFlareGlowRenderer == null) && heatFlareCamera != null)
+            {
+                if (heatFlareRenderer != null) Destroy(heatFlareRenderer.gameObject);
+                if (heatFlareGlowRenderer != null) Destroy(heatFlareGlowRenderer.gameObject);
                 CreateHeatFlareOverlay();
-            if (heatFlareRenderer == null) return flare;
+            }
+            if (heatFlareRenderer == null || heatFlareCamera == null) return flare;
 
-            heatFlareRenderer.transform.localPosition =
-                Vector3.forward * (heatFlareCamera.nearClipPlane + 0.01f);
-            heatFlareRenderer.transform.localScale = new Vector3(
-                heatFlareCamera.orthographicSize * 2f * heatFlareCamera.aspect,
-                heatFlareCamera.orthographicSize * 2f,
-                1f);
-            heatFlareRenderer.color = new Color(1f, 0.30f, 0.08f, 0.20f * flare);
+            float viewHeight = heatFlareCamera.orthographicSize * 2f;
+            float viewWidth = viewHeight * heatFlareCamera.aspect;
+            Vector3 overlayPosition = Vector3.forward * (heatFlareCamera.nearClipPlane + 0.01f);
+            // Fire light isn't steady: a quick flicker on top of the envelope
+            float flicker = 0.88f + 0.12f * Mathf.PerlinNoise(Time.time * 11f, 0.37f);
+
+            heatFlareRenderer.transform.localPosition = overlayPosition;
+            heatFlareRenderer.transform.localScale = new Vector3(viewWidth, viewHeight, 1f);
+            heatFlareRenderer.color = new Color(1f, 0.30f, 0.08f, 0.13f * flare * flicker);
+
+            if (heatFlareGlowRenderer != null && heatFlareGlowRenderer.sprite != null)
+            {
+                Vector2 spriteSize = heatFlareGlowRenderer.sprite.bounds.size;
+                heatFlareGlowRenderer.transform.localPosition = overlayPosition;
+                heatFlareGlowRenderer.transform.localScale = new Vector3(
+                    viewWidth / Mathf.Max(0.001f, spriteSize.x),
+                    viewHeight / Mathf.Max(0.001f, spriteSize.y),
+                    1f);
+                heatFlareGlowRenderer.color = new Color(1f, 0.40f, 0.08f, 0.55f * flare * flicker);
+            }
             return flare;
         }
 
+        /// <summary>
+        /// 1 at the blast, then a long fall-off with a second, smaller throb a third of the way in
+        /// (the furnace breathing out again) before it settles.
+        /// </summary>
         private float GetHeatFlareIntensity()
         {
             if (heatFlareTimer <= 0f) return 0f;
 
-            float progress = 1f - heatFlareTimer / HeatFlareDurationSeconds;
-            return 1f - Mathf.SmoothStep(0f, 1f, progress);
+            float progress = Mathf.Clamp01(1f - heatFlareTimer / HeatFlareDurationSeconds);
+            float decay = Mathf.Pow(1f - progress, 1.6f);
+            float throbT = Mathf.InverseLerp(0.22f, 0.62f, progress);
+            float throb = 0.28f * Mathf.Sin(throbT * Mathf.PI) * (1f - progress);
+            return Mathf.Clamp01(decay + throb);
         }
 
         /// <summary>
@@ -171,7 +225,11 @@ namespace TrashTD.Core.GameLoop
             if (heatStackAdded)
             {
                 heatFlareTimer = HeatFlareDurationSeconds;
+                emberStreamAccumulator = 0f;
                 EmitHeatFlareEmbers();
+                EmitHeatFlareSparks();
+                EmitHeatFlareSteamAndSmoke();
+                GameplayCameraController.Instance?.Shake(0.07f, 0.5f);
             }
         }
 
@@ -413,6 +471,11 @@ namespace TrashTD.Core.GameLoop
             ps.Play();
         }
 
+        // Flare embers run from white-hot to deep orange, so the burst doesn't read as one flat colour
+        private static readonly Color FlareEmberHot = new Color(1f, 0.97f, 0.75f, 1f);
+        private static readonly Color FlareEmberWarm = new Color(1f, 0.62f, 0.18f, 1f);
+
+        /// <summary>The blast's big ember burst along the bottom of the map, thrown higher and wider than the idle drift.</summary>
         private void EmitHeatFlareEmbers()
         {
             if (emberParticleSystem == null) return;
@@ -423,15 +486,254 @@ namespace TrashTD.Core.GameLoop
                 {
                     position = new Vector3(
                         Random.Range(emberFlareMinX, emberFlareMaxX),
-                        emberFlareY,
+                        emberFlareY + Random.Range(-0.2f, 0.35f),
                         emberFlareZ),
-                    velocity = new Vector3(Random.Range(-0.2f, 0.2f), Random.Range(0.8f, 1.4f), 0f),
-                    startLifetime = Random.Range(0.55f, 0.95f),
-                    startSize = Random.Range(0.12f, 0.20f),
-                    startColor = new Color(1f, 0.96f, 0.68f, 1f)
+                    velocity = new Vector3(Random.Range(-0.35f, 0.35f), Random.Range(0.8f, 1.9f), 0f),
+                    startLifetime = Random.Range(1.1f, FlareEmberMaxLifetime),
+                    startSize = Random.Range(0.10f, 0.22f),
+                    startColor = Color.Lerp(FlareEmberHot, FlareEmberWarm, Random.value)
                 };
                 emberParticleSystem.Emit(ember, 1);
             }
+        }
+
+        /// <summary>Keeps embers rising for the length of the blast, thinning out as it fades.</summary>
+        private void StreamHeatFlareEmbers(float flare)
+        {
+            if (emberParticleSystem == null) return;
+
+            emberStreamAccumulator += FlareEmberStreamRate * flare * Time.deltaTime;
+            while (emberStreamAccumulator >= 1f)
+            {
+                emberStreamAccumulator -= 1f;
+                var ember = new ParticleSystem.EmitParams
+                {
+                    position = new Vector3(
+                        Random.Range(emberFlareMinX, emberFlareMaxX),
+                        emberFlareY + Random.Range(-0.2f, 0.2f),
+                        emberFlareZ),
+                    velocity = new Vector3(Random.Range(-0.25f, 0.25f), Random.Range(0.7f, 1.5f), 0f),
+                    startLifetime = Random.Range(1.0f, 1.8f),
+                    startSize = Random.Range(0.08f, 0.17f),
+                    startColor = Color.Lerp(FlareEmberHot, FlareEmberWarm, Random.value)
+                };
+                emberParticleSystem.Emit(ember, 1);
+            }
+        }
+
+        /// <summary>Fast spark streaks thrown up from the floor; they arc and fall back under gravity.</summary>
+        private void EmitHeatFlareSparks()
+        {
+            if (flareSparkSystem == null) return;
+
+            for (int i = 0; i < FlareSparkCount; i++)
+            {
+                var spark = new ParticleSystem.EmitParams
+                {
+                    position = new Vector3(
+                        Random.Range(emberFlareMinX, emberFlareMaxX),
+                        emberFlareY + Random.Range(-0.1f, 0.25f),
+                        emberFlareZ),
+                    velocity = new Vector3(Random.Range(-1.2f, 1.2f), Random.Range(2.4f, 4.6f), 0f),
+                    startLifetime = Random.Range(0.6f, 1.2f),
+                    startSize = Random.Range(0.035f, 0.07f),
+                    startColor = Color.Lerp(FlareEmberHot, new Color(1f, 0.82f, 0.4f, 1f), Random.value)
+                };
+                flareSparkSystem.Emit(spark, 1);
+            }
+        }
+
+        /// <summary>
+        /// Steam jets out of every vent and hisses up from the floor, while ember-lit smoke rolls up along the
+        /// bottom of the map behind it.
+        /// </summary>
+        private void EmitHeatFlareSteamAndSmoke()
+        {
+            if (flareSmokeSystem != null)
+            {
+                for (int i = 0; i < FlareSmokeCount; i++)
+                {
+                    var smoke = new ParticleSystem.EmitParams
+                    {
+                        position = new Vector3(
+                            Random.Range(emberFlareMinX - 0.5f, emberFlareMaxX + 0.5f),
+                            emberFlareY + Random.Range(-0.45f, 0.15f),
+                            emberFlareZ),
+                        velocity = new Vector3(Random.Range(-0.15f, 0.15f), Random.Range(0.45f, 0.9f), 0f),
+                        startLifetime = Random.Range(1.8f, 2.6f),
+                        startSize = Random.Range(0.9f, 1.6f),
+                        rotation = Random.Range(0f, 360f),
+                        startColor = new Color(0.52f, 0.44f, 0.40f, 0.45f) // light enough to see units through
+                    };
+                    flareSmokeSystem.Emit(smoke, 1);
+                }
+            }
+
+            if (flareSteamSystem == null) return;
+
+            for (int v = 0; v < steamVentPositions.Count; v++)
+            {
+                for (int i = 0; i < FlareSteamPuffsPerVent; i++)
+                {
+                    var puff = new ParticleSystem.EmitParams
+                    {
+                        position = steamVentPositions[v] + new Vector3(Random.Range(-0.08f, 0.08f), 0f, 0f),
+                        velocity = new Vector3(Random.Range(-0.35f, 0.35f), Random.Range(1.3f, 2.2f), 0f),
+                        startLifetime = Random.Range(1.6f, 2.4f),
+                        startSize = Random.Range(0.45f, 0.85f),
+                        rotation = Random.Range(0f, 360f),
+                        startColor = new Color(1f, 1f, 1f, 0.5f)
+                    };
+                    flareSteamSystem.Emit(puff, 1);
+                }
+            }
+
+            for (int i = 0; i < FlareFloorSteamCount; i++)
+            {
+                var wisp = new ParticleSystem.EmitParams
+                {
+                    position = new Vector3(
+                        Random.Range(emberFlareMinX, emberFlareMaxX),
+                        emberFlareY + Random.Range(-0.1f, 0.3f),
+                        emberFlareZ),
+                    velocity = new Vector3(Random.Range(-0.2f, 0.2f), Random.Range(0.6f, 1.1f), 0f),
+                    startLifetime = Random.Range(1.4f, 2.1f),
+                    startSize = Random.Range(0.35f, 0.65f),
+                    rotation = Random.Range(0f, 360f),
+                    startColor = new Color(1f, 0.96f, 0.92f, 0.35f)
+                };
+                flareSteamSystem.Emit(wisp, 1);
+            }
+        }
+
+        /// <summary>
+        /// The blast's own particle systems. They emit nothing on their own: EmitHeatFlare* fills them when a round
+        /// heats the squad. Smoke draws behind the steam, steam behind the embers (25), sparks on top.
+        /// </summary>
+        private void CreateHeatFlareParticles()
+        {
+            var flareRoot = new GameObject("Stage4HeatFlare");
+            flareRoot.transform.SetParent(transform, false);
+
+            // Smoke: warm-lit at first (the fire under it), cooling to grey as it rises and spreads
+            flareSmokeSystem = CreateBurstParticleSystem(flareRoot.transform, "FlareSmoke", GetSteamMaterial(), 23, 80);
+            SetBurstSizeCurve(flareSmokeSystem, new AnimationCurve(new Keyframe(0f, 0.6f), new Keyframe(0.4f, 1.3f), new Keyframe(1f, 2.0f)));
+            SetBurstColorGradient(flareSmokeSystem,
+                new[]
+                {
+                    new GradientColorKey(new Color(1f, 0.60f, 0.35f), 0f),
+                    new GradientColorKey(new Color(0.60f, 0.58f, 0.60f), 0.45f),
+                    new GradientColorKey(new Color(0.42f, 0.42f, 0.45f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0f, 0f),
+                    new GradientAlphaKey(1f, 0.15f),
+                    new GradientAlphaKey(0.7f, 0.6f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            AddBurstDrift(flareSmokeSystem, 0.3f, 0.4f, 20f);
+
+            // Steam: bright jets that burst out fast, slow down and billow
+            flareSteamSystem = CreateBurstParticleSystem(flareRoot.transform, "FlareSteam", GetSteamMaterial(), 24, 120);
+            SetBurstSizeCurve(flareSteamSystem, new AnimationCurve(new Keyframe(0f, 0.5f), new Keyframe(0.25f, 1.4f), new Keyframe(1f, 3.0f)));
+            SetBurstColorGradient(flareSteamSystem,
+                new[]
+                {
+                    new GradientColorKey(Color.white, 0f),
+                    new GradientColorKey(new Color(0.90f, 0.92f, 0.96f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0f, 0f),
+                    new GradientAlphaKey(1f, 0.1f),
+                    new GradientAlphaKey(0.6f, 0.5f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            AddBurstDrift(flareSteamSystem, 0.35f, 0.5f, 30f);
+            var steamDrag = flareSteamSystem.limitVelocityOverLifetime;
+            steamDrag.enabled = true;
+            steamDrag.limit = 0.45f;
+            steamDrag.dampen = 0.06f;
+
+            // Sparks: stretched along their velocity so they read as streaks, pulled back down by gravity
+            flareSparkSystem = CreateBurstParticleSystem(flareRoot.transform, "FlareSparks", GetEmberMaterial(), 27, 120);
+            var sparkMain = flareSparkSystem.main;
+            sparkMain.gravityModifier = 0.35f;
+            SetBurstColorGradient(flareSparkSystem,
+                new[]
+                {
+                    new GradientColorKey(Color.white, 0f),
+                    new GradientColorKey(new Color(1f, 0.7f, 0.25f), 0.5f),
+                    new GradientColorKey(new Color(1f, 0.32f, 0.08f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(1f, 0f),
+                    new GradientAlphaKey(0.9f, 0.6f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            var sparkRenderer = flareSparkSystem.GetComponent<ParticleSystemRenderer>();
+            sparkRenderer.renderMode = ParticleSystemRenderMode.Stretch;
+            sparkRenderer.velocityScale = 0.07f;
+            sparkRenderer.lengthScale = 1.5f;
+        }
+
+        private ParticleSystem CreateBurstParticleSystem(Transform parent, string objectName, Material material, int sortingOrder, int maxParticles)
+        {
+            var systemObject = new GameObject(objectName);
+            systemObject.transform.SetParent(parent, false);
+            systemObject.transform.position = new Vector3(0f, 0f, emberFlareZ);
+
+            ParticleSystem ps = systemObject.AddComponent<ParticleSystem>();
+            // AddComponent starts it playing; stop before changing duration-type settings
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.loop = true;
+            main.playOnAwake = false;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = maxParticles;
+            var emission = ps.emission;
+            emission.enabled = false; // Emit() still works; nothing spawns by itself
+            var shape = ps.shape;
+            shape.enabled = false;
+
+            var renderer = systemObject.GetComponent<ParticleSystemRenderer>();
+            renderer.sortingOrder = sortingOrder;
+            renderer.sharedMaterial = material;
+            ps.Play();
+            return ps;
+        }
+
+        private static void SetBurstSizeCurve(ParticleSystem ps, AnimationCurve curve)
+        {
+            var size = ps.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, curve);
+        }
+
+        private static void SetBurstColorGradient(ParticleSystem ps, GradientColorKey[] colors, GradientAlphaKey[] alphas)
+        {
+            var gradient = new Gradient();
+            gradient.SetKeys(colors, alphas);
+            var color = ps.colorOverLifetime;
+            color.enabled = true;
+            color.color = new ParticleSystem.MinMaxGradient(gradient);
+        }
+
+        /// <summary>Wandering noise plus a slow spin, for soft puffs.</summary>
+        private static void AddBurstDrift(ParticleSystem ps, float noiseStrength, float noiseFrequency, float spinDegrees)
+        {
+            var noise = ps.noise;
+            noise.enabled = true;
+            noise.strength = noiseStrength;
+            noise.frequency = noiseFrequency;
+            noise.scrollSpeed = 0.3f;
+            noise.damping = true;
+
+            var rotation = ps.rotationOverLifetime;
+            rotation.enabled = true;
+            rotation.z = new ParticleSystem.MinMaxCurve(-spinDegrees * Mathf.Deg2Rad, spinDegrees * Mathf.Deg2Rad);
         }
 
         private static Material emberMaterial;
@@ -544,6 +846,7 @@ namespace TrashTD.Core.GameLoop
                     ventGridCoords[i].x * cellSize,
                     ventGridCoords[i].y * cellSize,
                     -0.08f);
+                steamVentPositions.Add(ventPos); // the round-start blast jets steam out of these too
 
                 var ventObj = new GameObject($"SteamVent_{i + 1}");
                 ventObj.transform.SetParent(steamRoot.transform, false);
