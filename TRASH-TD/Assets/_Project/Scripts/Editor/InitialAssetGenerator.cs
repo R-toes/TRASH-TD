@@ -406,27 +406,42 @@ namespace TrashTD.Editor
             }
             else
             {
-                var qiFuPrefab = CreateQiFuPrefab(qiFuFrames);
-                var qiFu = CreateOperator(
-                    "OP_Guard_QiFu",
-                    "Chi Paw",
-                    OperatorClass.Guard,
-                    OperatorPosition.Melee,
-                    OperatorRarity.Star1,
-                    hp: 140,
-                    atk: 65,
-                    def: 20,
-                    res: 0,
-                    blockCount: 2,
-                    range: 1,
-                    interval: 1.1f,
-                    new[] { new Vector2Int(1, 0) },
-                    qiFuFrames[0],
-                    qiFuPrefab);
-                qiFu.damageType = DamageType.Physical;
-                qiFu.roleTags = new[] { "Chi", "Knockback" };
-                qiFu.skillDescription = "Every fourth landed hit channels a green Chi Paw that pushes the enemy back one block.";
-                EditorUtility.SetDirty(qiFu);
+                var qiFuAttackFrames = new Sprite[QiFuSpriteAnimation.AttackFrameCount];
+                bool hasAllQiFuAttackFrames = true;
+                for (int i = 0; i < qiFuAttackFrames.Length; i++)
+                {
+                    qiFuAttackFrames[i] = LoadSprite("Qi Fu Attack Sheet.png", $"Qi Fu Attack Sheet_{i}");
+                    hasAllQiFuAttackFrames &= qiFuAttackFrames[i] != null;
+                }
+
+                if (!hasAllQiFuAttackFrames)
+                {
+                    Debug.LogError("Qi Fu Attack Sheet.png must contain the imported Qi Fu Attack Sheet_0 through Qi Fu Attack Sheet_10 sprites.");
+                }
+                else
+                {
+                    var qiFuPrefab = CreateQiFuPrefab(qiFuFrames, qiFuAttackFrames);
+                    var qiFu = CreateOperator(
+                        "OP_Guard_QiFu",
+                        "Chi Paw",
+                        OperatorClass.Guard,
+                        OperatorPosition.Melee,
+                        OperatorRarity.Star1,
+                        hp: 140,
+                        atk: 65,
+                        def: 20,
+                        res: 0,
+                        blockCount: 2,
+                        range: 1,
+                        interval: 1.1f,
+                        new[] { new Vector2Int(1, 0) },
+                        qiFuFrames[0],
+                        qiFuPrefab);
+                    qiFu.damageType = DamageType.Physical;
+                    qiFu.roleTags = new[] { "Chi", "Knockback" };
+                    qiFu.skillDescription = "Every fourth landed hit channels a green Chi Paw that pushes the enemy back one block.";
+                    EditorUtility.SetDirty(qiFu);
+                }
             }
 
             // 1d. Guard (Stag-ger)
@@ -911,20 +926,33 @@ namespace TrashTD.Editor
             return prefab;
         }
 
-        private static GameObject CreateQiFuPrefab(Sprite[] frames)
+        private static GameObject CreateQiFuPrefab(Sprite[] frames, Sprite[] attackFrames)
         {
             const string prefabName = "Prefab_OP_QiFu";
             string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (existing != null) return existing;
+            if (existing != null)
+            {
+                var existingAnim = existing.GetComponent<OperatorSpriteAnimation>();
+                if (existingAnim != null) existingAnim.enabled = false;
+
+                var existingQiFuAnim = existing.GetComponent<QiFuSpriteAnimation>();
+                if (existingQiFuAnim == null) existingQiFuAnim = existing.AddComponent<QiFuSpriteAnimation>();
+                existingQiFuAnim.Configure(frames, attackFrames);
+
+                var existingSr = existing.GetComponent<SpriteRenderer>();
+                if (existingSr != null) existingSr.sprite = frames[0];
+                EditorUtility.SetDirty(existing);
+                return existing;
+            }
 
             var go = new GameObject(prefabName);
             var spriteRenderer = go.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = frames[0];
             spriteRenderer.sortingOrder = 5;
             go.AddComponent<QiFuOperator>();
-            var animation = go.AddComponent<OperatorSpriteAnimation>();
-            animation.Configure(frames);
+            var animation = go.AddComponent<QiFuSpriteAnimation>();
+            animation.Configure(frames, attackFrames);
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
             Object.DestroyImmediate(go);

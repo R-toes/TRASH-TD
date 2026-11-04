@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 2889681320739116179}
   - component: {fileID: 1953683822338594582}
   - component: {fileID: 2316544622861878676}
-  - component: {fileID: 7058294136912038846}
+  - component: {fileID: 1058294136912038846}
   m_Layer: 0
   m_Name: Prefab_OP_QiFu
   m_TagString: Untagged
@@ -104,7 +104,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.QiFuOperator
   data: {fileID: 0}
---- !u!114 &7058294136912038846
+--- !u!114 &1058294136912038846
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -113,11 +113,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 4120733290429841632}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 15730cd9b1a04c21b3c152b454d2f53a, type: 3}
+  m_Script: {fileID: 11500000, guid: 6b2b327bc43e4f87b90a2687533b670c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
-  frameDuration: 0.1
-  frames:
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.QiFuSpriteAnimation
+  idleFrames:
   - {fileID: 2002156026692265899, guid: f1dce23d008b5034bb6a3ebb5780f7fc, type: 3}
   - {fileID: 5548234032086450506, guid: f1dce23d008b5034bb6a3ebb5780f7fc, type: 3}
   - {fileID: 6742138908514308109, guid: f1dce23d008b5034bb6a3ebb5780f7fc, type: 3}
@@ -126,3 +125,16 @@ MonoBehaviour:
   - {fileID: 8067542559497896625, guid: f1dce23d008b5034bb6a3ebb5780f7fc, type: 3}
   - {fileID: -5253256042303207515, guid: f1dce23d008b5034bb6a3ebb5780f7fc, type: 3}
   - {fileID: 131493581881279065, guid: f1dce23d008b5034bb6a3ebb5780f7fc, type: 3}
+  attackFrames:
+  - {fileID: 848452367848816989, guid: 727953178cd63904ba907108558e71ac, type: 3}
+  - {fileID: 2060385820479690208, guid: 727953178cd63904ba907108558e71ac, type: 3}
+  - {fileID: 1984407481423780173, guid: 727953178cd63904ba907108558e71ac, type: 3}
+  - {fileID: 6451002351364376047, guid: 727953178cd63904ba907108558e71ac, type: 3}
+  - {fileID: -8231066727589979782, guid: 727953178cd63904ba907108558e71ac, type: 3}
+  - {fileID: -4150660892952569379, guid: 727953178cd63904ba907108558e71ac, type: 3}
+  - {fileID: -6090685173722568665, guid: 727953178cd63904ba907108558e71ac, type: 3}
+  - {fileID: -3488124675944665729, guid: 727953178cd63904ba907108558e71ac, type: 3}
+  - {fileID: -7352424474796570287, guid: 727953178cd63904ba907108558e71ac, type: 3}
+  - {fileID: 623861953529915789, guid: 727953178cd63904ba907108558e71ac, type: 3}
+  - {fileID: -8023881662565074588, guid: 727953178cd63904ba907108558e71ac, type: 3}
+  idleFrameDuration: 0.1
