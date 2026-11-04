@@ -388,7 +388,7 @@ namespace TrashTD.Editor
                     echosquirePrefab);
                 echosquire.roleTags = new[] { "Lifesteal", "Survival" };
                 echosquire.skillDescription =
-                    "Passive - Vampiric Guard: Restores 20% of physical damage dealt as HP. Cannot be healed by other operators.";
+                    "Base (2\u2605): ATK, DEF, and RES increase as HP falls: +1% per 1% HP missing, up to +60% at 40% HP or lower. Attack speed is not affected. Restores 20% of physical damage dealt as HP and cannot be healed by other operators. 1st upgrade (3\u2605): after landing a hit, has a 100% chance to dodge incoming attacks for 0.5 seconds. 2nd upgrade (4\u2605): the first time HP reaches 0 each wave, revives with at least 50% HP; reaching 0 again that wave is fatal.";
                 EditorUtility.SetDirty(echosquire);
             }
 

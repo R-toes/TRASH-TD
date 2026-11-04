@@ -74,7 +74,7 @@ namespace TrashTD.Operators
                 return Mathf.Max(0, def);
             }
         }
-        public int CurrentRES => currentRES;
+        public virtual int CurrentRES => currentRES;
         public OperatorRarity CurrentRarity => currentRarity;
         public OperatorFacing Facing => facing;
         public OperatorClass OperatorClass => data.operatorClass;
@@ -722,7 +722,7 @@ namespace TrashTD.Operators
                 return;
             }
 
-            int damage = Combat.DamageCalculator.CalculateDamage(rawATK, CurrentDEF, currentRES, damageType);
+            int damage = Combat.DamageCalculator.CalculateDamage(rawATK, CurrentDEF, CurrentRES, damageType);
             int previousHP = currentHP;
             currentHP = Mathf.Max(0, currentHP - damage);
             int actualDamage = previousHP - currentHP;
