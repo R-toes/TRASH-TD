@@ -292,6 +292,8 @@ namespace TrashTD.UI
         private RectTransform oddsLever; // stick, pivot at the bottom; flipped (scale y -1) while pulled
         private Coroutine oddsRoutine;
         private DraftOdds oddsTarget;
+        private DraftOdds oddsShown;      // odds of the last draft shown this run; the next change spins from here
+        private bool hasOddsShown;
 
         /// <summary>One slot reel: a clipped window over a strip of rows that scrolls down and wraps around.</summary>
         private sealed class OddsReel
@@ -1861,9 +1863,10 @@ namespace TrashTD.UI
 
         /// <summary>
         /// Shows the odds this draft was rolled with (CardDraftSystem.GetCurrentOdds) on the slot machine's reels, and
-        /// when they next go up. On the first draft of a new step the reels start on the previous step's odds, the
-        /// lever is pulled and they spin to the new ones (instantly with Skip card animation). Rerolls keep the same
-        /// odds, so this only runs when a draft opens.
+        /// when they next go up. Whenever they differ from the last draft's (the opening draft's 100/0/0 to the first
+        /// table row, then every step), the reels start on the old odds, the lever is pulled and they spin to the new
+        /// ones (instantly with Skip card animation); "ODDS UP!" follows if the higher rarities went up. The opening
+        /// draft starts a new run, so it never spins. Rerolls keep the same odds, so this only runs when a draft opens.
         /// </summary>
         private void UpdateDraftOdds()
         {
@@ -1894,18 +1897,32 @@ namespace TrashTD.UI
                 oddsNextText.text = "MAX ODDS";
             }
 
-            bool stepUp = !draftSystem.IsOpeningDraft && table.IsStepStart(cleared);
-            oddsUpTag.gameObject.SetActive(stepUp);
+            DraftOdds from = oddsShown;
+            bool changed = hasOddsShown && !draftSystem.IsOpeningDraft && !SameShownOdds(from, oddsTarget);
+            oddsShown = oddsTarget;
+            hasOddsShown = true;
+
+            bool oddsUp = changed && (Mathf.RoundToInt(oddsTarget.Star3) > Mathf.RoundToInt(from.Star3) ||
+                Mathf.RoundToInt(oddsTarget.Star2 + oddsTarget.Star3) > Mathf.RoundToInt(from.Star2 + from.Star3));
+            oddsUpTag.gameObject.SetActive(oddsUp);
             oddsUpTag.localScale = Vector3.one;
-            if (!stepUp || SkipCardAnimation || !isActiveAndEnabled)
+            if (!changed || SkipCardAnimation || !isActiveAndEnabled)
             {
                 ApplyOdds(oddsTarget);
                 return;
             }
 
-            ApplyOdds(table.GetOdds(cleared - 1));
+            ApplyOdds(from);
             oddsUpTag.localScale = Vector3.zero;
-            oddsRoutine = StartCoroutine(OddsSpinRoutine(oddsTarget));
+            oddsRoutine = StartCoroutine(OddsSpinRoutine(oddsTarget, oddsUp));
+        }
+
+        /// <summary>True if both odds read the same on the reels (whole percentages).</summary>
+        private static bool SameShownOdds(DraftOdds a, DraftOdds b)
+        {
+            return Mathf.RoundToInt(a.Star1) == Mathf.RoundToInt(b.Star1) &&
+                Mathf.RoundToInt(a.Star2) == Mathf.RoundToInt(b.Star2) &&
+                Mathf.RoundToInt(a.Star3) == Mathf.RoundToInt(b.Star3);
         }
 
         /// <summary>Puts every reel at rest on its odds (0% tiers are dimmed).</summary>
@@ -1988,10 +2005,11 @@ namespace TrashTD.UI
         }
 
         /// <summary>
-        /// Odds step-up: the lever drops, the reels spin up, then stop one by one (1★, 2★, 3★) on the new odds with
-        /// a small overshoot; once all three land, the "ODDS UP!" tag pops in with a flash and sparks.
+        /// Odds change: the lever drops, the reels spin up, then stop one by one (1★, 2★, 3★) on the new odds with
+        /// a small overshoot. Once all three land the cabinet flashes; if the odds went up, the "ODDS UP!" tag pops
+        /// in with sparks and the rank-up sound.
         /// </summary>
-        private IEnumerator OddsSpinRoutine(DraftOdds to)
+        private IEnumerator OddsSpinRoutine(DraftOdds to, bool oddsUp)
         {
             yield return new WaitForSecondsRealtime(OddsSpinDelay);
 
@@ -2066,8 +2084,11 @@ namespace TrashTD.UI
             }
 
             oddsLever.localScale = Vector3.one;
-            PlaySfx(oddsUpClip, 1.1f);
-            StartCoroutine(OddsSparksRoutine());
+            if (oddsUp)
+            {
+                PlaySfx(oddsUpClip, 1.1f);
+                StartCoroutine(OddsSparksRoutine());
+            }
 
             const float popTime = 0.35f;
             float t = 0f;
@@ -2075,7 +2096,7 @@ namespace TrashTD.UI
             {
                 t += Time.unscaledDeltaTime;
                 float k = Mathf.Clamp01(t / popTime);
-                oddsUpTag.localScale = Vector3.one * EaseOutBack(k);
+                if (oddsUp) oddsUpTag.localScale = Vector3.one * EaseOutBack(k);
                 oddsFlash.color = new Color(1f, 1f, 1f, 0.5f * (1f - k));
                 yield return null;
             }
