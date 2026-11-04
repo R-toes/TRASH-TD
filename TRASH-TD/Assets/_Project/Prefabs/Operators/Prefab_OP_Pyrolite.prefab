@@ -116,11 +116,26 @@ MonoBehaviour:
   m_GameObject: {fileID: 1724151342938439338}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 15730cd9b1a04c21b3c152b454d2f53a, type: 3}
+  m_Script: {fileID: 11500000, guid: 1c903958fd8b4ef9ae75aa7ad238403e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
-  frames:
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.PyroliteSpriteAnimation
+  idleFrames:
   - {fileID: -6978141465280609473, guid: 171a50e7bc1c9834483e15cfe93a2b60, type: 3}
   - {fileID: -4257263752715702465, guid: 171a50e7bc1c9834483e15cfe93a2b60, type: 3}
   - {fileID: 1763755506, guid: 171a50e7bc1c9834483e15cfe93a2b60, type: 3}
   - {fileID: -681737365, guid: 171a50e7bc1c9834483e15cfe93a2b60, type: 3}
+  attackFrames:
+  - {fileID: 5243438799768927714, guid: 1abbf20b6c40f1348a037b033ed13b5b, type: 3}
+  - {fileID: -9144192833688648800, guid: 1abbf20b6c40f1348a037b033ed13b5b, type: 3}
+  - {fileID: 1446374181750563728, guid: 1abbf20b6c40f1348a037b033ed13b5b, type: 3}
+  - {fileID: 3517736927341696174, guid: 1abbf20b6c40f1348a037b033ed13b5b, type: 3}
+  - {fileID: 6486140989969151374, guid: 1abbf20b6c40f1348a037b033ed13b5b, type: 3}
+  - {fileID: 6208025017240483842, guid: 1abbf20b6c40f1348a037b033ed13b5b, type: 3}
+  - {fileID: -209827217793749733, guid: 1abbf20b6c40f1348a037b033ed13b5b, type: 3}
+  - {fileID: 5021175136318931542, guid: 1abbf20b6c40f1348a037b033ed13b5b, type: 3}
+  - {fileID: 5121490915267693843, guid: 1abbf20b6c40f1348a037b033ed13b5b, type: 3}
+  - {fileID: 6319002513573377477, guid: 1abbf20b6c40f1348a037b033ed13b5b, type: 3}
+  - {fileID: 8000002256498090944, guid: 1abbf20b6c40f1348a037b033ed13b5b, type: 3}
+  - {fileID: 114256499981748889, guid: 1abbf20b6c40f1348a037b033ed13b5b, type: 3}
+  - {fileID: 5595042479556776255, guid: 1abbf20b6c40f1348a037b033ed13b5b, type: 3}
+  idleFrameDuration: 0.25
