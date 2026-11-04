@@ -731,7 +731,7 @@ namespace TrashTD.Operators
             Vector3[] crystals = GetCrystalPositions(chargeLevel);
             Vector3 targetPos = target.VisualPosition;
 
-            // Flashy laser/beam lines from crystals to target (3.0s stay duration)
+            // Flashy laser/beam lines from crystals to target
             ResicochetAttackBeamVisual.PlayFromCrystals(crystals, targetPos, projectileColor);
 
             // Fire projectiles along each crystal beam line
