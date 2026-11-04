@@ -114,9 +114,20 @@ MonoBehaviour:
   m_GameObject: {fileID: 4120733290429841632}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 15730cd9b1a04c21b3c152b454d2f53a, type: 3}
+  m_Script: {fileID: 11500000, guid: 9a5e99e6cbda1d142a3c1598a5eca3e9, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
-  frames:
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.ScrapperSpriteAnimation
+  idleFrames:
   - {fileID: -705202181, guid: 98e7a721d66dd4c48acc4d1cf6e1541e, type: 3}
   - {fileID: 2064664623, guid: 98e7a721d66dd4c48acc4d1cf6e1541e, type: 3}
+  attackFrames:
+  - {fileID: 1717329777757071494, guid: aa9bfabe25219864680222ccd04ebc85, type: 3}
+  - {fileID: -4083918798053240788, guid: aa9bfabe25219864680222ccd04ebc85, type: 3}
+  - {fileID: 5920832685474418192, guid: aa9bfabe25219864680222ccd04ebc85, type: 3}
+  - {fileID: -3673143732389167136, guid: aa9bfabe25219864680222ccd04ebc85, type: 3}
+  - {fileID: -1691292587900541755, guid: aa9bfabe25219864680222ccd04ebc85, type: 3}
+  - {fileID: -7819231841352378075, guid: aa9bfabe25219864680222ccd04ebc85, type: 3}
+  - {fileID: -1868633967247531382, guid: aa9bfabe25219864680222ccd04ebc85, type: 3}
+  - {fileID: 5154746125173223066, guid: aa9bfabe25219864680222ccd04ebc85, type: 3}
+  idleFrameDuration: 0.25
+  attackFrameDuration: 0.055
