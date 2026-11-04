@@ -61,6 +61,7 @@ SpriteRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -113,11 +114,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 6120733290429841632}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 15730cd9b1a04c21b3c152b454d2f53a, type: 3}
+  m_Script: {fileID: 11500000, guid: b1a2c3d4e5f60718293a4b5c6d7e8f90, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
-  frameDuration: 0.125
-  frames:
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.StaggerSpriteAnimation
+  idleFrames:
   - {fileID: -1433936279, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
   - {fileID: -1852208288, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
   - {fileID: 1991774566, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
@@ -126,4 +126,18 @@ MonoBehaviour:
   - {fileID: -468944462, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
   - {fileID: -1557945625, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
   - {fileID: 1602364546, guid: df8e3333148be9f4294cdddc815a2788, type: 3}
-
+  attackFrames:
+  - {fileID: -3993105752082215374, guid: 9cbba6655c1057242b868ed99b5d1faa, type: 3}
+  - {fileID: 401910465554410478, guid: 9cbba6655c1057242b868ed99b5d1faa, type: 3}
+  - {fileID: 3268000869001041207, guid: 9cbba6655c1057242b868ed99b5d1faa, type: 3}
+  - {fileID: 2601177117338421598, guid: 9cbba6655c1057242b868ed99b5d1faa, type: 3}
+  - {fileID: -4513225909762272958, guid: 9cbba6655c1057242b868ed99b5d1faa, type: 3}
+  - {fileID: 5668209945753435476, guid: 9cbba6655c1057242b868ed99b5d1faa, type: 3}
+  - {fileID: 8618048182483766665, guid: 9cbba6655c1057242b868ed99b5d1faa, type: 3}
+  - {fileID: 7278430910817073282, guid: 9cbba6655c1057242b868ed99b5d1faa, type: 3}
+  - {fileID: 40201712742592041, guid: 9cbba6655c1057242b868ed99b5d1faa, type: 3}
+  - {fileID: 6141976543509761647, guid: 9cbba6655c1057242b868ed99b5d1faa, type: 3}
+  - {fileID: 3336497485844783843, guid: 9cbba6655c1057242b868ed99b5d1faa, type: 3}
+  - {fileID: -5413734708045199802, guid: 9cbba6655c1057242b868ed99b5d1faa, type: 3}
+  idleFrameDuration: 0.125
+  attackFrameDuration: 0.05

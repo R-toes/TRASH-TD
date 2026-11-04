@@ -14,7 +14,8 @@ namespace TrashTD.Operators
     /// (including his tile and forward range where enemies are blocked).
     /// If no enemies are blocked, attacks a single unblocked enemy in range ahead.
     /// Has a 20% to dodge any attack, atk then increase by 50% in the next attack if the dodge is successful.
-    /// Range covers one tile ahead.
+    /// Uses 48x32 Six-Limb Slugger attack animation with right 32x32 pivot offset (2/3, 0.5)
+    /// to keep Stag-ger centered on the deployed tile while the flurry of punches extends into the forward tile.
     /// </summary>
     public class StaggerOperator : GuardOperator
     {
@@ -22,8 +23,46 @@ namespace TrashTD.Operators
 
         private readonly List<EnemyBase> targetBuffer = new List<EnemyBase>();
         private bool hasDodgeAtkBuff;
+        private StaggerSpriteAnimation spriteAnimation;
 
         public bool HasDodgeAtkBuff => hasDodgeAtkBuff;
+
+        public StaggerSpriteAnimation SpriteAnimation
+        {
+            get
+            {
+                if (spriteAnimation == null)
+                {
+                    spriteAnimation = GetComponentInChildren<StaggerSpriteAnimation>(true);
+                    if (spriteAnimation == null)
+                    {
+                        spriteAnimation = gameObject.AddComponent<StaggerSpriteAnimation>();
+                    }
+                }
+                return spriteAnimation;
+            }
+        }
+
+        private void Awake()
+        {
+            // If the GameObject has generic OperatorSpriteAnimation, disable it so StaggerSpriteAnimation controls playback
+            var genericAnim = GetComponent<OperatorSpriteAnimation>();
+            if (genericAnim != null && genericAnim.enabled)
+            {
+                genericAnim.enabled = false;
+            }
+
+            EnsureStaggerAnimation();
+        }
+
+        private void EnsureStaggerAnimation()
+        {
+            var anim = SpriteAnimation;
+            if (anim != null && !anim.enabled)
+            {
+                anim.enabled = true;
+            }
+        }
 
         /// <summary>
         /// Random value generator for dodge roll in [0, 1).
@@ -35,11 +74,13 @@ namespace TrashTD.Operators
         {
             base.OnDeployed();
             hasDodgeAtkBuff = false;
+            EnsureStaggerAnimation();
         }
 
         protected override void OnRetreated()
         {
             hasDodgeAtkBuff = false;
+            SpriteAnimation?.CancelAttack();
             base.OnRetreated();
         }
 
@@ -116,7 +157,13 @@ namespace TrashTD.Operators
 
         public override void Attack(EnemyBase target)
         {
-            if (target == null || !isDeployed) return;
+            if (target == null || !isDeployed || isStunned || isBound) return;
+
+            HasFoughtInWave = true;
+            DeployedDuringCurrentPreparation = false;
+
+            // Trigger the 48x32 Six-Limb Slugger attack animation
+            SpriteAnimation?.PlayAttack();
 
             List<EnemyBase> blockedTargets = GetBlockedTargetsInRange();
 
@@ -143,7 +190,10 @@ namespace TrashTD.Operators
                             : new Color(1f, 0.45f, 0.1f, 1f));
 
                     int damage = DamageCalculator.CalculateDamage(attackAtk, GetTargetMitigation(enemy));
-                    enemy.TryTakeAttackDamage(damage, data.damageType, this);
+                    if (enemy.TryTakeAttackDamage(damage, data.damageType, this))
+                    {
+                        PlayImpactSound();
+                    }
                 }
 
                 hasDodgeAtkBuff = false;
@@ -160,7 +210,10 @@ namespace TrashTD.Operators
                     : new Color(1f, 0.78f, 0.3f, 1f));
 
             int singleDamage = DamageCalculator.CalculateDamage(attackAtk, GetTargetMitigation(target));
-            target.TryTakeAttackDamage(singleDamage, data.damageType, this);
+            if (target.TryTakeAttackDamage(singleDamage, data.damageType, this))
+            {
+                PlayImpactSound();
+            }
             hasDodgeAtkBuff = false;
         }
 
