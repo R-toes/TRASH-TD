@@ -86,6 +86,23 @@ namespace TrashTD.Enemies
         private float sluggishMoveSpeedMultiplier = 1f;
         private float sluggishAttackIntervalMultiplier = 1f;
         private bool isSluggish;
+        private int highestResicochetCharge;
+        public int HighestResicochetCharge => highestResicochetCharge;
+        public bool IsEnraged { get; set; }
+
+        public void ApplyResicochetHit(int chargeLevel)
+        {
+            if (chargeLevel > highestResicochetCharge)
+            {
+                highestResicochetCharge = Mathf.Clamp(chargeLevel, 1, 3);
+                UpdateChillVisual();
+            }
+        }
+
+        public void ModifyATK(int delta)
+        {
+            currentATK = Mathf.Max(0, currentATK + delta);
+        }
         protected SpriteRenderer[] animationRenderers;
         protected int animationFrameIndex;
         protected float animationFrameTimer;
@@ -224,6 +241,8 @@ namespace TrashTD.Enemies
             sluggishTimer = 0f;
             sluggishMoveSpeedMultiplier = 1f;
             sluggishAttackIntervalMultiplier = 1f;
+            highestResicochetCharge = 0;
+            IsEnraged = false;
             CacheChillRenderers();
             UpdateChillVisual();
 

@@ -19,10 +19,21 @@ namespace TrashTD.Operators
     {
         public const float EnemyHealCooldownDuration = 1.0f;
         public const float EnvironmentHealCooldownDuration = 3.0f;
+        public const float StallEnrageDuration = 20.0f;
         private float healCooldownTimer;
         public float HealCooldownTimer => healCooldownTimer;
 
+        private readonly Dictionary<EnemyBase, float> blockedStallTimers = new Dictionary<EnemyBase, float>();
+        private readonly Dictionary<EnemyBase, int> blockedLastHPs = new Dictionary<EnemyBase, int>();
+        private readonly List<EnemyBase> stallCleanupList = new List<EnemyBase>();
+
         public override bool HasTaunt => true;
+
+        public float GetStallTimer(EnemyBase enemy)
+        {
+            if (enemy == null) return 0f;
+            return blockedStallTimers.TryGetValue(enemy, out float t) ? t : 0f;
+        }
 
         public override void Attack(EnemyBase target)
         {
@@ -42,6 +53,71 @@ namespace TrashTD.Operators
             if (healCooldownTimer > 0f)
             {
                 healCooldownTimer -= Time.deltaTime;
+            }
+
+            UpdateBlockedEnemiesStall(Time.deltaTime);
+        }
+
+        public void UpdateBlockedEnemiesStall(float deltaTime)
+        {
+            if (blockedEnemies == null || blockedEnemies.Count == 0)
+            {
+                if (blockedStallTimers.Count > 0)
+                {
+                    blockedStallTimers.Clear();
+                    blockedLastHPs.Clear();
+                }
+                return;
+            }
+
+            stallCleanupList.Clear();
+            foreach (var kvp in blockedStallTimers)
+            {
+                if (kvp.Key == null || kvp.Key.IsDead || !blockedEnemies.Contains(kvp.Key))
+                {
+                    stallCleanupList.Add(kvp.Key);
+                }
+            }
+            for (int i = 0; i < stallCleanupList.Count; i++)
+            {
+                blockedStallTimers.Remove(stallCleanupList[i]);
+                blockedLastHPs.Remove(stallCleanupList[i]);
+            }
+
+            for (int i = 0; i < blockedEnemies.Count; i++)
+            {
+                EnemyBase enemy = blockedEnemies[i];
+                if (enemy == null || enemy.IsDead || enemy.IsEnraged) continue;
+
+                if (!blockedStallTimers.ContainsKey(enemy))
+                {
+                    blockedStallTimers[enemy] = 0f;
+                    blockedLastHPs[enemy] = enemy.CurrentHP;
+                    continue;
+                }
+
+                int prevHP = blockedLastHPs[enemy];
+                int currentHP = enemy.CurrentHP;
+
+                if (currentHP < prevHP)
+                {
+                    // Stalled enemy took damage! Reset stall timer
+                    blockedStallTimers[enemy] = 0f;
+                    blockedLastHPs[enemy] = currentHP;
+                }
+                else
+                {
+                    blockedLastHPs[enemy] = currentHP;
+                    float elapsed = blockedStallTimers[enemy] + deltaTime;
+                    blockedStallTimers[enemy] = elapsed;
+
+                    if (elapsed >= StallEnrageDuration)
+                    {
+                        MossmoEnragedEffect.Apply(enemy);
+                        blockedStallTimers.Remove(enemy);
+                        blockedLastHPs.Remove(enemy);
+                    }
+                }
             }
         }
 
