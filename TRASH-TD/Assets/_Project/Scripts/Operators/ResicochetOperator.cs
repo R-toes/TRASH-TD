@@ -19,6 +19,8 @@ namespace TrashTD.Operators
     /// - Each projectile bounces to surrounding tiles of the hit target (up to 4 targets total),
     ///   reducing damage by 25% on each bounce.
     /// - Sprite row changes dynamically with charge count (Row 1: 1 charge, Row 2: 2 charges, Row 3: 3 charges).
+    /// - Floating crystals have an outline aura effect matching Shadeslice's isolation talent,
+    ///   scaling, pulsing, and bobbing with the crystals frame-by-frame and matching charge color (Orange -> Green -> Blue).
     /// </summary>
     public class ResicochetOperator : CasterOperator
     {
@@ -67,11 +69,25 @@ namespace TrashTD.Operators
         [SerializeField] private Sprite[] charge2Frames;
         [SerializeField] private Sprite[] charge3Frames;
 
+        [Header("Resicochet Crystal Outline Frames (4 frames each)")]
+        [SerializeField] private Sprite[] crystalCharge1Frames;
+        [SerializeField] private Sprite[] crystalCharge2Frames;
+        [SerializeField] private Sprite[] crystalCharge3Frames;
+
         private int charges = 1;
         private float chargeTimer = 0f;
         private bool isFiringBurst = false;
         private Coroutine burstCoroutine;
         private OperatorSpriteAnimation spriteAnim;
+
+        // Shadeslice-style crystal aura & outline renderers
+        private SpriteRenderer opSpriteRenderer;
+        private SpriteRenderer crystalAuraOuter;
+        private SpriteRenderer crystalAuraInner;
+        private SpriteRenderer crystalOutlineLeft;
+        private SpriteRenderer crystalOutlineRight;
+        private SpriteRenderer crystalOutlineUp;
+        private SpriteRenderer crystalOutlineDown;
 
         public int CurrentCharges => charges;
         public float ChargeTimer => chargeTimer;
@@ -82,12 +98,34 @@ namespace TrashTD.Operators
         public Sprite[] Charge2Frames => charge2Frames;
         public Sprite[] Charge3Frames => charge3Frames;
 
+        public Sprite[] CrystalCharge1Frames => crystalCharge1Frames;
+        public Sprite[] CrystalCharge2Frames => crystalCharge2Frames;
+        public Sprite[] CrystalCharge3Frames => crystalCharge3Frames;
+
+        public SpriteRenderer CrystalAuraOuter => crystalAuraOuter;
+        public SpriteRenderer CrystalAuraInner => crystalAuraInner;
+        public SpriteRenderer CrystalOutlineLeft => crystalOutlineLeft;
+        public SpriteRenderer CrystalOutlineRight => crystalOutlineRight;
+        public SpriteRenderer CrystalOutlineUp => crystalOutlineUp;
+        public SpriteRenderer CrystalOutlineDown => crystalOutlineDown;
+
         public void ConfigureAnimationFrames(Sprite[] c1, Sprite[] c2, Sprite[] c3)
         {
             charge1Frames = c1;
             charge2Frames = c2;
             charge3Frames = c3;
             UpdateChargeVisuals();
+        }
+
+        public void ConfigureCrystalAnimationFrames(Sprite[] c1, Sprite[] c2, Sprite[] c3)
+        {
+            crystalCharge1Frames = c1;
+            crystalCharge2Frames = c2;
+            crystalCharge3Frames = c3;
+            if (crystalAuraOuter != null)
+            {
+                UpdateCrystalAuras();
+            }
         }
 
         public override void Initialize(OperatorData operatorData, OperatorRarity rarity, OperatorFacing operatorFacing = OperatorFacing.Right)
@@ -108,12 +146,45 @@ namespace TrashTD.Operators
             isFiringBurst = false;
             EnsureFramesLoaded();
             UpdateChargeVisuals();
+            CreateCrystalAuras();
+            SetCrystalAuraEnabled(true);
+            UpdateCrystalAuras();
         }
 
         private void Awake()
         {
             EnsureFramesLoaded();
             UpdateChargeVisuals();
+        }
+
+        private static Texture2D cachedCrystalTexture;
+        private static Sprite[] cachedCrystal1Frames;
+        private static Sprite[] cachedCrystal2Frames;
+        private static Sprite[] cachedCrystal3Frames;
+
+        /// <summary>
+        /// Identifies whether a 32x32 frame pixel belongs to the floating crystals.
+        /// Evaluated in Unity texture coordinates where localY=0 is bottom and localY=31 is top.
+        /// Isolates Crystal 1 (Mid), Crystal 2 (Top-Left), and Crystal 3 (Top) without including body or flame pixels.
+        /// </summary>
+        public static bool IsCrystalPixelInUnityCoords(int chargeLevel, int localX, int localY)
+        {
+            int yTop = 31 - localY;
+
+            // Crystal 1 (Mid): present at all charges
+            if (localX >= 0 && localX <= 5 && yTop >= 9 && yTop <= 15) return true;
+
+            // Crystal 2 (Top-Left): present at charge 2 and 3
+            if (chargeLevel >= 2 && localX >= 2 && localX <= 8 && yTop >= 1 && yTop <= 8) return true;
+
+            // Crystal 3 (Top): present at charge 3 only
+            if (chargeLevel >= 3 && localX >= 9 && localX <= 14 && yTop >= 1 && yTop <= 6)
+            {
+                if (localX == 14 && yTop == 6) return false; // Head flame edge
+                return true;
+            }
+
+            return false;
         }
 
         private void EnsureFramesLoaded()
@@ -123,33 +194,6 @@ namespace TrashTD.Operators
                 spriteAnim = GetComponent<OperatorSpriteAnimation>();
             }
 
-            if (charge1Frames != null && charge1Frames.Length > 0 &&
-                charge2Frames != null && charge2Frames.Length > 0 &&
-                charge3Frames != null && charge3Frames.Length > 0)
-            {
-                return;
-            }
-
-#if UNITY_EDITOR
-            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Resicochet-Sheet.png");
-            if (assets != null && assets.Length > 0)
-            {
-                var subSprites = new Dictionary<string, Sprite>();
-                foreach (var a in assets)
-                {
-                    if (a is Sprite s) subSprites[s.name] = s;
-                }
-                if (subSprites.ContainsKey("Resicochet_0") && subSprites.ContainsKey("Resicochet_4") && subSprites.ContainsKey("Resicochet_8"))
-                {
-                    charge1Frames = new[] { subSprites["Resicochet_0"], subSprites["Resicochet_1"], subSprites["Resicochet_2"], subSprites["Resicochet_3"] };
-                    charge2Frames = new[] { subSprites["Resicochet_4"], subSprites["Resicochet_5"], subSprites["Resicochet_6"], subSprites["Resicochet_7"] };
-                    charge3Frames = new[] { subSprites["Resicochet_8"], subSprites["Resicochet_9"], subSprites["Resicochet_10"], subSprites["Resicochet_11"] };
-                    return;
-                }
-            }
-#endif
-
-            // Attempt to load from SpriteRenderer texture or AssetDatabase
             var sr = GetComponent<SpriteRenderer>();
             Texture2D tex = sr != null && sr.sprite != null ? sr.sprite.texture : null;
 
@@ -160,10 +204,137 @@ namespace TrashTD.Operators
             }
 #endif
 
-            if (tex != null)
+            if (charge1Frames == null || charge1Frames.Length == 0 ||
+                charge2Frames == null || charge2Frames.Length == 0 ||
+                charge3Frames == null || charge3Frames.Length == 0)
             {
-                SliceFramesFromTexture(tex);
+#if UNITY_EDITOR
+                var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Resicochet-Sheet.png");
+                if (assets != null && assets.Length > 0)
+                {
+                    var subSprites = new Dictionary<string, Sprite>();
+                    foreach (var a in assets)
+                    {
+                        if (a is Sprite s) subSprites[s.name] = s;
+                    }
+                    if (subSprites.ContainsKey("Resicochet_0") && subSprites.ContainsKey("Resicochet_4") && subSprites.ContainsKey("Resicochet_8"))
+                    {
+                        charge1Frames = new[] { subSprites["Resicochet_0"], subSprites["Resicochet_1"], subSprites["Resicochet_2"], subSprites["Resicochet_3"] };
+                        charge2Frames = new[] { subSprites["Resicochet_4"], subSprites["Resicochet_5"], subSprites["Resicochet_6"], subSprites["Resicochet_7"] };
+                        charge3Frames = new[] { subSprites["Resicochet_8"], subSprites["Resicochet_9"], subSprites["Resicochet_10"], subSprites["Resicochet_11"] };
+                    }
+                }
+#endif
+                if ((charge1Frames == null || charge1Frames.Length == 0) && tex != null)
+                {
+                    SliceFramesFromTexture(tex);
+                }
             }
+
+            EnsureCrystalFramesLoaded(tex);
+        }
+
+        private void EnsureCrystalFramesLoaded(Texture2D sourceTex)
+        {
+            if (crystalCharge1Frames != null && crystalCharge1Frames.Length > 0 &&
+                crystalCharge2Frames != null && crystalCharge2Frames.Length > 0 &&
+                crystalCharge3Frames != null && crystalCharge3Frames.Length > 0)
+            {
+                return;
+            }
+
+            if (cachedCrystal1Frames != null && cachedCrystal1Frames.Length > 0)
+            {
+                crystalCharge1Frames = cachedCrystal1Frames;
+                crystalCharge2Frames = cachedCrystal2Frames;
+                crystalCharge3Frames = cachedCrystal3Frames;
+                return;
+            }
+
+            Texture2D readable = null;
+            if (sourceTex != null && sourceTex.isReadable)
+            {
+                readable = sourceTex;
+            }
+            else
+            {
+                string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Resicochet-Sheet.png");
+                if (System.IO.File.Exists(path))
+                {
+                    try
+                    {
+                        byte[] raw = System.IO.File.ReadAllBytes(path);
+                        readable = new Texture2D(128, 96, TextureFormat.RGBA32, false);
+                        readable.filterMode = FilterMode.Point;
+                        readable.LoadImage(raw);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogWarning($"[ResicochetOperator] Could not load raw texture bytes: {ex.Message}");
+                    }
+                }
+            }
+
+            if (readable == null) return;
+
+            cachedCrystalTexture = new Texture2D(128, 96, TextureFormat.RGBA32, false);
+            cachedCrystalTexture.filterMode = FilterMode.Point;
+
+            Color32[] clearColors = new Color32[128 * 96];
+            cachedCrystalTexture.SetPixels32(clearColors);
+
+            for (int col = 0; col < 4; col++)
+            {
+                int xOffset = col * 32;
+
+                for (int y = 0; y < 96; y++)
+                {
+                    int row = y / 32;
+                    int localY = y % 32;
+                    int chargeLevel = row switch
+                    {
+                        2 => 1,
+                        1 => 2,
+                        0 => 3,
+                        _ => 1
+                    };
+
+                    for (int x = 0; x < 32; x++)
+                    {
+                        int texX = xOffset + x;
+                        int texY = y;
+
+                        if (IsCrystalPixelInUnityCoords(chargeLevel, x, localY))
+                        {
+                            Color srcPixel = readable.GetPixel(texX, texY);
+                            if (srcPixel.a > 0.05f)
+                            {
+                                cachedCrystalTexture.SetPixel(texX, texY, Color.white);
+                            }
+                        }
+                    }
+                }
+            }
+
+            cachedCrystalTexture.Apply(false);
+
+            float ppu = 32f;
+            Vector2 pivot = new Vector2(0.5f, 0.5f);
+
+            cachedCrystal1Frames = new Sprite[4];
+            cachedCrystal2Frames = new Sprite[4];
+            cachedCrystal3Frames = new Sprite[4];
+
+            for (int col = 0; col < 4; col++)
+            {
+                cachedCrystal1Frames[col] = Sprite.Create(cachedCrystalTexture, new Rect(col * 32, 64, 32, 32), pivot, ppu);
+                cachedCrystal2Frames[col] = Sprite.Create(cachedCrystalTexture, new Rect(col * 32, 32, 32, 32), pivot, ppu);
+                cachedCrystal3Frames[col] = Sprite.Create(cachedCrystalTexture, new Rect(col * 32, 0, 32, 32), pivot, ppu);
+            }
+
+            crystalCharge1Frames = cachedCrystal1Frames;
+            crystalCharge2Frames = cachedCrystal2Frames;
+            crystalCharge3Frames = cachedCrystal3Frames;
         }
 
         private void SliceFramesFromTexture(Texture2D tex)
@@ -228,12 +399,212 @@ namespace TrashTD.Operators
                 spriteAnim.Configure(activeFrames);
             }
 
-            var sr = GetComponent<SpriteRenderer>();
-            if (sr != null && activeFrames[0] != null)
+            if (opSpriteRenderer == null)
             {
-                sr.sprite = activeFrames[0];
+                opSpriteRenderer = GetComponent<SpriteRenderer>();
+            }
+
+            if (opSpriteRenderer != null && activeFrames[0] != null)
+            {
+                opSpriteRenderer.sprite = activeFrames[0];
+            }
+
+            if (crystalAuraOuter != null && isDeployed)
+            {
+                UpdateCrystalAuras();
             }
         }
+
+        #region Shadeslice-Style Crystal Aura & Outline Effect
+
+        private void CreateCrystalAuras()
+        {
+            if (crystalAuraOuter != null) return;
+
+            if (opSpriteRenderer == null)
+            {
+                opSpriteRenderer = GetComponent<SpriteRenderer>();
+            }
+            if (opSpriteRenderer == null) return;
+
+            int baseOrder = opSpriteRenderer.sortingOrder;
+
+            // Shadeslice outer & inner aura layers
+            crystalAuraOuter = CreateAuraLayer("CrystalAuraOuter", baseOrder - 2, Charge1ProjectileColor);
+            crystalAuraInner = CreateAuraLayer("CrystalAuraInner", baseOrder - 1, Charge1ProjectileColor);
+
+            // 1-pixel cardinal outline layers
+            crystalOutlineLeft = CreateAuraLayer("CrystalOutlineLeft", baseOrder - 1, Charge1ProjectileColor);
+            crystalOutlineRight = CreateAuraLayer("CrystalOutlineRight", baseOrder - 1, Charge1ProjectileColor);
+            crystalOutlineUp = CreateAuraLayer("CrystalOutlineUp", baseOrder - 1, Charge1ProjectileColor);
+            crystalOutlineDown = CreateAuraLayer("CrystalOutlineDown", baseOrder - 1, Charge1ProjectileColor);
+        }
+
+        private SpriteRenderer CreateAuraLayer(string objectName, int sortingOrder, Color color)
+        {
+            var auraObj = new GameObject(objectName);
+            auraObj.transform.SetParent(transform, false);
+            auraObj.transform.localPosition = Vector3.zero;
+
+            var sr = auraObj.AddComponent<SpriteRenderer>();
+            sr.color = color;
+            if (opSpriteRenderer != null)
+            {
+                sr.sortingLayerID = opSpriteRenderer.sortingLayerID;
+                sr.sharedMaterial = opSpriteRenderer.sharedMaterial;
+                sr.flipX = opSpriteRenderer.flipX;
+                sr.flipY = opSpriteRenderer.flipY;
+            }
+            sr.enabled = false;
+            return sr;
+        }
+
+        public void SetCrystalAuraEnabled(bool enabled)
+        {
+            if (crystalAuraOuter != null) crystalAuraOuter.enabled = enabled;
+            if (crystalAuraInner != null) crystalAuraInner.enabled = enabled;
+            if (crystalOutlineLeft != null) crystalOutlineLeft.enabled = enabled;
+            if (crystalOutlineRight != null) crystalOutlineRight.enabled = enabled;
+            if (crystalOutlineUp != null) crystalOutlineUp.enabled = enabled;
+            if (crystalOutlineDown != null) crystalOutlineDown.enabled = enabled;
+        }
+
+        public void UpdateCrystalAuras()
+        {
+            if (!isDeployed) return;
+            if (crystalAuraOuter == null) CreateCrystalAuras();
+            if (crystalAuraOuter == null) return;
+
+            if (opSpriteRenderer == null)
+            {
+                opSpriteRenderer = GetComponent<SpriteRenderer>();
+            }
+            if (opSpriteRenderer == null) return;
+
+            float time = Time.time;
+            float pulse = 0.5f + 0.5f * Mathf.Sin(time * 5f);
+            float flicker = Mathf.Sin(time * 13f) * 0.025f;
+
+            // Determine current animation frame index (0..3) from the operator sprite
+            int frameIndex = 0;
+            Sprite currentOpSprite = opSpriteRenderer.sprite;
+            Sprite[] activeOpFrames = charges switch
+            {
+                1 => charge1Frames,
+                2 => charge2Frames,
+                3 => charge3Frames,
+                _ => charge1Frames
+            };
+            if (activeOpFrames != null && currentOpSprite != null)
+            {
+                for (int i = 0; i < activeOpFrames.Length; i++)
+                {
+                    if (activeOpFrames[i] == currentOpSprite)
+                    {
+                        frameIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            // Pick the crystal-only sprite for current charges and animation frame
+            Sprite[] activeCrystalFrames = charges switch
+            {
+                1 => crystalCharge1Frames,
+                2 => crystalCharge2Frames,
+                3 => crystalCharge3Frames,
+                _ => crystalCharge1Frames
+            };
+
+            Sprite crystalSprite = (activeCrystalFrames != null && frameIndex < activeCrystalFrames.Length)
+                ? activeCrystalFrames[frameIndex]
+                : null;
+
+            bool isFlipped = opSpriteRenderer.flipX;
+
+            Color outerColor;
+            Color innerColor;
+
+            if (charges == 1)
+            {
+                // Vibrant Pulsing Amber/Orange (Charge 1)
+                outerColor = new Color(
+                    1.0f,
+                    Mathf.Lerp(0.35f, 0.65f, pulse),
+                    0.05f,
+                    0.38f + pulse * 0.16f + flicker);
+                innerColor = new Color(
+                    1.0f,
+                    Mathf.Lerp(0.55f, 0.85f, pulse),
+                    0.12f,
+                    0.70f + pulse * 0.20f);
+            }
+            else if (charges == 2)
+            {
+                // Vibrant Emerald Green (Charge 2)
+                outerColor = new Color(
+                    0.08f,
+                    Mathf.Lerp(0.75f, 1.0f, pulse),
+                    0.20f,
+                    0.38f + pulse * 0.16f + flicker);
+                innerColor = new Color(
+                    0.30f,
+                    1.0f,
+                    Mathf.Lerp(0.45f, 0.75f, pulse),
+                    0.70f + pulse * 0.20f);
+            }
+            else
+            {
+                // Radiant Azure/Blue (Charge 3)
+                outerColor = new Color(
+                    0.12f,
+                    Mathf.Lerp(0.50f, 0.80f, pulse),
+                    1.0f,
+                    0.38f + pulse * 0.16f + flicker);
+                innerColor = new Color(
+                    0.35f,
+                    Mathf.Lerp(0.75f, 0.95f, pulse),
+                    1.0f,
+                    0.70f + pulse * 0.20f);
+            }
+
+            // Sync sprite, flip and colors
+            SyncAuraRenderer(crystalAuraOuter, crystalSprite, isFlipped, outerColor);
+            SyncAuraRenderer(crystalAuraInner, crystalSprite, isFlipped, innerColor);
+            SyncAuraRenderer(crystalOutlineLeft, crystalSprite, isFlipped, innerColor);
+            SyncAuraRenderer(crystalOutlineRight, crystalSprite, isFlipped, innerColor);
+            SyncAuraRenderer(crystalOutlineUp, crystalSprite, isFlipped, innerColor);
+            SyncAuraRenderer(crystalOutlineDown, crystalSprite, isFlipped, innerColor);
+
+            // Shadeslice-style pulsing outer & inner scale and float
+            crystalAuraOuter.transform.localScale = Vector3.one * (1.22f + pulse * 0.035f + flicker);
+            crystalAuraInner.transform.localScale = Vector3.one * (1.11f + pulse * 0.025f - flicker * 0.5f);
+            crystalAuraOuter.transform.localPosition = new Vector3(0f, Mathf.Sin(time * 7f) * 0.012f, 0.01f);
+            crystalAuraInner.transform.localPosition = new Vector3(0f, Mathf.Sin(time * 9f + 1f) * 0.008f, 0.005f);
+
+            // Outline 1-pixel cardinal offsets (1 / 32 = 0.03125 world units)
+            float pixelOffset = (1.0f + pulse * 0.3f) / 32f;
+            float flipDir = isFlipped ? -1f : 1f;
+
+            crystalOutlineLeft.transform.localPosition = new Vector3(-pixelOffset * flipDir, 0f, 0.005f);
+            crystalOutlineRight.transform.localPosition = new Vector3(pixelOffset * flipDir, 0f, 0.005f);
+            crystalOutlineUp.transform.localPosition = new Vector3(0f, pixelOffset, 0.005f);
+            crystalOutlineDown.transform.localPosition = new Vector3(0f, -pixelOffset, 0.005f);
+        }
+
+        private void SyncAuraRenderer(SpriteRenderer r, Sprite s, bool flipX, Color c)
+        {
+            if (r == null) return;
+            r.sprite = s;
+            r.flipX = flipX;
+            r.color = c;
+            if (opSpriteRenderer != null)
+            {
+                r.sortingLayerID = opSpriteRenderer.sortingLayerID;
+            }
+        }
+
+        #endregion
 
         private TrashTD.Core.GameLoop.WaveManager cachedWaveManager;
 
@@ -284,6 +655,8 @@ namespace TrashTD.Operators
             }
 
             base.Update();
+
+            UpdateCrystalAuras();
         }
 
         public override bool CanAttackTarget(EnemyBase target)
@@ -358,7 +731,7 @@ namespace TrashTD.Operators
             Vector3[] crystals = GetCrystalPositions(chargeLevel);
             Vector3 targetPos = target.VisualPosition;
 
-            // Flashy laser/beam lines from crystals to target
+            // Flashy laser/beam lines from crystals to target (3.0s stay duration)
             ResicochetAttackBeamVisual.PlayFromCrystals(crystals, targetPos, projectileColor);
 
             // Fire projectiles along each crystal beam line
@@ -448,6 +821,7 @@ namespace TrashTD.Operators
                 }
             }
         }
+
         /// <summary>
         /// Finds an enemy on the surrounding tiles of the primary target or current target.
         /// Excludes enemies already hit in this bounce chain.
@@ -547,8 +921,8 @@ namespace TrashTD.Operators
             isFiringBurst = false;
             charges = 1;
             chargeTimer = 0f;
+            SetCrystalAuraEnabled(false);
             base.OnRetreated();
         }
     }
 }
-

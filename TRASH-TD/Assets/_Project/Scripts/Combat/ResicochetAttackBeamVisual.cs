@@ -12,7 +12,7 @@ namespace TrashTD.Combat
     /// </summary>
     public sealed class ResicochetAttackBeamVisual : MonoBehaviour
     {
-        private const float DefaultLifetime = 0.25f;
+        public const float DefaultLifetime = 3.0f;
         private const float DefaultWidth = 0.05f;
         private static Material sharedMaterial;
 
@@ -156,7 +156,7 @@ namespace TrashTD.Combat
         {
             elapsed += Time.deltaTime;
             float progress = Mathf.Clamp01(elapsed / lifetime);
-            float alpha = 1f - progress;
+            float alpha = progress < 0.8f ? 1f : Mathf.Lerp(1f, 0f, (progress - 0.8f) / 0.2f);
 
             Color currentMain = baseColor;
             currentMain.a = alpha;
