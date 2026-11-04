@@ -5,14 +5,14 @@ namespace TrashTD.Combat
 {
     /// <summary>
     /// Enraged status effect applied to an enemy blocked and stalled by Mossmo for 20 seconds.
-    /// - Grants +25% ATK
+    /// - Grants +50% ATK
     /// - Takes 5% Max HP as True Damage every 1.0 second tick until defeated.
     /// - Visual cues: floating combat text "ENRAGED!"
     /// </summary>
     public class MossmoEnragedEffect : MonoBehaviour
     {
         public const float TickInterval = 1.0f;
-        public const float AtkMultiplier = 0.25f;
+        public const float AtkMultiplier = 0.50f;
         public const float HpTickPercent = 0.05f;
 
         [SerializeField] private EnemyBase targetEnemy;

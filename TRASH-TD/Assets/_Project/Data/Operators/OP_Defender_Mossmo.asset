@@ -37,7 +37,7 @@ MonoBehaviour:
   cannotBeHealed: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: "Does not attack and taunts nearby ranged enemies. When taking damage, heals up to 2 operators in range (including himself). If a blocked enemy is stalled (takes no damage for 20s), the enemy becomes Enraged: gains +25% ATK, but loses 5% max HP per tick until defeated."
+  skillDescription: "Does not attack and taunts nearby ranged enemies. When taking damage, heals up to 2 operators in range (including himself). If a blocked enemy is stalled (takes no damage for 20s), the enemy becomes Enraged: gains +50% ATK, but loses 5% max HP per tick until defeated."
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
