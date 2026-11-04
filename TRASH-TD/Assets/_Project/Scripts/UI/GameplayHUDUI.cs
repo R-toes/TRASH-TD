@@ -4478,7 +4478,7 @@ namespace TrashTD.UI
 
         private void ToggleDeckCardInfo(int index, DraftCard card)
         {
-            if (deckInfoSlot == index && ReferenceEquals(deckInfoCard, card))
+            if (deckInfoSlot == index && ReferenceEquals(deckInfoCard, card) && selectedOperatorDetailsPanel != null && selectedOperatorDetailsPanel.activeSelf)
             {
                 ClearDeckCardInfo();
                 return;
@@ -4492,17 +4492,23 @@ namespace TrashTD.UI
             deckInfoSlot = index;
             deckInfoCard = card;
             snapHealthFill = true;
-            if (selectedOperatorDetailsPanel != null && selectedOperatorDetailsPanel.activeSelf) UpdateDeckCardDetails(card);
-            // Shown from Update (RefreshSelectedOperatorInfo): selecting the card for deployment, right after this,
-            // may still hide another card's placement preview, which would close the tab if checked now.
+            if (selectedOperatorDetailsPanel != null)
+            {
+                selectedOperatorDetailsPanel.SetActive(true);
+                UpdateDeckCardDetails(card);
+            }
         }
 
         private void ClearDeckCardInfo()
         {
-            if (deckInfoSlot < 0) return;
+            if (deckInfoSlot < 0 && (selectedOperatorDetailsPanel == null || !selectedOperatorDetailsPanel.activeSelf || selectedOperatorDetailsTarget != null)) return;
             deckInfoSlot = -1;
             deckInfoCard = null;
             SetSelectedOperatorName(string.Empty, Vector3.zero); // also closes the SHOW MORE panel
+            if (selectedOperatorDetailsTarget == null && selectedOperatorDetailsPanel != null)
+            {
+                selectedOperatorDetailsPanel.SetActive(false);
+            }
         }
 
         /// <summary>
@@ -4518,8 +4524,7 @@ namespace TrashTD.UI
             DraftCard card = playerDeck != null ? playerDeck.GetCard(deckInfoSlot) : null;
             if (card == null || card.operatorData == null || !ReferenceEquals(card, deckInfoCard) ||
                 deckButtons == null || deckInfoSlot >= deckButtons.Length || canvas == null ||
-                clickedOutside || IsDeckCardDragging ||
-                (stageBootstrapper != null && stageBootstrapper.IsPlacementPreviewActive))
+                clickedOutside || IsDeckCardDragging)
             {
                 ClearDeckCardInfo();
                 return false;

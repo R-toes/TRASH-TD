@@ -291,6 +291,41 @@ namespace TrashTD.Operators
             return base.CanAttackTarget(target);
         }
 
+        /// <summary>
+        /// Returns world positions of the floating crystals based on charge count and operator facing:
+        /// - 1 charge: 1 crystal (mid)
+        /// - 2 charges: 2 crystals (mid, top)
+        /// - 3 charges: 3 crystals (mid, top, bot)
+        /// </summary>
+        public Vector3[] GetCrystalPositions(int chargeCount)
+        {
+            int count = Mathf.Clamp(chargeCount, 1, 3);
+            Vector3[] positions = new Vector3[count];
+            float flipFactor = (Facing == OperatorFacing.Right) ? -1f : 1f;
+
+            // Pixel-derived crystal offsets relative to sprite center (32 PPU)
+            Vector3 c1 = transform.position + new Vector3(-0.39f * flipFactor, 0.09f, 0f);
+            Vector3 c2 = transform.position + new Vector3(-0.33f * flipFactor, 0.31f, 0f);
+            Vector3 c3 = transform.position + new Vector3(-0.11f * flipFactor, 0.38f, 0f);
+
+            if (count == 1)
+            {
+                positions[0] = c1;
+            }
+            else if (count == 2)
+            {
+                positions[0] = c1;
+                positions[1] = c2;
+            }
+            else
+            {
+                positions[0] = c1;
+                positions[1] = c2;
+                positions[2] = c3;
+            }
+            return positions;
+        }
+
         public override void Attack(EnemyBase target)
         {
             if (target == null || !isDeployed || isStunned || isBound || isFiringBurst) return;
@@ -298,76 +333,62 @@ namespace TrashTD.Operators
             HasFoughtInWave = true;
             DeployedDuringCurrentPreparation = false;
 
-            int burstCount = charges;
-            float chargeMultiplier = GetChargeDamageMultiplier(charges);
-            Color projectileColor = GetProjectileColorForCharges(charges);
+            int chargeLevel = charges;
+            float chargeMultiplier = GetChargeDamageMultiplier(chargeLevel);
+            Color projectileColor = GetProjectileColorForCharges(chargeLevel);
 
             // Consume extra charges back to default 1
             charges = 1;
             chargeTimer = 0f;
             UpdateChargeVisuals();
 
-            if (burstCoroutine != null)
-            {
-                StopCoroutine(burstCoroutine);
-            }
-            burstCoroutine = StartCoroutine(FireBurstRoutine(target, burstCount, chargeMultiplier, projectileColor));
+            PlayAttackSound();
+            FireChargeAttack(target, chargeLevel, chargeMultiplier, projectileColor);
         }
 
         protected override void FireAttackProjectile(EnemyBase target, Vector3 startOffset = default)
         {
-            FireSingleBouncingProjectile(target, GetChargeDamageMultiplier(charges), GetProjectileColorForCharges(charges));
+            FireChargeAttack(target, charges, GetChargeDamageMultiplier(charges), GetProjectileColorForCharges(charges));
         }
 
-        private IEnumerator FireBurstRoutine(EnemyBase initialTarget, int shotsToFire, float chargeMultiplier, Color projectileColor)
+        public void FireChargeAttack(EnemyBase target, int chargeLevel, float chargeMultiplier, Color projectileColor)
         {
-            isFiringBurst = true;
+            if (target == null) return;
 
-            for (int i = 0; i < shotsToFire; i++)
+            Vector3[] crystals = GetCrystalPositions(chargeLevel);
+            Vector3 targetPos = target.VisualPosition;
+
+            // Flashy laser/beam lines from crystals to target
+            ResicochetAttackBeamVisual.PlayFromCrystals(crystals, targetPos, projectileColor);
+
+            // Fire projectiles along each crystal beam line
+            for (int i = 0; i < crystals.Length; i++)
             {
-                if (!isDeployed || isStunned || isBound || currentHP <= 0) break;
+                Vector3 crystalPos = crystals[i];
+                bool isPrimary = (i == 0);
 
-                EnemyBase currentEnemy = initialTarget;
-                if (currentEnemy == null || currentEnemy.IsDead || !CanAttackTarget(currentEnemy))
-                {
-                    currentEnemy = FindTarget();
-                }
-
-                if (currentEnemy != null && !currentEnemy.IsDead)
-                {
-                    PlayAttackSound();
-                    FireSingleBouncingProjectile(currentEnemy, chargeMultiplier, projectileColor);
-                }
-
-                if (i < shotsToFire - 1)
-                {
-                    yield return new WaitForSeconds(BurstFireInterval);
-                }
+                CombatProjectileVisual.Fire(
+                    crystalPos,
+                    target,
+                    projectileColor,
+                    14f,
+                    0.24f,
+                    0.12f,
+                    true,
+                    isPrimary ? () => HandleHitAndBounce(target, target, 0, new HashSet<EnemyBase> { target }, chargeLevel, chargeMultiplier, projectileColor) : null,
+                    ProjectileStyle.ArtsOrb);
             }
-
-            isFiringBurst = false;
-            attackTimer = 0f;
-            burstCoroutine = null;
         }
 
         public void FireSingleBouncingProjectile(EnemyBase target, float chargeMultiplier = 1.0f, Color? projectileColor = null)
         {
-            if (target == null) return;
-
             Color color = projectileColor ?? GetProjectileColorForCharges(1);
-            Vector3 startPos = ProjectileOrigin;
-            EnemyBase primaryTarget = target;
+            FireChargeAttack(target, 1, chargeMultiplier, color);
+        }
 
-            CombatProjectileVisual.Fire(
-                startPos,
-                primaryTarget,
-                color,
-                13f,
-                0.24f,
-                0.12f,
-                true,
-                () => HandleHitAndBounce(primaryTarget, primaryTarget, 0, new HashSet<EnemyBase> { primaryTarget }, chargeMultiplier, color),
-                ProjectileStyle.ArtsOrb);
+        public void HandleHitAndBounce(EnemyBase primaryTarget, EnemyBase currentTarget, int bounceIndex, HashSet<EnemyBase> hitEnemies, float chargeMultiplier = 1.0f, Color? projectileColor = null)
+        {
+            HandleHitAndBounce(primaryTarget, currentTarget, bounceIndex, hitEnemies, 1, chargeMultiplier, projectileColor);
         }
 
         /// <summary>
@@ -375,11 +396,20 @@ namespace TrashTD.Operators
         /// - Deals Arts damage with 25% reduction per bounce.
         /// - Scales with charge multiplier (1 charge: 1.0x, 2 charges: 1.10x, 3 charges: 1.25x).
         /// - Applies Sluggish effect to enemies hit.
+        /// - Tints damaged enemies to the highest charge color dealt to them.
+        /// - Shows 1, 2, or 3 flashy parallel bounce lines to each bounce target.
         /// - Bounces up to 4 targets total (initial hit + 3 bounces).
         /// </summary>
-        public void HandleHitAndBounce(EnemyBase primaryTarget, EnemyBase currentTarget, int bounceIndex, HashSet<EnemyBase> hitEnemies, float chargeMultiplier = 1.0f, Color? projectileColor = null)
+        public void HandleHitAndBounce(
+            EnemyBase primaryTarget,
+            EnemyBase currentTarget,
+            int bounceIndex,
+            HashSet<EnemyBase> hitEnemies,
+            int chargeLevel,
+            float chargeMultiplier = 1.0f,
+            Color? projectileColor = null)
         {
-            Color color = projectileColor ?? GetProjectileColorForCharges(1);
+            Color color = projectileColor ?? GetProjectileColorForCharges(chargeLevel);
 
             if (currentTarget != null && !currentTarget.IsDead)
             {
@@ -388,6 +418,7 @@ namespace TrashTD.Operators
                 int damage = DamageCalculator.CalculateDamage(rawAtk, currentTarget.CurrentRES);
                 currentTarget.TryTakeAttackDamage(damage, DamageType.Arts, this);
                 currentTarget.ApplySluggish(sluggishDuration, sluggishSpeedMultiplier, sluggishAttackIntervalMultiplier);
+                currentTarget.ApplyResicochetHit(chargeLevel);
                 PlayImpactSound();
             }
 
@@ -399,6 +430,10 @@ namespace TrashTD.Operators
                 {
                     hitEnemies.Add(nextTarget);
                     Vector3 bounceStart = currentTarget != null ? currentTarget.VisualPosition : transform.position;
+                    Vector3 bounceEnd = nextTarget.VisualPosition;
+
+                    // Play flashy parallel bounce lines matching charge
+                    ResicochetAttackBeamVisual.PlayParallel(bounceStart, bounceEnd, chargeLevel, color);
 
                     CombatProjectileVisual.Fire(
                         bounceStart,
@@ -408,12 +443,11 @@ namespace TrashTD.Operators
                         0.2f,
                         0.1f,
                         true,
-                        () => HandleHitAndBounce(primaryTarget, nextTarget, bounceIndex + 1, hitEnemies, chargeMultiplier, color),
+                        () => HandleHitAndBounce(primaryTarget, nextTarget, bounceIndex + 1, hitEnemies, chargeLevel, chargeMultiplier, color),
                         ProjectileStyle.ArtsOrb);
                 }
             }
         }
-
         /// <summary>
         /// Finds an enemy on the surrounding tiles of the primary target or current target.
         /// Excludes enemies already hit in this bounce chain.
