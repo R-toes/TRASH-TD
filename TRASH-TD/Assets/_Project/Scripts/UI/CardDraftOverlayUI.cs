@@ -78,14 +78,27 @@ namespace TrashTD.UI
         private const float TitleCenterY = -124f;      // y 94..154
         private const float WaveCounterCenterY = -172f; // y 158..186
 
-        // Draft odds block, above the details panel (y 138..212; the panel starts at 230)
-        private const float OddsTop = 138f;
-        private const float OddsHeight = 74f;
-        private const float OddsBarTop = 26f;
-        private const float OddsBarHeight = 18f;
-        private const float OddsLabelTop = 50f;
-        private const float OddsUpDelay = 0.5f;       // lets the intro and deal start first
-        private const float OddsUpTime = 0.65f;       // bar segments slide from the old odds to the new
+        // Draft odds slot machine, above the details panel (y 130..226; the panel starts at 230)
+        private const float OddsTop = 130f;
+        private const float OddsHeight = 96f;
+        private const float OddsCabinetTop = 22f;      // header row above, cabinet below
+        private const float OddsReelMargin = 10f;
+        private const float OddsReelGap = 9f;
+        private const float OddsPlateTop = 4f;         // star plate over each reel, inside the cabinet
+        private const float OddsPlateHeight = 16f;
+        private const float OddsWindowTop = 22f;
+        private const float OddsWindowHeight = 48f;
+        private const float OddsRowHeight = 30f;       // neighbours peek 9 px above and below the payline row
+        private const int OddsReelRows = 4;
+        private const int OddsPaylineRow = 2;          // strip slot (in rows from the top) on the payline
+        private const float OddsPaylinePosition = OddsPaylineRow * OddsRowHeight;
+        private const float OddsSpinDelay = 0.5f;      // lets the intro and deal start first
+        private const float OddsLeverPullTime = 0.18f;
+        private const float OddsLeverReturnTime = 0.35f;
+        private const float OddsSpinSpeed = 1100f;     // px/s at full spin
+        private const float OddsSpinUpTime = 0.15f;
+        private const float OddsFirstStop = 0.6f;      // the 1★ reel starts stopping this long after the pull
+        private const float OddsStopStagger = 0.3f;    // then the 2★, then the 3★
 
         private const string SkipCardAnimationKey = "TrashTD.SkipCardAnimation";
 
@@ -269,15 +282,30 @@ namespace TrashTD.UI
         private bool rerollNoticeDontShow;
         private bool rerollNoticeAcknowledged; // shown once per opening draft
 
-        // --- Draft odds (bar split by rarity, labels, next boost, "ODDS UP!" tag) ---
+        // --- Draft odds (slot machine: one reel per rarity, lever, next boost, "ODDS UP!" tag) ---
         private RectTransform oddsRoot;
-        private readonly RectTransform[] oddsSegments = new RectTransform[3];
-        private readonly Text[] oddsLabels = new Text[3];
+        private RectTransform oddsCabinet;
+        private readonly OddsReel[] oddsReels = new OddsReel[3];
         private Text oddsNextText;
         private RectTransform oddsUpTag;
         private Image oddsFlash;
+        private RectTransform oddsLever; // stick, pivot at the bottom; flipped (scale y -1) while pulled
         private Coroutine oddsRoutine;
         private DraftOdds oddsTarget;
+
+        /// <summary>One slot reel: a clipped window over a strip of rows that scrolls down and wraps around.</summary>
+        private sealed class OddsReel
+        {
+            public Text plate;
+            public RectTransform window;
+            public readonly Text[] rows = new Text[OddsReelRows];
+            public readonly float[] rowPositions = new float[OddsReelRows]; // last strip position, to spot wraps
+            public float scroll;
+            public int landingRow = -1; // while stopping: the row that comes to rest on the payline
+            public string landingText;
+            public Color color;
+            public bool zero;           // at rest on 0%: dimmed
+        }
 #if UNITY_EDITOR || DEBUG
         private Button developerPickButton;
         private GameObject developerPickerRoot;
@@ -1832,9 +1860,10 @@ namespace TrashTD.UI
         // ============================
 
         /// <summary>
-        /// Shows the odds this draft was rolled with (CardDraftSystem.GetCurrentOdds) and when they next go up.
-        /// On the first draft of a new step the bar slides up from the previous step's odds under an "ODDS UP!"
-        /// tag (instantly with Skip card animation). Rerolls keep the same odds, so this only runs when a draft opens.
+        /// Shows the odds this draft was rolled with (CardDraftSystem.GetCurrentOdds) on the slot machine's reels, and
+        /// when they next go up. On the first draft of a new step the reels start on the previous step's odds, the
+        /// lever is pulled and they spin to the new ones (instantly with Skip card animation). Rerolls keep the same
+        /// odds, so this only runs when a draft opens.
         /// </summary>
         private void UpdateDraftOdds()
         {
@@ -1874,80 +1903,213 @@ namespace TrashTD.UI
                 return;
             }
 
-            DraftOdds from = table.GetOdds(cleared - 1);
-            ApplyOdds(from);
+            ApplyOdds(table.GetOdds(cleared - 1));
             oddsUpTag.localScale = Vector3.zero;
-            oddsRoutine = StartCoroutine(OddsUpRoutine(from, oddsTarget));
+            oddsRoutine = StartCoroutine(OddsSpinRoutine(oddsTarget));
         }
 
-        /// <summary>Sizes the bar segments to the odds and writes the labels (0% tiers are dimmed).</summary>
+        /// <summary>Puts every reel at rest on its odds (0% tiers are dimmed).</summary>
         private void ApplyOdds(DraftOdds odds)
         {
             float[] values = { odds.Star1, odds.Star2, odds.Star3 };
-            float left = 0f;
             for (int i = 0; i < 3; i++)
             {
-                float width = Mathf.Clamp01(values[i] / 100f);
-                float right = i == 2 ? 1f : Mathf.Min(1f, left + width);
-                RectTransform segment = oddsSegments[i];
-                segment.gameObject.SetActive(right - left > 0.001f);
-                segment.anchorMin = new Vector2(left, 0f);
-                segment.anchorMax = new Vector2(right, 1f);
-                // A 2 px dark gap between segments keeps the colours apart
-                segment.offsetMin = new Vector2(left > 0f ? 2f : 0f, 0f);
-                segment.offsetMax = Vector2.zero;
-                left = right;
-
-                int percent = Mathf.RoundToInt(values[i]);
-                Color color = GetRarityColor(i + 1);
-                oddsLabels[i].text = $"{new string('★', i + 1)} {percent}%";
-                oddsLabels[i].color = percent > 0 ? color : new Color(color.r, color.g, color.b, 0.35f);
+                SetReelAtRest(oddsReels[i], values[i]);
             }
         }
 
-        private IEnumerator OddsUpRoutine(DraftOdds from, DraftOdds to)
+        /// <summary>Resets the reel's strip with this percentage on the payline and filler numbers around it.</summary>
+        private static void SetReelAtRest(OddsReel reel, float percent)
         {
-            yield return new WaitForSecondsRealtime(OddsUpDelay);
-
-            PlaySfx(oddsUpClip, 1.1f);
-            StartCoroutine(OddsSparksRoutine());
-
-            float t = 0f;
-            while (t < OddsUpTime)
+            int rounded = Mathf.RoundToInt(percent);
+            reel.scroll = 0f;
+            reel.landingRow = -1;
+            reel.zero = rounded <= 0;
+            for (int r = 0; r < OddsReelRows; r++)
             {
-                t += Time.unscaledDeltaTime;
-                float k = EaseOutCubic(Mathf.Clamp01(t / OddsUpTime));
-                ApplyOdds(new DraftOdds(
-                    Mathf.Lerp(from.Star1, to.Star1, k),
-                    Mathf.Lerp(from.Star2, to.Star2, k),
-                    Mathf.Lerp(from.Star3, to.Star3, k)));
-                oddsUpTag.localScale = Vector3.one * EaseOutBack(Mathf.Clamp01(t / 0.35f));
-                oddsFlash.color = new Color(1f, 1f, 1f, 0.6f * (1f - Mathf.Clamp01(t / 0.3f)));
+                reel.rowPositions[r] = r * OddsRowHeight; // strip positions at scroll 0
+                reel.rows[r].text = r == OddsPaylineRow ? FormatOddsPercent(rounded) : RandomOddsFiller();
+            }
+            ApplyReelPlate(reel);
+            LayoutReel(reel, 0f);
+        }
+
+        /// <summary>
+        /// Places the reel's rows for its scroll. A row that wraps from the bottom back to the top (out of sight)
+        /// gets a new filler number, or the landing number if it's the landing row. Rows fade away from the payline;
+        /// blur (0..1) stretches and fades them while the reel spins fast.
+        /// </summary>
+        private static void LayoutReel(OddsReel reel, float blur)
+        {
+            const float stripLength = OddsReelRows * OddsRowHeight;
+            for (int r = 0; r < OddsReelRows; r++)
+            {
+                float position = Mathf.Repeat(r * OddsRowHeight + reel.scroll, stripLength);
+                // Only a big backwards jump is a wrap; small ones are the stop's overshoot settling back
+                if (position < reel.rowPositions[r] - stripLength * 0.5f)
+                {
+                    reel.rows[r].text = r == reel.landingRow ? reel.landingText : RandomOddsFiller();
+                }
+                reel.rowPositions[r] = position;
+
+                float y = OddsPaylinePosition - position;
+                RectTransform rect = reel.rows[r].rectTransform;
+                rect.anchoredPosition = new Vector2(0f, y);
+                rect.localScale = new Vector3(1f, 1f + 0.35f * blur, 1f);
+
+                float alpha = (1f - 0.7f * Mathf.Clamp01(Mathf.Abs(y) / OddsRowHeight)) * (1f - 0.35f * blur);
+                if (reel.zero) alpha *= 0.35f;
+                reel.rows[r].color = new Color(reel.color.r, reel.color.g, reel.color.b, alpha);
+            }
+        }
+
+        private static void ApplyReelPlate(OddsReel reel)
+        {
+            Color color = reel.color;
+            reel.plate.color = reel.zero ? new Color(color.r, color.g, color.b, 0.35f) : color;
+        }
+
+        private static string FormatOddsPercent(int percent) => $"{percent}%";
+
+        private static string RandomOddsFiller() => FormatOddsPercent(UnityEngine.Random.Range(1, 100));
+
+        /// <summary>
+        /// Picks where a spinning reel comes to rest (on a row boundary, at least five rows on) and which row lands on
+        /// the payline. Five rows of travel make that row wrap in at the top at least once, so it gets the percentage
+        /// out of sight. Returns the scroll to stop at.
+        /// </summary>
+        private static float BeginReelStop(OddsReel reel, float percent)
+        {
+            int stopRow = Mathf.CeilToInt((reel.scroll + 5f * OddsRowHeight) / OddsRowHeight);
+            // Row r rests on the payline when r + stopRow = OddsPaylineRow (mod OddsReelRows)
+            reel.landingRow = ((OddsPaylineRow - stopRow) % OddsReelRows + OddsReelRows) % OddsReelRows;
+            reel.landingText = FormatOddsPercent(Mathf.RoundToInt(percent));
+            return stopRow * OddsRowHeight;
+        }
+
+        /// <summary>
+        /// Odds step-up: the lever drops, the reels spin up, then stop one by one (1★, 2★, 3★) on the new odds with
+        /// a small overshoot; once all three land, the "ODDS UP!" tag pops in with a flash and sparks.
+        /// </summary>
+        private IEnumerator OddsSpinRoutine(DraftOdds to)
+        {
+            yield return new WaitForSecondsRealtime(OddsSpinDelay);
+
+            float[] values = { to.Star1, to.Star2, to.Star3 };
+            var stopStart = new float[3];
+            var stopFrom = new float[3];
+            var stopTo = new float[3];
+            var stopTime = new float[3];
+            var landed = new bool[3];
+            for (int i = 0; i < 3; i++)
+            {
+                stopStart[i] = -1f;
+                oddsReels[i].zero = false;
+                ApplyReelPlate(oddsReels[i]);
+            }
+
+            PlaySfx(clickClip, 0.75f); // lever
+            bool whirPlayed = false;
+            int landedCount = 0;
+            float elapsed = 0f;
+            while (landedCount < 3)
+            {
+                float dt = Time.unscaledDeltaTime;
+                elapsed += dt;
+                UpdateOddsLever(elapsed);
+
+                // The reels start once the lever is down
+                float spinSpeed = OddsSpinSpeed * Mathf.Clamp01((elapsed - OddsLeverPullTime) / OddsSpinUpTime);
+                if (!whirPlayed && elapsed >= OddsLeverPullTime)
+                {
+                    whirPlayed = true;
+                    PlaySfx(shuffleClip, 1.2f);
+                }
+
+                for (int i = 0; i < 3; i++)
+                {
+                    if (landed[i]) continue;
+                    OddsReel reel = oddsReels[i];
+                    float before = reel.scroll;
+
+                    if (stopStart[i] < 0f)
+                    {
+                        reel.scroll += spinSpeed * dt;
+                        if (elapsed >= OddsFirstStop + OddsStopStagger * i)
+                        {
+                            stopStart[i] = elapsed;
+                            stopFrom[i] = reel.scroll;
+                            stopTo[i] = BeginReelStop(reel, values[i]);
+                            // EaseOutBack starts at ~4.7x its average speed, so this carries on at the spin speed
+                            stopTime[i] = 4.7f * (stopTo[i] - stopFrom[i]) / OddsSpinSpeed;
+                        }
+                    }
+                    else
+                    {
+                        float k = Mathf.Clamp01((elapsed - stopStart[i]) / stopTime[i]);
+                        reel.scroll = Mathf.LerpUnclamped(stopFrom[i], stopTo[i], EaseOutBack(k));
+                        if (k >= 1f)
+                        {
+                            landed[i] = true;
+                            landedCount++;
+                            reel.landingRow = -1;
+                            reel.zero = Mathf.RoundToInt(values[i]) <= 0;
+                            ApplyReelPlate(reel);
+                            PlaySfx(clickClip, 1f + 0.12f * i); // reel clunks into place
+                        }
+                    }
+
+                    float speed = Mathf.Abs(reel.scroll - before) / Mathf.Max(dt, 0.0001f);
+                    LayoutReel(reel, landed[i] ? 0f : Mathf.Clamp01(speed / OddsSpinSpeed));
+                }
                 yield return null;
             }
 
-            ApplyOdds(to);
+            oddsLever.localScale = Vector3.one;
+            PlaySfx(oddsUpClip, 1.1f);
+            StartCoroutine(OddsSparksRoutine());
+
+            const float popTime = 0.35f;
+            float t = 0f;
+            while (t < popTime)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = Mathf.Clamp01(t / popTime);
+                oddsUpTag.localScale = Vector3.one * EaseOutBack(k);
+                oddsFlash.color = new Color(1f, 1f, 1f, 0.5f * (1f - k));
+                yield return null;
+            }
+
             oddsUpTag.localScale = Vector3.one;
             oddsFlash.color = new Color(1f, 1f, 1f, 0f);
             oddsRoutine = null;
         }
 
-        /// <summary>Pixel sparks in the 3★ colour fly up out of the bar's 3★ end.</summary>
+        /// <summary>The lever stick flips down over OddsLeverPullTime, then springs back up.</summary>
+        private void UpdateOddsLever(float elapsed)
+        {
+            float scale = elapsed < OddsLeverPullTime
+                ? Mathf.Lerp(1f, -1f, EaseInCubic(elapsed / OddsLeverPullTime))
+                : Mathf.LerpUnclamped(-1f, 1f, EaseOutBack(Mathf.Clamp01((elapsed - OddsLeverPullTime) / OddsLeverReturnTime)));
+            oddsLever.localScale = new Vector3(1f, scale, 1f);
+        }
+
+        /// <summary>Pixel sparks in the 3★ colour fly up out of the 3★ reel.</summary>
         private IEnumerator OddsSparksRoutine()
         {
             const int count = 14;
             Color color = GetRarityColor(3);
-            RectTransform bar = (RectTransform)oddsFlash.transform.parent;
-            Vector2 origin = new Vector2(bar.rect.width * 0.4f, -bar.rect.height * 0.5f);
+            RectTransform window = oddsReels[2].window;
+            Vector2 origin = oddsCabinet.InverseTransformPoint(window.TransformPoint(window.rect.center));
 
             var sparks = new RectTransform[count];
             var images = new Image[count];
             var velocities = new Vector2[count];
             for (int s = 0; s < count; s++)
             {
-                images[s] = CreatePlainImage(bar, "Spark", color);
+                images[s] = CreatePlainImage(oddsCabinet, "Spark", color);
                 sparks[s] = images[s].rectTransform;
-                sparks[s].anchorMin = sparks[s].anchorMax = new Vector2(0.5f, 1f);
+                sparks[s].anchorMin = sparks[s].anchorMax = new Vector2(0.5f, 1f); // the cabinet's pivot
                 float size = Mathf.Round(UnityEngine.Random.Range(4f, 8f));
                 sparks[s].sizeDelta = new Vector2(size, size);
                 sparks[s].anchoredPosition = origin + new Vector2(UnityEngine.Random.Range(-40f, 40f), 0f);
@@ -1978,7 +2140,7 @@ namespace TrashTD.UI
             }
         }
 
-        /// <summary>Ends a running odds step-up at its final values.</summary>
+        /// <summary>Ends a running odds spin with the reels at rest on the final values.</summary>
         private void StopOddsAnimation()
         {
             if (oddsRoutine == null) return;
@@ -1987,6 +2149,7 @@ namespace TrashTD.UI
             ApplyOdds(oddsTarget);
             oddsUpTag.localScale = Vector3.one;
             oddsFlash.color = new Color(1f, 1f, 1f, 0f);
+            oddsLever.localScale = Vector3.one;
         }
 
         // ============================
@@ -2487,8 +2650,9 @@ namespace TrashTD.UI
         }
 
         /// <summary>
-        /// "DRAFT ODDS" block above the detail panel: a header row (label, "ODDS UP!" tag, next boost), a bar split
-        /// into the 1★ / 2★ / 3★ chances in the rarity colours, and the percentages under it. See UpdateDraftOdds.
+        /// "DRAFT ODDS" slot machine above the detail panel: a header row (label, "ODDS UP!" tag, next boost) over a
+        /// cabinet with one reel per rarity (star plate on top, the percentage on the payline) and a lever on its
+        /// right side. See UpdateDraftOdds.
         /// </summary>
         private void BuildDraftOdds(Transform parent)
         {
@@ -2519,31 +2683,102 @@ namespace TrashTD.UI
             StretchFill(tagText.rectTransform);
             oddsUpTag.gameObject.SetActive(false);
 
-            Image bar = CreatePlainImage(root.transform, "Bar", TILE_BG);
-            StretchTopRT(bar, 0f, 0f, OddsBarTop, OddsBarHeight);
-            var barOutline = bar.gameObject.AddComponent<Outline>();
-            barOutline.effectColor = new Color(1f, 1f, 1f, 0.1f);
-            barOutline.effectDistance = new Vector2(2f, -2f);
+            Color chrome = new Color(HAZARD_YELLOW.r, HAZARD_YELLOW.g, HAZARD_YELLOW.b, 0.8f);
+            Image cabinet = CreatePlainImage(root.transform, "Cabinet", CARD_BG);
+            oddsCabinet = cabinet.rectTransform;
+            StretchTopRT(cabinet, 0f, 0f, OddsCabinetTop, OddsHeight - OddsCabinetTop);
+            var cabinetOutline = cabinet.gameObject.AddComponent<Outline>();
+            cabinetOutline.effectColor = chrome;
+            cabinetOutline.effectDistance = new Vector2(2f, -2f);
+            CreateCornerNotches(cabinet.transform, 3f, 4f, new Color(chrome.r, chrome.g, chrome.b, 0.45f));
 
-            TextAnchor[] alignments = { TextAnchor.MiddleLeft, TextAnchor.MiddleCenter, TextAnchor.MiddleRight };
+            float reelWidth = (PanelWidth - 2f * OddsReelMargin - 2f * OddsReelGap) / 3f;
             for (int i = 0; i < 3; i++)
             {
-                Image segment = CreatePlainImage(bar.transform, $"Segment{i + 1}", GetRarityColor(i + 1));
-                oddsSegments[i] = segment.rectTransform;
+                var reel = new OddsReel { color = GetRarityColor(i + 1) };
+                oddsReels[i] = reel;
+                float x = OddsReelMargin + i * (reelWidth + OddsReelGap);
 
-                // Lighter top band for a pixel-art bevel
-                Image shine = CreatePlainImage(segment.transform, "Shine", new Color(1f, 1f, 1f, 0.22f));
-                RectTransform shineRect = shine.rectTransform;
-                shineRect.anchorMin = new Vector2(0f, 0.62f);
-                shineRect.anchorMax = Vector2.one;
-                shineRect.offsetMin = shineRect.offsetMax = Vector2.zero;
+                reel.plate = MakeText(cabinet.transform, $"Plate{i + 1}", new string('★', i + 1), 14,
+                    TextAnchor.MiddleCenter, reel.color);
+                PlaceTopLeft(reel.plate, x, OddsPlateTop, reelWidth, OddsPlateHeight);
 
-                oddsLabels[i] = MakeText(root.transform, $"Odds{i + 1}", "", 16, alignments[i], GetRarityColor(i + 1));
-                oddsLabels[i].fontStyle = FontStyle.Bold;
-                StretchTopRT(oddsLabels[i], 0f, 0f, OddsLabelTop, 22f);
+                Image window = CreatePlainImage(cabinet.transform, $"Reel{i + 1}", BG_OVERLAY);
+                PlaceTopLeft(window, x, OddsWindowTop, reelWidth, OddsWindowHeight);
+                var windowOutline = window.gameObject.AddComponent<Outline>();
+                windowOutline.effectColor = new Color(1f, 1f, 1f, 0.12f);
+                windowOutline.effectDistance = new Vector2(2f, -2f);
+                reel.window = window.rectTransform;
+
+                // The rows scroll inside a clipped strip (a child, so the window's outline isn't clipped)
+                var strip = new GameObject("Strip", typeof(RectTransform), typeof(RectMask2D));
+                strip.transform.SetParent(window.transform, false);
+                StretchFill((RectTransform)strip.transform);
+
+                for (int r = 0; r < OddsReelRows; r++)
+                {
+                    Text row = MakeText(strip.transform, $"Row{r}", "", 22, TextAnchor.MiddleCenter, reel.color);
+                    row.fontStyle = FontStyle.Bold;
+                    RectTransform rowRect = row.rectTransform;
+                    rowRect.anchorMin = new Vector2(0f, 0.5f);
+                    rowRect.anchorMax = new Vector2(1f, 0.5f);
+                    rowRect.pivot = new Vector2(0.5f, 0.5f);
+                    rowRect.sizeDelta = new Vector2(0f, OddsRowHeight);
+                    reel.rows[r] = row;
+                }
+
+                // Two-step dark bands at the top and bottom round the drum off
+                foreach (float bandHeight in new[] { 10f, 4f })
+                {
+                    for (int edge = 0; edge < 2; edge++)
+                    {
+                        Image band = CreatePlainImage(strip.transform, "Shade", new Color(0f, 0f, 0f, 0.4f));
+                        RectTransform bandRect = band.rectTransform;
+                        bandRect.anchorMin = new Vector2(0f, edge);
+                        bandRect.anchorMax = new Vector2(1f, edge);
+                        bandRect.pivot = new Vector2(0.5f, edge);
+                        bandRect.anchoredPosition = Vector2.zero;
+                        bandRect.sizeDelta = new Vector2(0f, bandHeight);
+                    }
+                }
+
+                // Payline marks on both sides
+                for (int side = 0; side < 2; side++)
+                {
+                    Image mark = CreatePlainImage(strip.transform, "Payline", chrome);
+                    RectTransform markRect = mark.rectTransform;
+                    markRect.anchorMin = markRect.anchorMax = new Vector2(side, 0.5f);
+                    markRect.pivot = new Vector2(side, 0.5f);
+                    markRect.anchoredPosition = Vector2.zero;
+                    markRect.sizeDelta = new Vector2(4f, 10f);
+                }
             }
 
-            oddsFlash = CreatePlainImage(bar.transform, "Flash", new Color(1f, 1f, 1f, 0f));
+            // Lever on the right side: a mount, a stick that flips down when pulled, and a red knob
+            Image mount = CreatePlainImage(cabinet.transform, "LeverMount", TILE_BG);
+            RectTransform mountRect = mount.rectTransform;
+            mountRect.anchorMin = mountRect.anchorMax = new Vector2(1f, 0.5f);
+            mountRect.pivot = new Vector2(0f, 0.5f);
+            mountRect.anchoredPosition = new Vector2(2f, 0f);
+            mountRect.sizeDelta = new Vector2(10f, 22f);
+
+            Image stick = CreatePlainImage(cabinet.transform, "Lever", STAT_LABEL_COLOR);
+            oddsLever = stick.rectTransform;
+            oddsLever.anchorMin = oddsLever.anchorMax = new Vector2(1f, 0.5f);
+            oddsLever.pivot = new Vector2(0.5f, 0f);
+            oddsLever.anchoredPosition = new Vector2(8f, 0f);
+            oddsLever.sizeDelta = new Vector2(4f, 28f);
+
+            Image knob = CreatePlainImage(oddsLever, "Knob", DECK_FULL_COLOR);
+            RectTransform knobRect = knob.rectTransform;
+            knobRect.anchorMin = knobRect.anchorMax = new Vector2(0.5f, 1f);
+            knobRect.pivot = new Vector2(0.5f, 0.5f);
+            knobRect.anchoredPosition = Vector2.zero;
+            knobRect.sizeDelta = new Vector2(12f, 12f);
+            Image knobShine = CreatePlainImage(knobRect, "Shine", new Color(1f, 1f, 1f, 0.45f));
+            PlaceTopLeft(knobShine, 2f, 2f, 4f, 4f);
+
+            oddsFlash = CreatePlainImage(cabinet.transform, "Flash", new Color(1f, 1f, 1f, 0f));
             StretchFill(oddsFlash.rectTransform);
 
             ApplyOdds(new DraftOdds(100f, 0f, 0f));
@@ -2622,7 +2857,7 @@ namespace TrashTD.UI
 
         /// <summary>
         /// Shown the first time REROLL is pressed in an opening draft (CardDraftSystem.IsOpeningDraft): that draft
-        /// only deals 1★ operators, rerolls included. REROLL goes ahead, CANCEL keeps the hand. "Don't show this
+        /// only deals 1★ operators and no Medics or Specialists, rerolls included. REROLL goes ahead, CANCEL keeps the hand. "Don't show this
         /// again" turns GameplaySettings.ShowOpeningRerollNotice off (back on in Settings → Gameplay).
         /// </summary>
         private void ShowRerollNotice()
@@ -2698,8 +2933,8 @@ namespace TrashTD.UI
             }
 
             Text body = MakeText(panel.transform, "Body",
-                "The first draft of every run only deals 1-star operators, so restarting for a better hand won't " +
-                "help. Rerolling now will only show other 1-star operators too.",
+                "The first draft of every run only deals 1-star Guards, Defenders, Snipers and Casters, so " +
+                "restarting for a better hand won't help. Rerolling now will only show more of the same.",
                 14, TextAnchor.UpperCenter, STAT_VALUE_COLOR);
             body.horizontalOverflow = HorizontalWrapMode.Wrap;
             body.verticalOverflow = VerticalWrapMode.Overflow;

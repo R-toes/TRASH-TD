@@ -288,6 +288,7 @@ namespace TrashTD.Systems
         /// - Exactly 3 cards
         /// - No duplicate classes
         /// - 1★ to 3★ only (1★ only in the opening draft, <see cref="IsOpeningDraft"/>)
+        /// - No Medics or Specialists in the opening draft (<see cref="IsExcludedFromOpeningDraft"/>)
         /// </summary>
         public List<DraftCard> GenerateDraftOffer()
         {
@@ -318,6 +319,7 @@ namespace TrashTD.Systems
                 {
                     if (op == null || selectedClasses.Contains(op.operatorClass)) continue;
                     if (op.baseRarity < OperatorRarity.Star1 || op.baseRarity > maxRarity) continue;
+                    if (IsOpeningDraft && IsExcludedFromOpeningDraft(op.operatorClass)) continue;
 
                     if (!candidatesByRarity.TryGetValue(op.baseRarity, out var candidates))
                     {
@@ -340,6 +342,14 @@ namespace TrashTD.Systems
 
             OnCardsOffered?.Invoke(currentOfferedCards);
             return currentOfferedCards;
+        }
+
+        /// <summary>
+        /// Classes left out of the opening draft so the first picks are operators that can hold a lane on their own.
+        /// </summary>
+        public static bool IsExcludedFromOpeningDraft(OperatorClass operatorClass)
+        {
+            return operatorClass == OperatorClass.Medic || operatorClass == OperatorClass.Specialist;
         }
 
         /// <summary>

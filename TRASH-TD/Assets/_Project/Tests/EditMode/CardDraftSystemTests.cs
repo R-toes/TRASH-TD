@@ -108,6 +108,44 @@ namespace TrashTD.Tests
             Assert.AreEqual(operatorData.baseRarity, offer[0].rarity);
         }
 
+        [Test]
+        public void GenerateDraftOffer_OpeningDraftHasNoMedicsOrSpecialists()
+        {
+            var specialist = ScriptableObject.CreateInstance<OperatorData>();
+            specialist.operatorName = "Test_Specialist";
+            specialist.operatorClass = OperatorClass.Specialist;
+            specialist.baseRarity = OperatorRarity.Star1;
+            testPool.Add(specialist);
+            draftSystem.SetOperatorPool(testPool);
+
+            for (int trial = 0; trial < 30; trial++)
+            {
+                draftSystem.ResetForNewStage();
+                var offer = draftSystem.GenerateDraftOffer();
+                Assert.AreEqual(3, offer.Count, "The opening draft still offers 3 cards");
+                foreach (var card in offer)
+                {
+                    Assert.IsFalse(CardDraftSystem.IsExcludedFromOpeningDraft(card.operatorData.operatorClass),
+                        $"Opening draft offered a {card.operatorData.operatorClass}");
+                }
+            }
+
+            // From the second draft on, Medics and Specialists can be offered again
+            draftSystem.ResetForNewStage();
+            draftSystem.GenerateDraftOffer();
+            bool sawExcludedClass = false;
+            for (int trial = 0; trial < 50 && !sawExcludedClass; trial++)
+            {
+                foreach (var card in draftSystem.GenerateDraftOffer())
+                {
+                    if (CardDraftSystem.IsExcludedFromOpeningDraft(card.operatorData.operatorClass)) sawExcludedClass = true;
+                }
+            }
+            Assert.IsTrue(sawExcludedClass, "Later drafts should be able to offer Medics and Specialists");
+
+            Object.DestroyImmediate(specialist);
+        }
+
         private static void AssertOdds(DraftOdds odds, float star1, float star2, float star3, string context)
         {
             Assert.AreEqual(star1, odds.Star1, 0.01f, $"1★ odds {context}");
