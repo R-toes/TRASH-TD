@@ -48,6 +48,7 @@ namespace TrashTD.UI
         // Range tiles (same colours as the draft range preview)
         private static readonly Color RangeSelfColor = new Color(0.15f, 0.85f, 1f, 1f);
         private static readonly Color RangeHitColor = new Color(0.15f, 1f, 0.28f, 1f);
+        private static readonly Color RangeUpgradeColor = new Color(0.78f, 0.38f, 1f, 1f);
         private static readonly Color RangeTalentColor = new Color(1f, 0.75f, 0.2f, 1f);
         private static readonly Color RangeEmptyColor = new Color(1f, 1f, 1f, 0.22f);
         private static readonly Color EnemySelfColor = new Color(1f, 0.42f, 0.38f, 1f);
@@ -1355,6 +1356,7 @@ namespace TrashTD.UI
             ClearChildren(rangeLegend);
 
             var hitCells = new HashSet<Vector2Int>();
+            var upgradeCells = new HashSet<Vector2Int>();
             var talentCells = new HashSet<Vector2Int>();
             Color selfColor;
             Color hitColor;
@@ -1364,17 +1366,31 @@ namespace TrashTD.UI
             {
                 OperatorData op = entry.Operator;
                 if (op.rangePattern != null) foreach (Vector2Int cell in op.rangePattern) if (cell != Vector2Int.zero) hitCells.Add(cell);
+                if (op.operatorName == "Pyrolite")
+                {
+                    Vector2Int[] upgradedRange = TrashTD.Operators.PyroliteOperator.GetRangePatternForRarity(op, OperatorRarity.Star2);
+                    if (upgradedRange != null)
+                        foreach (Vector2Int cell in upgradedRange)
+                            if (cell != Vector2Int.zero && !hitCells.Contains(cell)) upgradeCells.Add(cell);
+                }
+
                 Vector2Int[] talent = op.GetTalentRangePattern();
-                if (talent != null) foreach (Vector2Int cell in talent) if (cell != Vector2Int.zero && !hitCells.Contains(cell)) talentCells.Add(cell);
+                if (talent != null) foreach (Vector2Int cell in talent) if (cell != Vector2Int.zero && !hitCells.Contains(cell) && !upgradeCells.Contains(cell)) talentCells.Add(cell);
 
                 selfColor = RangeSelfColor;
                 hitColor = RangeHitColor;
                 selfIcon = GameplayHUDUI.GetClassIconSprite(op.operatorClass);
                 bool hitsSelf = op.rangePattern != null && Array.IndexOf(op.rangePattern, Vector2Int.zero) >= 0;
-                rangeReadout.text = hitCells.Count == 0 ? (hitsSelf ? "OWN TILE" : "NO ATTACK") : hitCells.Count + " TILES, FACING RIGHT";
+                int displayedRangeCount = hitCells.Count + upgradeCells.Count;
+                rangeReadout.text = displayedRangeCount == 0
+                    ? (hitsSelf ? "OWN TILE" : "NO ATTACK")
+                    : op.operatorName == "Pyrolite"
+                        ? displayedRangeCount + " TILES AT 2\u2605, FACING RIGHT"
+                        : hitCells.Count + " TILES, FACING RIGHT";
 
                 float x = AddLegend(0f, selfColor, "SELF");
                 x = AddLegend(x, hitColor, "ATTACK");
+                if (upgradeCells.Count > 0) x = AddLegend(x, RangeUpgradeColor, "2\u2605 BONUS");
                 if (talentCells.Count > 0) AddLegend(x, RangeTalentColor, "TALENT");
             }
             else
@@ -1418,6 +1434,7 @@ namespace TrashTD.UI
 
             int minX = 0, maxX = 0, minY = 0, maxY = 0;
             foreach (Vector2Int cell in hitCells) Expand(cell, ref minX, ref maxX, ref minY, ref maxY);
+            foreach (Vector2Int cell in upgradeCells) Expand(cell, ref minX, ref maxX, ref minY, ref maxY);
             foreach (Vector2Int cell in talentCells) Expand(cell, ref minX, ref maxX, ref minY, ref maxY);
 
             // Pad small patterns to at least 3x3 so the unit's own tile has context around it.
@@ -1438,12 +1455,13 @@ namespace TrashTD.UI
                     var cell = new Vector2Int(gx, gy);
                     bool isSelf = cell == Vector2Int.zero;
                     bool hit = hitCells.Contains(cell);
+                    bool upgrade = upgradeCells.Contains(cell);
                     bool talent = talentCells.Contains(cell);
-                    Color color = isSelf ? selfColor : hit ? hitColor : talent ? RangeTalentColor : RangeEmptyColor;
+                    Color color = isSelf ? selfColor : upgrade ? RangeUpgradeColor : hit ? hitColor : talent ? RangeTalentColor : RangeEmptyColor;
                     var position = new Vector2(
                         Mathf.Round((gx - minX - (cols - 1) * 0.5f) * step),
                         Mathf.Round((gy - minY - (rows - 1) * 0.5f) * step));
-                    CreateRangeTile(position, tileSize, color, isSelf || hit || talent, isSelf ? selfIcon : null);
+                    CreateRangeTile(position, tileSize, color, isSelf || hit || upgrade || talent, isSelf ? selfIcon : null);
                 }
             }
         }

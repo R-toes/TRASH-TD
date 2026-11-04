@@ -386,7 +386,7 @@ namespace TrashTD.Operators
             if (fallback.HasValue) AudioManager.Instance?.PlaySfx(fallback.Value);
         }
 
-        public Vector2Int[] GetRangePattern() => data.rangePattern;
+        public virtual Vector2Int[] GetRangePattern() => data != null ? data.rangePattern : null;
         public virtual Vector2Int[] GetTalentRangePattern() => data != null ? data.GetTalentRangePattern() : null;
         public virtual float GetAttackInterval() =>
             Combat.StageCombatModifiers.GetAttackInterval(data.attackInterval) / HarmonyAttackSpeedMultiplier;

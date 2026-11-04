@@ -46,11 +46,17 @@ namespace TrashTD.Combat
         private float elapsed;
         private float lifetime = Lifetime;
 
-        public static void PlayCircle(Vector3 center, float radius, Color color, AoeStyle style = AoeStyle.Pulse)
+        public static void PlayCircle(Vector3 center, float radius, Color color, AoeStyle style = AoeStyle.Pulse) =>
+            PlayCircle(center, radius, color, style, 0f);
+
+        public static void PlayCircle(Vector3 center, float radius, Color color, AoeStyle style, float delay)
         {
             if (radius <= 0f) return;
 
             AoeBlastVisual visual = Create(center, color);
+            delay = Mathf.Max(0f, delay);
+            visual.elapsed = -delay;
+            visual.lifetime += delay;
             int radiusPx = Mathf.Max(3, Mathf.RoundToInt(radius * CombatFxArt.PixelsPerUnit));
             visual.AddPiece(Vector3.zero, CombatFxArt.AreaCircle(radiusPx), 0f);
 
@@ -61,7 +67,7 @@ namespace TrashTD.Combat
             visual.shockwave.sprite = visual.shockwaveFrames[0];
             visual.shockwave.sortingOrder = ShockwaveSortingOrder;
 
-            PlayCircleStyle(center, radius, color, style);
+            PlayCircleStyle(center, radius, color, style, delay);
             visual.ApplyAnimation();
         }
 
@@ -123,6 +129,14 @@ namespace TrashTD.Combat
 
         private void ApplyAnimation()
         {
+            if (elapsed < 0f)
+            {
+                for (int i = 0; i < pieces.Count; i++)
+                    pieces[i].Renderer.enabled = false;
+                if (shockwave != null) shockwave.enabled = false;
+                return;
+            }
+
             // Area: flashes bright, holds at the given strength, then fades
             for (int i = 0; i < pieces.Count; i++)
             {
@@ -142,6 +156,7 @@ namespace TrashTD.Combat
 
             if (shockwave != null)
             {
+                shockwave.enabled = true;
                 float t = Mathf.Clamp01(elapsed / ShockwaveDuration);
                 shockwave.sprite = shockwaveFrames[Mathf.Min(shockwaveFrames.Length - 1, Mathf.FloorToInt(t * shockwaveFrames.Length))];
                 Color ring = Color.Lerp(blastColor, Color.white, 0.5f);
@@ -154,19 +169,19 @@ namespace TrashTD.Combat
         //  Styles
         // ─────────────────────────────────────────────────────
 
-        private static void PlayCircleStyle(Vector2 center, float radius, Color color, AoeStyle style)
+        private static void PlayCircleStyle(Vector2 center, float radius, Color color, AoeStyle style, float delay)
         {
             color.a = 1f;
             switch (style)
             {
                 case AoeStyle.Explosion:
-                    CombatFx.Explosion(center, radius * 0.6f);
+                    CombatFx.Explosion(center, radius * 0.6f, delay);
                     // Secondary blasts out toward the edge, so a big radius reads as a big blast
                     int extra = Mathf.Clamp(Mathf.RoundToInt(radius * 2f), 0, 4);
                     for (int i = 0; i < extra; i++)
                     {
                         Vector2 offset = Random.insideUnitCircle.normalized * radius * Random.Range(0.4f, 0.7f);
-                        CombatFx.Explosion(center + offset, radius * 0.3f, 0.06f + i * 0.05f, true);
+                        CombatFx.Explosion(center + offset, radius * 0.3f, delay + 0.06f + i * 0.05f, true);
                     }
                     break;
 
@@ -179,9 +194,9 @@ namespace TrashTD.Combat
                     break;
 
                 case AoeStyle.Arts:
-                    CombatFx.Flash(center, color, true);
-                    CombatFx.Sparks(center, color, Mathf.Clamp(Mathf.RoundToInt(radius * 14f), 6, 20), radius * 5f, 0.3f);
-                    CombatFx.Crosses(center, color, Mathf.Clamp(Mathf.RoundToInt(radius * 4f), 2, 6), radius * 0.6f, false, 0.4f);
+                    CombatFx.Flash(center, color, true, delay);
+                    CombatFx.Sparks(center, color, Mathf.Clamp(Mathf.RoundToInt(radius * 14f), 6, 20), radius * 5f, 0.3f, delay: delay);
+                    CombatFx.Crosses(center, color, Mathf.Clamp(Mathf.RoundToInt(radius * 4f), 2, 6), radius * 0.6f, false, 0.4f, delay);
                     break;
 
                 case AoeStyle.Heal:

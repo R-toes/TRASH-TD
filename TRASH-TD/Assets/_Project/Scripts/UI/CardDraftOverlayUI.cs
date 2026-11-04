@@ -10,6 +10,7 @@ using UnityEngine.SceneManagement;
 using TrashTD.Audio;
 using TrashTD.Core.GameLoop;
 using TrashTD.Data;
+using TrashTD.Operators;
 using TrashTD.Systems;
 
 namespace TrashTD.UI
@@ -1527,7 +1528,10 @@ namespace TrashTD.UI
             detailIntervalText.text = op.attackInterval.ToString("0.##") + "s";
 
             // Attack range pattern
-            UpdateRangePreview(op);
+            Vector2Int[] rangePattern = op.operatorName == "Pyrolite"
+                ? PyroliteOperator.GetRangePatternForRarity(op, card.rarity)
+                : op.rangePattern;
+            UpdateRangePreview(op, rangePattern);
 
             // Passive / ability text (only shown when the operator has one)
             string passive = FindStringMember(op, PassiveMemberNames);
@@ -3795,7 +3799,7 @@ namespace TrashTD.UI
         /// Draws <see cref="OperatorData.rangePattern"/> — the same offsets combat uses via
         /// GridManager.GetCellsInRange — as a tile grid facing right.
         /// </summary>
-        private void UpdateRangePreview(OperatorData op)
+        private void UpdateRangePreview(OperatorData op, Vector2Int[] rangePattern)
         {
             if (detailRangeGrid == null) return;
 
@@ -3805,9 +3809,9 @@ namespace TrashTD.UI
             }
 
             var rangeCells = new HashSet<Vector2Int>();
-            if (op.rangePattern != null)
+            if (rangePattern != null)
             {
-                foreach (Vector2Int offset in op.rangePattern) rangeCells.Add(offset);
+                foreach (Vector2Int offset in rangePattern) rangeCells.Add(offset);
             }
 
             int minX = 0, maxX = 0, minY = 0, maxY = 0;

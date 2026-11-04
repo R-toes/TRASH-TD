@@ -87,7 +87,7 @@ namespace TrashTD.Tests
         [TestCase(OperatorRarity.Star3, 2)]
         [TestCase(OperatorRarity.Star4, 2)]
         [TestCase(OperatorRarity.Star5, 2)]
-        public void KnockbackFrequency_ScalesWithRarity(OperatorRarity rarity, int expectedHits)
+        public void KnockbackStats_ScaleWithRarity(OperatorRarity rarity, int expectedHits)
         {
             var gameObject = new GameObject("QiFuKnockbackFrequencyTest");
             var qiFu = gameObject.AddComponent<QiFuOperator>();
@@ -96,6 +96,7 @@ namespace TrashTD.Tests
             qiFu.Initialize(data, rarity);
 
             Assert.AreEqual(expectedHits, qiFu.HitsPerKnockback);
+            Assert.AreEqual(rarity >= OperatorRarity.Star3 ? 2 : 1, qiFu.KnockbackDistance);
 
             Object.DestroyImmediate(data);
             Object.DestroyImmediate(gameObject);

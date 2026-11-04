@@ -439,7 +439,7 @@ namespace TrashTD.Editor
                         qiFuPrefab);
                     qiFu.damageType = DamageType.Physical;
                     qiFu.roleTags = new[] { "Chi", "Knockback" };
-                    qiFu.skillDescription = "Every fourth landed hit channels a green Chi Paw that pushes the enemy back one block.";
+                    qiFu.skillDescription = "Base (1\u2605): After every 4 landed hits, channels a green Chi Paw to push the struck enemy back 1 tile. 1st upgrade (2\u2605): triggers after every 3 landed hits. 2nd upgrade (3\u2605): triggers after every 2 landed hits and pushes the enemy back 2 tiles.";
                     EditorUtility.SetDirty(qiFu);
                 }
             }
@@ -648,7 +648,7 @@ namespace TrashTD.Editor
                 },
                 casterSprite, casterPrefab);
             caster.damageType = DamageType.Arts;
-            caster.skillDescription = "Increases damage by 3% per enemy in range (stacks up to 5 times). Deals AoE Arts damage.";
+            caster.skillDescription = "Base (1\u2605): Gains 3% ATK per enemy in range (up to 5 stacks) and deals AoE Arts damage. 1st upgrade (2\u2605): adds two tiles beside the furthest tile of his range. 2nd upgrade (3\u2605): each Arts AoE hit deals damage twice.";
             EditorUtility.SetDirty(caster);
 
             // 4b. Caster (Resicochet)

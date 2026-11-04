@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
@@ -20,6 +21,9 @@ namespace TrashTD.Operators
 
         private PyroliteSpriteAnimation spriteAnimation;
         private float lastAttackInterval;
+        private OperatorData cachedRangeData;
+        private OperatorRarity cachedRangeRarity;
+        private Vector2Int[] cachedUpgradedRangePattern;
 
         private PyroliteSpriteAnimation SpriteAnimation
         {
@@ -35,6 +39,60 @@ namespace TrashTD.Operators
             lastAttackInterval = base.GetAttackInterval();
             return lastAttackInterval;
         }
+
+        public override Vector2Int[] GetRangePattern()
+        {
+            if (data == null || data.rangePattern == null || currentRarity < OperatorRarity.Star2)
+                return data != null ? data.rangePattern : null;
+
+            if (cachedRangeData != data || cachedRangeRarity != currentRarity || cachedUpgradedRangePattern == null)
+            {
+                cachedRangeData = data;
+                cachedRangeRarity = currentRarity;
+                cachedUpgradedRangePattern = BuildUpgradedRangePattern(data.rangePattern);
+            }
+
+            return cachedUpgradedRangePattern;
+        }
+
+        public static Vector2Int[] GetRangePatternForRarity(OperatorData operatorData, OperatorRarity rarity)
+        {
+            if (operatorData == null || operatorData.rangePattern == null || rarity < OperatorRarity.Star2)
+                return operatorData != null ? operatorData.rangePattern : null;
+
+            return BuildUpgradedRangePattern(operatorData.rangePattern);
+        }
+
+        private static Vector2Int[] BuildUpgradedRangePattern(Vector2Int[] basePattern)
+        {
+            int furthestForward = int.MinValue;
+            for (int i = 0; i < basePattern.Length; i++)
+            {
+                Vector2Int offset = basePattern[i];
+                if (offset.y == 0) furthestForward = Mathf.Max(furthestForward, offset.x);
+            }
+
+            if (furthestForward == int.MinValue)
+            {
+                for (int i = 0; i < basePattern.Length; i++)
+                    furthestForward = Mathf.Max(furthestForward, basePattern[i].x);
+            }
+
+            var extendedPattern = new List<Vector2Int>(basePattern);
+            AddRangeTileIfMissing(extendedPattern, new Vector2Int(furthestForward, 1));
+            AddRangeTileIfMissing(extendedPattern, new Vector2Int(furthestForward, -1));
+
+            return extendedPattern.ToArray();
+        }
+
+        private static void AddRangeTileIfMissing(List<Vector2Int> pattern, Vector2Int tile)
+        {
+            for (int i = 0; i < pattern.Count; i++)
+                if (pattern[i] == tile) return;
+            pattern.Add(tile);
+        }
+
+        protected override int ArtsImpactCount => currentRarity >= OperatorRarity.Star3 ? 2 : 1;
 
         protected override void OnRetreated()
         {
@@ -109,13 +167,14 @@ namespace TrashTD.Operators
 
         public int GetEnemiesInRangeCount()
         {
-            if (EnemyManager.Instance == null || deployedCell == null || data == null || data.rangePattern == null)
+            Vector2Int[] rangePattern = GetRangePattern();
+            if (EnemyManager.Instance == null || deployedCell == null || data == null || rangePattern == null)
                 return 0;
 
             var gridManager = FindAnyObjectByType<GridManager>();
             if (gridManager == null) return 0;
 
-            var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
+            var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, rangePattern, Facing);
             var enemies = EnemyManager.Instance.GetEnemiesInCells(rangeCells, data.position);
             if (enemies == null) return 0;
 

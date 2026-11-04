@@ -1,6 +1,9 @@
 using NUnit.Framework;
+using TrashTD.Combat;
 using TrashTD.Data;
+using TrashTD.Enemies;
 using TrashTD.Operators;
+using TrashTD.Systems;
 using UnityEngine;
 
 namespace TrashTD.Tests
@@ -88,5 +91,87 @@ namespace TrashTD.Tests
             Object.DestroyImmediate(data);
             Object.DestroyImmediate(gameObject);
         }
+
+        [Test]
+        public void FirstUpgrade_AddsTwoCellsBesideFurthestRangeTile()
+        {
+            var data = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>(
+                "Assets/_Project/Data/Operators/OP_Caster_Pyrolite.asset");
+            Assert.IsNotNull(data);
+
+            Vector2Int[] baseRange = PyroliteOperator.GetRangePatternForRarity(data, OperatorRarity.Star1);
+            Vector2Int[] upgradedRange = PyroliteOperator.GetRangePatternForRarity(data, OperatorRarity.Star2);
+
+            Assert.AreEqual(data.rangePattern.Length, baseRange.Length);
+            Assert.AreEqual(data.rangePattern.Length + 2, upgradedRange.Length);
+            CollectionAssert.Contains(upgradedRange, new Vector2Int(2, 1));
+            CollectionAssert.Contains(upgradedRange, new Vector2Int(2, -1));
+        }
+
+        [TestCase(OperatorRarity.Star2, 1)]
+        [TestCase(OperatorRarity.Star3, 2)]
+        [TestCase(OperatorRarity.Star4, 2)]
+        [TestCase(OperatorRarity.Star5, 2)]
+        public void AoeDamageHitCount_ScalesAtSecondUpgrade(OperatorRarity rarity, int expectedHits)
+        {
+            bool originalHazardsEnabled = StageCombatModifiers.HazardsEnabled;
+            StageCombatModifiers.HazardsEnabled = false;
+            var managerObject = new GameObject("PyroliteAoeTestEnemyManager");
+            var enemyManager = managerObject.AddComponent<EnemyManager>();
+            var operatorData = ScriptableObject.CreateInstance<OperatorData>();
+            operatorData.baseATK = 80;
+            var enemyData = ScriptableObject.CreateInstance<EnemyData>();
+            enemyData.baseHP = 10000;
+            enemyData.baseDEF = 0;
+            enemyData.baseRES = 0;
+
+            var operatorObject = new GameObject("PyroliteAoeTestOperator");
+            var pyrolite = operatorObject.AddComponent<PyroliteOperator>();
+            pyrolite.Initialize(operatorData, rarity);
+
+            var primaryObject = new GameObject("PyroliteAoeTestPrimary");
+            var primary = primaryObject.AddComponent<PyroliteAoeTestEnemy>();
+            primary.Initialize(enemyData, 1);
+            primary.transform.position = Vector3.zero;
+            enemyManager.RegisterEnemy(primary);
+
+            var secondaryObject = new GameObject("PyroliteAoeTestSecondary");
+            var secondary = secondaryObject.AddComponent<PyroliteAoeTestEnemy>();
+            secondary.Initialize(enemyData, 1);
+            secondary.transform.position = Vector3.right;
+            enemyManager.RegisterEnemy(secondary);
+
+            int primaryHpBefore = primary.CurrentHP;
+            int secondaryHpBefore = secondary.CurrentHP;
+            int expectedPrimaryDamage = DamageCalculator.CalculateDamage(pyrolite.CurrentATK, primary.CurrentRES);
+            int expectedSecondaryATK = Mathf.RoundToInt(pyrolite.CurrentATK * 0.75f);
+            int expectedSecondaryDamage = DamageCalculator.CalculateDamage(expectedSecondaryATK, secondary.CurrentRES);
+            int blastVisualCountBefore = Object.FindObjectsByType<AoeBlastVisual>().Length;
+
+            try
+            {
+                pyrolite.ApplyAttackImpact(primary);
+
+                Assert.AreEqual(expectedPrimaryDamage * expectedHits, primaryHpBefore - primary.CurrentHP);
+                Assert.AreEqual(expectedSecondaryDamage * expectedHits, secondaryHpBefore - secondary.CurrentHP);
+                Assert.AreEqual(expectedHits, Object.FindObjectsByType<AoeBlastVisual>().Length - blastVisualCountBefore);
+            }
+            finally
+            {
+                StageCombatModifiers.HazardsEnabled = originalHazardsEnabled;
+                foreach (AoeBlastVisual visual in Object.FindObjectsByType<AoeBlastVisual>())
+                    Object.DestroyImmediate(visual.gameObject);
+                Object.DestroyImmediate(primaryObject);
+                Object.DestroyImmediate(secondaryObject);
+                Object.DestroyImmediate(operatorObject);
+                Object.DestroyImmediate(managerObject);
+                Object.DestroyImmediate(enemyData);
+                Object.DestroyImmediate(operatorData);
+            }
+        }
+    }
+
+    public sealed class PyroliteAoeTestEnemy : EnemyBase
+    {
     }
 }

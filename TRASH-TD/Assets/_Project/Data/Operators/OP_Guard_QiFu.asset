@@ -32,7 +32,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: Every fourth landed hit channels a green Chi Paw that pushes the enemy back one block.
+  skillDescription: 'Base (1★): After every 4 landed hits, channels a green Chi Paw to push the struck enemy back 1 tile. 1st upgrade (2★): triggers after every 3 landed hits. 2nd upgrade (3★): triggers after every 2 landed hits and pushes the enemy back 2 tiles.'
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5

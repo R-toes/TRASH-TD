@@ -18,6 +18,8 @@ namespace TrashTD.Operators
             currentRarity >= OperatorRarity.Star3 ? 2 :
             currentRarity >= OperatorRarity.Star2 ? 3 : 4;
 
+        public int KnockbackDistance => currentRarity >= OperatorRarity.Star3 ? 2 : 1;
+
         private QiFuSpriteAnimation SpriteAnimation
         {
             get
@@ -121,7 +123,7 @@ namespace TrashTD.Operators
                 return false;
 
             hitsSinceKnockback = 0;
-            bool knockedBack = !target.IsDead && target.PushBack(1, QiFuChiAttackVisual.PushbackDuration);
+            bool knockedBack = !target.IsDead && target.PushBack(KnockbackDistance, QiFuChiAttackVisual.PushbackDuration);
             if (knockedBack) PlayAbilitySound();
             return knockedBack;
         }

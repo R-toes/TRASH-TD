@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using TrashTD.Combat;
 using TrashTD.Core.Grid;
@@ -44,7 +45,7 @@ namespace TrashTD.Operators
             var gridManager = FindAnyObjectByType<GridManager>();
             if (gridManager == null) return null;
 
-            var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
+            var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, GetRangePattern(), Facing);
             var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells, data.position);
             if (candidates == null || candidates.Count == 0) return null;
 
@@ -149,6 +150,7 @@ namespace TrashTD.Operators
         }
 
         protected virtual float GetDamageMultiplier() => 1f;
+        protected virtual int ArtsImpactCount => 1;
 
         protected virtual void ApplyChillImpact(EnemyBase target)
         {
@@ -170,26 +172,45 @@ namespace TrashTD.Operators
         {
             if (target == null || target.IsDead) return;
 
-            int primaryATK = Mathf.RoundToInt(GetArmorAdjustedAttack(currentATK, target) * GetDamageMultiplier());
-            target.TryTakeAttackDamage(
-                DamageCalculator.CalculateDamage(primaryATK, target.CurrentRES),
-                DamageType.Arts,
-                this);
-
-            if (EnemyManager.Instance == null || splashRadius <= 0f) return;
-
-            AoeBlastVisual.PlayCircle(target.VisualPosition, splashRadius, new Color(0.74f, 0.38f, 1f, 0.5f), AoeStyle.Arts);
-
-            var splashTargets = EnemyManager.Instance.GetEnemiesInRadius(target.transform.position, splashRadius, data.position);
-            int secondaryAtk = Mathf.RoundToInt(currentATK * splashDamageRatio * GetDamageMultiplier());
-            for (int i = 0; i < splashTargets.Count; i++)
+            List<EnemyBase> splashTargets = null;
+            if (EnemyManager.Instance != null && splashRadius > 0f)
             {
-                var splashTarget = splashTargets[i];
-                if (splashTarget == null || splashTarget == target || splashTarget.IsDead) continue;
+                for (int hit = 0; hit < Mathf.Max(1, ArtsImpactCount); hit++)
+                {
+                    AoeBlastVisual.PlayCircle(
+                        target.VisualPosition,
+                        splashRadius,
+                        new Color(0.74f, 0.38f, 1f, 0.5f),
+                        AoeStyle.Arts,
+                        hit * 0.1f);
+                }
+                splashTargets = EnemyManager.Instance.GetEnemiesInRadius(target.transform.position, splashRadius, data.position);
+            }
 
-                int armorAdjustedSplashATK = GetArmorAdjustedAttack(secondaryAtk, splashTarget);
-                int splashDmg = DamageCalculator.CalculateDamage(armorAdjustedSplashATK, splashTarget.CurrentRES);
-                splashTarget.TryTakeAttackDamage(splashDmg, DamageType.Arts, this);
+            int impactCount = Mathf.Max(1, ArtsImpactCount);
+            for (int hit = 0; hit < impactCount; hit++)
+            {
+                if (!target.IsDead)
+                {
+                    int primaryATK = Mathf.RoundToInt(GetArmorAdjustedAttack(currentATK, target) * GetDamageMultiplier());
+                    target.TryTakeAttackDamage(
+                        DamageCalculator.CalculateDamage(primaryATK, target.CurrentRES),
+                        DamageType.Arts,
+                        this);
+                }
+
+                if (splashTargets == null) continue;
+
+                int secondaryAtk = Mathf.RoundToInt(currentATK * splashDamageRatio * GetDamageMultiplier());
+                for (int i = 0; i < splashTargets.Count; i++)
+                {
+                    var splashTarget = splashTargets[i];
+                    if (splashTarget == null || splashTarget == target || splashTarget.IsDead) continue;
+
+                    int armorAdjustedSplashATK = GetArmorAdjustedAttack(secondaryAtk, splashTarget);
+                    int splashDmg = DamageCalculator.CalculateDamage(armorAdjustedSplashATK, splashTarget.CurrentRES);
+                    splashTarget.TryTakeAttackDamage(splashDmg, DamageType.Arts, this);
+                }
             }
         }
 
