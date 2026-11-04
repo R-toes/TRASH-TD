@@ -78,6 +78,15 @@ namespace TrashTD.UI
         private const float TitleCenterY = -124f;      // y 94..154
         private const float WaveCounterCenterY = -172f; // y 158..186
 
+        // Draft odds block, above the details panel (y 138..212; the panel starts at 230)
+        private const float OddsTop = 138f;
+        private const float OddsHeight = 74f;
+        private const float OddsBarTop = 26f;
+        private const float OddsBarHeight = 18f;
+        private const float OddsLabelTop = 50f;
+        private const float OddsUpDelay = 0.5f;       // lets the intro and deal start first
+        private const float OddsUpTime = 0.65f;       // bar segments slide from the old odds to the new
+
         private const string SkipCardAnimationKey = "TrashTD.SkipCardAnimation";
 
         // Range preview box (bottom-left of the detail panel)
@@ -133,6 +142,7 @@ namespace TrashTD.UI
         [SerializeField] private AudioClip shuffleClip;
         [SerializeField] private AudioClip dealClip;
         [SerializeField] private AudioClip flipClip;
+        [SerializeField] private AudioClip oddsUpClip;
         [SerializeField, Range(0f, 1f)] private float sfxVolume = 0.7f;
 
         [Header("Card Flip")]
@@ -258,6 +268,16 @@ namespace TrashTD.UI
         private Image rerollNoticeCheck;
         private bool rerollNoticeDontShow;
         private bool rerollNoticeAcknowledged; // shown once per opening draft
+
+        // --- Draft odds (bar split by rarity, labels, next boost, "ODDS UP!" tag) ---
+        private RectTransform oddsRoot;
+        private readonly RectTransform[] oddsSegments = new RectTransform[3];
+        private readonly Text[] oddsLabels = new Text[3];
+        private Text oddsNextText;
+        private RectTransform oddsUpTag;
+        private Image oddsFlash;
+        private Coroutine oddsRoutine;
+        private DraftOdds oddsTarget;
 #if UNITY_EDITOR || DEBUG
         private Button developerPickButton;
         private GameObject developerPickerRoot;
@@ -372,6 +392,8 @@ namespace TrashTD.UI
             if (shuffleClip == null) shuffleClip = AudioManager.Instance?.GetClip(SfxId.UiCardShuffle) ?? hoverClip;
             if (dealClip == null) dealClip = AudioManager.Instance?.GetClip(SfxId.UiCardDeal) ?? hoverClip;
             if (flipClip == null) flipClip = AudioManager.Instance?.GetClip(SfxId.UiCardFlip) ?? hoverClip;
+            // Odds step-up reuses the deck's rank-up sound.
+            if (oddsUpClip == null) oddsUpClip = AudioManager.Instance?.GetClip(SfxId.GameplayCardUpgrade) ?? confirmClip;
 
             if (draftSystem != null)
             {
@@ -612,6 +634,8 @@ namespace TrashTD.UI
             // Generate a fresh draft offer and immediately populate the card UI
             if (draftSystem != null)
             {
+                // During Card Pick the wave index is the number of waves cleared, which picks the odds row
+                if (gameManager != null) draftSystem.SetWavesCleared(gameManager.GetCurrentWaveIndex());
                 var offer = draftSystem.GenerateDraftOffer();
                 HandleCardsOffered(offer);
             }
@@ -619,6 +643,7 @@ namespace TrashTD.UI
             UpdateConfirmButton();
             UpdateDeckCount();
             UpdateWaveInfo();
+            UpdateDraftOdds();
 
             bool extras = !IsTutorialDraft;
             if (rerollButton != null) rerollButton.gameObject.SetActive(extras);
@@ -1803,6 +1828,168 @@ namespace TrashTD.UI
         }
 
         // ============================
+        // Draft odds
+        // ============================
+
+        /// <summary>
+        /// Shows the odds this draft was rolled with (CardDraftSystem.GetCurrentOdds) and when they next go up.
+        /// On the first draft of a new step the bar slides up from the previous step's odds under an "ODDS UP!"
+        /// tag (instantly with Skip card animation). Rerolls keep the same odds, so this only runs when a draft opens.
+        /// </summary>
+        private void UpdateDraftOdds()
+        {
+            if (oddsRoot == null) return;
+
+            StopOddsAnimation();
+            bool show = draftSystem != null && !IsTutorialDraft;
+            oddsRoot.gameObject.SetActive(show);
+            if (!show) return;
+
+            DraftOddsTable table = draftSystem.OddsTable;
+            int cleared = draftSystem.WavesCleared;
+            oddsTarget = draftSystem.GetCurrentOdds();
+
+            var waveManager = FindAnyObjectByType<WaveManager>();
+            int totalWaves = waveManager != null ? waveManager.TotalWaves : 0;
+            if (draftSystem.IsOpeningDraft)
+            {
+                oddsNextText.text = "OPENING DRAFT: 1★ ONLY";
+            }
+            else if (table.TryGetNextStep(cleared, out int nextStep) && (totalWaves <= 0 || nextStep < totalWaves))
+            {
+                // A step after the stage's last wave never gets a draft, so it isn't announced
+                oddsNextText.text = $"BOOST AFTER WAVE {nextStep}";
+            }
+            else
+            {
+                oddsNextText.text = "MAX ODDS";
+            }
+
+            bool stepUp = !draftSystem.IsOpeningDraft && table.IsStepStart(cleared);
+            oddsUpTag.gameObject.SetActive(stepUp);
+            oddsUpTag.localScale = Vector3.one;
+            if (!stepUp || SkipCardAnimation || !isActiveAndEnabled)
+            {
+                ApplyOdds(oddsTarget);
+                return;
+            }
+
+            DraftOdds from = table.GetOdds(cleared - 1);
+            ApplyOdds(from);
+            oddsUpTag.localScale = Vector3.zero;
+            oddsRoutine = StartCoroutine(OddsUpRoutine(from, oddsTarget));
+        }
+
+        /// <summary>Sizes the bar segments to the odds and writes the labels (0% tiers are dimmed).</summary>
+        private void ApplyOdds(DraftOdds odds)
+        {
+            float[] values = { odds.Star1, odds.Star2, odds.Star3 };
+            float left = 0f;
+            for (int i = 0; i < 3; i++)
+            {
+                float width = Mathf.Clamp01(values[i] / 100f);
+                float right = i == 2 ? 1f : Mathf.Min(1f, left + width);
+                RectTransform segment = oddsSegments[i];
+                segment.gameObject.SetActive(right - left > 0.001f);
+                segment.anchorMin = new Vector2(left, 0f);
+                segment.anchorMax = new Vector2(right, 1f);
+                // A 2 px dark gap between segments keeps the colours apart
+                segment.offsetMin = new Vector2(left > 0f ? 2f : 0f, 0f);
+                segment.offsetMax = Vector2.zero;
+                left = right;
+
+                int percent = Mathf.RoundToInt(values[i]);
+                Color color = GetRarityColor(i + 1);
+                oddsLabels[i].text = $"{new string('★', i + 1)} {percent}%";
+                oddsLabels[i].color = percent > 0 ? color : new Color(color.r, color.g, color.b, 0.35f);
+            }
+        }
+
+        private IEnumerator OddsUpRoutine(DraftOdds from, DraftOdds to)
+        {
+            yield return new WaitForSecondsRealtime(OddsUpDelay);
+
+            PlaySfx(oddsUpClip, 1.1f);
+            StartCoroutine(OddsSparksRoutine());
+
+            float t = 0f;
+            while (t < OddsUpTime)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = EaseOutCubic(Mathf.Clamp01(t / OddsUpTime));
+                ApplyOdds(new DraftOdds(
+                    Mathf.Lerp(from.Star1, to.Star1, k),
+                    Mathf.Lerp(from.Star2, to.Star2, k),
+                    Mathf.Lerp(from.Star3, to.Star3, k)));
+                oddsUpTag.localScale = Vector3.one * EaseOutBack(Mathf.Clamp01(t / 0.35f));
+                oddsFlash.color = new Color(1f, 1f, 1f, 0.6f * (1f - Mathf.Clamp01(t / 0.3f)));
+                yield return null;
+            }
+
+            ApplyOdds(to);
+            oddsUpTag.localScale = Vector3.one;
+            oddsFlash.color = new Color(1f, 1f, 1f, 0f);
+            oddsRoutine = null;
+        }
+
+        /// <summary>Pixel sparks in the 3★ colour fly up out of the bar's 3★ end.</summary>
+        private IEnumerator OddsSparksRoutine()
+        {
+            const int count = 14;
+            Color color = GetRarityColor(3);
+            RectTransform bar = (RectTransform)oddsFlash.transform.parent;
+            Vector2 origin = new Vector2(bar.rect.width * 0.4f, -bar.rect.height * 0.5f);
+
+            var sparks = new RectTransform[count];
+            var images = new Image[count];
+            var velocities = new Vector2[count];
+            for (int s = 0; s < count; s++)
+            {
+                images[s] = CreatePlainImage(bar, "Spark", color);
+                sparks[s] = images[s].rectTransform;
+                sparks[s].anchorMin = sparks[s].anchorMax = new Vector2(0.5f, 1f);
+                float size = Mathf.Round(UnityEngine.Random.Range(4f, 8f));
+                sparks[s].sizeDelta = new Vector2(size, size);
+                sparks[s].anchoredPosition = origin + new Vector2(UnityEngine.Random.Range(-40f, 40f), 0f);
+                float angle = UnityEngine.Random.Range(0.15f, Mathf.PI - 0.15f); // upward half
+                velocities[s] = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * UnityEngine.Random.Range(160f, 380f);
+            }
+
+            float t = 0f;
+            while (t < BurstLifetime)
+            {
+                float dt = Time.unscaledDeltaTime;
+                t += dt;
+                float k = Mathf.Clamp01(t / BurstLifetime);
+                for (int s = 0; s < count; s++)
+                {
+                    if (sparks[s] == null) continue;
+                    velocities[s] *= 1f - Mathf.Min(1f, 2.5f * dt);
+                    velocities[s].y -= 700f * dt;
+                    sparks[s].anchoredPosition += velocities[s] * dt;
+                    images[s].color = new Color(color.r, color.g, color.b, 1f - k * k);
+                }
+                yield return null;
+            }
+
+            for (int s = 0; s < count; s++)
+            {
+                if (sparks[s] != null) Destroy(sparks[s].gameObject);
+            }
+        }
+
+        /// <summary>Ends a running odds step-up at its final values.</summary>
+        private void StopOddsAnimation()
+        {
+            if (oddsRoutine == null) return;
+            StopCoroutine(oddsRoutine);
+            oddsRoutine = null;
+            ApplyOdds(oddsTarget);
+            oddsUpTag.localScale = Vector3.one;
+            oddsFlash.color = new Color(1f, 1f, 1f, 0f);
+        }
+
+        // ============================
         // Minimize (view the map)
         // ============================
 
@@ -1898,6 +2085,7 @@ namespace TrashTD.UI
             }
 
             StopAllFlips();
+            StopOddsAnimation();
 
             if (dealRoutine != null)
             {
@@ -2210,6 +2398,9 @@ namespace TrashTD.UI
             // Detail panel (right side of the screen)
             BuildDetailsPanel(overlayRoot.transform);
 
+            // Draft odds, above the detail panel
+            BuildDraftOdds(overlayRoot.transform);
+
             // Reroll / Skip under the cards
             var buttonsContainer = new GameObject("ButtonsContainer", typeof(RectTransform));
             buttonsContainer.transform.SetParent(overlayRoot.transform, false);
@@ -2281,16 +2472,81 @@ namespace TrashTD.UI
                 detailsPanelRect,
                 buttonsRect,
                 confirmButton.GetComponent<RectTransform>(),
-                hintText.rectTransform
+                hintText.rectTransform,
+                oddsRoot
             };
             introTargets = new Vector2[introRects.Length];
             for (int i = 0; i < introRects.Length; i++) introTargets[i] = introRects[i].anchoredPosition;
             introOffsets = new[]
             {
                 new Vector2(0f, 40f), new Vector2(0f, 40f), new Vector2(0f, 40f), new Vector2(0f, 40f),
-                new Vector2(90f, 0f), new Vector2(0f, -60f), new Vector2(0f, -60f), new Vector2(0f, -30f)
+                new Vector2(90f, 0f), new Vector2(0f, -60f), new Vector2(0f, -60f), new Vector2(0f, -30f),
+                new Vector2(0f, 40f)
             };
-            introDelays = new[] { 0f, 0.06f, 0.1f, 0.1f, 0.15f, 0.25f, 0.3f, 0.35f };
+            introDelays = new[] { 0f, 0.06f, 0.1f, 0.1f, 0.15f, 0.25f, 0.3f, 0.35f, 0.12f };
+        }
+
+        /// <summary>
+        /// "DRAFT ODDS" block above the detail panel: a header row (label, "ODDS UP!" tag, next boost), a bar split
+        /// into the 1★ / 2★ / 3★ chances in the rarity colours, and the percentages under it. See UpdateDraftOdds.
+        /// </summary>
+        private void BuildDraftOdds(Transform parent)
+        {
+            var root = new GameObject("DraftOdds", typeof(RectTransform));
+            root.transform.SetParent(parent, false);
+            oddsRoot = root.GetComponent<RectTransform>();
+            oddsRoot.anchorMin = oddsRoot.anchorMax = new Vector2(0.5f, 1f);
+            oddsRoot.pivot = new Vector2(0.5f, 1f);
+            oddsRoot.anchoredPosition = new Vector2(PanelCenterX, -OddsTop);
+            oddsRoot.sizeDelta = new Vector2(PanelWidth, OddsHeight);
+
+            Text label = MakeText(root.transform, "Label", "DRAFT ODDS", 14, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
+            label.fontStyle = FontStyle.Bold;
+            PlaceTopLeft(label, 0f, 0f, 140f, 20f);
+
+            oddsNextText = MakeText(root.transform, "NextBoost", "", 12, TextAnchor.MiddleRight, ACCENT_BRIGHT);
+            StretchTopRT(oddsNextText, 0f, 0f, 0f, 20f);
+
+            // "ODDS UP!" tag next to the label, scaled from its centre when it pops in
+            Image tag = CreatePlainImage(root.transform, "OddsUpTag", GetRarityColor(3));
+            oddsUpTag = tag.rectTransform;
+            oddsUpTag.anchorMin = oddsUpTag.anchorMax = new Vector2(0f, 1f);
+            oddsUpTag.pivot = new Vector2(0.5f, 0.5f);
+            oddsUpTag.sizeDelta = new Vector2(108f, 20f);
+            oddsUpTag.anchoredPosition = new Vector2(146f + 54f, -10f);
+            Text tagText = MakeText(oddsUpTag, "Text", "ODDS UP!", 12, TextAnchor.MiddleCenter, HAZARD_INK);
+            tagText.fontStyle = FontStyle.Bold;
+            StretchFill(tagText.rectTransform);
+            oddsUpTag.gameObject.SetActive(false);
+
+            Image bar = CreatePlainImage(root.transform, "Bar", TILE_BG);
+            StretchTopRT(bar, 0f, 0f, OddsBarTop, OddsBarHeight);
+            var barOutline = bar.gameObject.AddComponent<Outline>();
+            barOutline.effectColor = new Color(1f, 1f, 1f, 0.1f);
+            barOutline.effectDistance = new Vector2(2f, -2f);
+
+            TextAnchor[] alignments = { TextAnchor.MiddleLeft, TextAnchor.MiddleCenter, TextAnchor.MiddleRight };
+            for (int i = 0; i < 3; i++)
+            {
+                Image segment = CreatePlainImage(bar.transform, $"Segment{i + 1}", GetRarityColor(i + 1));
+                oddsSegments[i] = segment.rectTransform;
+
+                // Lighter top band for a pixel-art bevel
+                Image shine = CreatePlainImage(segment.transform, "Shine", new Color(1f, 1f, 1f, 0.22f));
+                RectTransform shineRect = shine.rectTransform;
+                shineRect.anchorMin = new Vector2(0f, 0.62f);
+                shineRect.anchorMax = Vector2.one;
+                shineRect.offsetMin = shineRect.offsetMax = Vector2.zero;
+
+                oddsLabels[i] = MakeText(root.transform, $"Odds{i + 1}", "", 16, alignments[i], GetRarityColor(i + 1));
+                oddsLabels[i].fontStyle = FontStyle.Bold;
+                StretchTopRT(oddsLabels[i], 0f, 0f, OddsLabelTop, 22f);
+            }
+
+            oddsFlash = CreatePlainImage(bar.transform, "Flash", new Color(1f, 1f, 1f, 0f));
+            StretchFill(oddsFlash.rectTransform);
+
+            ApplyOdds(new DraftOdds(100f, 0f, 0f));
         }
 
         /// <summary>Checkbox "SKIP CARD ANIMATION" under the deck count (top-right). See <see cref="SkipCardAnimation"/>.</summary>

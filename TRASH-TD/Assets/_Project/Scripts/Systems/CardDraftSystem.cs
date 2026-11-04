@@ -46,6 +46,7 @@ namespace TrashTD.Systems
     /// - Every round offers exactly 3 cards.
     /// - No two cards in the same offer share the same class (Guard, Defender, Sniper, Caster, Medic).
     /// - Draft pool only offers 1★, 2★, or 3★ base creatures (4★ and 5★ are obtained via upgrade only).
+    /// - Rarity odds step up as waves are cleared (<see cref="DraftOddsTable"/>).
     /// </summary>
     public class CardDraftSystem : MonoBehaviour
     {
@@ -53,19 +54,16 @@ namespace TrashTD.Systems
         [Tooltip("Master pool of all available OperatorData assets eligible for drafting")]
         [SerializeField] private List<OperatorData> availableOperatorPool = new List<OperatorData>();
 
-        [Header("Rarity Offer Weights")]
-        [Tooltip("Relative weight for 1★ offers")]
-        [SerializeField] private float star1Weight = 85f;
-        [Tooltip("Relative weight for 2★ offers")]
-        [SerializeField] private float star2Weight = 12f;
-        [Tooltip("Relative weight for 3★ offers")]
-        [SerializeField] private float star3Weight = 3f;
+        [Header("Rarity Odds")]
+        [Tooltip("Optional. Empty = Resources/DraftOddsTable, or the built-in default table without it.")]
+        [SerializeField] private DraftOddsTable oddsTable;
 
         private readonly List<DraftCard> currentOfferedCards = new List<DraftCard>(3);
         // Set by the tutorial: the next draft offers exactly these operators instead of random ones
         private readonly List<OperatorData> scriptedOffer = new List<OperatorData>(3);
         private int currentRound = 0;
         private int rerollsRemaining = 3;
+        private int wavesCleared;
 
         public const int STARTING_REROLLS = 3;
 
@@ -98,6 +96,41 @@ namespace TrashTD.Systems
         /// </summary>
         public bool IsOpeningDraft => currentRound == 1;
         public int RerollsRemaining => rerollsRemaining;
+
+        /// <summary>Waves cleared so far in this stage run; picks the row of the odds table.</summary>
+        public int WavesCleared => wavesCleared;
+
+        // Loaded lazily: EditMode tests add this component without running Awake.
+        public DraftOddsTable OddsTable
+        {
+            get
+            {
+                if (oddsTable == null) oddsTable = DraftOddsTable.Load();
+                return oddsTable;
+            }
+        }
+
+        /// <summary>Replaces the odds table (null = load the default again).</summary>
+        public void SetOddsTable(DraftOddsTable table)
+        {
+            oddsTable = table;
+        }
+
+        /// <summary>Set before each draft (the draft overlay passes GameManager's wave index during Card Pick).</summary>
+        public void SetWavesCleared(int count)
+        {
+            wavesCleared = Mathf.Max(0, count);
+        }
+
+        /// <summary>
+        /// Odds the current offer was rolled with: 100% 1★ in the opening draft, otherwise the odds table's row
+        /// for <see cref="WavesCleared"/>. Tiers with no eligible operator left are skipped when rolling, but
+        /// these are the odds shown to the player.
+        /// </summary>
+        public DraftOdds GetCurrentOdds()
+        {
+            return IsOpeningDraft ? new DraftOdds(100f, 0f, 0f) : OddsTable.GetOdds(wavesCleared);
+        }
 #if UNITY_EDITOR || DEBUG
         public IReadOnlyList<OperatorData> AvailableOperatorPool => availableOperatorPool;
 #endif
@@ -137,6 +170,7 @@ namespace TrashTD.Systems
         public void ResetForNewStage()
         {
             currentRound = 0;
+            wavesCleared = 0;
             rerollsRemaining = STARTING_REROLLS;
             currentOfferedCards.Clear();
             OnRerollCountChanged?.Invoke(rerollsRemaining);
@@ -309,15 +343,16 @@ namespace TrashTD.Systems
         }
 
         /// <summary>
-        /// Selects a rarity tier using the configured weights, considering only tiers
+        /// Selects a rarity tier using the odds table's current row, considering only tiers
         /// with eligible operators. The selected operator keeps its configured rarity.
         /// </summary>
         private OperatorRarity RollDraftRarity(IReadOnlyList<OperatorRarity> availableRarities)
         {
+            DraftOdds odds = OddsTable.GetOdds(wavesCleared);
             float totalWeight = 0f;
             foreach (var rarity in availableRarities)
             {
-                totalWeight += GetRarityWeight(rarity);
+                totalWeight += odds.Get(rarity);
             }
 
             if (totalWeight <= 0f)
@@ -328,24 +363,13 @@ namespace TrashTD.Systems
             float roll = UnityEngine.Random.Range(0f, totalWeight);
             foreach (var rarity in availableRarities)
             {
-                float weight = GetRarityWeight(rarity);
+                float weight = odds.Get(rarity);
                 if (weight <= 0f) continue;
                 if (roll < weight) return rarity;
                 roll -= weight;
             }
 
             return availableRarities[availableRarities.Count - 1];
-        }
-
-        private float GetRarityWeight(OperatorRarity rarity)
-        {
-            return Mathf.Max(0f, rarity switch
-            {
-                OperatorRarity.Star1 => star1Weight,
-                OperatorRarity.Star2 => star2Weight,
-                OperatorRarity.Star3 => star3Weight,
-                _ => 0f
-            });
         }
 
         /// <summary>

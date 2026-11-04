@@ -99,12 +99,127 @@ namespace TrashTD.Tests
             var operatorData = testPool[0];
             operatorData.baseRarity = OperatorRarity.Star2;
             draftSystem.SetOperatorPool(new[] { operatorData });
+            draftSystem.GenerateDraftOffer(); // the opening draft is 1★ only, so it offers nothing here
 
             var offer = draftSystem.GenerateDraftOffer();
 
             Assert.AreEqual(1, offer.Count);
             Assert.AreSame(operatorData, offer[0].operatorData);
             Assert.AreEqual(operatorData.baseRarity, offer[0].rarity);
+        }
+
+        private static void AssertOdds(DraftOdds odds, float star1, float star2, float star3, string context)
+        {
+            Assert.AreEqual(star1, odds.Star1, 0.01f, $"1★ odds {context}");
+            Assert.AreEqual(star2, odds.Star2, 0.01f, $"2★ odds {context}");
+            Assert.AreEqual(star3, odds.Star3, 0.01f, $"3★ odds {context}");
+        }
+
+        [Test]
+        public void DraftOddsTable_Default_StepsUpEveryFiveWavesCleared()
+        {
+            DraftOddsTable table = DraftOddsTable.GetBuiltInDefault();
+
+            AssertOdds(table.GetOdds(0), 80f, 17f, 3f, "after 0 waves");
+            AssertOdds(table.GetOdds(4), 80f, 17f, 3f, "after 4 waves");
+            AssertOdds(table.GetOdds(5), 72f, 21f, 7f, "after 5 waves");
+            AssertOdds(table.GetOdds(9), 72f, 21f, 7f, "after 9 waves");
+            AssertOdds(table.GetOdds(10), 64f, 24f, 12f, "after 10 waves");
+            AssertOdds(table.GetOdds(15), 56f, 28f, 16f, "after 15 waves");
+            AssertOdds(table.GetOdds(20), 48f, 31f, 21f, "after 20 waves");
+            AssertOdds(table.GetOdds(25), 40f, 35f, 25f, "after 25 waves");
+            AssertOdds(table.GetOdds(40), 40f, 35f, 25f, "after 40 waves (last step holds)");
+        }
+
+        [Test]
+        public void DraftOddsTable_Default_HigherRaritiesNeverDrop_AndOneStarStaysMostLikely()
+        {
+            DraftOddsTable table = DraftOddsTable.GetBuiltInDefault();
+            DraftOdds previous = table.GetOdds(0);
+            for (int cleared = 1; cleared <= 30; cleared++)
+            {
+                DraftOdds odds = table.GetOdds(cleared);
+                Assert.GreaterOrEqual(odds.Star3, previous.Star3, $"3★ odds dropped after {cleared} waves");
+                Assert.GreaterOrEqual(odds.Star2 + odds.Star3, previous.Star2 + previous.Star3,
+                    $"2★+ odds dropped after {cleared} waves");
+                Assert.Greater(odds.Star1, odds.Star2, $"1★ must stay the most likely after {cleared} waves");
+                Assert.Greater(odds.Star1, odds.Star3, $"1★ must stay the most likely after {cleared} waves");
+                previous = odds;
+            }
+        }
+
+        [Test]
+        public void DraftOddsTable_Default_ReportsStepStartsAndNextStep()
+        {
+            DraftOddsTable table = DraftOddsTable.GetBuiltInDefault();
+
+            Assert.IsFalse(table.IsStepStart(0), "The first row isn't a step-up");
+            Assert.IsTrue(table.IsStepStart(5));
+            Assert.IsFalse(table.IsStepStart(6));
+            Assert.IsTrue(table.IsStepStart(25));
+
+            Assert.IsTrue(table.TryGetNextStep(0, out int next));
+            Assert.AreEqual(5, next);
+            Assert.IsTrue(table.TryGetNextStep(5, out next));
+            Assert.AreEqual(10, next);
+            Assert.IsFalse(table.TryGetNextStep(25, out _), "25 is the last step");
+        }
+
+        [Test]
+        public void GetCurrentOdds_OpeningDraftIsAllOneStar_LaterDraftsFollowWavesCleared()
+        {
+            draftSystem.SetOddsTable(DraftOddsTable.GetBuiltInDefault());
+
+            draftSystem.GenerateDraftOffer();
+            AssertOdds(draftSystem.GetCurrentOdds(), 100f, 0f, 0f, "in the opening draft");
+
+            draftSystem.SetWavesCleared(10);
+            draftSystem.GenerateDraftOffer();
+            AssertOdds(draftSystem.GetCurrentOdds(), 64f, 24f, 12f, "after 10 waves");
+
+            draftSystem.ResetForNewStage();
+            Assert.AreEqual(0, draftSystem.WavesCleared, "A new stage starts from 0 waves cleared");
+        }
+
+        [Test]
+        public void GenerateDraftOffer_RollsRaritiesWithTheCurrentOdds()
+        {
+            // Three classes with a 1★, 2★ and 3★ each, so every card rolls from all three tiers
+            var pool = new List<OperatorData>();
+            foreach (var opClass in new[] { OperatorClass.Guard, OperatorClass.Sniper, OperatorClass.Caster })
+            {
+                foreach (var rarity in new[] { OperatorRarity.Star1, OperatorRarity.Star2, OperatorRarity.Star3 })
+                {
+                    var op = ScriptableObject.CreateInstance<OperatorData>();
+                    op.operatorName = $"Test_{opClass}_{rarity}";
+                    op.operatorClass = opClass;
+                    op.baseRarity = rarity;
+                    pool.Add(op);
+                }
+            }
+
+            draftSystem.SetOperatorPool(pool);
+            draftSystem.SetOddsTable(DraftOddsTable.GetBuiltInDefault());
+            draftSystem.GenerateDraftOffer(); // opening draft
+            draftSystem.SetWavesCleared(25);  // 40 / 35 / 25
+
+            UnityEngine.Random.InitState(1234);
+            var counts = new Dictionary<OperatorRarity, int>
+            {
+                { OperatorRarity.Star1, 0 }, { OperatorRarity.Star2, 0 }, { OperatorRarity.Star3, 0 }
+            };
+            const int offers = 2000;
+            for (int i = 0; i < offers; i++)
+            {
+                foreach (DraftCard card in draftSystem.GenerateDraftOffer()) counts[card.rarity]++;
+            }
+
+            float total = offers * 3f;
+            Assert.AreEqual(0.40f, counts[OperatorRarity.Star1] / total, 0.03f, "1★ share");
+            Assert.AreEqual(0.35f, counts[OperatorRarity.Star2] / total, 0.03f, "2★ share");
+            Assert.AreEqual(0.25f, counts[OperatorRarity.Star3] / total, 0.03f, "3★ share");
+
+            foreach (OperatorData op in pool) Object.DestroyImmediate(op);
         }
 
 #if UNITY_EDITOR || DEBUG
