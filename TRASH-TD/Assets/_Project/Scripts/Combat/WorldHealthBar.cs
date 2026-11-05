@@ -1,6 +1,7 @@
 using UnityEngine;
 using TrashTD.Core.Grid;
 using TrashTD.Enemies;
+using TrashTD.Operators;
 
 namespace TrashTD.Combat
 {
@@ -55,6 +56,18 @@ namespace TrashTD.Combat
             if (spriteRenderer != null)
             {
                 verticalOffset = spriteRenderer.bounds.extents.y + BarOffset;
+                MonoBehaviour[] components = GetComponentsInChildren<MonoBehaviour>(true);
+                for (int i = 0; i < components.Length; i++)
+                {
+                    if (!(components[i] is IOperatorSpriteFrames animation) ||
+                        animation.Frames == null || animation.Frames.Length == 0 || animation.Frames[0] == null)
+                        continue;
+
+                    verticalOffset = spriteRenderer.transform.TransformVector(
+                        Vector3.up * animation.Frames[0].bounds.extents.y).magnitude + BarOffset;
+                    break;
+                }
+
                 sortingLayerId = spriteRenderer.sortingLayerID;
                 sortingOrder = Mathf.Max(sortingOrder, spriteRenderer.sortingOrder + 1);
             }

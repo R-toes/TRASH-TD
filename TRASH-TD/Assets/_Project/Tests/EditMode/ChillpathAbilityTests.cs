@@ -1,5 +1,7 @@
 using NUnit.Framework;
+using System.Reflection;
 using UnityEngine;
+using TrashTD.Combat;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
 using TrashTD.Enemies;
@@ -97,6 +99,29 @@ namespace TrashTD.Tests
                 instance.transform.Find("Muzzle").position);
 
             Object.DestroyImmediate(data);
+            Object.DestroyImmediate(instance);
+        }
+
+        [Test]
+        public void HealthBar_UsesIdleSpriteHeightWhenCreatedDuringAttackAnimation()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ChillpathPrefabPath);
+            Assert.IsNotNull(prefab);
+
+            var instance = Object.Instantiate(prefab);
+            var animation = instance.GetComponent<ChillpathSpriteAnimation>();
+            var spriteRenderer = instance.GetComponent<SpriteRenderer>();
+            spriteRenderer.sprite = animation.AttackFrames[0];
+
+            WorldHealthBar.UpdateFor(instance, 50, 100);
+
+            var healthBar = instance.GetComponent<WorldHealthBar>();
+            var offsetField = typeof(WorldHealthBar).GetField("verticalOffset", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(offsetField);
+            float actualOffset = (float)offsetField.GetValue(healthBar);
+            float expectedOffset = animation.Frames[0].bounds.extents.y + 0.15f;
+            Assert.AreEqual(expectedOffset, actualOffset, 0.0001f);
+
             Object.DestroyImmediate(instance);
         }
 
