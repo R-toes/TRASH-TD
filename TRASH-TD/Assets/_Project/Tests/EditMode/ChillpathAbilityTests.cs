@@ -5,11 +5,14 @@ using TrashTD.Data;
 using TrashTD.Enemies;
 using TrashTD.Operators;
 using TrashTD.Systems;
+using UnityEditor;
 
 namespace TrashTD.Tests
 {
     public class ChillpathAbilityTests
     {
+        private const string ChillpathPrefabPath = "Assets/_Project/Prefabs/Operators/Prefab_OP_Chillpath.prefab";
+
         private GameObject chillpathObject;
         private GameObject gridObject;
         private GameObject enemyManagerObject;
@@ -26,6 +29,76 @@ namespace TrashTD.Tests
         private EnemyManager enemyManager;
         private GruntEnemy targetA;
         private GruntEnemy targetB;
+
+        [Test]
+        public void AttackAnimation_UsesAllFramesWithSpecifiedTimingAndAlignedPivots()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ChillpathPrefabPath);
+            Assert.IsNotNull(prefab);
+
+            var animation = prefab.GetComponent<ChillpathSpriteAnimation>();
+            Assert.IsNotNull(animation);
+            Assert.AreEqual(8, animation.Frames.Length);
+            Assert.AreEqual(ChillpathSpriteAnimation.AttackFrameCount, animation.AttackFrames.Length);
+            Assert.AreEqual(ChillpathSpriteAnimation.CastFrameIndex, 9);
+            Assert.AreEqual(0.74f, ChillpathSpriteAnimation.CastWindupSeconds, 0.0001f);
+            Assert.AreEqual(0.99f, ChillpathSpriteAnimation.AttackDuration, 0.0001f);
+
+            foreach (Sprite frame in animation.Frames)
+            {
+                Assert.AreEqual(new Vector2(32f, 32f), frame.rect.size);
+                Assert.AreEqual(32f, frame.pixelsPerUnit);
+                Assert.AreEqual(new Vector2(16f, 16f), frame.pivot);
+            }
+
+            foreach (Sprite frame in animation.AttackFrames)
+            {
+                Assert.AreEqual(new Vector2(32f, 64f), frame.rect.size);
+                Assert.AreEqual(32f, frame.pixelsPerUnit);
+                Assert.AreEqual(new Vector2(16f, 16f), frame.pivot);
+            }
+
+            float[] expectedDurations =
+            {
+                0.10f, 0.09f, 0.08f, 0.08f, 0.08f, 0.08f,
+                0.08f, 0.08f, 0.07f, 0.08f, 0.08f, 0.09f
+            };
+            for (int i = 0; i < expectedDurations.Length; i++)
+                Assert.AreEqual(expectedDurations[i], ChillpathSpriteAnimation.GetAttackFrameDuration(i), 0.0001f);
+        }
+
+        [Test]
+        public void Muzzle_IsAtCrystalPositionAndMirrorsWithFacing()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ChillpathPrefabPath);
+            Assert.IsNotNull(prefab);
+
+            var instance = Object.Instantiate(prefab);
+            instance.transform.position = new Vector3(4f, 5f, 0f);
+            var data = ScriptableObject.CreateInstance<OperatorData>();
+            var chillpath = instance.GetComponent<ChillpathOperator>();
+
+            chillpath.Initialize(data, OperatorRarity.Star1, OperatorFacing.Left);
+            Assert.AreEqual(new Vector3(4f - 1.5f / 32f, 5f + 14.5f / 32f, 0f),
+                instance.transform.Find("Muzzle").position);
+
+            instance.GetComponent<SpriteRenderer>().flipX = true;
+            Assert.AreEqual(new Vector3(4f + 1.5f / 32f, 5f + 14.5f / 32f, 0f),
+                instance.GetComponent<ChillpathSpriteAnimation>().Muzzle.position);
+
+            instance.GetComponent<SpriteRenderer>().flipX = false;
+            instance.transform.localScale = new Vector3(-1f, 1f, 1f);
+            Assert.AreEqual(new Vector3(4f + 1.5f / 32f, 5f + 14.5f / 32f, 0f),
+                instance.GetComponent<ChillpathSpriteAnimation>().Muzzle.position);
+
+            instance.transform.localScale = Vector3.one;
+            chillpath.SetFacing(OperatorFacing.Right);
+            Assert.AreEqual(new Vector3(4f + 1.5f / 32f, 5f + 14.5f / 32f, 0f),
+                instance.transform.Find("Muzzle").position);
+
+            Object.DestroyImmediate(data);
+            Object.DestroyImmediate(instance);
+        }
 
         [SetUp]
         public void SetUp()
@@ -211,4 +284,3 @@ namespace TrashTD.Tests
         }
     }
 }
-

@@ -41,6 +41,7 @@ namespace TrashTD.Editor
             AssetDatabase.Refresh();
 
             GenerateOperators();
+            ConfigureChillpathAttackAnimation();
             GenerateEnemies();
             GenerateStage();
             GenerateStage2();
@@ -193,6 +194,58 @@ namespace TrashTD.Editor
             }
 
             return frames;
+        }
+
+        private static void ConfigureChillpathAttackAnimation()
+        {
+            Sprite[] idleFrames = LoadSpriteFrames("Chillpath-Sheet.png", "Chillpath-Sheet", 8);
+            Sprite[] attackFrames = LoadSpriteFrames("Chillpath Attack Sheet.png", "Chillpath Attack Sheet", ChillpathSpriteAnimation.AttackFrameCount);
+            if (System.Array.Exists(idleFrames, frame => frame == null) ||
+                System.Array.Exists(attackFrames, frame => frame == null))
+                return;
+
+            string path = $"{OperatorPrefabFolder}/Prefab_OP_Chillpath.prefab";
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
+            {
+                Debug.LogError($"InitialAssetGenerator: Missing Chillpath prefab at {path}.");
+                return;
+            }
+
+            GameObject prefabContents = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                SpriteRenderer spriteRenderer = prefabContents.GetComponent<SpriteRenderer>();
+                if (spriteRenderer == null)
+                {
+                    Debug.LogError($"InitialAssetGenerator: Chillpath prefab at {path} requires a SpriteRenderer.");
+                    return;
+                }
+
+                OperatorSpriteAnimation oldAnimation = prefabContents.GetComponent<OperatorSpriteAnimation>();
+                if (oldAnimation != null)
+                    Object.DestroyImmediate(oldAnimation);
+
+                ChillpathSpriteAnimation animation = prefabContents.GetComponent<ChillpathSpriteAnimation>();
+                if (animation == null)
+                    animation = prefabContents.AddComponent<ChillpathSpriteAnimation>();
+
+                Transform muzzle = prefabContents.transform.Find("Muzzle");
+                if (muzzle == null)
+                {
+                    var muzzleObject = new GameObject("Muzzle");
+                    muzzle = muzzleObject.transform;
+                    muzzle.SetParent(prefabContents.transform, false);
+                }
+
+                muzzle.localPosition = new Vector3(-1.5f / 32f, 14.5f / 32f, 0f);
+                animation.Configure(idleFrames, attackFrames);
+                spriteRenderer.sprite = idleFrames[0];
+                PrefabUtility.SaveAsPrefabAsset(prefabContents, path);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(prefabContents);
+            }
         }
 
         private static GameObject CreateOrGetOperatorPrefab(string prefabName, Sprite sprite, OperatorClass opClass)

@@ -31,8 +31,40 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1818033988749894849}
   m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1818033988749894848
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1818033988749894849}
+  m_Layer: 0
+  m_Name: Muzzle
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1818033988749894849
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1818033988749894848}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.046875, y: 0.453125, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1086861063096648023}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &2220730834930650483
 SpriteRenderer:
@@ -119,10 +151,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 1724151342938439338}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 15730cd9b1a04c21b3c152b454d2f53a, type: 3}
+  m_Script: {fileID: 11500000, guid: d17cf78910394d3cb1bd751e74a2d904, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
-  frames:
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.ChillpathSpriteAnimation
+  idleFrames:
   - {fileID: -8846849301509126494, guid: 594cd36f94a25cc4981b40f2404f7b5e, type: 3}
   - {fileID: 7170179702107838426, guid: 594cd36f94a25cc4981b40f2404f7b5e, type: 3}
   - {fileID: -579858959, guid: 594cd36f94a25cc4981b40f2404f7b5e, type: 3}
@@ -131,4 +163,17 @@ MonoBehaviour:
   - {fileID: 811515974, guid: 594cd36f94a25cc4981b40f2404f7b5e, type: 3}
   - {fileID: 1066745819, guid: 594cd36f94a25cc4981b40f2404f7b5e, type: 3}
   - {fileID: 1260103088, guid: 594cd36f94a25cc4981b40f2404f7b5e, type: 3}
-  frameDuration: 0.15
+  attackFrames:
+  - {fileID: -5509799587500645695, guid: 505833b2e3bae124f9fc184bdde4092a, type: 3}
+  - {fileID: 1732025234074346814, guid: 505833b2e3bae124f9fc184bdde4092a, type: 3}
+  - {fileID: 1384467890138085422, guid: 505833b2e3bae124f9fc184bdde4092a, type: 3}
+  - {fileID: 3876249739159349594, guid: 505833b2e3bae124f9fc184bdde4092a, type: 3}
+  - {fileID: 418188361499950562, guid: 505833b2e3bae124f9fc184bdde4092a, type: 3}
+  - {fileID: -4998906269219938685, guid: 505833b2e3bae124f9fc184bdde4092a, type: 3}
+  - {fileID: -6938048365530193050, guid: 505833b2e3bae124f9fc184bdde4092a, type: 3}
+  - {fileID: 5329878430020045545, guid: 505833b2e3bae124f9fc184bdde4092a, type: 3}
+  - {fileID: 7787511555758799434, guid: 505833b2e3bae124f9fc184bdde4092a, type: 3}
+  - {fileID: 4749683315755484303, guid: 505833b2e3bae124f9fc184bdde4092a, type: 3}
+  - {fileID: 2496389457872390207, guid: 505833b2e3bae124f9fc184bdde4092a, type: 3}
+  - {fileID: -5729407708620113628, guid: 505833b2e3bae124f9fc184bdde4092a, type: 3}
+  idleFrameDuration: 0.15

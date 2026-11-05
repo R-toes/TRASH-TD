@@ -1,5 +1,6 @@
 using UnityEngine;
 using TrashTD.Combat;
+using TrashTD.Data;
 using TrashTD.Enemies;
 
 namespace TrashTD.Operators
@@ -17,6 +18,17 @@ namespace TrashTD.Operators
 
         private float hasteTimer;
         private int attackCount;
+        private float lastAttackInterval;
+        private ChillpathSpriteAnimation spriteAnimation;
+
+        private ChillpathSpriteAnimation SpriteAnimation
+        {
+            get
+            {
+                if (spriteAnimation == null) spriteAnimation = GetComponentInChildren<ChillpathSpriteAnimation>(true);
+                return spriteAnimation;
+            }
+        }
 
         public bool IsHasteActive => hasteTimer > 0f;
         public int AttackCount => attackCount;
@@ -30,6 +42,49 @@ namespace TrashTD.Operators
                 hasteTimer -= Time.deltaTime;
             }
             base.Update();
+            UpdateAttackWindup();
+        }
+
+        public override void ApplyFacingVisuals()
+        {
+            base.ApplyFacingVisuals();
+            SpriteAnimation?.SetMuzzleFacing(facing == OperatorFacing.Right);
+        }
+
+        private void UpdateAttackWindup()
+        {
+            ChillpathSpriteAnimation anim = SpriteAnimation;
+            if (anim == null || !anim.HasAttackAnimation) return;
+
+            if (!isDeployed)
+            {
+                anim.CancelAttack();
+                return;
+            }
+
+            if (IsCombatPaused || isStunned || isBound)
+            {
+                anim.CancelWindup();
+                return;
+            }
+
+            if (anim.IsWindingUp)
+            {
+                EnemyBase windupTarget = FindTarget();
+                if (windupTarget == null || !CanAttackTarget(windupTarget))
+                    anim.CancelWindup();
+                return;
+            }
+
+            if (anim.IsRecovering) return;
+
+            float timeUntilCast = lastAttackInterval - attackTimer;
+            if (timeUntilCast <= 0f || timeUntilCast > ChillpathSpriteAnimation.CastWindupSeconds)
+                return;
+
+            EnemyBase target = FindTarget();
+            if (target != null && CanAttackTarget(target))
+                anim.BeginAttack(timeUntilCast);
         }
 
         public override void Attack(EnemyBase target)
@@ -43,6 +98,7 @@ namespace TrashTD.Operators
                 attackCount = 0;
             }
 
+            SpriteAnimation?.Cast();
             base.Attack(target);
 
             if (isBonusAttack)
@@ -77,7 +133,15 @@ namespace TrashTD.Operators
         public override float GetAttackInterval()
         {
             float baseInterval = base.GetAttackInterval();
-            return IsHasteActive ? baseInterval * AttackIntervalMultiplier : baseInterval;
+            lastAttackInterval = IsHasteActive ? baseInterval * AttackIntervalMultiplier : baseInterval;
+            return lastAttackInterval;
+        }
+
+        protected override void FireAttackProjectile(EnemyBase target, Vector3 startOffset = default)
+        {
+            Transform muzzle = SpriteAnimation != null ? SpriteAnimation.Muzzle : null;
+            Vector3 start = muzzle != null ? muzzle.position : transform.position;
+            base.FireAttackProjectile(target, start - ProjectileOrigin + startOffset);
         }
 
         protected override void OnDeployed()
@@ -91,6 +155,7 @@ namespace TrashTD.Operators
 
         protected override void OnRetreated()
         {
+            SpriteAnimation?.CancelAttack();
             hasteTimer = 0f;
             attackCount = 0;
             BonusAttackCount = 0;
@@ -99,4 +164,3 @@ namespace TrashTD.Operators
         }
     }
 }
-
