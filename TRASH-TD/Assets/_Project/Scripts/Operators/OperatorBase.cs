@@ -523,7 +523,6 @@ namespace TrashTD.Operators
             if (!isStunned)
             {
                 isStunned = true;
-                TrashTD.Combat.FloatingCombatNumber.ShowText(transform.position, "STUNNED!", new Color(1f, 0.9f, 0.2f));
                 AudioManager.Instance?.PlaySfx(SfxId.CombatStun);
             }
 
