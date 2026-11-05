@@ -394,6 +394,11 @@ namespace TrashTD.Systems
             newOp.HeatStacks = heat;
             newOp.IsBurning = heat >= 5;
 
+            if (newOp is PompothOperator pompoth)
+            {
+                pompoth.UpdateIndicatorVisuals();
+            }
+
             float hpRatio = framiliarMaxHP > 0 ? (float)currentHP / framiliarMaxHP : 1f;
             newOp.RestoreSavedHP(Mathf.Max(1, Mathf.RoundToInt(newOp.MaxHP * hpRatio)));
 

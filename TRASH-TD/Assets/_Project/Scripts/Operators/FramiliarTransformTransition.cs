@@ -283,6 +283,10 @@ namespace TrashTD.Operators
             {
                 resiOp.UpdateChargeVisuals();
             }
+            if (TryGetComponent<PompothOperator>(out var pompothOp) && pompothOp != null)
+            {
+                pompothOp.UpdateIndicatorVisuals();
+            }
             if (TryGetComponent<OperatorBase>(out var opBase) && opBase != null)
             {
                 opBase.ApplyFacingVisuals();
@@ -301,4 +305,3 @@ namespace TrashTD.Operators
         }
     }
 }
-

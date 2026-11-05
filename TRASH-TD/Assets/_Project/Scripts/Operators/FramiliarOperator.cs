@@ -268,15 +268,15 @@ namespace TrashTD.Operators
                 if (r != null)
                 {
                     string rName = r.gameObject.name;
-                    // Preserve external bubble shields
-                    if (rName.StartsWith("BubbleShield"))
+                    // Preserve external bubble shields and procedural indicator/glow renderers
+                    if (rName.StartsWith("BubbleShield") || rName.StartsWith("PompothAttackOrigin"))
                     {
                         continue;
                     }
 
                     if (mat != null)
                     {
-                        r.material = mat;
+                        r.sharedMaterial = mat;
                     }
                     else
                     {

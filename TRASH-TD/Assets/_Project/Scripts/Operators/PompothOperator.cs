@@ -107,10 +107,13 @@ namespace TrashTD.Operators
 
             PlayAttackSound();
             Vector3 attackOrigin = GetNextAttackOrigin();
+            Color projectileColor = IsCopiedFromFramiliar
+                ? new Color(0.85f, 0.85f, 0.85f)
+                : new Color(0.9f, 0.2f, 0.9f); // distinctive purple color for Pompoth, monochrome for Framiliar copy
             CombatProjectileVisual.Fire(
                 attackOrigin,
                 target,
-                new Color(0.9f, 0.2f, 0.9f), // distinctive purple color for Pompoth
+                projectileColor,
                 14f,
                 0.12f,
                 0.07f,
@@ -147,6 +150,29 @@ namespace TrashTD.Operators
             nextAttackOriginIndex = Random.Range(0, AttackOriginPointCount);
         }
 
+        public void UpdateIndicatorVisuals()
+        {
+            if (attackOriginIndicator == null)
+            {
+                EnsureAttackOriginIndicator();
+                return;
+            }
+
+            Color diamondColor = IsCopiedFromFramiliar
+                ? new Color(0.75f, 0.75f, 0.75f)
+                : new Color(0.72f, 0.2f, 1f);
+            attackOriginIndicator.sprite = CombatFxArt.Diamond(diamondColor);
+
+            if (attackOriginGlow != null)
+            {
+                attackOriginGlow.sprite = CombatFxArt.GlowDisc(6);
+                Color glowColor = IsCopiedFromFramiliar
+                    ? new Color(0.75f, 0.75f, 0.75f, 0.24f)
+                    : new Color(0.72f, 0.2f, 1f, 0.24f);
+                attackOriginGlow.color = glowColor;
+            }
+        }
+
         private void EnsureAttackOriginIndicator()
         {
             if (attackOriginIndicator != null) return;
@@ -154,7 +180,10 @@ namespace TrashTD.Operators
             var indicatorObject = new GameObject("PompothAttackOriginIndicator");
             indicatorObject.transform.SetParent(transform, false);
             attackOriginIndicator = indicatorObject.AddComponent<SpriteRenderer>();
-            attackOriginIndicator.sprite = CombatFxArt.Diamond(new Color(0.72f, 0.2f, 1f));
+            Color diamondColor = IsCopiedFromFramiliar
+                ? new Color(0.75f, 0.75f, 0.75f)
+                : new Color(0.72f, 0.2f, 1f);
+            attackOriginIndicator.sprite = CombatFxArt.Diamond(diamondColor);
             attackOriginIndicator.sortingLayerID = GetComponent<SpriteRenderer>().sortingLayerID;
             attackOriginIndicator.sortingOrder = GetComponent<SpriteRenderer>().sortingOrder + 2;
             attackOriginIndicator.color = new Color(1f, 1f, 1f, 0.5f);
@@ -167,13 +196,25 @@ namespace TrashTD.Operators
             attackOriginGlow.sprite = CombatFxArt.GlowDisc(6);
             attackOriginGlow.sortingLayerID = attackOriginIndicator.sortingLayerID;
             attackOriginGlow.sortingOrder = attackOriginIndicator.sortingOrder - 1;
-            attackOriginGlow.color = new Color(0.72f, 0.2f, 1f, 0.24f);
+            Color glowColor = IsCopiedFromFramiliar
+                ? new Color(0.75f, 0.75f, 0.75f, 0.24f)
+                : new Color(0.72f, 0.2f, 1f, 0.24f);
+            attackOriginGlow.color = glowColor;
             attackOriginGlow.transform.localScale = Vector3.one * 1.8f;
         }
 
         private void UpdateAttackOriginIndicator()
         {
             if (attackOriginIndicator == null || !isDeployed) return;
+
+            // If Framiliar transform transition is still playing, keep indicator hidden
+            if (TryGetComponent<FramiliarTransformTransition>(out var transition) && !transition.IsFinished)
+            {
+                attackOriginIndicator.enabled = false;
+                if (attackOriginGlow != null)
+                    attackOriginGlow.enabled = false;
+                return;
+            }
 
             attackOriginIndicator.enabled = true;
             if (attackOriginGlow != null)
@@ -189,7 +230,14 @@ namespace TrashTD.Operators
             if (attackOriginGlow != null)
             {
                 attackOriginGlow.transform.localScale = Vector3.one * (1.8f + charge * 0.3f);
-                attackOriginGlow.color = new Color(0.72f, 0.2f, 1f, Mathf.Lerp(0.16f, 0.3f, charge) * pulse);
+                Color glowBaseColor = IsCopiedFromFramiliar
+                    ? new Color(0.75f, 0.75f, 0.75f)
+                    : new Color(0.72f, 0.2f, 1f);
+                attackOriginGlow.color = new Color(
+                    glowBaseColor.r,
+                    glowBaseColor.g,
+                    glowBaseColor.b,
+                    Mathf.Lerp(0.16f, 0.3f, charge) * pulse);
             }
         }
 
