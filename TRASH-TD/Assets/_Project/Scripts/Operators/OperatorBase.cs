@@ -494,7 +494,7 @@ namespace TrashTD.Operators
             }
         }
 
-        public int GetBlockCount() => (isStunned || isBound || data == null) ? 0 : Mathf.Max(0, data.blockCount + blockCountModifier);
+        public virtual int GetBlockCount() => (isStunned || isBound || data == null) ? 0 : Mathf.Max(0, data.blockCount + blockCountModifier);
 
         /// <summary>Block slots in use: each blocked enemy takes its EnemyData.blockWeight (heavy units take 2).</summary>
         public int GetCurrentBlockCount()

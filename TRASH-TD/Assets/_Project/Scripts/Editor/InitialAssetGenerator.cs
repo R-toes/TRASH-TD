@@ -24,6 +24,7 @@ namespace TrashTD.Editor
             ArtFolder,
         };
         private const string OperatorDataFolder = "Assets/_Project/Data/Operators";
+        private const string BulkheadSkillDescription = "Base (1\u2605): When blocking 3 or more enemies, increases ATK and DEF by 20%. 1st upgrade (2\u2605): Every 8 enemy hits, releases a gray shockwave that stuns all enemies Bulkhead is currently blocking for 1.5 seconds. 2nd upgrade (3\u2605): Block count increases to 6.";
         private const string ChillpathSkillDescription = "Base (1\u2605): Applies chill to slow and freeze enemies. Freezing an enemy grants 25% faster attacks for 3.5 seconds. Every 4th attack fires 1 extra shard at another enemy in range, or the same enemy if alone. 1st upgrade (2\u2605): While Chillpath is deployed, all operators deal 50% more damage to frozen enemies. 2nd upgrade (3\u2605): Fires 3 shards per attack at different enemies when possible, repeating targets if fewer than 3 are in range. The every-4th-attack bonus adds 1 more shard, for 4 total. Her freeze haste remains.";
         private const string EnemyDataFolder = "Assets/_Project/Data/Enemies";
         private const string StageDataFolder = "Assets/Resources/Stages";
@@ -625,10 +626,10 @@ namespace TrashTD.Editor
             var defenderSprite = LoadSprite("tex_op_defender.png");
             var defenderPrefab = CreateOrGetOperatorPrefab("Prefab_OP_Bulkhead", defenderSprite, OperatorClass.Defender);
             var bulkhead = CreateOperator("OP_Defender_Bulkhead", "Bulkhead", OperatorClass.Defender, OperatorPosition.Melee, OperatorRarity.Star1,
-                hp: 280, atk: 35, def: 45, res: 10, blockCount: 3, range: 1, interval: 1.4f,
+                hp: 280, atk: 35, def: 45, res: 10, blockCount: 4, range: 1, interval: 1.4f,
                 new[] { new Vector2Int(0, 0), new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1) },
                 defenderSprite, defenderPrefab);
-            bulkhead.skillDescription = "When blocking 3 enemies, increases ATK by 20% but decreases DEF by 20%.";
+            bulkhead.skillDescription = BulkheadSkillDescription;
             EditorUtility.SetDirty(bulkhead);
 
             // 2b. Defender (Mossmo)

@@ -879,6 +879,10 @@ namespace TrashTD.Tests
             {
                 Assert.AreEqual(4, bulkheadData.blockCount, "Bulkhead block count must be 4 in asset.");
                 Assert.IsTrue(bulkheadData.skillDescription.Contains("blocking 3 or more enemies"), "Bulkhead skill description should mention 3 or more enemies.");
+                StringAssert.Contains("1st upgrade (2\u2605)", bulkheadData.skillDescription);
+                StringAssert.Contains("Every 8 enemy hits", bulkheadData.skillDescription);
+                StringAssert.Contains("2nd upgrade (3\u2605)", bulkheadData.skillDescription);
+                StringAssert.Contains("Block count increases to 6", bulkheadData.skillDescription);
             }
 
             var opObj = new GameObject("BulkheadTest");
@@ -941,6 +945,83 @@ namespace TrashTD.Tests
                 Object.DestroyImmediate(enemies[i].Data);
                 Object.DestroyImmediate(enemies[i].gameObject);
             }
+            Object.DestroyImmediate(data);
+            Object.DestroyImmediate(opObj);
+        }
+
+        [Test]
+        public void Bulkhead_SecondUpgrade_IncreasesBlockCountToSix()
+        {
+            var opObj = new GameObject("BulkheadUpgradeTest");
+            var op = opObj.AddComponent<BulkheadOperator>();
+            var data = ScriptableObject.CreateInstance<OperatorData>();
+            data.operatorName = "Bulkhead";
+            data.baseHP = 200;
+            data.baseATK = 50;
+            data.baseDEF = 40;
+            data.blockCount = 4;
+            data.operatorClass = OperatorClass.Defender;
+
+            op.Initialize(data, OperatorRarity.Star2);
+            Assert.AreEqual(4, op.GetBlockCount(), "Bulkhead should retain its base block count before the second upgrade.");
+
+            op.Initialize(data, OperatorRarity.Star3);
+            Assert.AreEqual(6, op.GetBlockCount(), "Bulkhead's second upgrade should add two block slots.");
+            op.ApplyStun(1f);
+            Assert.AreEqual(0, op.GetBlockCount(), "A stunned operator must still have no block capacity.");
+
+            Object.DestroyImmediate(data);
+            Object.DestroyImmediate(opObj);
+        }
+
+        [Test]
+        public void Bulkhead_FirstUpgrade_ShockwaveStunsOnlyCurrentBlockedEnemiesEveryEightEnemyHits()
+        {
+            var opObj = new GameObject("BulkheadShockwaveTest");
+            var op = opObj.AddComponent<BulkheadOperator>();
+            var data = ScriptableObject.CreateInstance<OperatorData>();
+            data.operatorName = "Bulkhead";
+            data.baseHP = 1000;
+            data.baseATK = 50;
+            data.baseDEF = 0;
+            data.blockCount = 4;
+            data.operatorClass = OperatorClass.Defender;
+            op.Initialize(data, OperatorRarity.Star2);
+            op.Deploy(new GridCell(0, 0, TileType.LowGround, Vector3.zero));
+
+            var blockedTwoObject = new GameObject("SecondBlockedEnemy");
+            blockedTwoObject.AddComponent<SpriteRenderer>();
+            var blockedTwo = blockedTwoObject.AddComponent<GruntEnemy>();
+            blockedTwo.Initialize(enemyData, 0);
+
+            var unblockedObject = new GameObject("UnblockedEnemy");
+            unblockedObject.AddComponent<SpriteRenderer>();
+            var unblocked = unblockedObject.AddComponent<GruntEnemy>();
+            unblocked.Initialize(enemyData, 0);
+
+            Assert.IsTrue(op.TryBlock(enemy));
+            Assert.IsTrue(op.TryBlock(blockedTwo));
+
+            for (int i = 0; i < 7; i++)
+                op.TakeDamage(10, DamageType.Physical);
+            Assert.AreEqual(0, op.HitsSinceShockwave, "Non-enemy damage should not count toward the shockwave.");
+
+            for (int i = 0; i < 7; i++)
+                op.TakeDamage(10, DamageType.Physical, enemy);
+            Assert.IsFalse(enemy.IsStunned, "The shockwave should not trigger before the eighth enemy hit.");
+            Assert.IsFalse(blockedTwo.IsStunned);
+
+            op.TakeDamage(10, DamageType.Physical, enemy);
+            Assert.IsTrue(enemy.IsStunned, "The eighth enemy hit should stun the first blocked enemy.");
+            Assert.IsTrue(blockedTwo.IsStunned, "The shockwave should stun every enemy currently blocked.");
+            Assert.IsFalse(unblocked.IsStunned, "The shockwave should not stun enemies Bulkhead is not blocking.");
+            Assert.AreEqual(0, op.HitsSinceShockwave, "The hit counter should reset after the shockwave.");
+            Assert.AreEqual(1.5f, BulkheadOperator.ShockwaveStunDuration, "The shockwave should stun for 1.5 seconds.");
+
+            var visual = GameObject.Find("AoeBlastVisual");
+            if (visual != null) Object.DestroyImmediate(visual);
+            Object.DestroyImmediate(unblockedObject);
+            Object.DestroyImmediate(blockedTwoObject);
             Object.DestroyImmediate(data);
             Object.DestroyImmediate(opObj);
         }
