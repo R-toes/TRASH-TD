@@ -390,7 +390,8 @@ namespace TrashTD.Systems
             float hpRatio = framiliarMaxHP > 0 ? (float)currentHP / framiliarMaxHP : 1f;
             newOp.RestoreSavedHP(Mathf.Max(1, Mathf.RoundToInt(newOp.MaxHP * hpRatio)));
 
-            FramiliarOperator.ApplyGrayscale(newOpObj);
+            Sprite framiliarSprite = framiliar.GetCurrentSprite();
+            Sprite copiedSprite = FramiliarOperator.GetOperatorSprite(newOp, targetData);
 
             int idx = deployedOperators.IndexOf(framiliar);
             if (idx >= 0)
@@ -412,6 +413,10 @@ namespace TrashTD.Systems
             }
 
             Destroy(framiliar.gameObject);
+
+            // Play Framiliar transformation transition (Normal -> White Framiliar / White Copied alternating -> Monochrome Copied)
+            FramiliarTransformTransition.Play(newOp, framiliarSprite, copiedSprite);
+
             OnOperatorDeployed?.Invoke(newOp);
             return newOp;
         }

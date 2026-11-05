@@ -27,6 +27,8 @@ namespace TrashTD.Operators
         private OperatorSpriteAnimation spriteAnim;
 
         private static Material s_GrayscaleMaterial;
+        private static Material s_WhiteSilhouetteMaterial;
+        private static Material s_DefaultSpriteMaterial;
 
         public bool IsCopied => isCopied;
         public DraftCard CopiedCard => copiedCard;
@@ -169,6 +171,77 @@ namespace TrashTD.Operators
             return s_GrayscaleMaterial;
         }
 
+        public static Material GetWhiteSilhouetteMaterial()
+        {
+            if (s_WhiteSilhouetteMaterial == null)
+            {
+                Shader shader = Shader.Find("TrashTD/SpriteFlash");
+                if (shader == null)
+                {
+                    shader = Resources.Load<Shader>("Shaders/SpriteFlash");
+                }
+                if (shader == null)
+                {
+                    shader = Shader.Find("Sprites/Default");
+                }
+
+                if (shader != null)
+                {
+                    s_WhiteSilhouetteMaterial = new Material(shader) { hideFlags = HideFlags.DontSave };
+                }
+            }
+            return s_WhiteSilhouetteMaterial;
+        }
+
+        public static Material GetDefaultSpriteMaterial()
+        {
+            if (s_DefaultSpriteMaterial == null)
+            {
+                Shader shader = Shader.Find("Sprites/Default");
+                if (shader != null)
+                {
+                    s_DefaultSpriteMaterial = new Material(shader) { hideFlags = HideFlags.DontSave };
+                }
+            }
+            return s_DefaultSpriteMaterial;
+        }
+
+        public Sprite GetCurrentSprite()
+        {
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr != null && sr.sprite != null) return sr.sprite;
+            if (framiliarFrames != null && framiliarFrames.Length > 0 && framiliarFrames[0] != null) return framiliarFrames[0];
+            if (data != null && data.portrait != null) return data.portrait;
+            return null;
+        }
+
+        public static Sprite GetOperatorSprite(OperatorBase op, OperatorData opData)
+        {
+            if (op != null)
+            {
+                var sr = op.GetComponent<SpriteRenderer>();
+                if (sr != null && sr.sprite != null) return sr.sprite;
+                var anim = op.GetComponent<OperatorSpriteAnimation>();
+                if (anim != null && anim.Frames != null && anim.Frames.Length > 0 && anim.Frames[0] != null) return anim.Frames[0];
+                var childSr = op.GetComponentInChildren<SpriteRenderer>();
+                if (childSr != null && childSr.sprite != null) return childSr.sprite;
+            }
+            if (opData != null)
+            {
+                if (opData.operatorPrefab != null)
+                {
+                    var sr = opData.operatorPrefab.GetComponent<SpriteRenderer>();
+                    if (sr != null && sr.sprite != null) return sr.sprite;
+                    var anim = opData.operatorPrefab.GetComponent<OperatorSpriteAnimation>();
+                    if (anim != null && anim.Frames != null && anim.Frames.Length > 0 && anim.Frames[0] != null) return anim.Frames[0];
+                    var childSr = opData.operatorPrefab.GetComponentInChildren<SpriteRenderer>();
+                    if (childSr != null && childSr.sprite != null) return childSr.sprite;
+                }
+                return opData.portrait;
+            }
+            return null;
+        }
+
         public static void ApplyGrayscale(GameObject go)
         {
             if (go == null) return;
@@ -232,6 +305,9 @@ namespace TrashTD.Operators
             }
 
             // Standalone fallback for unit tests without OperatorManager
+            Sprite framiliarSprite = GetCurrentSprite();
+            Sprite copiedSprite = GetOperatorSprite(this, targetData);
+
             int harmonyStacks = HarmonyStacks;
             SetHarmonyStacks(0);
             isCopied = true;
@@ -245,7 +321,7 @@ namespace TrashTD.Operators
             SetHarmonyStacks(harmonyStacks); // Re-applied for the copied class
 
             IsCopiedFromFramiliar = true;
-            ApplyGrayscale(gameObject);
+            FramiliarTransformTransition.Play(this, framiliarSprite, copiedSprite);
             return this;
         }
     }
