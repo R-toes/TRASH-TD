@@ -11,11 +11,15 @@ namespace TrashTD.Operators
     /// Pompoth operator — Sniper variant with rapid fire.
     /// Damage per shot is reduced, but attack interval is faster, keeping DPS equal to Deadeye.
     /// Passive: +10% attack speed per enemy in range, capped at +100% (double speed) with 10 or more enemies.
+    /// Upgrades add target-specific DEF ignore and increase her passive to +30% per enemy, capped at +300%.
     /// </summary>
     public class PompothOperator : SniperOperator
     {
         private const float DamageMultiplier = 0.8f; // 80% of base damage per shot
         private const float IntervalMultiplier = 0.8f; // 80% of base interval (faster)
+        public const float DefenseIgnorePerHit = 0.01f;
+        public const float MaximumDefenseIgnore = 1f;
+        private const int DefenseIgnoreHitCap = 100;
         private const float AttackOriginRadiusMultiplier = 1.35f;
         public const int AttackOriginPointCount = 8;
 
@@ -24,6 +28,12 @@ namespace TrashTD.Operators
         private SpriteRenderer attackOriginIndicator;
         private SpriteRenderer attackOriginGlow;
         private int nextAttackOriginIndex;
+        private EnemyBase defenseRampTarget;
+        private int landedHitsOnDefenseRampTarget;
+
+        public bool HasDefenseIgnoreUpgrade => currentRarity >= OperatorRarity.Star2;
+        public bool HasIncreasedAttackSpeedUpgrade => currentRarity >= OperatorRarity.Star3;
+        public int LandedHitsOnDefenseRampTarget => landedHitsOnDefenseRampTarget;
 
         private GridManager GetGridManager()
         {
@@ -45,6 +55,8 @@ namespace TrashTD.Operators
         protected override void OnRetreated()
         {
             cachedRangeCells = null;
+            defenseRampTarget = null;
+            landedHitsOnDefenseRampTarget = 0;
             if (attackOriginIndicator != null)
                 attackOriginIndicator.enabled = false;
             if (attackOriginGlow != null)
@@ -93,18 +105,17 @@ namespace TrashTD.Operators
             float baseInterval = base.GetAttackInterval();
             float interval = baseInterval * IntervalMultiplier;
 
-            // Passive bonus based on enemies in range: +10% attack speed per enemy, capped at +100%
+            // Passive bonus based on enemies in range; the second upgrade doubles its per-enemy bonus and cap.
             int enemyCount = GetEnemyCountInRange();
-            float bonus = Mathf.Clamp01(enemyCount * 0.10f);
-            // Attack speed scales by (1 + bonus), so the interval divides by it: at most half the interval
-            interval /= 1f + bonus;
-            return interval;
+            return interval / GetAttackSpeedMultiplier(enemyCount, currentRarity);
         }
 
         public override void Attack(EnemyBase target)
         {
             if (target == null || !isDeployed) return;
 
+            SelectDefenseRampTarget(target);
+            int hitCountForShot = landedHitsOnDefenseRampTarget;
             PlayAttackSound();
             Vector3 attackOrigin = GetNextAttackOrigin();
             Color projectileColor = IsCopiedFromFramiliar
@@ -118,7 +129,7 @@ namespace TrashTD.Operators
                 0.12f,
                 0.07f,
                 false,
-                () => ApplyPompothDamage(target),
+                () => ApplyPompothDamage(target, hitCountForShot),
                 ProjectileStyle.Bullet);
             SelectNextAttackOrigin();
         }
@@ -241,13 +252,54 @@ namespace TrashTD.Operators
             }
         }
 
-        private void ApplyPompothDamage(EnemyBase target)
+        private void SelectDefenseRampTarget(EnemyBase target)
+        {
+            if (defenseRampTarget == target) return;
+
+            defenseRampTarget = target;
+            landedHitsOnDefenseRampTarget = 0;
+        }
+
+        private void ApplyPompothDamage(EnemyBase target, int hitCountForShot)
         {
             if (target == null || target.IsDead) return;
 
             int atk = Mathf.RoundToInt(CurrentATK * DamageMultiplier);
-            int damage = DamageCalculator.CalculateDamage(atk, GetTargetMitigation(target));
-            target.TryTakeAttackDamage(damage, data.damageType, this);
+            bool isCurrentRampTarget = defenseRampTarget == target;
+            int currentHitCount = isCurrentRampTarget
+                ? landedHitsOnDefenseRampTarget
+                : hitCountForShot;
+            int mitigation = data.damageType == DamageType.Physical
+                ? CalculateDefenseAfterIgnore(target.CurrentDEF, currentHitCount, HasDefenseIgnoreUpgrade)
+                : target.CurrentRES;
+            int damage = DamageCalculator.CalculateDamage(atk, mitigation);
+            int previousHP = target.CurrentHP;
+            if (!target.TryTakeAttackDamage(damage, data.damageType, this) || target.CurrentHP >= previousHP)
+                return;
+
+            if (HasDefenseIgnoreUpgrade && isCurrentRampTarget)
+            {
+                landedHitsOnDefenseRampTarget = Mathf.Max(
+                    landedHitsOnDefenseRampTarget,
+                    Mathf.Min(currentHitCount + 1, DefenseIgnoreHitCap));
+            }
+        }
+
+        public static float GetAttackSpeedMultiplier(int enemyCount, OperatorRarity rarity)
+        {
+            float perEnemyBonus = rarity >= OperatorRarity.Star3 ? 0.30f : 0.10f;
+            float maxBonus = rarity >= OperatorRarity.Star3 ? 3f : 1f;
+            return 1f + Mathf.Min(Mathf.Max(0, enemyCount) * perEnemyBonus, maxBonus);
+        }
+
+        public static int CalculateDefenseAfterIgnore(int defense, int landedHitsOnTarget, bool hasDefenseIgnoreUpgrade)
+        {
+            if (!hasDefenseIgnoreUpgrade) return Mathf.Max(0, defense);
+
+            float ignore = Mathf.Min(
+                Mathf.Clamp(landedHitsOnTarget + 1, 1, DefenseIgnoreHitCap) * DefenseIgnorePerHit,
+                MaximumDefenseIgnore);
+            return Mathf.Max(0, Mathf.RoundToInt(defense * (1f - ignore)));
         }
     }
 }

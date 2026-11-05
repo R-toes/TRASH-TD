@@ -27,6 +27,7 @@ namespace TrashTD.Editor
         private const string BulkheadSkillDescription = "Base (1\u2605): When blocking 3 or more enemies, increases ATK and DEF by 20%. 1st upgrade (2\u2605): Every 8 enemy hits, releases a gray shockwave that stuns all enemies Bulkhead is currently blocking for 1.5 seconds. 2nd upgrade (3\u2605): Block count increases to 6.";
         private const string ChillpathSkillDescription = "Base (1\u2605): Applies chill to slow and freeze enemies. Freezing an enemy grants 25% faster attacks for 3.5 seconds. Every 4th attack fires 1 extra shard at another enemy in range, or the same enemy if alone. 1st upgrade (2\u2605): While Chillpath is deployed, all operators deal 50% more damage to frozen enemies. 2nd upgrade (3\u2605): Fires 3 shards per attack at different enemies when possible, repeating targets if fewer than 3 are in range. The every-4th-attack bonus adds 1 more shard, for 4 total. Her freeze haste remains.";
         private const string DeadeyeSkillDescription = "Base (1\u2605): Deals 20% more damage to flying enemies, but his attack interval is 20% longer while an aerial target is in range. 1st upgrade (2\u2605): Removes the attack interval penalty while keeping the flying-enemy damage bonus. Each landed hit against the same target adds 2% of ATK as damage, starting on the first hit and capped at +100%; switching targets resets the bonus. 2nd upgrade (3\u2605): After killing an enemy, his next shot deals an additional 100% damage.";
+        private const string PompothSkillDescription = "Base (1\u2605): Rapid-fire sniper with lower per-shot damage but equal total DPS. Gains +10% attack speed per enemy in range, capped at +100%. 1st upgrade (2\u2605): Each landed hit against the same enemy ignores 1% of its DEF, stacking to 100%; switching targets resets this bonus. 2nd upgrade (3\u2605): Increases the attack-speed passive to +30% per enemy, capped at +300%.";
         private const string EnemyDataFolder = "Assets/_Project/Data/Enemies";
         private const string StageDataFolder = "Assets/Resources/Stages";
         private const string OperatorPrefabFolder = "Assets/_Project/Prefabs/Operators";
@@ -703,7 +704,7 @@ namespace TrashTD.Editor
                         new Vector2Int(3, -1), new Vector2Int(3, 1)
                     },
                     pompothFrame0, pompothPrefab);
-                pompoth.skillDescription = "Rapid-fire sniper. Fires faster with lower damage per shot but equal DPS. Passive: +10% attack speed per enemy in range, capped at +100% with 10 or more enemies.";
+                pompoth.skillDescription = PompothSkillDescription;
                 EditorUtility.SetDirty(pompoth);
             }
 
