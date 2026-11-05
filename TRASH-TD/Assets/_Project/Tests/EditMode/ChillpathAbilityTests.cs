@@ -14,9 +14,11 @@ namespace TrashTD.Tests
     public class ChillpathAbilityTests
     {
         private const string ChillpathPrefabPath = "Assets/_Project/Prefabs/Operators/Prefab_OP_Chillpath.prefab";
+        private const string ChillpathDataPath = "Assets/_Project/Data/Operators/OP_Caster_Chillpath.asset";
 
         private GameObject chillpathObject;
         private GameObject gridObject;
+        private GameObject operatorManagerObject;
         private GameObject enemyManagerObject;
         private GameObject targetAObject;
         private GameObject targetBObject;
@@ -28,9 +30,23 @@ namespace TrashTD.Tests
 
         private ChillpathOperator chillpath;
         private GridManager gridManager;
+        private OperatorManager operatorManager;
         private EnemyManager enemyManager;
         private GruntEnemy targetA;
         private GruntEnemy targetB;
+
+        [Test]
+        public void SkillDescription_ListsBaseAndBothUpgradeTiers()
+        {
+            var data = AssetDatabase.LoadAssetAtPath<OperatorData>(ChillpathDataPath);
+            Assert.IsNotNull(data);
+            StringAssert.Contains("Base (1\u2605)", data.skillDescription);
+            StringAssert.Contains("1st upgrade (2\u2605)", data.skillDescription);
+            StringAssert.Contains("50% more damage to frozen enemies", data.skillDescription);
+            StringAssert.Contains("2nd upgrade (3\u2605)", data.skillDescription);
+            StringAssert.Contains("Fires 3 shards per attack", data.skillDescription);
+            StringAssert.Contains("freeze haste remains", data.skillDescription);
+        }
 
         [Test]
         public void AttackAnimation_UsesAllFramesWithSpecifiedTimingAndAlignedPivots()
@@ -141,6 +157,9 @@ namespace TrashTD.Tests
             gridManager = gridObject.AddComponent<GridManager>();
             gridManager.InitializeFromStageData(stageData);
 
+            operatorManagerObject = new GameObject("TestOperatorManager");
+            operatorManager = operatorManagerObject.AddComponent<OperatorManager>();
+
             enemyManagerObject = new GameObject("TestEnemyManager");
             enemyManager = TestUtility.AddAwakened<EnemyManager>(enemyManagerObject);
 
@@ -174,6 +193,7 @@ namespace TrashTD.Tests
 
             var deployCell = gridManager.GetCell(new Vector2Int(0, 0));
             chillpath.Deploy(deployCell);
+            operatorManager.RegisterOperator(chillpath);
 
             enemyDataA = ScriptableObject.CreateInstance<EnemyData>();
             enemyDataA.baseHP = 200;
@@ -202,6 +222,7 @@ namespace TrashTD.Tests
             if (chillpathObject != null) Object.DestroyImmediate(chillpathObject);
             if (targetAObject != null) Object.DestroyImmediate(targetAObject);
             if (targetBObject != null) Object.DestroyImmediate(targetBObject);
+            if (operatorManagerObject != null) Object.DestroyImmediate(operatorManagerObject);
             if (enemyManagerObject != null) Object.DestroyImmediate(enemyManagerObject);
             if (gridObject != null) Object.DestroyImmediate(gridObject);
             if (chillpathData != null) Object.DestroyImmediate(chillpathData);
@@ -306,6 +327,75 @@ namespace TrashTD.Tests
             Assert.IsTrue(chillpath.IsHasteActive, "Chillpath should gain haste after freezing an enemy.");
             float hastedInterval = chillpath.GetAttackInterval();
             Assert.AreEqual(normalInterval * 0.75f, hastedInterval, 0.001f, "Attack interval should decrease by 25% while hasted.");
+        }
+
+        [Test]
+        public void FirstUpgrade_OperatorsDealFiftyPercentMoreDamageToFrozenEnemiesWhileDeployed()
+        {
+            Assert.IsTrue(chillpath.HasFrozenDamageUpgrade);
+            Assert.IsTrue(ChillpathOperator.IsFrozenDamageBonusActive);
+            Assert.IsTrue(targetA.ApplyChill(
+                chillpathData.chillFreezeThreshold,
+                chillpathData.chillSlowMultiplier,
+                chillpathData.chillSlowDuration,
+                chillpathData.chillFreezeThreshold,
+                chillpathData.chillFreezeDuration));
+            Assert.IsTrue(targetA.IsFrozen);
+
+            int hpBeforeHit = targetA.CurrentHP;
+            Assert.IsTrue(targetA.TryTakeAttackDamage(20, DamageType.Physical, chillpath));
+            Assert.AreEqual(hpBeforeHit - 30, targetA.CurrentHP);
+
+            chillpath.Retreat();
+            Assert.IsFalse(ChillpathOperator.IsFrozenDamageBonusActive);
+
+            int hpAfterRetreat = targetA.CurrentHP;
+            Assert.IsTrue(targetA.TryTakeAttackDamage(20, DamageType.Physical, chillpath));
+            Assert.AreEqual(hpAfterRetreat - 20, targetA.CurrentHP);
+        }
+
+        [Test]
+        public void SecondUpgrade_FiresThreeShardsAtDifferentTargetsWhenAvailable()
+        {
+            UpgradeAndRedeployChillpath(OperatorRarity.Star3);
+            enemyManager.RegisterActiveEnemyForTesting(targetA);
+            enemyManager.RegisterActiveEnemyForTesting(targetB);
+
+            int projectileCountBefore = Object.FindObjectsByType<CombatProjectileVisual>().Length;
+            chillpath.Attack(targetA);
+
+            Assert.AreEqual(targetB, chillpath.LastUpgradeShardTarget);
+            Assert.AreEqual(projectileCountBefore + ChillpathOperator.UpgradedShardCount,
+                Object.FindObjectsByType<CombatProjectileVisual>().Length);
+
+            float normalInterval = chillpath.GetAttackInterval();
+            chillpath.ApplyAttackImpact(targetA);
+            chillpath.ApplyAttackImpact(targetA);
+            chillpath.ApplyAttackImpact(targetA);
+            Assert.IsTrue(chillpath.IsHasteActive);
+            Assert.AreEqual(normalInterval * 0.75f, chillpath.GetAttackInterval(), 0.001f);
+        }
+
+        [Test]
+        public void SecondUpgrade_FiresAllThreeShardsAtSameTargetWhenAlone()
+        {
+            UpgradeAndRedeployChillpath(OperatorRarity.Star3);
+            enemyManager.RegisterActiveEnemyForTesting(targetA);
+
+            int projectileCountBefore = Object.FindObjectsByType<CombatProjectileVisual>().Length;
+            chillpath.Attack(targetA);
+
+            Assert.AreEqual(targetA, chillpath.LastUpgradeShardTarget);
+            Assert.AreEqual(projectileCountBefore + ChillpathOperator.UpgradedShardCount,
+                Object.FindObjectsByType<CombatProjectileVisual>().Length);
+        }
+
+        private void UpgradeAndRedeployChillpath(OperatorRarity rarity)
+        {
+            chillpath.Retreat();
+            chillpath.Initialize(chillpathData, rarity);
+            Assert.IsTrue(chillpath.Deploy(gridManager.GetCell(new Vector2Int(0, 0))));
+            operatorManager.RegisterOperator(chillpath);
         }
     }
 }

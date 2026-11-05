@@ -1238,6 +1238,11 @@ namespace TrashTD.Enemies
                 {
                     damage = Mathf.Max(1, Mathf.RoundToInt(damage * (1f - junkernautReduction)));
                 }
+
+                if (isFrozen && ChillpathOperator.IsFrozenDamageBonusActive)
+                {
+                    damage = Mathf.Max(1, Mathf.RoundToInt(damage * ChillpathOperator.FrozenEnemyDamageMultiplier));
+                }
             }
 
             int hpBeforeHit = currentHP;

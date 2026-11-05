@@ -24,6 +24,7 @@ namespace TrashTD.Editor
             ArtFolder,
         };
         private const string OperatorDataFolder = "Assets/_Project/Data/Operators";
+        private const string ChillpathSkillDescription = "Base (1\u2605): Applies chill to slow and freeze enemies. Freezing an enemy grants 25% faster attacks for 3.5 seconds. Every 4th attack fires 1 extra shard at another enemy in range, or the same enemy if alone. 1st upgrade (2\u2605): While Chillpath is deployed, all operators deal 50% more damage to frozen enemies. 2nd upgrade (3\u2605): Fires 3 shards per attack at different enemies when possible, repeating targets if fewer than 3 are in range. The every-4th-attack bonus adds 1 more shard, for 4 total. Her freeze haste remains.";
         private const string EnemyDataFolder = "Assets/_Project/Data/Enemies";
         private const string StageDataFolder = "Assets/Resources/Stages";
         private const string OperatorPrefabFolder = "Assets/_Project/Prefabs/Operators";
@@ -750,6 +751,17 @@ namespace TrashTD.Editor
             caster.damageType = DamageType.Arts;
             caster.skillDescription = "Base (1\u2605): Gains 3% ATK per enemy in range (up to 5 stacks) and deals AoE Arts damage. 1st upgrade (2\u2605): adds two tiles beside the furthest tile of his range. 2nd upgrade (3\u2605): each Arts AoE hit deals damage twice.";
             EditorUtility.SetDirty(caster);
+
+            var chillpath = AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Chillpath.asset");
+            if (chillpath == null)
+            {
+                Debug.LogError("OP_Caster_Chillpath.asset was not found; Chillpath's skill description could not be generated.");
+            }
+            else
+            {
+                chillpath.skillDescription = ChillpathSkillDescription;
+                EditorUtility.SetDirty(chillpath);
+            }
 
             // 4b. Caster (Resicochet)
             var resicochetFrame0 = LoadSprite("Resicochet-Sheet.png", "Resicochet_0");

@@ -38,7 +38,7 @@ MonoBehaviour:
   cannotBeHealed: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: Applies chill to slow and freeze enemies. Decreases attack interval after applying freeze. Every 4th attack hits an additional target in range (or the current target if no other target is in range).
+  skillDescription: 'Base (1★): Applies chill to slow and freeze enemies. Freezing an enemy grants 25% faster attacks for 3.5 seconds. Every 4th attack fires 1 extra shard at another enemy in range, or the same enemy if alone. 1st upgrade (2★): While Chillpath is deployed, all operators deal 50% more damage to frozen enemies. 2nd upgrade (3★): Fires 3 shards per attack at different enemies when possible, repeating targets if fewer than 3 are in range. The every-4th-attack bonus adds 1 more shard, for 4 total. Her freeze haste remains.'
   chillPerHit: 30
   chillSlowMultiplier: 0.5
   chillSlowDuration: 2.5
