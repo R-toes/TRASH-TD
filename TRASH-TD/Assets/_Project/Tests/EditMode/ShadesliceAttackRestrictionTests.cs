@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using TrashTD.Combat;
@@ -171,6 +172,106 @@ namespace TrashTD.Tests
             attacker.TakeDamage(1000, DamageType.True);
 
             Assert.Less(shadeslice.CurrentHP, startingHP);
+        }
+
+        [Test]
+        public void AttackAnimation_UsesRequestedFrameTimingAndTotalDuration()
+        {
+            float[] expectedDurations =
+            {
+                0.08f, 0.05f, 0.05f, 0.07f, 0.10f, 0.03f, 0.03f,
+                0.04f, 0.05f, 0.09f, 0.07f, 0.04f, 0.06f, 0.09f
+            };
+
+            Assert.AreEqual(14, ShadesliceSpriteAnimation.AttackFrameCount);
+            Assert.AreEqual(8, ShadesliceSpriteAnimation.ImpactFrameIndex);
+            Assert.AreEqual(0.45f, ShadesliceSpriteAnimation.WindupSeconds, 0.0001f);
+            Assert.AreEqual(0.85f, ShadesliceSpriteAnimation.AttackDuration, 0.0001f);
+            for (int i = 0; i < expectedDurations.Length; i++)
+                Assert.AreEqual(expectedDurations[i], ShadesliceSpriteAnimation.GetAttackFrameDuration(i), 0.0001f);
+        }
+
+        [Test]
+        public void AttackAnimation_StartsWhenTargetEntersRangeAfterAttackIsReady()
+        {
+            const string prefabPath = "Assets/_Project/Prefabs/Operators/Prefab_OP_Shadeslice.prefab";
+            GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.IsNotNull(prefab);
+
+            ShadesliceSpriteAnimation prefabAnimation = prefab.GetComponent<ShadesliceSpriteAnimation>();
+            Assert.IsNotNull(prefabAnimation);
+            shadesliceObject.AddComponent<SpriteRenderer>();
+            ShadesliceSpriteAnimation animation = shadesliceObject.AddComponent<ShadesliceSpriteAnimation>();
+            animation.Configure(prefabAnimation.Frames, prefabAnimation.AttackFrames);
+            TestUtility.CallAwake(animation);
+            Assert.IsTrue(animation.HasAttackAnimation);
+
+            GruntEnemy attacker = CreateEnemy<GruntEnemy>(EnemyArchetype.Grunt);
+            Assert.IsTrue(shadeslice.TryBlock(attacker));
+
+            float attackInterval = shadeslice.GetAttackInterval();
+            typeof(OperatorBase).GetField("attackTimer", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(shadeslice, attackInterval);
+            typeof(ShadesliceOperator).GetMethod("UpdateAttackWindup", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(shadeslice, null);
+
+            Assert.IsTrue(animation.IsWindingUp);
+            Assert.AreEqual(attackInterval - ShadesliceSpriteAnimation.WindupSeconds,
+                (float)typeof(OperatorBase).GetField("attackTimer", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .GetValue(shadeslice),
+                0.0001f);
+        }
+
+        [TestCase(OperatorFacing.Left, -1f)]
+        [TestCase(OperatorFacing.Right, 1f)]
+        public void AttackProjectile_TravelsFixedDistanceInFacingDirectionWithoutHoming(
+            OperatorFacing facing,
+            float expectedDirection)
+        {
+            shadesliceData.projectileOrigin = new Vector2(-0.34f, 0.28f);
+            shadeslice.SetFacing(facing);
+            GruntEnemy attacker = CreateEnemy<GruntEnemy>(EnemyArchetype.Grunt);
+            attacker.transform.position = shadeslice.transform.position + new Vector3(3f, 2f, 0f);
+
+            var existingProjectiles = new HashSet<CombatProjectileVisual>(
+                Object.FindObjectsByType<CombatProjectileVisual>());
+            shadeslice.Attack(attacker);
+
+            CombatProjectileVisual[] projectiles = Object.FindObjectsByType<CombatProjectileVisual>();
+            CombatProjectileVisual attackProjectile = null;
+            foreach (CombatProjectileVisual projectile in projectiles)
+            {
+                if (!existingProjectiles.Contains(projectile))
+                {
+                    attackProjectile = projectile;
+                    break;
+                }
+            }
+
+            Assert.IsNotNull(attackProjectile);
+            try
+            {
+                var targetEnemyField = typeof(CombatProjectileVisual).GetField(
+                    "targetEnemy",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                var targetPositionField = typeof(CombatProjectileVisual).GetField(
+                    "targetPosition",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.IsNotNull(targetEnemyField);
+                Assert.IsNotNull(targetPositionField);
+                Assert.IsNull(targetEnemyField.GetValue(attackProjectile));
+
+                Vector3 expectedStart = shadeslice.transform.position + Vector3.down * (2f / 32f);
+                Vector3 expectedEnd = expectedStart + Vector3.right * expectedDirection;
+                Assert.AreEqual(expectedStart, attackProjectile.transform.position);
+                Assert.AreEqual(expectedEnd, (Vector3)targetPositionField.GetValue(attackProjectile));
+                Assert.AreEqual(expectedStart.y, expectedEnd.y);
+                Assert.AreNotEqual(attacker.VisualPosition, expectedEnd);
+            }
+            finally
+            {
+                Object.DestroyImmediate(attackProjectile.gameObject);
+            }
         }
 
         private TEnemy CreateEnemy<TEnemy>(EnemyArchetype archetype) where TEnemy : EnemyBase

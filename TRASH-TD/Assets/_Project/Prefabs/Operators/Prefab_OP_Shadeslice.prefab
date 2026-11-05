@@ -114,11 +114,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 4120733290429841632}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 15730cd9b1a04c21b3c152b454d2f53a, type: 3}
+  m_Script: {fileID: 11500000, guid: 7d26a058c9854c26875d2e060c2e6e1d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
-  frameDuration: 0.1
-  frames:
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.ShadesliceSpriteAnimation
+  idleFrames:
   - {fileID: 2426505987633283266, guid: 40492eeb02783134cbc4e16243dc8a13, type: 3}
   - {fileID: -5897899313615954717, guid: 40492eeb02783134cbc4e16243dc8a13, type: 3}
   - {fileID: -233461237, guid: 40492eeb02783134cbc4e16243dc8a13, type: 3}
@@ -127,3 +126,19 @@ MonoBehaviour:
   - {fileID: 1742526698, guid: 40492eeb02783134cbc4e16243dc8a13, type: 3}
   - {fileID: -211133805, guid: 40492eeb02783134cbc4e16243dc8a13, type: 3}
   - {fileID: 1379334424, guid: 40492eeb02783134cbc4e16243dc8a13, type: 3}
+  attackFrames:
+  - {fileID: -106690110828427005, guid: 40ff638bead8aea47849dc7ce9e63bae, type: 3}
+  - {fileID: -945709466628082383, guid: 40ff638bead8aea47849dc7ce9e63bae, type: 3}
+  - {fileID: -1123767423714514606, guid: 40ff638bead8aea47849dc7ce9e63bae, type: 3}
+  - {fileID: 5149824214124655256, guid: 40ff638bead8aea47849dc7ce9e63bae, type: 3}
+  - {fileID: 8267254732963938966, guid: 40ff638bead8aea47849dc7ce9e63bae, type: 3}
+  - {fileID: 5637722915713369246, guid: 40ff638bead8aea47849dc7ce9e63bae, type: 3}
+  - {fileID: 3557554923697473251, guid: 40ff638bead8aea47849dc7ce9e63bae, type: 3}
+  - {fileID: 7262958121665088038, guid: 40ff638bead8aea47849dc7ce9e63bae, type: 3}
+  - {fileID: 5922334236174717763, guid: 40ff638bead8aea47849dc7ce9e63bae, type: 3}
+  - {fileID: -5646743975767174733, guid: 40ff638bead8aea47849dc7ce9e63bae, type: 3}
+  - {fileID: -7654553237644073635, guid: 40ff638bead8aea47849dc7ce9e63bae, type: 3}
+  - {fileID: 2197055641735549890, guid: 40ff638bead8aea47849dc7ce9e63bae, type: 3}
+  - {fileID: 1542648471370474645, guid: 40ff638bead8aea47849dc7ce9e63bae, type: 3}
+  - {fileID: -1830182672571015649, guid: 40ff638bead8aea47849dc7ce9e63bae, type: 3}
+  idleFrameDuration: 0.1

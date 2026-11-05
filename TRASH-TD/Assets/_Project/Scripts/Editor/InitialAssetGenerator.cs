@@ -42,6 +42,7 @@ namespace TrashTD.Editor
 
             GenerateOperators();
             ConfigureChillpathAttackAnimation();
+            ConfigureShadesliceAttackAnimation();
             GenerateEnemies();
             GenerateStage();
             GenerateStage2();
@@ -238,6 +239,52 @@ namespace TrashTD.Editor
                 }
 
                 muzzle.localPosition = new Vector3(-1.5f / 32f, 14.5f / 32f, 0f);
+                animation.Configure(idleFrames, attackFrames);
+                spriteRenderer.sprite = idleFrames[0];
+                PrefabUtility.SaveAsPrefabAsset(prefabContents, path);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(prefabContents);
+            }
+        }
+
+        private static void ConfigureShadesliceAttackAnimation()
+        {
+            Sprite[] idleFrames = LoadSpriteFrames("Shadeslice-Sheet.png", "Shadeslice-Sheet", 8);
+            Sprite[] attackFrames = LoadSpriteFrames(
+                "Shadeslice Attack Sheet.png",
+                "Shadeslice Attack Sheet",
+                ShadesliceSpriteAnimation.AttackFrameCount);
+            if (System.Array.Exists(idleFrames, frame => frame == null) ||
+                System.Array.Exists(attackFrames, frame => frame == null))
+                return;
+
+            string path = $"{OperatorPrefabFolder}/Prefab_OP_Shadeslice.prefab";
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
+            {
+                Debug.LogError($"InitialAssetGenerator: Missing Shadeslice prefab at {path}.");
+                return;
+            }
+
+            GameObject prefabContents = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                SpriteRenderer spriteRenderer = prefabContents.GetComponent<SpriteRenderer>();
+                if (spriteRenderer == null)
+                {
+                    Debug.LogError($"InitialAssetGenerator: Shadeslice prefab at {path} requires a SpriteRenderer.");
+                    return;
+                }
+
+                OperatorSpriteAnimation oldAnimation = prefabContents.GetComponent<OperatorSpriteAnimation>();
+                if (oldAnimation != null)
+                    Object.DestroyImmediate(oldAnimation);
+
+                ShadesliceSpriteAnimation animation = prefabContents.GetComponent<ShadesliceSpriteAnimation>();
+                if (animation == null)
+                    animation = prefabContents.AddComponent<ShadesliceSpriteAnimation>();
+
                 animation.Configure(idleFrames, attackFrames);
                 spriteRenderer.sprite = idleFrames[0];
                 PrefabUtility.SaveAsPrefabAsset(prefabContents, path);
