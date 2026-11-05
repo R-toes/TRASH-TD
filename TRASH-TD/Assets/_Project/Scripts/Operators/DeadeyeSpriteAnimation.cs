@@ -3,43 +3,90 @@ using UnityEngine;
 namespace TrashTD.Operators
 {
     /// <summary>
-    /// Deadeye's sprite: an 8-frame idle loop ("Deadeye-Sheet") and a 10-frame attack ("Deadeye Attack Sheet":
-    /// frames 0-4 raise and aim the arm, 5 is the shot, 6-9 recover). DeadeyeOperator starts the attack early so
-    /// the shot frame lands on the real shot, leaving combat timing unchanged. A shot with no warning (an enemy
-    /// walking into range of a charged attack) jumps straight to the shot frame.
+    /// Deadeye's sprite: an 8-frame idle loop ("Deadeye-Sheet") and a 10-frame one-shot attack
+    /// ("Deadeye Attack Sheet"). DeadeyeOperator starts the attack early so frame 5 lands on the real shot,
+    /// leaving combat timing unchanged. A shot with no warning jumps straight to the launch frame.
     /// </summary>
     [RequireComponent(typeof(SpriteRenderer))]
     public class DeadeyeSpriteAnimation : MonoBehaviour, IOperatorSpriteFrames
     {
         // 8-frame idle loop (1 s per cycle).
         private const float FrameInterval = 0.125f;
-        // 10 attack frames in 0.7 s, inside Deadeye's 0.75 s attack interval
-        private const float AttackFrameInterval = 0.07f;
 
-        /// <summary>The attack frame that shows the shot (recoil, eyes shut).</summary>
+        private static readonly float[] AttackFrameDurations =
+        {
+            0.12f, 0.07f, 0.06f, 0.10f, 0.11f,
+            0.06f, 0.06f, 0.08f, 0.08f, 0.12f
+        };
+
         public const int FireFrame = 5;
-
-        /// <summary>How long the wind-up before the shot frame lasts when it can start early.</summary>
-        public const float WindupTime = FireFrame * AttackFrameInterval;
+        public const int AttackFrameCount = 10;
+        public const float WindupTime = 0.46f;
+        public const float FirePointOffsetXPixels = -14f;
+        public const float FirePointOffsetYPixels = 1f;
+        public const float PixelsPerUnit = 32f;
 
         [SerializeField] private Sprite[] frames;
         [SerializeField] private Sprite[] attackFrames;
 
         public Sprite[] Frames => frames;
+        public Sprite[] AttackFrames => attackFrames;
         public float FrameDuration => FrameInterval;
 
-        /// <summary>True when the attack sheet is assigned (otherwise Deadeye just idles while shooting).</summary>
-        public bool HasAttackAnimation => attackFrames != null && attackFrames.Length > FireFrame && attackFrames[FireFrame] != null;
+        public bool HasAttackAnimation => attackFrames != null &&
+                                          attackFrames.Length == AttackFrameCount &&
+                                          System.Array.TrueForAll(attackFrames, frame => frame != null);
         public bool IsAttacking => attacking;
+        public int CurrentAttackFrame => attackFrame;
+        public Transform FirePoint
+        {
+            get
+            {
+                EnsureFirePoint();
+                RefreshFirePointFacing();
+                return firePoint;
+            }
+        }
 
         private SpriteRenderer spriteRenderer;
+        private Transform firePoint;
         private float frameTimer;
         private int currentFrame;
 
         private bool attacking;
         private int attackFrame;
         private float attackFrameTimer;
-        private float windupFrameInterval = AttackFrameInterval;
+        private float windupPlaybackScale = 1f;
+
+        public static float GetAttackFrameDuration(int frameIndex)
+        {
+            return frameIndex >= 0 && frameIndex < AttackFrameDurations.Length
+                ? AttackFrameDurations[frameIndex]
+                : 0f;
+        }
+
+        public static float AttackDuration
+        {
+            get
+            {
+                float duration = 0f;
+                for (int i = 0; i < AttackFrameDurations.Length; i++)
+                    duration += AttackFrameDurations[i];
+                return duration;
+            }
+        }
+
+        public void RefreshFirePointFacing()
+        {
+            EnsureFirePoint();
+            if (firePoint == null) return;
+
+            float direction = spriteRenderer != null && spriteRenderer.flipX ? -1f : 1f;
+            firePoint.localPosition = new Vector3(
+                direction * FirePointOffsetXPixels / PixelsPerUnit,
+                FirePointOffsetYPixels / PixelsPerUnit,
+                0f);
+        }
 
         private void Awake()
         {
@@ -47,6 +94,13 @@ namespace TrashTD.Operators
             if (frames == null || frames.Length < 2)
             {
                 Debug.LogError("DeadeyeSpriteAnimation requires at least two assigned sprites.", this);
+                enabled = false;
+                return;
+            }
+
+            if (!HasAttackAnimation)
+            {
+                Debug.LogError($"DeadeyeSpriteAnimation requires exactly {AttackFrameCount} assigned attack sprites.", this);
                 enabled = false;
                 return;
             }
@@ -61,6 +115,8 @@ namespace TrashTD.Operators
                 }
             }
 
+            EnsureFirePoint();
+            RefreshFirePointFacing();
             spriteRenderer.sprite = frames[0];
         }
 
@@ -70,12 +126,25 @@ namespace TrashTD.Operators
         /// </summary>
         public void BeginAttack(float timeUntilShot)
         {
-            if (!enabled || !HasAttackAnimation || attacking) return;
+            if (!enabled || !HasAttackAnimation || attacking || timeUntilShot <= 0f) return;
 
-            int windupFrames = Mathf.Clamp(Mathf.CeilToInt(timeUntilShot / AttackFrameInterval), 1, FireFrame);
             attacking = true;
-            attackFrame = FireFrame - windupFrames;
-            windupFrameInterval = Mathf.Max(0.01f, timeUntilShot / windupFrames);
+            currentFrame = 0;
+            frameTimer = 0f;
+            float availableTime = Mathf.Min(timeUntilShot, WindupTime);
+            float remainingWindup = WindupTime;
+            attackFrame = 0;
+            for (int i = 0; i < FireFrame; i++)
+            {
+                if (remainingWindup < availableTime) break;
+                attackFrame = i;
+                remainingWindup -= AttackFrameDurations[i];
+            }
+
+            float selectedWindupDuration = 0f;
+            for (int i = attackFrame; i < FireFrame; i++)
+                selectedWindupDuration += AttackFrameDurations[i];
+            windupPlaybackScale = selectedWindupDuration / availableTime;
             attackFrameTimer = 0f;
             ShowAttackFrame();
         }
@@ -122,17 +191,19 @@ namespace TrashTD.Operators
             attackFrameTimer += Time.deltaTime;
             while (attacking)
             {
-                float interval = attackFrame < FireFrame ? windupFrameInterval : AttackFrameInterval;
+                float interval = AttackFrameDurations[attackFrame];
+                if (attackFrame < FireFrame)
+                    interval /= windupPlaybackScale;
                 if (attackFrameTimer < interval) return;
 
                 attackFrameTimer -= interval;
                 attackFrame++;
                 if (attackFrame >= attackFrames.Length || attackFrames[attackFrame] == null)
                 {
-                    // Recovered: pick the idle loop back up where it left off
                     attacking = false;
+                    currentFrame = 0;
                     frameTimer = 0f;
-                    spriteRenderer.sprite = frames[currentFrame];
+                    spriteRenderer.sprite = frames[0];
                     return;
                 }
 
@@ -143,6 +214,19 @@ namespace TrashTD.Operators
         private void ShowAttackFrame()
         {
             if (spriteRenderer != null) spriteRenderer.sprite = attackFrames[attackFrame];
+        }
+
+        private void EnsureFirePoint()
+        {
+            if (firePoint != null) return;
+
+            firePoint = transform.Find("FirePoint");
+            if (firePoint == null)
+            {
+                var firePointObject = new GameObject("FirePoint");
+                firePoint = firePointObject.transform;
+                firePoint.SetParent(transform, false);
+            }
         }
     }
 }

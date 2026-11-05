@@ -156,11 +156,15 @@ namespace TrashTD.Operators
 
             SpriteAnimation?.ShotFired();
             PlayAttackSound();
+            FireLightning(target, isAir);
+        }
 
+        private void FireLightning(EnemyBase target, bool isAir)
+        {
             Color projectileColor = isAir ? new Color(1f, 0.5f, 0.1f) : new Color(1f, 0.82f, 0.32f);
 
             CombatProjectileVisual.Fire(
-                ProjectileOrigin,
+                SpriteAnimation != null ? SpriteAnimation.FirePoint.position : ProjectileOrigin,
                 target,
                 projectileColor,
                 14f,
