@@ -14,7 +14,7 @@ namespace TrashTD.Operators
     /// Does not heal directly; every 2.0 seconds, grants an allied operator in range
     /// a protective bubble shield that negates one instance of damage (even at full HP).
     /// When the bubble pops, it heals the recipient for 30% of Bubblets' ATK and deals Arts damage
-    /// equal to 30% of Bubblets' ATK to enemies on that tile or directly in front.
+    /// equal to 30% of Bubblets' ATK to enemies on that tile and surrounding tiles.
     /// </summary>
     public class BubbletsOperator : MedicOperator
     {

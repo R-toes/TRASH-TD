@@ -276,6 +276,96 @@ namespace TrashTD.Combat
             });
         }
 
+        /// <summary>
+        /// Bubblets' protective bubble pop: a multi-frame pixel pop flipbook bursting into droplets,
+        /// radial pixel spray (1x1 dots, 2x2 beads, hollow 3x3 foam bits), floating rising micro-bubbles,
+        /// twinkling sparkle crosses, and a bright central flash.
+        /// Centered directly on the operator's tile.
+        /// </summary>
+        public static void BubblePop(Vector2 position, float radius = 0.75f, float delay = 0f)
+        {
+            Color bubbleCyan = new Color(0.45f, 0.88f, 1f);
+            Color brightIce = new Color(0.82f, 0.94f, 1f);
+            Color waterDroplet = new Color(0.51f, 0.73f, 0.92f);
+            Color deepWater = new Color(0.30f, 0.48f, 0.70f);
+
+            // 1. Bright center flash (1 frame)
+            Flash(position, bubbleCyan, false, delay);
+
+            // 2. Multi-frame 48x48 pixel pop flipbook centered on the operator's tile
+            PixelParticles.Emit(new PixelParticle
+            {
+                Position = position,
+                Life = 0.24f,
+                Delay = delay,
+                StartColor = Color.white,
+                EndColor = new Color(1f, 1f, 1f, 0.85f),
+                Frames = CombatFxArt.BubblePopFrames(),
+                SortingOrder = ImpactSortingOrder + 2
+            });
+
+            // 3. Radial bursting pixel particles sprayed outwards in 360 degrees
+            int particleCount = 20;
+            for (int i = 0; i < particleCount; i++)
+            {
+                float angle = (i * (360f / particleCount) + Random.Range(-12f, 12f)) * Mathf.Deg2Rad;
+                Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+                float speed = Random.Range(1.8f, 3.8f);
+
+                // Varied pixel sprites: 1x1 pixels, 2x2 water beads, and 3x3 hollow foam bits
+                Sprite sprite = (i % 4) switch
+                {
+                    0 => CombatFxArt.FoamBit(),
+                    1 => CombatFxArt.Dot2(),
+                    2 => CombatFxArt.Plus3(),
+                    _ => CombatFxArt.Dot1()
+                };
+
+                Color tint = (i % 3) switch
+                {
+                    0 => Color.white,
+                    1 => brightIce,
+                    _ => waterDroplet
+                };
+
+                PixelParticles.Emit(new PixelParticle
+                {
+                    Position = position + dir * Random.Range(0.08f, 0.32f),
+                    Velocity = dir * speed,
+                    Life = Random.Range(0.25f, 0.42f),
+                    Delay = delay + Random.Range(0f, 0.04f),
+                    Gravity = 3.5f,
+                    Drag = 3f,
+                    StartColor = tint,
+                    EndColor = Fade(tint),
+                    Sprite = sprite,
+                    SortingOrder = ImpactSortingOrder + 1
+                });
+            }
+
+            // 4. Rising micro-foam bubbles (gentle upward drift and pop)
+            for (int i = 0; i < 6; i++)
+            {
+                Vector2 offset = Random.insideUnitCircle * 0.35f;
+                PixelParticles.Emit(new PixelParticle
+                {
+                    Position = position + offset,
+                    Velocity = new Vector2(Random.Range(-0.35f, 0.35f), Random.Range(0.5f, 1.2f)),
+                    Life = Random.Range(0.35f, 0.55f),
+                    Delay = delay + Random.Range(0.02f, 0.10f),
+                    Gravity = -0.5f, // Floats gently upward
+                    Drag = 1.2f,
+                    StartColor = brightIce,
+                    EndColor = Fade(deepWater),
+                    Sprite = i % 2 == 0 ? CombatFxArt.FoamBit() : CombatFxArt.Dot1(),
+                    SortingOrder = ImpactSortingOrder + 1
+                });
+            }
+
+            // 5. Twinkling sparkle crosses shimmering around the 48x48 area
+            Crosses(position, bubbleCyan, 6, radius * 0.7f, false, 0.4f, delay);
+        }
+
         /// <summary>Little crosses floating up and fading: twinkles (small) or heal symbols (large).</summary>
         public static void Crosses(Vector2 position, Color color, int count, float spread, bool large,
             float life = 0.6f, float delay = 0f)

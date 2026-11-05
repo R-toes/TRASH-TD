@@ -12,8 +12,9 @@ namespace TrashTD.Operators
     /// <summary>
     /// Bubble shield applied by Bubblets to an operator.
     /// Negates 1 instance of damage (regardless of value).
-    /// When popped, heals recipient and deals Arts damage equal to 30% of Bubblets' ATK
-    /// to enemies on that tile or directly in front (such as enemies blocked by the operator).
+    /// When popped, plays a retro pixel pop animation on the actual operator's tile, heals recipient,
+    /// and deals Arts damage equal to 30% of Bubblets' ATK to enemies on that actual tile
+    /// and all surrounding tiles (3x3 grid area) as well as blocked enemies.
     /// Uses Bubblets-bubbles sprite at 40x40 scale centered directly on the operator.
     /// </summary>
     public class BubbleShield : MonoBehaviour
@@ -21,6 +22,9 @@ namespace TrashTD.Operators
         public const float BaseBubblePixelSize = 32f;
         public const float TargetBubblePixelSize = 40f;
         public const float BubbleScale = TargetBubblePixelSize / BaseBubblePixelSize; // 1.25f
+
+        public const float PopAoePixelSize = 48f;
+        public const float PopAoeRadius = (PopAoePixelSize * 0.5f) / BaseBubblePixelSize; // 0.75f units (24px radius = 48x48 visual)
 
         private static Sprite sharedBubbleSprite;
 
@@ -150,8 +154,11 @@ namespace TrashTD.Operators
         {
             Vector3 pos = transform.position;
 
-            // Cyan burst effect scaled to 40x40 px bounds (0.625 unit radius = 1.25 unit diameter)
-            AoeBlastVisual.PlayCircle(pos, 0.625f, new Color(0.35f, 0.88f, 1f, 0.85f), AoeStyle.Bubble);
+            // 1. Play the crisp 48x48 retro pixel pop animation & pixel particles centered on the actual operator
+            CombatFx.BubblePop(pos, PopAoeRadius);
+
+            // 2. Play the circular AoE blast scaled to 48x48 px centered to the operator
+            AoeBlastVisual.PlayCircle(pos, PopAoeRadius, new Color(0.35f, 0.88f, 1f, 0.8f), AoeStyle.Pulse);
 
             // Floating indicator on recipient
             if (showBlockedText)
@@ -178,30 +185,39 @@ namespace TrashTD.Operators
 
             GridManager gridManager = FindAnyObjectByType<GridManager>();
             GridCell currentCell = recipient.DeployedCell;
-            GridCell frontCell = null;
+            if (currentCell == null && gridManager != null)
+            {
+                currentCell = gridManager.GetCell(gridManager.WorldToGridPosition(recipient.transform.position));
+            }
 
+            var checkCells = new List<GridCell>();
+
+            // Collect the actual operator's tile and all 8 surrounding tiles (3x3 grid area)
             if (gridManager != null && currentCell != null)
             {
-                Vector2Int frontOffset = recipient.Facing switch
+                Vector2Int centerPos = currentCell.GridPosition;
+                for (int dy = -1; dy <= 1; dy++)
                 {
-                    OperatorFacing.Right => new Vector2Int(1, 0),
-                    OperatorFacing.Left => new Vector2Int(-1, 0),
-                    OperatorFacing.Up => new Vector2Int(0, 1),
-                    OperatorFacing.Down => new Vector2Int(0, -1),
-                    _ => new Vector2Int(1, 0)
-                };
-                frontCell = gridManager.GetCell(currentCell.GridPosition + frontOffset);
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        GridCell cell = gridManager.GetCell(centerPos.x + dx, centerPos.y + dy);
+                        if (cell != null && !checkCells.Contains(cell))
+                        {
+                            checkCells.Add(cell);
+                        }
+                    }
+                }
+            }
+            else if (currentCell != null)
+            {
+                checkCells.Add(currentCell);
             }
 
             var hitEnemies = new HashSet<EnemyBase>();
 
-            // Enemies on current tile or front tile
-            if (EnemyManager.Instance != null)
+            // Enemies on the actual tile or any surrounding tile
+            if (EnemyManager.Instance != null && checkCells.Count > 0)
             {
-                var checkCells = new List<GridCell>();
-                if (currentCell != null) checkCells.Add(currentCell);
-                if (frontCell != null) checkCells.Add(frontCell);
-
                 var inCells = EnemyManager.Instance.GetEnemiesInCells(
                     checkCells,
                     recipient != null && recipient.Data != null ? recipient.Data.position : OperatorPosition.Ranged);
@@ -211,6 +227,27 @@ namespace TrashTD.Operators
                     {
                         var e = inCells[i];
                         if (e != null && !e.IsDead) hitEnemies.Add(e);
+                    }
+                }
+            }
+            else if (EnemyManager.Instance != null && checkCells.Count == 0)
+            {
+                // Fallback for tests when GridManager is uninitialized
+                var active = EnemyManager.Instance.ActiveEnemies;
+                if (active != null)
+                {
+                    Vector3 center = recipient.transform.position;
+                    for (int i = 0; i < active.Count; i++)
+                    {
+                        var e = active[i];
+                        if (e != null && !e.IsDead)
+                        {
+                            Vector3 diff = e.transform.position - center;
+                            if (Mathf.Abs(diff.x) <= 1.55f && Mathf.Abs(diff.y) <= 1.55f)
+                            {
+                                hitEnemies.Add(e);
+                            }
+                        }
                     }
                 }
             }
@@ -224,12 +261,6 @@ namespace TrashTD.Operators
                     var e = blocked[i];
                     if (e != null && !e.IsDead) hitEnemies.Add(e);
                 }
-            }
-
-            // If front cell exists and has enemies, play splash on front cell too
-            if (frontCell != null && hitEnemies.Count > 0)
-            {
-                AoeBlastVisual.PlayCircle(frontCell.WorldPosition, 0.8f, new Color(0.35f, 0.88f, 1f, 0.6f), AoeStyle.Bubble);
             }
 
             int baseAtk = bubbletATK > 0 ? bubbletATK : (source != null ? source.CurrentATK : 45);

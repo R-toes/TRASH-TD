@@ -12,7 +12,7 @@ namespace TrashTD.Combat
     /// colour; the cache checks for destroyed sprites because domain reload is off (they are destroyed when
     /// play mode ends but the static cache survives).
     /// </summary>
-    internal static class CombatFxArt
+    public static class CombatFxArt
     {
         public const float PixelsPerUnit = 32f;
         public const float Pixel = 1f / PixelsPerUnit;
@@ -183,6 +183,12 @@ namespace TrashTD.Combat
 
         public static Sprite Plus3() => White("plus3", ".W.", "WWW", ".W.");
 
+        /// <summary>3x3 hollow mini-bubble foam pixel bit: .W. / W.W / .W.</summary>
+        public static Sprite FoamBit() => White("foambit",
+            ".W.",
+            "W.W",
+            ".W.");
+
         public static Sprite GlassFragment() => White("glassfrag", "WW.", ".WW");
 
         public static Sprite Plus5() => White("plus5",
@@ -247,6 +253,241 @@ namespace TrashTD.Combat
                 for (int f = 0; f < frames.Length; f++) frames[f] = BuildRing("Fx PopRing " + f, 2 + f, 1f, false);
                 return frames;
             });
+        }
+
+        /// <summary>
+        /// 6 frames of Bubblets' 40x40 protective bubble popping: wobble & tension flare, perimeter rupture,
+        /// burst into 8 droplet beads, droplet expansion, fine mist, and final evaporation.
+        /// Matches Bubble-pop.png.
+        /// </summary>
+        public static Sprite[] BubblePopFrames()
+        {
+            return CachedFrames("bubblepop", () =>
+            {
+#if UNITY_EDITOR
+                var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Bubble-pop.png");
+                if (assets != null)
+                {
+                    var list = new System.Collections.Generic.List<Sprite>();
+                    foreach (var a in assets)
+                    {
+                        if (a is Sprite s) list.Add(s);
+                    }
+                    if (list.Count >= 6)
+                    {
+                        list.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+                        return list.ToArray();
+                    }
+                }
+#endif
+                return BuildProceduralBubblePopFrames();
+            });
+        }
+
+        private static Sprite[] BuildProceduralBubblePopFrames()
+        {
+            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Bubble-pop.png");
+            if (System.IO.File.Exists(path))
+            {
+                try
+                {
+                    byte[] raw = System.IO.File.ReadAllBytes(path);
+                    var tex = new Texture2D(288, 48, TextureFormat.RGBA32, false);
+                    tex.filterMode = FilterMode.Point;
+                    tex.wrapMode = TextureWrapMode.Clamp;
+                    tex.LoadImage(raw);
+                    var loadedFrames = new Sprite[6];
+                    for (int i = 0; i < 6; i++)
+                    {
+                        loadedFrames[i] = Sprite.Create(
+                            tex,
+                            new Rect(i * 48, 0, 48, 48),
+                            new Vector2(0.5f, 0.5f),
+                            PixelsPerUnit);
+                        loadedFrames[i].name = $"Bubble-pop_{i}";
+                    }
+                    return loadedFrames;
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[CombatFxArt] Failed to load Bubble-pop.png: {ex.Message}");
+                }
+            }
+
+            // Procedural fallback matching the exact 6-frame pixel art sequence
+            const int size = 48;
+            const float cx = 23.5f;
+            const float cy = 23.5f;
+
+            Color cDark = new Color(9f / 255f, 30f / 255f, 60f / 255f, 1f);
+            Color cRim = new Color(129f / 255f, 186f / 255f, 228f / 255f, 1f);
+            Color cLight = new Color(209f / 255f, 237f / 255f, 255f / 255f, 1f);
+            Color cWhite = Color.white;
+            Color cBody = new Color(116f / 255f, 151f / 255f, 177f / 255f, 0.33f);
+            Color cShadow = new Color(76f / 255f, 122f / 255f, 178f / 255f, 0.33f);
+
+            var frames = new Sprite[6];
+            float[] angles8 = { 0f, 45f, 90f, 135f, 180f, 225f, 270f, 315f };
+
+            for (int f = 0; f < 6; f++)
+            {
+                Texture2D tex = NewTexture(size, size, $"Fx BubblePop {f}");
+                for (int y = 0; y < size; y++)
+                {
+                    for (int x = 0; x < size; x++)
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+
+                if (f == 0)
+                {
+                    // Frame 0: Wobble & Rim flare
+                    float r = 16.5f;
+                    for (int y = 0; y < size; y++)
+                    {
+                        for (int x = 0; x < size; x++)
+                        {
+                            float dx = x - cx;
+                            float dy = y - cy;
+                            float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                            if (dist > r + 1.2f) continue;
+
+                            if (dist >= r - 0.9f && dist <= r + 0.9f)
+                            {
+                                if (dy > 0 && dx < 0) tex.SetPixel(x, y, cWhite);
+                                else if (dy > 0 || dx < 0) tex.SetPixel(x, y, cLight);
+                                else tex.SetPixel(x, y, cRim);
+                            }
+                            else if (dist > r + 0.5f && dist <= r + 1.2f)
+                            {
+                                tex.SetPixel(x, y, cDark);
+                            }
+                            else if (dist < r - 0.9f)
+                            {
+                                if (dx < -4 && dy > 4 && dist > 7f) tex.SetPixel(x, y, cLight);
+                                else if (dy < -2) tex.SetPixel(x, y, cShadow);
+                                else tex.SetPixel(x, y, cBody);
+                            }
+                        }
+                    }
+                }
+                else if (f == 1)
+                {
+                    // Frame 1: Rupture & 8 Puncture gaps
+                    float r = 17.2f;
+                    for (int y = 0; y < size; y++)
+                    {
+                        for (int x = 0; x < size; x++)
+                        {
+                            float dx = x - cx;
+                            float dy = y - cy;
+                            float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                            if (dist > r + 1.2f) continue;
+
+                            float angleDeg = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
+                            if (angleDeg < 0f) angleDeg += 360f;
+
+                            float minGapDist = 999f;
+                            for (int i = 0; i < 8; i++)
+                            {
+                                float gapAngle = i * 45f + 22.5f;
+                                float diff = Mathf.Abs(angleDeg - gapAngle);
+                                if (diff > 180f) diff = 360f - diff;
+                                if (diff < minGapDist) minGapDist = diff;
+                            }
+
+                            if (minGapDist < 11f) continue;
+
+                            if (dist >= r - 1.2f && dist <= r + 0.9f)
+                            {
+                                tex.SetPixel(x, y, minGapDist < 16f ? cLight : cRim);
+                            }
+                            else if (dist > r + 0.6f && dist <= r + 1.2f)
+                            {
+                                tex.SetPixel(x, y, cDark);
+                            }
+                            else if (dist >= 10f && dist < r - 1.2f && (x + y) % 2 == 0)
+                            {
+                                tex.SetPixel(x, y, cBody);
+                            }
+                        }
+                    }
+                }
+                else if (f == 2)
+                {
+                    // Frame 2: Radial burst into 8 droplets at radius 19.5
+                    for (int i = 0; i < 8; i++)
+                    {
+                        float rad = angles8[i] * Mathf.Deg2Rad;
+                        int bx = Mathf.RoundToInt(cx + 19.5f * Mathf.Cos(rad));
+                        int by = Mathf.RoundToInt(cy + 19.5f * Mathf.Sin(rad));
+                        if (bx >= 1 && bx < size - 1 && by >= 1 && by < size - 1)
+                        {
+                            tex.SetPixel(bx, by, cWhite);
+                            tex.SetPixel(bx - 1, by, cLight);
+                            tex.SetPixel(bx + 1, by, cRim);
+                            tex.SetPixel(bx, by - 1, cRim);
+                            tex.SetPixel(bx, by + 1, cLight);
+                            tex.SetPixel(bx + 1, by - 1, cDark);
+                        }
+
+                        int sx = Mathf.RoundToInt(cx + 14.5f * Mathf.Cos(rad + 0.15f));
+                        int sy = Mathf.RoundToInt(cy + 14.5f * Mathf.Sin(rad + 0.15f));
+                        if (sx >= 0 && sx < size && sy >= 0 && sy < size) tex.SetPixel(sx, sy, cLight);
+                    }
+                }
+                else if (f == 3)
+                {
+                    // Frame 3: Droplets at radius 22.5
+                    for (int i = 0; i < 8; i++)
+                    {
+                        float rad = angles8[i] * Mathf.Deg2Rad;
+                        int bx = Mathf.RoundToInt(cx + 22.5f * Mathf.Cos(rad));
+                        int by = Mathf.RoundToInt(cy + 22.5f * Mathf.Sin(rad));
+                        if (bx >= 1 && bx < size - 1 && by >= 1 && by < size - 1)
+                        {
+                            tex.SetPixel(bx, by, cLight);
+                            tex.SetPixel(bx + (int)Mathf.Sign(Mathf.Cos(rad)), by, cRim);
+                            tex.SetPixel(bx, by + (int)Mathf.Sign(Mathf.Sin(rad)), cDark);
+                        }
+
+                        int tx = Mathf.RoundToInt(cx + 17.5f * Mathf.Cos(rad));
+                        int ty = Mathf.RoundToInt(cy + 17.5f * Mathf.Sin(rad));
+                        if (tx >= 0 && tx < size && ty >= 0 && ty < size) tex.SetPixel(tx, ty, cLight);
+                    }
+                }
+                else if (f == 4)
+                {
+                    // Frame 4: Dispersing 1px mist dots at radius 24.5
+                    Color cSoft = new Color(cRim.r, cRim.g, cRim.b, 0.65f);
+                    for (int i = 0; i < 8; i++)
+                    {
+                        float rad = angles8[i] * Mathf.Deg2Rad;
+                        int bx = Mathf.RoundToInt(cx + 24.5f * Mathf.Cos(rad));
+                        int by = Mathf.RoundToInt(cy + 24.5f * Mathf.Sin(rad));
+                        if (bx >= 0 && bx < size && by >= 0 && by < size) tex.SetPixel(bx, by, cSoft);
+                    }
+                }
+                else if (f == 5)
+                {
+                    // Frame 5: Faint evaporating mist dots
+                    Color cFaint = new Color(cRim.r, cRim.g, cRim.b, 0.3f);
+                    for (int i = 0; i < 8; i += 2)
+                    {
+                        float rad = (i * 45f + 15f) * Mathf.Deg2Rad;
+                        int bx = Mathf.RoundToInt(cx + 25.5f * Mathf.Cos(rad));
+                        int by = Mathf.RoundToInt(cy + 25.5f * Mathf.Sin(rad));
+                        if (bx >= 0 && bx < size && by >= 0 && by < size) tex.SetPixel(bx, by, cFaint);
+                    }
+                }
+
+                tex.Apply();
+                frames[f] = ToSprite(tex);
+                frames[f].name = $"Bubble-pop_{f}";
+            }
+
+            return frames;
         }
 
         // ─────────────────────────────────────────────────────

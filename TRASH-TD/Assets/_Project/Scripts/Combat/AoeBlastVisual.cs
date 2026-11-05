@@ -205,8 +205,7 @@ namespace TrashTD.Combat
                     break;
 
                 case AoeStyle.Bubble:
-                    CombatFx.Pop(center, color);
-                    CombatFx.Droplets(center, Color.Lerp(color, Color.white, 0.3f), Mathf.Clamp(Mathf.RoundToInt(radius * 12f), 5, 14), radius * 4f);
+                    CombatFx.BubblePop(center, radius, delay);
                     break;
 
                 case AoeStyle.Acid:
@@ -240,8 +239,7 @@ namespace TrashTD.Combat
                     CombatFx.Crosses(cellCenter, color, 2, cellSize * 0.3f, true, 0.7f, delay);
                     break;
                 case AoeStyle.Bubble:
-                    CombatFx.Pop(cellCenter, color, delay);
-                    CombatFx.Droplets(cellCenter, color, 4, cellSize * 2f, delay);
+                    CombatFx.BubblePop(cellCenter, cellSize * 0.5f, delay);
                     break;
                 case AoeStyle.Acid:
                     CombatFx.Droplets(cellCenter, color, 5, cellSize * 2.2f, delay);
