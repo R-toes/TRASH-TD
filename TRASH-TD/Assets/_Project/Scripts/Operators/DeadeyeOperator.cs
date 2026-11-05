@@ -9,8 +9,8 @@ namespace TrashTD.Operators
 {
     /// <summary>
     /// Deadeye operator — Sniper.
-    /// Trait: Increases damage by 20% against flying enemies, but delays attack (increases attack interval by 20%)
-    /// when preparing to attack air units. Returns to original attack interval when no aerial enemies are in range.
+    /// Trait: Increases damage by 20% against flying enemies. At base rarity, attacking air also increases the
+    /// attack interval by 20%; the first upgrade removes that penalty and adds a stacking single-target damage bonus.
     /// Attack animation (DeadeyeSpriteAnimation): the wind-up starts just before the next shot is due, so the shot
     /// frame lines up with the real shot; attack timing and damage are unchanged.
     /// </summary>
@@ -18,11 +18,34 @@ namespace TrashTD.Operators
     {
         private const float AirDamageMultiplier = 1.20f;
         private const float AirIntervalMultiplier = 1.20f;
+        public const float TargetHitDamageBonus = 0.02f;
+        public const float MaximumTargetDamageBonus = 1f;
+        public const float KillShotDamageBonus = 1f;
+        private const int TargetDamageBonusHitCap = 50;
 
         private GridManager gridManager;
         private GridCell[] cachedRangeCells;
         private DeadeyeSpriteAnimation spriteAnimation;
         private float lastAttackInterval; // from this frame's GetAttackInterval, so the air check isn't run twice
+        private EnemyBase rampTarget;
+        private int landedHitsOnRampTarget;
+        private bool hasKillShotBonus;
+
+        public bool HasTargetDamageUpgrade => currentRarity >= OperatorRarity.Star2;
+        public bool HasKillShotUpgrade => currentRarity >= OperatorRarity.Star3;
+        public int LandedHitsOnRampTarget => landedHitsOnRampTarget;
+        public bool HasPendingKillShotBonus => hasKillShotBonus;
+
+        public static float GetAirAttackIntervalMultiplier(bool hasAirTarget, OperatorRarity rarity) =>
+            hasAirTarget && rarity < OperatorRarity.Star2 ? AirIntervalMultiplier : 1f;
+
+        public override void Initialize(OperatorData operatorData, OperatorRarity rarity, OperatorFacing operatorFacing = OperatorFacing.Right)
+        {
+            base.Initialize(operatorData, rarity, operatorFacing);
+            rampTarget = null;
+            landedHitsOnRampTarget = 0;
+            hasKillShotBonus = false;
+        }
 
         private GridManager GetGridManager()
         {
@@ -51,6 +74,9 @@ namespace TrashTD.Operators
         protected override void OnRetreated()
         {
             cachedRangeCells = null;
+            rampTarget = null;
+            landedHitsOnRampTarget = 0;
+            hasKillShotBonus = false;
             SpriteAnimation?.CancelAttack();
             base.OnRetreated();
         }
@@ -144,7 +170,7 @@ namespace TrashTD.Operators
         public override float GetAttackInterval()
         {
             float baseInterval = base.GetAttackInterval();
-            lastAttackInterval = HasAirTargetInRange() ? baseInterval * AirIntervalMultiplier : baseInterval;
+            lastAttackInterval = baseInterval * GetAirAttackIntervalMultiplier(HasAirTargetInRange(), currentRarity);
             return lastAttackInterval;
         }
 
@@ -152,14 +178,34 @@ namespace TrashTD.Operators
         {
             if (target == null || !isDeployed) return;
 
+            SelectRampTarget(target);
+
             bool isAir = target.MovementType == EnemyMovementType.Air;
+            int hitCountForShot = landedHitsOnRampTarget;
+            bool usesKillShotBonus = ConsumeKillShotBonus();
 
             SpriteAnimation?.ShotFired();
             PlayAttackSound();
-            FireLightning(target, isAir);
+            FireLightning(target, isAir, hitCountForShot, usesKillShotBonus);
         }
 
-        private void FireLightning(EnemyBase target, bool isAir)
+        private void SelectRampTarget(EnemyBase target)
+        {
+            if (rampTarget == target) return;
+
+            rampTarget = target;
+            landedHitsOnRampTarget = 0;
+        }
+
+        private bool ConsumeKillShotBonus()
+        {
+            bool usesBonus = HasKillShotUpgrade && hasKillShotBonus;
+            if (usesBonus)
+                hasKillShotBonus = false;
+            return usesBonus;
+        }
+
+        private void FireLightning(EnemyBase target, bool isAir, int hitCountForShot, bool usesKillShotBonus)
         {
             Color projectileColor = isAir ? new Color(1f, 0.5f, 0.1f) : new Color(1f, 0.82f, 0.32f);
 
@@ -171,17 +217,48 @@ namespace TrashTD.Operators
                 0.16f,
                 0.09f,
                 false,
-                () => ApplyDeadeyeDamage(target, isAir),
+                () => ApplyDeadeyeDamage(target, isAir, hitCountForShot, usesKillShotBonus),
                 ProjectileStyle.Pea);
         }
 
-        private void ApplyDeadeyeDamage(EnemyBase target, bool isAir)
+        private void ApplyDeadeyeDamage(EnemyBase target, bool isAir, int hitCountForShot, bool usesKillShotBonus)
         {
             if (target == null || target.IsDead) return;
 
-            int atk = isAir ? Mathf.RoundToInt(CurrentATK * AirDamageMultiplier) : CurrentATK;
+            int atk = CalculateAttackPower(CurrentATK, hitCountForShot, HasTargetDamageUpgrade, isAir, usesKillShotBonus);
             int damage = DamageCalculator.CalculateDamage(atk, GetTargetMitigation(target));
-            target.TryTakeAttackDamage(damage, data.damageType, this);
+            int previousHP = target.CurrentHP;
+            if (!target.TryTakeAttackDamage(damage, data.damageType, this) || target.CurrentHP >= previousHP)
+                return;
+
+            if (usesKillShotBonus)
+                FloatingCombatNumber.ShowText(target.VisualPosition, "CRIT!", new Color(1f, 0.82f, 0.25f));
+
+            if (target.IsDead)
+            {
+                if (HasKillShotUpgrade)
+                    hasKillShotBonus = true;
+            }
+            else if (HasTargetDamageUpgrade && rampTarget == target)
+            {
+                landedHitsOnRampTarget = Mathf.Max(
+                    landedHitsOnRampTarget,
+                    Mathf.Min(hitCountForShot + 1, TargetDamageBonusHitCap));
+            }
+        }
+
+        public static int CalculateAttackPower(int attack, int landedHitsOnTarget, bool hasTargetDamageUpgrade,
+            bool isAir, bool usesKillShotBonus)
+        {
+            float bonus = isAir ? AirDamageMultiplier - 1f : 0f;
+            if (hasTargetDamageUpgrade)
+                bonus += Mathf.Min(
+                    Mathf.Clamp(landedHitsOnTarget + 1, 1, TargetDamageBonusHitCap) * TargetHitDamageBonus,
+                    MaximumTargetDamageBonus);
+            if (usesKillShotBonus)
+                bonus += KillShotDamageBonus;
+
+            return Mathf.RoundToInt(attack * (1f + bonus));
         }
     }
 }
