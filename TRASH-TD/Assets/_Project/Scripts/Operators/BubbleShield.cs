@@ -12,11 +12,16 @@ namespace TrashTD.Operators
     /// <summary>
     /// Bubble shield applied by Bubblets to an operator.
     /// Negates 1 instance of damage (regardless of value).
-    /// When popped, deals Arts damage equal to Bubblets' ATK to enemies on that tile
-    /// or directly in front (such as enemies blocked by the operator).
+    /// When popped, heals recipient and deals Arts damage equal to 30% of Bubblets' ATK
+    /// to enemies on that tile or directly in front (such as enemies blocked by the operator).
+    /// Uses Bubblets-bubbles sprite at 40x40 scale centered directly on the operator.
     /// </summary>
     public class BubbleShield : MonoBehaviour
     {
+        public const float BaseBubblePixelSize = 32f;
+        public const float TargetBubblePixelSize = 40f;
+        public const float BubbleScale = TargetBubblePixelSize / BaseBubblePixelSize; // 1.25f
+
         private static Sprite sharedBubbleSprite;
 
         private OperatorBase recipient;
@@ -28,6 +33,8 @@ namespace TrashTD.Operators
 
         public bool IsActive => isActive;
         public int BubbletATK => bubbletATK;
+        public GameObject VisualObject => visualObject;
+        public SpriteRenderer VisualRenderer => visualRenderer;
 
         public static bool HasActiveShield(OperatorBase op)
         {
@@ -80,22 +87,23 @@ namespace TrashTD.Operators
 
             visualObject = new GameObject("BubbleShieldVisual");
             visualObject.transform.SetParent(transform, false);
-            visualObject.transform.localPosition = new Vector3(0f, 0f, 0f);
+            visualObject.transform.localPosition = Vector3.zero;
+            visualObject.transform.localScale = Vector3.one * BubbleScale;
 
             visualRenderer = visualObject.AddComponent<SpriteRenderer>();
             visualRenderer.sprite = GetBubbleSprite();
             visualRenderer.sortingOrder = 18; // Above operator sprite
-            visualRenderer.color = new Color(1f, 1f, 1f, 0.9f);
+            visualRenderer.color = new Color(1f, 1f, 1f, 0.95f);
         }
 
         private void Update()
         {
             if (!isActive || visualObject == null) return;
 
-            // Subtle floating and pulsation animation fitting 32x32 px box
+            // Subtle floating and pulsation animation fitting 40x40 scale centered on operator
             float pulse = 1f + 0.03f * Mathf.Sin(Time.time * 3.5f);
             float bob = 0.02f * Mathf.Sin(Time.time * 2.5f);
-            visualObject.transform.localScale = Vector3.one * pulse;
+            visualObject.transform.localScale = Vector3.one * (BubbleScale * pulse);
             visualObject.transform.localPosition = new Vector3(0f, bob, 0f);
         }
 
@@ -142,8 +150,8 @@ namespace TrashTD.Operators
         {
             Vector3 pos = transform.position;
 
-            // Cyan burst effect scaled to 32x32 px bounds (0.5 unit radius = 1 unit diameter)
-            AoeBlastVisual.PlayCircle(pos, 0.5f, new Color(0.35f, 0.88f, 1f, 0.85f), AoeStyle.Bubble);
+            // Cyan burst effect scaled to 40x40 px bounds (0.625 unit radius = 1.25 unit diameter)
+            AoeBlastVisual.PlayCircle(pos, 0.625f, new Color(0.35f, 0.88f, 1f, 0.85f), AoeStyle.Bubble);
 
             // Floating indicator on recipient
             if (showBlockedText)
@@ -244,10 +252,69 @@ namespace TrashTD.Operators
             }
         }
 
-        private static Sprite GetBubbleSprite()
+        public static void ResetSharedBubbleSprite()
+        {
+            sharedBubbleSprite = null;
+        }
+
+        public static Sprite GetBubbleSprite()
         {
             if (sharedBubbleSprite != null) return sharedBubbleSprite;
 
+#if UNITY_EDITOR
+            sharedBubbleSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/Operators/Bubblets-bubbles.png");
+            if (sharedBubbleSprite == null)
+            {
+                var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Bubblets-bubbles.png");
+                if (assets != null)
+                {
+                    foreach (var a in assets)
+                    {
+                        if (a is Sprite s)
+                        {
+                            sharedBubbleSprite = s;
+                            break;
+                        }
+                    }
+                }
+            }
+#endif
+
+            if (sharedBubbleSprite == null)
+            {
+                string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Bubblets-bubbles.png");
+                if (System.IO.File.Exists(path))
+                {
+                    try
+                    {
+                        byte[] raw = System.IO.File.ReadAllBytes(path);
+                        var texture = new Texture2D(32, 32, TextureFormat.RGBA32, false);
+                        texture.filterMode = FilterMode.Point;
+                        texture.LoadImage(raw);
+                        sharedBubbleSprite = Sprite.Create(
+                            texture,
+                            new Rect(0, 0, texture.width, texture.height),
+                            new Vector2(0.5f, 0.5f),
+                            32f);
+                        sharedBubbleSprite.name = "Bubblets-bubbles";
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogWarning($"[BubbleShield] Failed to load Bubblets-bubbles.png: {ex.Message}");
+                    }
+                }
+            }
+
+            if (sharedBubbleSprite == null)
+            {
+                sharedBubbleSprite = CreateProceduralBubbleSprite();
+            }
+
+            return sharedBubbleSprite;
+        }
+
+        private static Sprite CreateProceduralBubbleSprite()
+        {
             const int size = 32;
             var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
             texture.filterMode = FilterMode.Point;
@@ -298,13 +365,11 @@ namespace TrashTD.Operators
             }
 
             texture.Apply();
-            sharedBubbleSprite = Sprite.Create(
+            return Sprite.Create(
                 texture,
                 new Rect(0, 0, size, size),
                 new Vector2(0.5f, 0.5f),
                 32);
-
-            return sharedBubbleSprite;
         }
     }
 }
