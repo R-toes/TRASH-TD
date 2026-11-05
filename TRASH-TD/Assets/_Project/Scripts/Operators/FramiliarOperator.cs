@@ -219,6 +219,11 @@ namespace TrashTD.Operators
         {
             if (op != null)
             {
+                if (op is ResicochetOperator resi && resi.Charge1Frames != null && resi.Charge1Frames.Length > 0 && resi.Charge1Frames[0] != null)
+                {
+                    return resi.Charge1Frames[0];
+                }
+
                 var sr = op.GetComponent<SpriteRenderer>();
                 if (sr != null && sr.sprite != null) return sr.sprite;
                 var framesInterface = op.GetComponent<IOperatorSpriteFrames>();
@@ -232,6 +237,12 @@ namespace TrashTD.Operators
             {
                 if (opData.operatorPrefab != null)
                 {
+                    if (opData.operatorPrefab.TryGetComponent<ResicochetOperator>(out var resiPrefab) &&
+                        resiPrefab.Charge1Frames != null && resiPrefab.Charge1Frames.Length > 0 && resiPrefab.Charge1Frames[0] != null)
+                    {
+                        return resiPrefab.Charge1Frames[0];
+                    }
+
                     var sr = opData.operatorPrefab.GetComponent<SpriteRenderer>();
                     if (sr != null && sr.sprite != null) return sr.sprite;
                     var framesInterface = opData.operatorPrefab.GetComponent<IOperatorSpriteFrames>();
@@ -253,15 +264,23 @@ namespace TrashTD.Operators
             var renderers = go.GetComponentsInChildren<SpriteRenderer>(true);
             for (int i = 0; i < renderers.Length; i++)
             {
-                if (renderers[i] != null)
+                var r = renderers[i];
+                if (r != null)
                 {
+                    string rName = r.gameObject.name;
+                    // Preserve external bubble shields
+                    if (rName.StartsWith("BubbleShield"))
+                    {
+                        continue;
+                    }
+
                     if (mat != null)
                     {
-                        renderers[i].material = mat;
+                        r.material = mat;
                     }
                     else
                     {
-                        renderers[i].color = new Color(0.7f, 0.7f, 0.7f, 1f);
+                        r.color = new Color(0.7f, 0.7f, 0.7f, 1f);
                     }
                 }
             }

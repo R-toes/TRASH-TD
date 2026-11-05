@@ -119,10 +119,8 @@ namespace TrashTD.Operators
                 }
             }
 
-            var baseWhite = FramiliarOperator.GetWhiteSilhouetteMaterial();
-            whiteSilhouetteMaterial = baseWhite != null ? new Material(baseWhite) { hideFlags = HideFlags.DontSave } : null;
-            var baseGray = FramiliarOperator.GetGrayscaleMaterial();
-            grayscaleMaterial = baseGray != null ? new Material(baseGray) { hideFlags = HideFlags.DontSave } : null;
+            whiteSilhouetteMaterial = FramiliarOperator.GetWhiteSilhouetteMaterial();
+            grayscaleMaterial = FramiliarOperator.GetGrayscaleMaterial();
 
             // Store other child renderers and hide them during glitching silhouettes
             var allRenderers = GetComponentsInChildren<SpriteRenderer>(true);
@@ -296,18 +294,10 @@ namespace TrashTD.Operators
 
         private void OnDestroy()
         {
-            if (whiteSilhouetteMaterial != null)
-            {
-                if (Application.isPlaying) Destroy(whiteSilhouetteMaterial);
-                else DestroyImmediate(whiteSilhouetteMaterial);
-                whiteSilhouetteMaterial = null;
-            }
-            if (grayscaleMaterial != null)
-            {
-                if (Application.isPlaying) Destroy(grayscaleMaterial);
-                else DestroyImmediate(grayscaleMaterial);
-                grayscaleMaterial = null;
-            }
+            // Do not destroy shared materials (whiteSilhouetteMaterial, grayscaleMaterial)
+            // as they are cached and reused across transitions and assigned to active renderers.
+            whiteSilhouetteMaterial = null;
+            grayscaleMaterial = null;
         }
     }
 }

@@ -22,8 +22,10 @@ namespace TrashTD.Operators
     /// - Floating crystals have an outline aura effect matching Shadeslice's isolation talent,
     ///   scaling, pulsing, and bobbing with the crystals frame-by-frame and matching charge color (Orange -> Green -> Blue).
     /// </summary>
-    public class ResicochetOperator : CasterOperator
+    public class ResicochetOperator : CasterOperator, IOperatorSpriteFrames
     {
+        public Sprite[] Frames => charge1Frames;
+        public float FrameDuration => 0.25f;
         public const float ChargeIntervalSeconds = 5.0f;
         public const int MaxChargeCount = 3;
         public const float BurstFireInterval = 0.5f;
@@ -177,8 +179,12 @@ namespace TrashTD.Operators
             // Crystal 1 (Mid): present at all charges
             if (localX >= 0 && localX <= 5 && yTop >= 9 && yTop <= 15) return true;
 
-            // Crystal 2 (Top-Left): present at charge 2 and 3
-            if (chargeLevel >= 2 && localX >= 2 && localX <= 8 && yTop >= 1 && yTop <= 8) return true;
+            // Crystal 2 (Top-Left): present at charge 2 and 3. Exclude shoulder outline at yTop=8, localX>=6
+            if (chargeLevel >= 2)
+            {
+                if (yTop >= 1 && yTop <= 7 && localX >= 2 && localX <= 7) return true;
+                if (yTop == 8 && localX >= 3 && localX <= 5) return true;
+            }
 
             // Crystal 3 (Top): present at charge 3 only
             if (chargeLevel >= 3 && localX >= 9 && localX <= 14 && yTop >= 1 && yTop <= 6)
@@ -470,11 +476,11 @@ namespace TrashTD.Operators
 
             int baseOrder = opSpriteRenderer.sortingOrder;
 
-            // Shadeslice outer & inner aura layers
-            crystalAuraOuter = CreateAuraLayer("CrystalAuraOuter", baseOrder - 2, Charge1ProjectileColor);
-            crystalAuraInner = CreateAuraLayer("CrystalAuraInner", baseOrder - 1, Charge1ProjectileColor);
+            // Shadeslice outer & inner aura layers (strictly behind body sprite)
+            crystalAuraOuter = CreateAuraLayer("CrystalAuraOuter", baseOrder - 3, Charge1ProjectileColor);
+            crystalAuraInner = CreateAuraLayer("CrystalAuraInner", baseOrder - 2, Charge1ProjectileColor);
 
-            // 1-pixel cardinal outline layers
+            // 1-pixel cardinal outline layers (strictly behind body sprite)
             crystalOutlineLeft = CreateAuraLayer("CrystalOutlineLeft", baseOrder - 1, Charge1ProjectileColor);
             crystalOutlineRight = CreateAuraLayer("CrystalOutlineRight", baseOrder - 1, Charge1ProjectileColor);
             crystalOutlineUp = CreateAuraLayer("CrystalOutlineUp", baseOrder - 1, Charge1ProjectileColor);
@@ -485,7 +491,7 @@ namespace TrashTD.Operators
         {
             var auraObj = new GameObject(objectName);
             auraObj.transform.SetParent(transform, false);
-            auraObj.transform.localPosition = Vector3.zero;
+            auraObj.transform.localPosition = new Vector3(0f, 0f, 0.01f);
 
             var sr = auraObj.AddComponent<SpriteRenderer>();
             sr.color = color;
@@ -493,11 +499,11 @@ namespace TrashTD.Operators
             if (opSpriteRenderer != null)
             {
                 sr.sortingLayerID = opSpriteRenderer.sortingLayerID;
-                sr.sharedMaterial = opSpriteRenderer.sharedMaterial;
                 sr.flipX = opSpriteRenderer.flipX;
                 sr.flipY = opSpriteRenderer.flipY;
             }
-            sr.enabled = false;
+            sr.sharedMaterial = IsCopiedFromFramiliar ? FramiliarOperator.GetGrayscaleMaterial() : FramiliarOperator.GetDefaultSpriteMaterial();
+            sr.enabled = isDeployed;
             return sr;
         }
 
@@ -514,7 +520,11 @@ namespace TrashTD.Operators
         public void UpdateCrystalAuras()
         {
             if (!isDeployed) return;
-            if (crystalAuraOuter == null) CreateCrystalAuras();
+            if (crystalAuraOuter == null)
+            {
+                CreateCrystalAuras();
+                SetCrystalAuraEnabled(true);
+            }
             if (crystalAuraOuter == null) return;
 
             if (opSpriteRenderer == null)
@@ -610,39 +620,58 @@ namespace TrashTD.Operators
                     0.70f + pulse * 0.20f);
             }
 
-            // Sync sprite, flip and colors
-            SyncAuraRenderer(crystalAuraOuter, crystalSprite, isFlipped, outerColor);
-            SyncAuraRenderer(crystalAuraInner, crystalSprite, isFlipped, innerColor);
-            SyncAuraRenderer(crystalOutlineLeft, crystalSprite, isFlipped, innerColor);
-            SyncAuraRenderer(crystalOutlineRight, crystalSprite, isFlipped, innerColor);
-            SyncAuraRenderer(crystalOutlineUp, crystalSprite, isFlipped, innerColor);
-            SyncAuraRenderer(crystalOutlineDown, crystalSprite, isFlipped, innerColor);
+            if (IsCopiedFromFramiliar)
+            {
+                // Grayscale / monochrome aura when copied by Framiliar
+                float grayOuter = outerColor.r * 0.299f + outerColor.g * 0.587f + outerColor.b * 0.114f;
+                float grayInner = innerColor.r * 0.299f + innerColor.g * 0.587f + innerColor.b * 0.114f;
+                outerColor = new Color(grayOuter, grayOuter, grayOuter, outerColor.a);
+                innerColor = new Color(grayInner, grayInner, grayInner, innerColor.a);
+            }
 
-            // Shadeslice-style pulsing outer & inner scale and float
+            // Sync sprite, flip and colors (strictly behind body sprite: -3, -2, -1)
+            SyncAuraRenderer(crystalAuraOuter, crystalSprite, isFlipped, outerColor, -3);
+            SyncAuraRenderer(crystalAuraInner, crystalSprite, isFlipped, innerColor, -2);
+            SyncAuraRenderer(crystalOutlineLeft, crystalSprite, isFlipped, innerColor, -1);
+            SyncAuraRenderer(crystalOutlineRight, crystalSprite, isFlipped, innerColor, -1);
+            SyncAuraRenderer(crystalOutlineUp, crystalSprite, isFlipped, innerColor, -1);
+            SyncAuraRenderer(crystalOutlineDown, crystalSprite, isFlipped, innerColor, -1);
+
+            // Shadeslice-style pulsing outer & inner scale and float (behind body in Z)
             crystalAuraOuter.transform.localScale = Vector3.one * (1.22f + pulse * 0.035f + flicker);
             crystalAuraInner.transform.localScale = Vector3.one * (1.11f + pulse * 0.025f - flicker * 0.5f);
-            crystalAuraOuter.transform.localPosition = new Vector3(0f, Mathf.Sin(time * 7f) * 0.012f, 0.01f);
-            crystalAuraInner.transform.localPosition = new Vector3(0f, Mathf.Sin(time * 9f + 1f) * 0.008f, 0.005f);
+            crystalAuraOuter.transform.localPosition = new Vector3(0f, Mathf.Sin(time * 7f) * 0.012f, 0.03f);
+            crystalAuraInner.transform.localPosition = new Vector3(0f, Mathf.Sin(time * 9f + 1f) * 0.008f, 0.02f);
 
-            // Outline 1-pixel cardinal offsets (1 / 32 = 0.03125 world units)
+            // Outline 1-pixel cardinal offsets (strictly behind body in Z)
             float pixelOffset = (1.0f + pulse * 0.3f) / 32f;
             float flipDir = isFlipped ? -1f : 1f;
 
-            crystalOutlineLeft.transform.localPosition = new Vector3(-pixelOffset * flipDir, 0f, 0.005f);
-            crystalOutlineRight.transform.localPosition = new Vector3(pixelOffset * flipDir, 0f, 0.005f);
-            crystalOutlineUp.transform.localPosition = new Vector3(0f, pixelOffset, 0.005f);
-            crystalOutlineDown.transform.localPosition = new Vector3(0f, -pixelOffset, 0.005f);
+            crystalOutlineLeft.transform.localPosition = new Vector3(-pixelOffset * flipDir, 0f, 0.01f);
+            crystalOutlineRight.transform.localPosition = new Vector3(pixelOffset * flipDir, 0f, 0.01f);
+            crystalOutlineUp.transform.localPosition = new Vector3(0f, pixelOffset, 0.01f);
+            crystalOutlineDown.transform.localPosition = new Vector3(0f, -pixelOffset, 0.01f);
         }
 
-        private void SyncAuraRenderer(SpriteRenderer r, Sprite s, bool flipX, Color c)
+        private void SyncAuraRenderer(SpriteRenderer r, Sprite s, bool flipX, Color c, int orderOffset)
         {
             if (r == null) return;
             r.sprite = s;
             r.flipX = flipX;
             r.color = c;
+            r.enabled = isDeployed && (s != null);
             if (opSpriteRenderer != null)
             {
                 r.sortingLayerID = opSpriteRenderer.sortingLayerID;
+                r.sortingOrder = opSpriteRenderer.sortingOrder + orderOffset;
+            }
+            if (IsCopiedFromFramiliar)
+            {
+                r.sharedMaterial = FramiliarOperator.GetGrayscaleMaterial();
+            }
+            else
+            {
+                r.sharedMaterial = FramiliarOperator.GetDefaultSpriteMaterial();
             }
         }
 
