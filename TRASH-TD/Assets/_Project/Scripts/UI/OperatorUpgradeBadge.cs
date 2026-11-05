@@ -26,9 +26,8 @@ namespace TrashTD.UI
             badgeObject.transform.SetParent(op.transform, false);
             badgeObject.transform.localScale = Vector3.one * 0.008f;
 
-            SpriteRenderer spriteRenderer = op.GetComponentInChildren<SpriteRenderer>();
-            float horizontalOffset = spriteRenderer != null ? spriteRenderer.bounds.extents.x * 0.55f : 0.25f;
-            float verticalOffset = spriteRenderer != null ? spriteRenderer.bounds.extents.y * 0.45f : 0.25f;
+            float horizontalOffset = op.BodyExtents.x * 0.55f;
+            float verticalOffset = op.BodyExtents.y * 0.45f;
             badgeObject.transform.localPosition = new Vector3(horizontalOffset, verticalOffset, -0.1f);
 
             Canvas canvas = badgeObject.GetComponent<Canvas>();

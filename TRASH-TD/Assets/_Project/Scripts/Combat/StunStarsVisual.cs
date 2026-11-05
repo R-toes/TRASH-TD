@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using TrashTD.Operators;
 
 namespace TrashTD.Combat
 {
@@ -236,7 +237,20 @@ namespace TrashTD.Combat
             float centerX;
             float centerZ;
 
-            if (targetRenderer != null && targetRenderer.sprite != null)
+            OperatorBase op = targetTransform != null ? targetTransform.GetComponent<OperatorBase>() : null;
+            if (op != null)
+            {
+                topY = op.VisualCenter.y + op.BodyExtents.y;
+                centerX = op.VisualCenter.x;
+                centerZ = targetRenderer != null ? targetRenderer.transform.position.z - 0.05f : targetTransform.position.z - 0.05f;
+
+                if (spriteRenderer != null && targetRenderer != null)
+                {
+                    spriteRenderer.sortingLayerID = targetRenderer.sortingLayerID;
+                    spriteRenderer.sortingOrder = targetRenderer.sortingOrder + 15;
+                }
+            }
+            else if (targetRenderer != null && targetRenderer.sprite != null)
             {
                 topY = targetRenderer.bounds.max.y;
                 centerX = targetRenderer.bounds.center.x;

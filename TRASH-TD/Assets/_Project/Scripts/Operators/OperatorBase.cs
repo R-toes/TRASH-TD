@@ -211,6 +211,14 @@ namespace TrashTD.Operators
             }
         }
 
+        /// <summary>
+        /// World-space center and half-extents of the operator's actual 32x32 body (1-unit tile footprint).
+        /// Used by overhead health bars, stun stars, Harmony notes, and badges so large attack animation
+        /// frames (e.g. Scrapper's 64x64 sledgehammer swing) do not displace or inflate standard status effects.
+        /// </summary>
+        public virtual Vector3 VisualCenter => transform.position;
+        public virtual Vector2 BodyExtents => new Vector2(0.5f, 0.5f);
+
         public virtual void ApplyFacingVisuals()
         {
             bool mirrorHorizontally = facing == OperatorFacing.Right;

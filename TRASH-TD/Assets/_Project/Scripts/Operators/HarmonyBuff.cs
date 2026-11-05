@@ -98,10 +98,9 @@ namespace TrashTD.Operators
         public static Vector3 OrbitCenter(OperatorBase target)
         {
             if (target == null) return Vector3.zero;
-            SpriteRenderer renderer = target.GetComponent<SpriteRenderer>();
-            if (renderer == null || renderer.sprite == null) return target.transform.position;
-            Bounds bounds = renderer.bounds;
-            return new Vector3(bounds.center.x, bounds.center.y - bounds.extents.y * 0.12f, target.transform.position.z);
+            Vector3 center = target.VisualCenter;
+            float extentsY = target.BodyExtents.y;
+            return new Vector3(center.x, center.y - extentsY * 0.12f, target.transform.position.z);
         }
 
         /// <summary>
@@ -220,7 +219,8 @@ namespace TrashTD.Operators
             if (body == null) body = GetComponent<SpriteRenderer>();
 
             Vector3 center = owner != null ? OrbitCenter(owner) : transform.position;
-            float radiusX = body != null && body.sprite != null ? Mathf.Max(0.3f, body.bounds.extents.x * 0.9f) : 0.4f;
+            float extentsX = owner != null ? owner.BodyExtents.x : (body != null && body.sprite != null ? Mathf.Min(0.5f, body.bounds.extents.x) : 0.5f);
+            float radiusX = Mathf.Max(0.3f, extentsX * 0.9f);
             float radiusY = radiusX * OrbitFlatten;
             int bodyOrder = body != null ? body.sortingOrder : 0;
             float time = Time.time;

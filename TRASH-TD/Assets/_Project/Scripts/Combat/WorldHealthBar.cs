@@ -53,7 +53,14 @@ namespace TrashTD.Combat
                 }
             }
 
-            if (spriteRenderer != null)
+            OperatorBase op = GetComponent<OperatorBase>();
+            if (op != null)
+            {
+                verticalOffset = op.BodyExtents.y + BarOffset;
+                sortingLayerId = spriteRenderer != null ? spriteRenderer.sortingLayerID : 0;
+                sortingOrder = Mathf.Max(sortingOrder, (spriteRenderer != null ? spriteRenderer.sortingOrder : 0) + 1);
+            }
+            else if (spriteRenderer != null)
             {
                 verticalOffset = spriteRenderer.bounds.extents.y + BarOffset;
                 MonoBehaviour[] components = GetComponentsInChildren<MonoBehaviour>(true);
@@ -83,8 +90,9 @@ namespace TrashTD.Combat
         {
             if (background == null || !background.gameObject.activeSelf) return;
 
-            Vector3 center = (enemy != null ? enemy.VisualPosition : transform.position) +
-                Vector3.up * verticalOffset;
+            OperatorBase op = GetComponent<OperatorBase>();
+            Vector3 basePos = enemy != null ? enemy.VisualPosition : (op != null ? op.VisualCenter : transform.position);
+            Vector3 center = basePos + Vector3.up * verticalOffset;
             center.z = transform.position.z - 0.05f;
             background.SetPosition(0, center + Vector3.left * (BarWidth * 0.5f));
             background.SetPosition(1, center + Vector3.right * (BarWidth * 0.5f));

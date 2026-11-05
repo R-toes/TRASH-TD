@@ -63,11 +63,7 @@ namespace TrashTD.UI
         {
             targetOperator = op;
 
-            SpriteRenderer sr = op.GetComponentInChildren<SpriteRenderer>();
-            if (sr != null)
-            {
-                verticalOffset = sr.bounds.extents.y + 0.35f;
-            }
+            verticalOffset = op != null ? op.BodyExtents.y + 0.35f : 0.85f;
 
             BuildUI();
         }
