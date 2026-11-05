@@ -188,6 +188,13 @@ namespace TrashTD.Systems
             }
             deployedInstance = opComp;
             OnOperatorDeployed?.Invoke(opComp);
+
+            // Framiliar exception: when deployed, its menu is already open as if clicked
+            if (opComp is FramiliarOperator fram && !fram.IsCopied)
+            {
+                SelectOperator(fram);
+            }
+
             return true;
         }
 

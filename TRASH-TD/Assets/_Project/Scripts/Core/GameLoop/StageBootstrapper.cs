@@ -775,7 +775,7 @@ namespace TrashTD.Core.GameLoop
                     deployedCard,
                     placementGridPosition,
                     placementFacing,
-                    out _))
+                    out var deployedOp))
             {
                 Debug.LogWarning($"Cannot deploy {deployedCard.operatorData.operatorName} here.");
                 AudioManager.Instance?.PlaySfx(SfxId.UiDenied);
@@ -786,6 +786,12 @@ namespace TrashTD.Core.GameLoop
             pendingDeployCard = null;
             HidePlacementPreview();
             Debug.Log($"<color=green>Deployed {deployedCard.operatorData.operatorName} at ({placementGridPosition.x}, {placementGridPosition.y}) facing {placementFacing}!</color>");
+
+            // Framiliar exception: open its menu immediately upon deployment
+            if (deployedOp is TrashTD.Operators.FramiliarOperator deployedFram && !deployedFram.IsCopied)
+            {
+                operatorManager.SelectOperator(deployedFram);
+            }
         }
 
         public void CancelOperatorPlacement()
