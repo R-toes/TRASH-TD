@@ -268,8 +268,8 @@ namespace TrashTD.Operators
                 if (r != null)
                 {
                     string rName = r.gameObject.name;
-                    // Preserve external bubble shields and procedural indicator/glow renderers
-                    if (rName.StartsWith("BubbleShield") || rName.StartsWith("PompothAttackOrigin"))
+                    // Preserve external bubble shields, stun stars, and procedural indicator/glow renderers
+                    if (rName.StartsWith("BubbleShield") || rName.StartsWith("PompothAttackOrigin") || rName.StartsWith("StunStars"))
                     {
                         continue;
                     }

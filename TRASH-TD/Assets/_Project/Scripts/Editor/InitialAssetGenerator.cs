@@ -462,7 +462,7 @@ namespace TrashTD.Editor
                 hp: 140, atk: 85, def: 20, res: 0, blockCount: 2, range: 2, interval: 1.1f,
                 new[] { new Vector2Int(1, 0), new Vector2Int(2, 0) },
                 scrapperFrame0, guardPrefab);
-            scrapper.skillDescription = "When attacking, has a 20% chance to Stun the target for 2 seconds.";
+            scrapper.skillDescription = "Base (1★): When attacking, has a 20% chance to Stun the target for 2 seconds. 1st upgrade (2★): Stun chance increases to 30%. 2nd upgrade (3★): Stun chance increases to 50% and attacks on the first tile become AoE.";
             EditorUtility.SetDirty(scrapper);
 
             var echosquireFrameOne = LoadSprite("Echosquire-Sheet.png", "Echosquire-Sheet_0");

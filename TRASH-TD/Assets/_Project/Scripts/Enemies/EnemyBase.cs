@@ -176,6 +176,25 @@ namespace TrashTD.Enemies
                 return transform.position;
             }
         }
+
+        public SpriteRenderer GetPrimaryVisualRenderer()
+        {
+            if (animationRenderers == null)
+                animationRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+
+            if (animationRenderers != null)
+            {
+                for (int i = 0; i < animationRenderers.Length; i++)
+                {
+                    SpriteRenderer renderer = animationRenderers[i];
+                    if (renderer != null && renderer.gameObject.name != "AirShadow" && !renderer.gameObject.name.StartsWith("StunStars") && renderer.sprite != null)
+                    {
+                        return renderer;
+                    }
+                }
+            }
+            return GetComponent<SpriteRenderer>();
+        }
         public float ChillAmount => chillAmount;
         public EnemyMovementType MovementType => data.movementType;
 
@@ -233,6 +252,7 @@ namespace TrashTD.Enemies
             chillSlowMultiplier = 1f;
             isFrozen = false;
             isStunned = false;
+            Combat.StunStarsVisual.Hide(gameObject);
             isSluggish = false;
             sluggishTimer = 0f;
             sluggishMoveSpeedMultiplier = 1f;
@@ -1273,6 +1293,7 @@ namespace TrashTD.Enemies
         protected virtual void Die()
         {
             isDead = true;
+            Combat.StunStarsVisual.Hide(gameObject);
 
             // Release from blocker if blocked
             if (isBlocked && blockingOperator != null)
@@ -1544,7 +1565,8 @@ namespace TrashTD.Enemies
             if (!isStunned)
             {
                 isStunned = true;
-                Combat.FloatingCombatNumber.ShowText(VisualPosition, "STUNNED!", new Color(1f, 0.9f, 0.2f));
+                Combat.StunStarsVisual.Show(gameObject, GetPrimaryVisualRenderer());
+                AudioManager.Instance?.PlaySfx(SfxId.CombatStun);
             }
 
             UpdateChillVisual();
@@ -1612,6 +1634,7 @@ namespace TrashTD.Enemies
                 if (stunTimer <= 0f)
                 {
                     isStunned = false;
+                    Combat.StunStarsVisual.Hide(gameObject);
                 }
             }
 

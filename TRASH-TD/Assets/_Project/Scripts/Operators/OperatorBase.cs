@@ -626,6 +626,15 @@ namespace TrashTD.Operators
                     spriteRenderer.color = new Color(1f, 1f, 1f, current.a);
                 }
             }
+
+            if (isStunned)
+            {
+                TrashTD.Combat.StunStarsVisual.Show(gameObject, spriteRenderer);
+            }
+            else
+            {
+                TrashTD.Combat.StunStarsVisual.Hide(gameObject);
+            }
         }
 
         // ========================
