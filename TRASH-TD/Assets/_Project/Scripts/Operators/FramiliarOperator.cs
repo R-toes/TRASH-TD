@@ -221,6 +221,8 @@ namespace TrashTD.Operators
             {
                 var sr = op.GetComponent<SpriteRenderer>();
                 if (sr != null && sr.sprite != null) return sr.sprite;
+                var framesInterface = op.GetComponent<IOperatorSpriteFrames>();
+                if (framesInterface != null && framesInterface.Frames != null && framesInterface.Frames.Length > 0 && framesInterface.Frames[0] != null) return framesInterface.Frames[0];
                 var anim = op.GetComponent<OperatorSpriteAnimation>();
                 if (anim != null && anim.Frames != null && anim.Frames.Length > 0 && anim.Frames[0] != null) return anim.Frames[0];
                 var childSr = op.GetComponentInChildren<SpriteRenderer>();
@@ -232,6 +234,8 @@ namespace TrashTD.Operators
                 {
                     var sr = opData.operatorPrefab.GetComponent<SpriteRenderer>();
                     if (sr != null && sr.sprite != null) return sr.sprite;
+                    var framesInterface = opData.operatorPrefab.GetComponent<IOperatorSpriteFrames>();
+                    if (framesInterface != null && framesInterface.Frames != null && framesInterface.Frames.Length > 0 && framesInterface.Frames[0] != null) return framesInterface.Frames[0];
                     var anim = opData.operatorPrefab.GetComponent<OperatorSpriteAnimation>();
                     if (anim != null && anim.Frames != null && anim.Frames.Length > 0 && anim.Frames[0] != null) return anim.Frames[0];
                     var childSr = opData.operatorPrefab.GetComponentInChildren<SpriteRenderer>();

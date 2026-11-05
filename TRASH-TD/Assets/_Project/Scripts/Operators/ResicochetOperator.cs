@@ -161,6 +161,9 @@ namespace TrashTD.Operators
         private static Sprite[] cachedCrystal1Frames;
         private static Sprite[] cachedCrystal2Frames;
         private static Sprite[] cachedCrystal3Frames;
+        private static Sprite[] cachedCharge1Frames;
+        private static Sprite[] cachedCharge2Frames;
+        private static Sprite[] cachedCharge3Frames;
 
         /// <summary>
         /// Identifies whether a 32x32 frame pixel belongs to the floating crystals.
@@ -194,6 +197,15 @@ namespace TrashTD.Operators
                 spriteAnim = GetComponent<OperatorSpriteAnimation>();
             }
 
+            if (cachedCharge1Frames != null && cachedCharge1Frames.Length > 0 &&
+                cachedCharge2Frames != null && cachedCharge2Frames.Length > 0 &&
+                cachedCharge3Frames != null && cachedCharge3Frames.Length > 0)
+            {
+                charge1Frames = cachedCharge1Frames;
+                charge2Frames = cachedCharge2Frames;
+                charge3Frames = cachedCharge3Frames;
+            }
+
             var sr = GetComponent<SpriteRenderer>();
             Texture2D tex = sr != null && sr.sprite != null ? sr.sprite.texture : null;
 
@@ -203,6 +215,24 @@ namespace TrashTD.Operators
                 tex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_Project/Art/Operators/Resicochet-Sheet.png");
             }
 #endif
+            if (tex == null)
+            {
+                string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Resicochet-Sheet.png");
+                if (System.IO.File.Exists(path))
+                {
+                    try
+                    {
+                        byte[] raw = System.IO.File.ReadAllBytes(path);
+                        tex = new Texture2D(128, 96, TextureFormat.RGBA32, false);
+                        tex.filterMode = FilterMode.Point;
+                        tex.LoadImage(raw);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogWarning($"[ResicochetOperator] Could not load raw texture bytes for operator frames: {ex.Message}");
+                    }
+                }
+            }
 
             if (charge1Frames == null || charge1Frames.Length == 0 ||
                 charge2Frames == null || charge2Frames.Length == 0 ||
@@ -222,13 +252,24 @@ namespace TrashTD.Operators
                         charge1Frames = new[] { subSprites["Resicochet_0"], subSprites["Resicochet_1"], subSprites["Resicochet_2"], subSprites["Resicochet_3"] };
                         charge2Frames = new[] { subSprites["Resicochet_4"], subSprites["Resicochet_5"], subSprites["Resicochet_6"], subSprites["Resicochet_7"] };
                         charge3Frames = new[] { subSprites["Resicochet_8"], subSprites["Resicochet_9"], subSprites["Resicochet_10"], subSprites["Resicochet_11"] };
+                        cachedCharge1Frames = charge1Frames;
+                        cachedCharge2Frames = charge2Frames;
+                        cachedCharge3Frames = charge3Frames;
                     }
                 }
 #endif
                 if ((charge1Frames == null || charge1Frames.Length == 0) && tex != null)
                 {
                     SliceFramesFromTexture(tex);
+                    cachedCharge1Frames = charge1Frames;
+                    cachedCharge2Frames = charge2Frames;
+                    cachedCharge3Frames = charge3Frames;
                 }
+            }
+
+            if (sr != null && sr.sprite == null && charge1Frames != null && charge1Frames.Length > 0)
+            {
+                sr.sprite = charge1Frames[0];
             }
 
             EnsureCrystalFramesLoaded(tex);
@@ -448,6 +489,7 @@ namespace TrashTD.Operators
 
             var sr = auraObj.AddComponent<SpriteRenderer>();
             sr.color = color;
+            sr.sortingOrder = sortingOrder;
             if (opSpriteRenderer != null)
             {
                 sr.sortingLayerID = opSpriteRenderer.sortingLayerID;

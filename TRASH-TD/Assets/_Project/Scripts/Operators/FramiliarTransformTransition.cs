@@ -119,8 +119,10 @@ namespace TrashTD.Operators
                 }
             }
 
-            whiteSilhouetteMaterial = FramiliarOperator.GetWhiteSilhouetteMaterial();
-            grayscaleMaterial = FramiliarOperator.GetGrayscaleMaterial();
+            var baseWhite = FramiliarOperator.GetWhiteSilhouetteMaterial();
+            whiteSilhouetteMaterial = baseWhite != null ? new Material(baseWhite) { hideFlags = HideFlags.DontSave } : null;
+            var baseGray = FramiliarOperator.GetGrayscaleMaterial();
+            grayscaleMaterial = baseGray != null ? new Material(baseGray) { hideFlags = HideFlags.DontSave } : null;
 
             // Store other child renderers and hide them during glitching silhouettes
             var allRenderers = GetComponentsInChildren<SpriteRenderer>(true);
@@ -274,8 +276,38 @@ namespace TrashTD.Operators
                 }
             }
 
+            // Sync specialized animators / visuals for copied operators
+            if (TryGetComponent<ScrapperOperator>(out var scrapperOp) && scrapperOp != null)
+            {
+                scrapperOp.SpriteAnimation?.CancelAttack();
+            }
+            if (TryGetComponent<ResicochetOperator>(out var resiOp) && resiOp != null)
+            {
+                resiOp.UpdateChargeVisuals();
+            }
+            if (TryGetComponent<OperatorBase>(out var opBase) && opBase != null)
+            {
+                opBase.ApplyFacingVisuals();
+            }
+
             if (Application.isPlaying) Destroy(this);
             else DestroyImmediate(this);
+        }
+
+        private void OnDestroy()
+        {
+            if (whiteSilhouetteMaterial != null)
+            {
+                if (Application.isPlaying) Destroy(whiteSilhouetteMaterial);
+                else DestroyImmediate(whiteSilhouetteMaterial);
+                whiteSilhouetteMaterial = null;
+            }
+            if (grayscaleMaterial != null)
+            {
+                if (Application.isPlaying) Destroy(grayscaleMaterial);
+                else DestroyImmediate(grayscaleMaterial);
+                grayscaleMaterial = null;
+            }
         }
     }
 }
