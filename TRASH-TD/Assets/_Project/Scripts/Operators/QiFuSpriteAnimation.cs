@@ -7,10 +7,15 @@ namespace TrashTD.Operators
     {
         public const int AttackFrameCount = 11;
         public const int StrikeFrameIndex = 5;
-        public const float AttackFrameDuration = 0.075f;
-        public const float WindupDuration = StrikeFrameIndex * AttackFrameDuration;
+        public const float WindupDuration = 0.35f;
         public const float StrikePointX = 22f;
         public const float StrikePointY = 20f;
+
+        private static readonly float[] AttackFrameDurations =
+        {
+            0.10f, 0.10f, 0.05f, 0.05f, 0.05f, 0.05f,
+            0.05f, 0.05f, 0.03f, 0.04f, 0.10f
+        };
 
         [SerializeField] private Sprite[] idleFrames;
         [SerializeField] private Sprite[] attackFrames;
@@ -31,7 +36,7 @@ namespace TrashTD.Operators
         private bool recovering;
         private int attackFrame;
         private float attackTimer;
-        private float windupFrameDuration = AttackFrameDuration;
+        private float windupPlaybackScale = 1f;
         private int lastTransitionFrame = -1;
 
         public void Configure(Sprite[] idle, Sprite[] attack)
@@ -73,6 +78,24 @@ namespace TrashTD.Operators
             return true;
         }
 
+        public static float GetAttackFrameDuration(int frameIndex)
+        {
+            return frameIndex >= 0 && frameIndex < AttackFrameDurations.Length
+                ? AttackFrameDurations[frameIndex]
+                : 0f;
+        }
+
+        public static float AttackDuration
+        {
+            get
+            {
+                float duration = 0f;
+                for (int i = 0; i < AttackFrameDurations.Length; i++)
+                    duration += AttackFrameDurations[i];
+                return duration;
+            }
+        }
+
         public void BeginAttack(float timeUntilStrike)
         {
             if (!enabled || !HasAttackAnimation || windingUp || recovering || timeUntilStrike <= 0f)
@@ -81,7 +104,7 @@ namespace TrashTD.Operators
             windingUp = true;
             attackFrame = 0;
             attackTimer = 0f;
-            windupFrameDuration = Mathf.Min(timeUntilStrike, WindupDuration) / StrikeFrameIndex;
+            windupPlaybackScale = WindupDuration / Mathf.Min(timeUntilStrike, WindupDuration);
             lastTransitionFrame = Time.frameCount;
             ShowAttackFrame();
         }
@@ -161,12 +184,13 @@ namespace TrashTD.Operators
 
         private void UpdateWindup(float deltaTime)
         {
-            attackTimer += deltaTime;
+            attackTimer += deltaTime * windupPlaybackScale;
             while (windingUp && attackFrame < StrikeFrameIndex)
             {
-                if (attackTimer < windupFrameDuration) return;
+                float duration = AttackFrameDurations[attackFrame];
+                if (attackTimer < duration) return;
 
-                attackTimer -= windupFrameDuration;
+                attackTimer -= duration;
                 attackFrame++;
                 ShowAttackFrame();
             }
@@ -177,9 +201,10 @@ namespace TrashTD.Operators
             attackTimer += deltaTime;
             while (recovering)
             {
-                if (attackTimer < AttackFrameDuration) return;
+                float duration = AttackFrameDurations[attackFrame];
+                if (attackTimer < duration) return;
 
-                attackTimer -= AttackFrameDuration;
+                attackTimer -= duration;
                 attackFrame++;
                 if (attackFrame >= AttackFrameCount)
                 {

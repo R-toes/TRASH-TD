@@ -64,6 +64,17 @@ namespace TrashTD.Combat
             ".OODDDOO.",
             "...OOO...");
 
+        public static Sprite Diamond(Color color) => Shaded("diamond", color,
+            "....O....",
+            "....L....",
+            "...OCO...",
+            "..OCLCO..",
+            ".OCLWWLCO",
+            "..OCLCO..",
+            "...OCO...",
+            "....L....",
+            "....O....");
+
         public static Sprite Shard(Color color) => Shaded("shard", color,
             "....OO...",
             "..ODCLLO.",

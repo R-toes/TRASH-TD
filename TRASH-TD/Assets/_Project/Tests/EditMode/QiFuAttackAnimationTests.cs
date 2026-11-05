@@ -42,7 +42,7 @@ namespace TrashTD.Tests
         public void Strike_DisplaysSixthAttackFrameAtAttackStart()
         {
             Assert.AreEqual(5, QiFuSpriteAnimation.StrikeFrameIndex);
-            Assert.AreEqual(0.375f, QiFuSpriteAnimation.WindupDuration, 0.0001f);
+            Assert.AreEqual(0.35f, QiFuSpriteAnimation.WindupDuration, 0.0001f);
 
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
             var instance = Object.Instantiate(prefab);
@@ -60,6 +60,31 @@ namespace TrashTD.Tests
             Assert.AreSame(animation.AttackFrames[5], spriteRenderer.sprite);
 
             Object.DestroyImmediate(instance);
+        }
+
+        [Test]
+        public void AttackFrameTiming_MatchesRequestedDurationsAndKeepsStrikeAtFrameFive()
+        {
+            float[] expectedDurations =
+            {
+                0.10f, 0.10f, 0.05f, 0.05f, 0.05f, 0.05f,
+                0.05f, 0.05f, 0.03f, 0.04f, 0.10f
+            };
+
+            float totalDuration = 0f;
+            float windupDuration = 0f;
+            for (int i = 0; i < expectedDurations.Length; i++)
+            {
+                Assert.AreEqual(expectedDurations[i], QiFuSpriteAnimation.GetAttackFrameDuration(i), 0.0001f);
+                totalDuration += expectedDurations[i];
+                if (i < QiFuSpriteAnimation.StrikeFrameIndex)
+                    windupDuration += expectedDurations[i];
+            }
+
+            Assert.AreEqual(0.67f, totalDuration, 0.0001f);
+            Assert.AreEqual(totalDuration, QiFuSpriteAnimation.AttackDuration, 0.0001f);
+            Assert.AreEqual(QiFuSpriteAnimation.WindupDuration, windupDuration, 0.0001f);
+            Assert.AreEqual(0f, QiFuSpriteAnimation.GetAttackFrameDuration(expectedDurations.Length), 0.0001f);
         }
 
         [Test]
