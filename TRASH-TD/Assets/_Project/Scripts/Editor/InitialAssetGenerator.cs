@@ -30,6 +30,7 @@ namespace TrashTD.Editor
         private const string PompothSkillDescription = "<color=#FFD700>Base (1★):</color> Rapid-fire sniper with lower per-shot damage but equal total DPS. Gains +10% attack speed per enemy in range, capped at +100%.\n<color=#FFD700>1st upgrade (2★):</color> Each landed hit against the same enemy ignores 1% of its DEF, stacking to 100%; switching targets resets this bonus.\n<color=#FFD700>2nd upgrade (3★):</color> Increases the attack-speed passive to +30% per enemy, capped at +300%.";
         private const string BubbletsSkillDescription = "<color=#FFD700>Base (3★):</color> Grants an allied operator in range a bubble shield that negates 1 instance of damage. When popped, the bubble heals the operator and deals Arts damage equal to 30% of Bubblets' ATK to enemies on that tile and surrounding tiles.\n<color=#FFD700>1st upgrade (4★):</color> Arts damage increases to 50%.\n<color=#FFD700>2nd upgrade (5★):</color> Gives bubble shield to an additional operator. Allies in range gain +5 RES and +20 DEF.";
         private const string DrawgooSkillDescription = "<color=#FFD700>Base (1★):</color> When Drawgoo dies, draw 2 random operator cards from the pool. Cannot be healed by other operators.\n<color=#FFD700>1st upgrade (2★):</color> Gives 2 1x Upgraded cards.\n<color=#FFD700>2nd upgrade (3★):</color> Gives 2 2x Upgraded cards.";
+        private const string ResicochetSkillDescription = "<color=#FFD700>Base (3★):</color> Stores a charge every 5 seconds (up to 3). Attacks fire 1 projectile per charge that bounces to up to 4 targets, dealing less damage each bounce.\n<color=#FFD700>1st upgrade (4★):</color> Charging is updated to 3 seconds. Additional 1 bounce.\n<color=#FFD700>2nd upgrade (5★):</color> Bounce doesn't get reduced damage anymore. Operators in range act as an extension of Resicochet's range, but doesn't attack on the extension range if not fully charged.";
         private const string EnemyDataFolder = "Assets/_Project/Data/Enemies";
         private const string StageDataFolder = "Assets/Resources/Stages";
         private const string OperatorPrefabFolder = "Assets/_Project/Prefabs/Operators";
@@ -799,7 +800,7 @@ namespace TrashTD.Editor
                 resicochetFrame0, resicochetPrefab);
             resicochet.damageType = DamageType.Arts;
             resicochet.roleTags = new[] { "Arts", "Bounce", "Burst" };
-            resicochet.skillDescription = "Stores a charge every 5 seconds (up to 3). Attacks fire 1 projectile per charge that bounces to up to 4 targets, dealing less damage each bounce.";
+            resicochet.skillDescription = ResicochetSkillDescription;
             EditorUtility.SetDirty(resicochet);
 
             // 5. Medic (Coalesce)

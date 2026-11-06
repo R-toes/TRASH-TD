@@ -27,10 +27,34 @@ namespace TrashTD.Operators
         public Sprite[] Frames => charge1Frames;
         public float FrameDuration => 0.25f;
         public const float ChargeIntervalSeconds = 5.0f;
+        public const float UpgradedChargeIntervalSeconds = 3.0f;
         public const int MaxChargeCount = 3;
         public const float BurstFireInterval = 0.5f;
         public const int MaxBounceTargets = 4;
+        public const int UpgradedMaxBounceTargets = 5;
         public const float BounceDamageReductionPerHit = 0.25f;
+
+        public bool HasFirstUpgrade => currentRarity >= OperatorRarity.Star4;
+        public bool HasSecondUpgrade => currentRarity >= OperatorRarity.Star5;
+
+        public float CurrentChargeInterval => HasFirstUpgrade ? UpgradedChargeIntervalSeconds : ChargeIntervalSeconds;
+        public int CurrentMaxBounceTargets => HasFirstUpgrade ? UpgradedMaxBounceTargets : MaxBounceTargets;
+
+        public void SetRarityForTesting(OperatorRarity rarity)
+        {
+            currentRarity = rarity;
+        }
+
+        public float GetBounceDamageMultiplier(int bounceIndex)
+        {
+            if (HasSecondUpgrade)
+            {
+                return 1.0f; // 2x Upgraded: Bounce damage is no longer reduced (100% on all bounces)
+            }
+
+            float reductionPerBounce = HasFirstUpgrade ? 0.20f : 0.25f;
+            return Mathf.Max(0.1f, 1.0f - (bounceIndex * reductionPerBounce));
+        }
 
         [Header("Sluggish Effect")]
         [SerializeField] private float sluggishDuration = 3.0f;
@@ -703,13 +727,13 @@ namespace TrashTD.Operators
         {
             if (!isDeployed) return;
 
-            // Charge accumulation: 1 charge every 5 seconds (up to 3 charges).
+            // Charge accumulation: 1 charge every 5 seconds (or 3 seconds when 1x upgraded), up to 3 charges.
             // Never charges during preparation or draft phase; only during active wave combat.
             bool isWaveActive = IsWaveActive();
             if (isWaveActive && !isStunned && !isBound && charges < MaxChargeCount)
             {
                 chargeTimer += Time.deltaTime;
-                if (chargeTimer >= ChargeIntervalSeconds)
+                if (chargeTimer >= CurrentChargeInterval)
                 {
                     AddCharge();
                 }
@@ -728,6 +752,161 @@ namespace TrashTD.Operators
             base.Update();
 
             UpdateCrystalAuras();
+        }
+
+        /// <summary>
+        /// Gets the extension range cells granted by allied operators deployed inside Resicochet's actual range.
+        /// Only cells strictly outside Resicochet's actual range are returned.
+        /// </summary>
+        public List<GridCell> GetExtensionRangeCells(GridManager gridManager, IEnumerable<GridCell> actualRangeCells = null)
+        {
+            var extensionCells = new List<GridCell>();
+            if (gridManager == null || deployedCell == null || !HasSecondUpgrade) return extensionCells;
+
+            HashSet<GridCell> actualSet;
+            if (actualRangeCells != null)
+            {
+                actualSet = new HashSet<GridCell>(actualRangeCells);
+            }
+            else
+            {
+                var actualArray = gridManager.GetCellsInRange(deployedCell.GridPosition, GetRangePattern(), Facing);
+                actualSet = actualArray != null ? new HashSet<GridCell>(actualArray) : new HashSet<GridCell>();
+            }
+
+            // Find all allied operators deployed inside Resicochet's actual range
+            List<OperatorBase> alliesInRange = null;
+            if (OperatorManager.Instance != null)
+            {
+                var cellList = new List<GridCell>(actualSet);
+                alliesInRange = OperatorManager.Instance.GetOperatorsInCells(cellList);
+            }
+            else
+            {
+                var allOps = FindObjectsByType<OperatorBase>();
+                alliesInRange = new List<OperatorBase>();
+                for (int i = 0; i < allOps.Length; i++)
+                {
+                    var op = allOps[i];
+                    if (op != null && op != this && op.IsDeployed && op.DeployedCell != null && actualSet.Contains(op.DeployedCell))
+                    {
+                        alliesInRange.Add(op);
+                    }
+                }
+            }
+
+            if (alliesInRange == null || alliesInRange.Count == 0) return extensionCells;
+
+            var visited = new HashSet<GridCell>();
+
+            for (int i = 0; i < alliesInRange.Count; i++)
+            {
+                var ally = alliesInRange[i];
+                if (ally == null || ally == this || !ally.IsDeployed || ally.DeployedCell == null) continue;
+
+                var allyPattern = ally.GetRangePattern();
+                if (allyPattern == null || allyPattern.Length == 0) continue;
+
+                var allyCells = gridManager.GetCellsInRange(ally.DeployedCell.GridPosition, allyPattern, ally.Facing);
+                if (allyCells == null) continue;
+
+                for (int j = 0; j < allyCells.Length; j++)
+                {
+                    var cell = allyCells[j];
+                    if (cell == null) continue;
+
+                    // Anything outside of Resicochet's actual range is the extension
+                    if (!actualSet.Contains(cell) && visited.Add(cell))
+                    {
+                        extensionCells.Add(cell);
+                    }
+                }
+            }
+
+            return extensionCells;
+        }
+
+        protected override EnemyBase FindTarget()
+        {
+            return FindTargetInternal(null);
+        }
+
+        public override EnemyBase FindAdditionalTarget(EnemyBase excludeTarget)
+        {
+            return FindTargetInternal(excludeTarget);
+        }
+
+        private EnemyBase FindTargetInternal(EnemyBase excludeTarget)
+        {
+            if (EnemyManager.Instance == null || deployedCell == null || data == null || data.rangePattern == null)
+                return null;
+
+            var gridManager = FindAnyObjectByType<GridManager>();
+            if (gridManager == null) return null;
+
+            var actualRangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, GetRangePattern(), Facing);
+            if (actualRangeCells == null || actualRangeCells.Length == 0) return null;
+
+            List<GridCell> targetSearchCells;
+            // 2x Upgraded: Operators on her range act as range extension, but doesn't attack into extension range if not fully charged (charges == 3)
+            if (HasSecondUpgrade && charges >= MaxChargeCount)
+            {
+                var extensionCells = GetExtensionRangeCells(gridManager, actualRangeCells);
+                if (extensionCells != null && extensionCells.Count > 0)
+                {
+                    targetSearchCells = new List<GridCell>(actualRangeCells.Length + extensionCells.Count);
+                    targetSearchCells.AddRange(actualRangeCells);
+                    targetSearchCells.AddRange(extensionCells);
+                }
+                else
+                {
+                    targetSearchCells = new List<GridCell>(actualRangeCells);
+                }
+            }
+            else
+            {
+                // Not fully charged: can only attack within Resicochet's actual range
+                targetSearchCells = new List<GridCell>(actualRangeCells);
+            }
+
+            var candidates = EnemyManager.Instance.GetEnemiesInCells(targetSearchCells, data.position);
+            if (candidates == null || candidates.Count == 0) return null;
+
+            EnemyBase bestTarget = null;
+            int highestDefense = -1;
+            int largestCluster = -1;
+
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                var candidate = candidates[i];
+                if (candidate == null || candidate.IsDead || candidate == excludeTarget || !CanAttackTarget(candidate)) continue;
+
+                bool isTaunt = candidate.HasTaunt;
+                bool bestIsTaunt = bestTarget != null && bestTarget.HasTaunt;
+                int defense = candidate.CurrentDEF;
+                int count = -1;
+                bool better;
+
+                if (bestTarget == null || (isTaunt && !bestIsTaunt)) better = true;
+                else if (isTaunt != bestIsTaunt) better = false;
+                else if (defense > highestDefense) better = true;
+                else if (defense == highestDefense)
+                {
+                    if (largestCluster < 0) largestCluster = CountSplashCluster(bestTarget);
+                    count = CountSplashCluster(candidate);
+                    better = count > largestCluster;
+                }
+                else better = false;
+
+                if (better)
+                {
+                    highestDefense = defense;
+                    largestCluster = count;
+                    bestTarget = candidate;
+                }
+            }
+
+            return bestTarget;
         }
 
         public override bool CanAttackTarget(EnemyBase target)
@@ -857,7 +1036,7 @@ namespace TrashTD.Operators
 
             if (currentTarget != null && !currentTarget.IsDead)
             {
-                float bounceMultiplier = Mathf.Max(0.1f, 1f - (bounceIndex * BounceDamageReductionPerHit));
+                float bounceMultiplier = GetBounceDamageMultiplier(bounceIndex);
                 int rawAtk = Mathf.RoundToInt(CurrentATK * chargeMultiplier * bounceMultiplier);
                 int damage = DamageCalculator.CalculateDamage(rawAtk, currentTarget.CurrentRES);
                 currentTarget.TryTakeAttackDamage(damage, DamageType.Arts, this);
@@ -866,8 +1045,8 @@ namespace TrashTD.Operators
                 PlayImpactSound();
             }
 
-            // If we have not reached max targets (4), search for next bounce target
-            if (bounceIndex + 1 < MaxBounceTargets)
+            // If we have not reached max targets, search for next bounce target
+            if (bounceIndex + 1 < CurrentMaxBounceTargets)
             {
                 EnemyBase nextTarget = FindNextBounceTarget(primaryTarget, currentTarget, hitEnemies);
                 if (nextTarget != null)

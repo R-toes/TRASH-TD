@@ -1285,6 +1285,17 @@ namespace TrashTD.Core.GameLoop
                 DrawCellOutline(rangeCells[i].WorldPosition, rangeColor);
             }
 
+            // Resicochet 2x Upgrade: Extension range from allied operators in range (yellow thick squares, like the green ones)
+            if (op is ResicochetOperator resicochet && resicochet.HasSecondUpgrade)
+            {
+                var extensionCells = resicochet.GetExtensionRangeCells(gridManager, rangeCells);
+                Color extensionColor = new Color(1f, 0.88f, 0.15f, 1f);
+                for (int i = 0; i < extensionCells.Count; i++)
+                {
+                    DrawCellOutline(extensionCells[i].WorldPosition, extensionColor);
+                }
+            }
+
             DrawCellOutline(op.DeployedCell.WorldPosition, new Color(0.15f, 0.85f, 1f, 1f));
             Vector3 labelPosition = op.DeployedCell.WorldPosition + Vector3.up * gridManager.CellSize * 0.7f;
             gameplayHudUI?.SetSelectedOperatorName(

@@ -39,7 +39,7 @@ MonoBehaviour:
   cannotBeHealed: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: Stores a charge every 5 seconds (up to 3). Attacks fire 1 projectile per charge that bounces to up to 4 targets, dealing less damage each bounce.
+  skillDescription: "<color=#FFD700>Base (3★):</color> Stores a charge every 5 seconds (up to 3). Attacks fire 1 projectile per charge that bounces to up to 4 targets, dealing less damage each bounce.\n<color=#FFD700>1st upgrade (4★):</color> Charging is updated to 3 seconds. Additional 1 bounce.\n<color=#FFD700>2nd upgrade (5★):</color> Bounce doesn't get reduced damage anymore. Operators in range act as an extension of Resicochet's range, but doesn't attack on the extension range if not fully charged."
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5

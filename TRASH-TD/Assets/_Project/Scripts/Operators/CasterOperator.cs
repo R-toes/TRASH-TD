@@ -17,15 +17,15 @@ namespace TrashTD.Operators
     {
         [Header("Caster Settings")]
         [Tooltip("Splash radius in world units for AoE attacks")]
-        [SerializeField] private float splashRadius = 1.5f;
+        [SerializeField] protected float splashRadius = 1.5f;
 
         [Tooltip("Percentage of ATK dealt to secondary targets caught in the splash")]
         [Range(0.1f, 1f)]
-        [SerializeField] private float splashDamageRatio = 0.75f;
+        [SerializeField] protected float splashDamageRatio = 0.75f;
 
         [Header("Armor Counter")]
         [Tooltip("Bonus Arts attack power per point of target DEF")]
-        [SerializeField, Range(0f, 1f)] private float armorDamageBonusRatio = 0.5f;
+        [SerializeField, Range(0f, 1f)] protected float armorDamageBonusRatio = 0.5f;
 
         protected override EnemyBase FindTarget()
         {
@@ -89,7 +89,7 @@ namespace TrashTD.Operators
         }
 
         /// <summary>Enemies this caster's splash would hit if it aimed at the target.</summary>
-        private int CountSplashCluster(EnemyBase target) =>
+        protected int CountSplashCluster(EnemyBase target) =>
             EnemyManager.Instance.CountEnemiesInRadius(target.transform.position, splashRadius, data.position);
 
         /// <summary>
