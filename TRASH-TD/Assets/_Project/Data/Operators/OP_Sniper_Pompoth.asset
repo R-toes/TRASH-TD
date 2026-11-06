@@ -38,7 +38,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Base (1★): Rapid-fire sniper with lower per-shot damage but equal total DPS. Gains +10% attack speed per enemy in range, capped at +100%. 1st upgrade (2★): Each landed hit against the same enemy ignores 1% of its DEF, stacking to 100%; switching targets resets this bonus. 2nd upgrade (3★): Increases the attack-speed passive to +30% per enemy, capped at +300%.'
+  skillDescription: "<color=#FFD700>Base (1★):</color> Rapid-fire sniper with lower per-shot damage but equal total DPS. Gains +10% attack speed per enemy in range, capped at +100%.\n<color=#FFD700>1st upgrade (2★):</color> Each landed hit against the same enemy ignores 1% of its DEF, stacking to 100%; switching targets resets this bonus.\n<color=#FFD700>2nd upgrade (3★):</color> Increases the attack-speed passive to +30% per enemy, capped at +300%."
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5

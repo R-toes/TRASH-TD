@@ -34,7 +34,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Base (1★): When blocking 3 or more enemies, increases ATK and DEF by 20%. 1st upgrade (2★): Every 8 enemy hits, releases a gray shockwave that stuns all enemies Bulkhead is currently blocking for 1.5 seconds. 2nd upgrade (3★): Block count increases to 6.'
+  skillDescription: "<color=#FFD700>Base (1★):</color> When blocking 3 or more enemies, increases ATK and DEF by 20%.\n<color=#FFD700>1st upgrade (2★):</color> Every 8 enemy hits, releases a gray shockwave that stuns all enemies Bulkhead is currently blocking for 1.5 seconds.\n<color=#FFD700>2nd upgrade (3★):</color> Block count increases to 6."
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5

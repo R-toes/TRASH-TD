@@ -35,7 +35,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Base (1★): Gains 3% ATK per enemy in range (up to 5 stacks) and deals AoE Arts damage. 1st upgrade (2★): adds two tiles beside the furthest tile of his range. 2nd upgrade (3★): each Arts AoE hit deals damage twice.'
+  skillDescription: "<color=#FFD700>Base (1★):</color> Gains 3% ATK per enemy in range (up to 5 stacks) and deals AoE Arts damage.\n<color=#FFD700>1st upgrade (2★):</color> adds two tiles beside the furthest tile of his range.\n<color=#FFD700>2nd upgrade (3★):</color> each Arts AoE hit deals damage twice."
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5

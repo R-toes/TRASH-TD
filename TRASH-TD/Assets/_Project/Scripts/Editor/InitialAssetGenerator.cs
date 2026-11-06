@@ -24,10 +24,10 @@ namespace TrashTD.Editor
             ArtFolder,
         };
         private const string OperatorDataFolder = "Assets/_Project/Data/Operators";
-        private const string BulkheadSkillDescription = "Base (1\u2605): When blocking 3 or more enemies, increases ATK and DEF by 20%. 1st upgrade (2\u2605): Every 8 enemy hits, releases a gray shockwave that stuns all enemies Bulkhead is currently blocking for 1.5 seconds. 2nd upgrade (3\u2605): Block count increases to 6.";
-        private const string ChillpathSkillDescription = "Base (1\u2605): Applies chill to slow and freeze enemies. Freezing an enemy grants 25% faster attacks for 3.5 seconds. Every 4th attack fires 1 extra shard at another enemy in range, or the same enemy if alone. 1st upgrade (2\u2605): While Chillpath is deployed, all operators deal 50% more damage to frozen enemies. 2nd upgrade (3\u2605): Fires 3 shards per attack at different enemies when possible, repeating targets if fewer than 3 are in range. The every-4th-attack bonus adds 1 more shard, for 4 total. Her freeze haste remains.";
-        private const string DeadeyeSkillDescription = "Base (1\u2605): Deals 20% more damage to flying enemies, but his attack interval is 20% longer while an aerial target is in range. 1st upgrade (2\u2605): Removes the attack interval penalty while keeping the flying-enemy damage bonus. Each landed hit against the same target adds 2% of ATK as damage, starting on the first hit and capped at +100%; switching targets resets the bonus. 2nd upgrade (3\u2605): After killing an enemy, his next shot deals an additional 100% damage.";
-        private const string PompothSkillDescription = "Base (1\u2605): Rapid-fire sniper with lower per-shot damage but equal total DPS. Gains +10% attack speed per enemy in range, capped at +100%. 1st upgrade (2\u2605): Each landed hit against the same enemy ignores 1% of its DEF, stacking to 100%; switching targets resets this bonus. 2nd upgrade (3\u2605): Increases the attack-speed passive to +30% per enemy, capped at +300%.";
+        private const string BulkheadSkillDescription = "<color=#FFD700>Base (1★):</color> When blocking 3 or more enemies, increases ATK and DEF by 20%.\n<color=#FFD700>1st upgrade (2★):</color> Every 8 enemy hits, releases a gray shockwave that stuns all enemies Bulkhead is currently blocking for 1.5 seconds.\n<color=#FFD700>2nd upgrade (3★):</color> Block count increases to 6.";
+        private const string ChillpathSkillDescription = "<color=#FFD700>Base (1★):</color> Applies chill to slow and freeze enemies. Freezing an enemy grants 25% faster attacks for 3.5 seconds. Every 4th attack fires 1 extra shard at another enemy in range, or the same enemy if alone.\n<color=#FFD700>1st upgrade (2★):</color> While Chillpath is deployed, all operators deal 50% more damage to frozen enemies.\n<color=#FFD700>2nd upgrade (3★):</color> Fires 3 shards per attack at different enemies when possible, repeating targets if fewer than 3 are in range. The every-4th-attack bonus adds 1 more shard, for 4 total. Her freeze haste remains.";
+        private const string DeadeyeSkillDescription = "<color=#FFD700>Base (1★):</color> Deals 20% more damage to flying enemies, but his attack interval is 20% longer while an aerial target is in range.\n<color=#FFD700>1st upgrade (2★):</color> Removes the attack interval penalty while keeping the flying-enemy damage bonus. Each landed hit against the same target adds 2% of ATK as damage, starting on the first hit and capped at +100%; switching targets resets the bonus.\n<color=#FFD700>2nd upgrade (3★):</color> After killing an enemy, his next shot deals an additional 100% damage.";
+        private const string PompothSkillDescription = "<color=#FFD700>Base (1★):</color> Rapid-fire sniper with lower per-shot damage but equal total DPS. Gains +10% attack speed per enemy in range, capped at +100%.\n<color=#FFD700>1st upgrade (2★):</color> Each landed hit against the same enemy ignores 1% of its DEF, stacking to 100%; switching targets resets this bonus.\n<color=#FFD700>2nd upgrade (3★):</color> Increases the attack-speed passive to +30% per enemy, capped at +300%.";
         private const string EnemyDataFolder = "Assets/_Project/Data/Enemies";
         private const string StageDataFolder = "Assets/Resources/Stages";
         private const string OperatorPrefabFolder = "Assets/_Project/Prefabs/Operators";
@@ -492,7 +492,7 @@ namespace TrashTD.Editor
                     echosquirePrefab);
                 echosquire.roleTags = new[] { "Lifesteal", "Survival" };
                 echosquire.skillDescription =
-                    "Base (2\u2605): ATK, DEF, and RES increase as HP falls: +1% per 1% HP missing, up to +60% at 40% HP or lower. Attack speed is not affected. Restores 20% of physical damage dealt as HP and cannot be healed by other operators. 1st upgrade (3\u2605): after landing a hit, has a 100% chance to dodge incoming attacks for 0.5 seconds. 2nd upgrade (4\u2605): the first time HP reaches 0 each wave, revives with at least 50% HP; reaching 0 again that wave is fatal.";
+                    "<color=#FFD700>Base (2★):</color> ATK, DEF, and RES increase as HP falls: +1% per 1% HP missing, up to +60% at 40% HP or lower. Attack speed is not affected. Restores 20% of physical damage dealt as HP and cannot be healed by other operators.\n<color=#FFD700>1st upgrade (3★):</color> after landing a hit, has a 100% chance to dodge incoming attacks for 0.5 seconds.\n<color=#FFD700>2nd upgrade (4★):</color> the first time HP reaches 0 each wave, revives with at least 50% HP; reaching 0 again that wave is fatal.";
                 EditorUtility.SetDirty(echosquire);
             }
 
@@ -543,7 +543,7 @@ namespace TrashTD.Editor
                         qiFuPrefab);
                     qiFu.damageType = DamageType.Physical;
                     qiFu.roleTags = new[] { "Chi", "Knockback" };
-                    qiFu.skillDescription = "Base (1\u2605): After every 4 landed hits, channels a green Chi Paw to push the struck enemy back 1 tile. 1st upgrade (2\u2605): triggers after every 3 landed hits. 2nd upgrade (3\u2605): triggers after every 2 landed hits and pushes the enemy back 2 tiles.";
+                    qiFu.skillDescription = "<color=#FFD700>Base (1★):</color> After every 4 landed hits, channels a green Chi Paw to push the struck enemy back 1 tile.\n<color=#FFD700>1st upgrade (2★):</color> triggers after every 3 landed hits.\n<color=#FFD700>2nd upgrade (3★):</color> triggers after every 2 landed hits and pushes the enemy back 2 tiles.";
                     EditorUtility.SetDirty(qiFu);
                 }
             }
@@ -752,7 +752,7 @@ namespace TrashTD.Editor
                 },
                 casterSprite, casterPrefab);
             caster.damageType = DamageType.Arts;
-            caster.skillDescription = "Base (1\u2605): Gains 3% ATK per enemy in range (up to 5 stacks) and deals AoE Arts damage. 1st upgrade (2\u2605): adds two tiles beside the furthest tile of his range. 2nd upgrade (3\u2605): each Arts AoE hit deals damage twice.";
+            caster.skillDescription = "<color=#FFD700>Base (1★):</color> Gains 3% ATK per enemy in range (up to 5 stacks) and deals AoE Arts damage.\n<color=#FFD700>1st upgrade (2★):</color> adds two tiles beside the furthest tile of his range.\n<color=#FFD700>2nd upgrade (3★):</color> each Arts AoE hit deals damage twice.";
             EditorUtility.SetDirty(caster);
 
             var chillpath = AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Caster_Chillpath.asset");
