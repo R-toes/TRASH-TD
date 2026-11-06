@@ -620,7 +620,7 @@ namespace TrashTD.Editor
                 ignisaur.damageType = DamageType.Arts;
                 ignisaur.roleTags = new[] { "Arts", "Melee", "Anti-Air" };
                 ignisaur.skillDescription =
-                    "Passive - Protean: Deals Physical damage with a melee slash to enemies on his tile, and Arts damage with ranged attacks to all forward and surrounding tiles in range. Can attack aerial/drone enemies. Reduces attack interval when not blocking, and increases ATK by 25% when blocking.";
+                    "<color=#FFD700>Base (2★):</color> Reduces attack interval when not blocking, and increases ATK by 25% when blocking. Deals Physical damage with a melee slash to enemies on his tile, and Arts damage with ranged attacks to all forward tiles in range.\n<color=#FFD700>1st upgrade (3★):</color> Extends attack range by 1.\n<color=#FFD700>2nd upgrade (4★):</color> Both buffs are now applied and deals physical/arts damage based on target's DEF/RES.";
                 EditorUtility.SetDirty(ignisaur);
             }
 

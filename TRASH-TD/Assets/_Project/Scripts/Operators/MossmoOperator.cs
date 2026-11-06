@@ -53,7 +53,16 @@ namespace TrashTD.Operators
 
         public override Vector2Int[] GetRangePattern()
         {
-            return HasSecondUpgrade ? UpgradedRangePattern : BaseRangePattern;
+            return HasSecondUpgrade ? UpgradedRangePattern : (data != null && data.rangePattern != null ? data.rangePattern : BaseRangePattern);
+        }
+
+        public static Vector2Int[] GetRangePatternForRarity(OperatorData operatorData, OperatorRarity rarity)
+        {
+            if (operatorData != null && operatorData.rangePattern != null && rarity < OperatorRarity.Star5)
+            {
+                return operatorData.rangePattern;
+            }
+            return rarity >= OperatorRarity.Star5 ? UpgradedRangePattern : BaseRangePattern;
         }
 
         private float healCooldownTimer;

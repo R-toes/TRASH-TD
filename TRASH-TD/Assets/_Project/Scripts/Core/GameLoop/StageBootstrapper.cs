@@ -1459,14 +1459,20 @@ namespace TrashTD.Core.GameLoop
             }
 
             // Attack range layer (green)
-            GridCell[] rangeCells = gridManager.GetCellsInRange(
-                placementGridPosition,
-                pendingDeployCard.operatorData.rangePattern,
-                placementFacing);
-            Color rangeColor = new Color(0.15f, 1f, 0.28f, 1f);
-            for (int i = 0; i < rangeCells.Length; i++)
+            Vector2Int[] effectiveRange = pendingDeployCard.operatorData != null
+                ? pendingDeployCard.operatorData.GetRangePatternForRarity(pendingDeployCard.rarity)
+                : null;
+            if (effectiveRange != null)
             {
-                DrawCellOutline(rangeCells[i].WorldPosition, rangeColor);
+                GridCell[] rangeCells = gridManager.GetCellsInRange(
+                    placementGridPosition,
+                    effectiveRange,
+                    placementFacing);
+                Color rangeColor = new Color(0.15f, 1f, 0.28f, 1f);
+                for (int i = 0; i < rangeCells.Length; i++)
+                {
+                    DrawCellOutline(rangeCells[i].WorldPosition, rangeColor);
+                }
             }
 
             Color placementColor = canDeploy ? new Color(0.15f, 0.85f, 1f, 1f) : new Color(1f, 0.12f, 0.12f, 1f);

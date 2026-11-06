@@ -1373,6 +1373,20 @@ namespace TrashTD.UI
                         foreach (Vector2Int cell in upgradedRange)
                             if (cell != Vector2Int.zero && !hitCells.Contains(cell)) upgradeCells.Add(cell);
                 }
+                else if (op.operatorName == "Ignisaur")
+                {
+                    Vector2Int[] upgradedRange = TrashTD.Operators.IgnisaurOperator.GetRangePatternForRarity(op, OperatorRarity.Star3);
+                    if (upgradedRange != null)
+                        foreach (Vector2Int cell in upgradedRange)
+                            if (cell != Vector2Int.zero && !hitCells.Contains(cell)) upgradeCells.Add(cell);
+                }
+                else if (op.operatorName == "Mossmo")
+                {
+                    Vector2Int[] upgradedRange = TrashTD.Operators.MossmoOperator.GetRangePatternForRarity(op, OperatorRarity.Star5);
+                    if (upgradedRange != null)
+                        foreach (Vector2Int cell in upgradedRange)
+                            if (cell != Vector2Int.zero && !hitCells.Contains(cell)) upgradeCells.Add(cell);
+                }
 
                 Vector2Int[] talent = op.GetTalentRangePattern();
                 if (talent != null) foreach (Vector2Int cell in talent) if (cell != Vector2Int.zero && !hitCells.Contains(cell) && !upgradeCells.Contains(cell)) talentCells.Add(cell);
@@ -1386,11 +1400,21 @@ namespace TrashTD.UI
                     ? (hitsSelf ? "OWN TILE" : "NO ATTACK")
                     : op.operatorName == "Pyrolite"
                         ? displayedRangeCount + " TILES AT 2\u2605, FACING RIGHT"
-                        : hitCells.Count + " TILES, FACING RIGHT";
+                        : op.operatorName == "Ignisaur"
+                            ? displayedRangeCount + " TILES AT 3\u2605, FACING RIGHT"
+                            : op.operatorName == "Mossmo"
+                                ? displayedRangeCount + " TILES AT 5\u2605, SURROUNDING"
+                                : hitCells.Count + " TILES, FACING RIGHT";
 
                 float x = AddLegend(0f, selfColor, "SELF");
                 x = AddLegend(x, hitColor, "ATTACK");
-                if (upgradeCells.Count > 0) x = AddLegend(x, RangeUpgradeColor, "2\u2605 BONUS");
+                if (upgradeCells.Count > 0)
+                {
+                    string bonusLabel = op.operatorName == "Ignisaur" ? "3\u2605 BONUS"
+                        : op.operatorName == "Mossmo" ? "5\u2605 BONUS"
+                        : "2\u2605 BONUS";
+                    x = AddLegend(x, RangeUpgradeColor, bonusLabel);
+                }
                 if (talentCells.Count > 0) AddLegend(x, RangeTalentColor, "TALENT");
             }
             else

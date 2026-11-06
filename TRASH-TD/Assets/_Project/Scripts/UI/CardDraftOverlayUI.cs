@@ -1528,9 +1528,7 @@ namespace TrashTD.UI
             detailIntervalText.text = op.attackInterval.ToString("0.##") + "s";
 
             // Attack range pattern
-            Vector2Int[] rangePattern = op.operatorName == "Pyrolite"
-                ? PyroliteOperator.GetRangePatternForRarity(op, card.rarity)
-                : op.rangePattern;
+            Vector2Int[] rangePattern = op.GetRangePatternForRarity(card.rarity);
             UpdateRangePreview(op, rangePattern);
 
             // Passive / ability text (only shown when the operator has one)

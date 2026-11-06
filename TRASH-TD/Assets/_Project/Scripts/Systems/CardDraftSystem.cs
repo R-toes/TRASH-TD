@@ -32,6 +32,12 @@ namespace TrashTD.Systems
 
         public bool HasSavedHP => savedHP >= 0;
 
+        public Vector2Int[] GetRangePattern()
+        {
+            if (operatorData == null) return null;
+            return operatorData.GetRangePatternForRarity(rarity);
+        }
+
         /// <summary>Saved HP as a fraction of this card's max HP (1 for a fresh card).</summary>
         public float GetHealthRatio()
         {

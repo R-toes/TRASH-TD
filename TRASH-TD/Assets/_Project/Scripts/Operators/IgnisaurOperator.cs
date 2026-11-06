@@ -29,16 +29,63 @@ namespace TrashTD.Operators
 
         public override bool CanHitAir => true;
 
+        public bool HasFirstUpgrade => currentRarity >= OperatorRarity.Star3;
+        public bool HasSecondUpgrade => currentRarity >= OperatorRarity.Star4;
+
+        public static readonly Vector2Int[] UpgradedRangePattern = new[]
+        {
+            new Vector2Int(1, 0),
+            new Vector2Int(1, 1),
+            new Vector2Int(1, -1),
+            new Vector2Int(2, 0),
+            new Vector2Int(2, 1),
+            new Vector2Int(2, -1),
+            new Vector2Int(3, 0)
+        };
+
+        public override Vector2Int[] GetRangePattern()
+        {
+            if (data == null || data.rangePattern == null) return null;
+            return HasFirstUpgrade ? UpgradedRangePattern : data.rangePattern;
+        }
+
+        public static Vector2Int[] GetRangePatternForRarity(OperatorData operatorData, OperatorRarity rarity)
+        {
+            if (operatorData == null || operatorData.rangePattern == null) return null;
+            return rarity >= OperatorRarity.Star3 ? UpgradedRangePattern : operatorData.rangePattern;
+        }
+
         public bool IsBlocking => blockedEnemies != null && blockedEnemies.Count > 0;
 
-        public override int CurrentATK => IsBlocking
-            ? Mathf.RoundToInt(base.CurrentATK * BlockedAtkMultiplier)
-            : base.CurrentATK;
+        public override int CurrentATK
+        {
+            get
+            {
+                int baseAtk = base.CurrentATK;
+                bool applyBuff = HasSecondUpgrade || IsBlocking;
+                return applyBuff ? Mathf.RoundToInt(baseAtk * BlockedAtkMultiplier) : baseAtk;
+            }
+        }
 
         public override float GetAttackInterval()
         {
             float baseInterval = base.GetAttackInterval();
-            return !IsBlocking ? baseInterval * UnblockedIntervalMultiplier : baseInterval;
+            bool applySpeedBuff = HasSecondUpgrade || !IsBlocking;
+            return applySpeedBuff ? baseInterval * UnblockedIntervalMultiplier : baseInterval;
+        }
+
+        public DamageType DetermineBestDamageType(EnemyBase target)
+        {
+            if (target == null) return DamageType.Physical;
+
+            int physicalDamage = DamageCalculator.CalculateDamage(CurrentATK, target.CurrentDEF);
+            int artsDamage = DamageCalculator.CalculateDamage(CurrentATK, target.CurrentRES);
+            if (OutgoingArtsDamageMultiplier > 1f)
+            {
+                artsDamage = Mathf.Max(1, Mathf.RoundToInt(artsDamage * OutgoingArtsDamageMultiplier));
+            }
+
+            return physicalDamage > artsDamage ? DamageType.Physical : DamageType.Arts;
         }
 
         public override void Attack(EnemyBase target)
@@ -46,33 +93,40 @@ namespace TrashTD.Operators
             if (target == null || !isDeployed) return;
 
             bool isOwnTile = IsOwnTileTarget(target);
+            DamageType chosenDamageType = HasSecondUpgrade
+                ? DetermineBestDamageType(target)
+                : (isOwnTile ? DamageType.Physical : DamageType.Arts);
 
             if (isOwnTile)
             {
-                // Physical melee slash on own tile
-                PlayAttackSound(SfxId.GameplayMeleeAttack);
+                // Physical melee slash on own tile (or chosen type at 2x Upgrade)
+                PlayAttackSound(chosenDamageType == DamageType.Arts ? SfxId.GameplayMagicAttack : SfxId.GameplayMeleeAttack);
                 MeleeSwipeVisual.Play(transform.position, target.VisualPosition, SlashColor, 1.35f, MeleeStyle.FlameSlash);
-                ApplyDamage(target, DamageType.Physical);
+                ApplyDamage(target, chosenDamageType);
             }
             else
             {
-                // Arts ranged projectile on all range tiles (yellow front tile and green tiles)
-                PlayAttackSound(SfxId.GameplayMagicAttack);
+                // Arts ranged projectile on range tiles (or chosen type at 2x Upgrade)
+                PlayAttackSound(chosenDamageType == DamageType.Physical ? SfxId.GameplayRangedPhysicalAttack : SfxId.GameplayMagicAttack);
                 CombatProjectileVisual.Fire(
                     ProjectileOrigin,
                     target,
-                    ArtsProjectileColor,
+                    chosenDamageType == DamageType.Physical ? SlashColor : ArtsProjectileColor,
                     10f,
                     0.2f,
                     0.12f,
                     burstOnImpact: true,
-                    () => ApplyDamage(target, DamageType.Arts),
+                    () => ApplyDamage(target, chosenDamageType),
                     style: ProjectileStyle.FireOrb);
             }
         }
 
         public DamageType GetDamageTypeForTarget(EnemyBase target)
         {
+            if (HasSecondUpgrade && target != null)
+            {
+                return DetermineBestDamageType(target);
+            }
             return IsOwnTileTarget(target) ? DamageType.Physical : DamageType.Arts;
         }
 
@@ -139,12 +193,13 @@ namespace TrashTD.Operators
             }
 
             // Priority 2: Enemies in range pattern (ground and aerial)
-            if (EnemyManager.Instance != null && deployedCell != null && data != null && data.rangePattern != null)
+            var rangePattern = GetRangePattern();
+            if (EnemyManager.Instance != null && deployedCell != null && rangePattern != null)
             {
                 var gridManager = FindAnyObjectByType<GridManager>();
                 if (gridManager != null)
                 {
-                    var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
+                    var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, rangePattern, Facing);
                     var rangeCellList = new List<GridCell>(rangeCells);
                     if (deployedCell != null && !rangeCellList.Contains(deployedCell))
                     {

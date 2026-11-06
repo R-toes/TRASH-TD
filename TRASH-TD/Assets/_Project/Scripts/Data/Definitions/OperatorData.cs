@@ -174,5 +174,26 @@ namespace TrashTD.Data
 
             return null;
         }
+
+        /// <summary>
+        /// Gets the effective range pattern for this operator at the given rarity tier,
+        /// accounting for range expansion upgrades (e.g. Pyrolite at 2★+, Ignisaur at 3★+, Mossmo at 5★).
+        /// </summary>
+        public Vector2Int[] GetRangePatternForRarity(OperatorRarity rarity)
+        {
+            if (operatorName == "Pyrolite")
+            {
+                return TrashTD.Operators.PyroliteOperator.GetRangePatternForRarity(this, rarity);
+            }
+            if (operatorName == "Ignisaur")
+            {
+                return TrashTD.Operators.IgnisaurOperator.GetRangePatternForRarity(this, rarity);
+            }
+            if (operatorName == "Mossmo")
+            {
+                return TrashTD.Operators.MossmoOperator.GetRangePatternForRarity(this, rarity);
+            }
+            return rangePattern;
+        }
     }
 }
