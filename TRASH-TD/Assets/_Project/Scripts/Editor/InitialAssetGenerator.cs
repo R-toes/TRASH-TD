@@ -865,7 +865,7 @@ namespace TrashTD.Editor
                     progenyFrame0, progenyPrefab);
                 progeny.roleTags = new[] { "Chain Heal", "Support" };
                 progeny.skillDescription =
-                    "Passive - Chain Heal: Restores HP to an allied operator in range. The heal bounces to a second operator in the surrounding tiles of the healed operator (healing reduced by 50% when it bounces).";
+                    "<color=#FFD700>Base (2★):</color> Heals bounce between 2 operators (healing reduced by 50% when it bounces).\n<color=#FFD700>1st upgrade (3★):</color> Additional 1 bounce, and increases range by 1 tile at every adjacent tile.\n<color=#FFD700>2nd upgrade (4★):</color> Healing bounces are no longer reduced.";
                 EditorUtility.SetDirty(progeny);
             }
 

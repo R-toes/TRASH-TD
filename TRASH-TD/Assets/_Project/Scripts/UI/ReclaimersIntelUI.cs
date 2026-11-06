@@ -1387,6 +1387,13 @@ namespace TrashTD.UI
                         foreach (Vector2Int cell in upgradedRange)
                             if (cell != Vector2Int.zero && !hitCells.Contains(cell)) upgradeCells.Add(cell);
                 }
+                else if (op.operatorName == "Progeny")
+                {
+                    Vector2Int[] upgradedRange = TrashTD.Operators.ProgenyOperator.GetRangePatternForRarity(op, OperatorRarity.Star3);
+                    if (upgradedRange != null)
+                        foreach (Vector2Int cell in upgradedRange)
+                            if (cell != Vector2Int.zero && !hitCells.Contains(cell)) upgradeCells.Add(cell);
+                }
 
                 Vector2Int[] talent = op.GetTalentRangePattern();
                 if (talent != null) foreach (Vector2Int cell in talent) if (cell != Vector2Int.zero && !hitCells.Contains(cell) && !upgradeCells.Contains(cell)) talentCells.Add(cell);
@@ -1404,13 +1411,15 @@ namespace TrashTD.UI
                             ? displayedRangeCount + " TILES AT 3\u2605, FACING RIGHT"
                             : op.operatorName == "Mossmo"
                                 ? displayedRangeCount + " TILES AT 5\u2605, SURROUNDING"
-                                : hitCells.Count + " TILES, FACING RIGHT";
+                                : op.operatorName == "Progeny"
+                                    ? displayedRangeCount + " TILES AT 3\u2605, CROSS"
+                                    : hitCells.Count + " TILES, FACING RIGHT";
 
                 float x = AddLegend(0f, selfColor, "SELF");
-                x = AddLegend(x, hitColor, "ATTACK");
+                x = AddLegend(x, hitColor, op.operatorClass == OperatorClass.Medic ? "HEAL" : "ATTACK");
                 if (upgradeCells.Count > 0)
                 {
-                    string bonusLabel = op.operatorName == "Ignisaur" ? "3\u2605 BONUS"
+                    string bonusLabel = (op.operatorName == "Ignisaur" || op.operatorName == "Progeny") ? "3\u2605 BONUS"
                         : op.operatorName == "Mossmo" ? "5\u2605 BONUS"
                         : "2\u2605 BONUS";
                     x = AddLegend(x, RangeUpgradeColor, bonusLabel);

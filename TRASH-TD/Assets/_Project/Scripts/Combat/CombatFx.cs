@@ -408,5 +408,77 @@ namespace TrashTD.Combat
                 });
             }
         }
+
+        /// <summary>
+        /// Restorative healing splash for operators: upward fountain of shaded heal crosses and glistening
+        /// splash droplets, with no expanding AoE ring.
+        /// </summary>
+        public static void HealCrossSplash(Vector2 position, Color color, float delay = 0f)
+        {
+            Color brightTint = Color.Lerp(color, Color.white, 0.45f);
+
+            // 1. Soft 1-frame center flash (no expanding ring)
+            Flash(position, Color.Lerp(color, Color.white, 0.6f), large: false, delay: delay);
+
+            // 2. Upward fountain spray of healing crosses
+            int crossCount = 6;
+            for (int i = 0; i < crossCount; i++)
+            {
+                float angle = Random.Range(40f, 140f) * Mathf.Deg2Rad;
+                Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+                float speed = Random.Range(1.0f, 2.2f);
+                Sprite crossSprite = (i % 3) switch
+                {
+                    0 => CombatFxArt.HealCross(color),
+                    1 => CombatFxArt.Plus5(),
+                    _ => CombatFxArt.Plus3()
+                };
+
+                PixelParticles.Emit(new PixelParticle
+                {
+                    Position = position + new Vector2(Random.Range(-0.15f, 0.15f), Random.Range(-0.05f, 0.10f)),
+                    Velocity = dir * speed,
+                    Life = Random.Range(0.40f, 0.60f),
+                    Delay = delay + Random.Range(0f, 0.05f),
+                    Gravity = 1.6f,
+                    Drag = 1.4f,
+                    StartColor = brightTint,
+                    EndColor = Fade(color),
+                    Sprite = crossSprite,
+                    SortingOrder = ImpactSortingOrder + 2
+                });
+            }
+
+            // 3. Liquid glistening splash droplets arching up and falling
+            int dropletCount = 10;
+            for (int i = 0; i < dropletCount; i++)
+            {
+                float angle = Random.Range(25f, 155f) * Mathf.Deg2Rad;
+                Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+                float speed = Random.Range(1.4f, 2.8f);
+                Sprite dropletSprite = (i % 3) switch
+                {
+                    0 => CombatFxArt.Dot2(),
+                    1 => CombatFxArt.FoamBit(),
+                    _ => CombatFxArt.Dot1()
+                };
+
+                Color dropColor = (i % 2 == 0) ? Color.white : brightTint;
+
+                PixelParticles.Emit(new PixelParticle
+                {
+                    Position = position + new Vector2(Random.Range(-0.10f, 0.10f), Random.Range(-0.05f, 0.05f)),
+                    Velocity = dir * speed,
+                    Life = Random.Range(0.28f, 0.42f),
+                    Delay = delay + Random.Range(0f, 0.03f),
+                    Gravity = 5.0f,
+                    Drag = 1.8f,
+                    StartColor = dropColor,
+                    EndColor = Fade(color),
+                    Sprite = dropletSprite,
+                    SortingOrder = ImpactSortingOrder + 1
+                });
+            }
+        }
     }
 }
