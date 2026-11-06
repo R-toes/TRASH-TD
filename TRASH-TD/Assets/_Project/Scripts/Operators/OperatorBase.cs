@@ -940,13 +940,11 @@ namespace TrashTD.Operators
         }
 
         /// <summary>
-        /// Rolls the number of 3-star operator cards granted by an upgraded Drawgoo on death.
-        /// 60% chance for 1 card, 40% chance for 2 cards.
+        /// Cards granted by an upgraded Drawgoo on death (2 cards).
         /// </summary>
         public static int RollUpgradedDrawgooCardCount(float roll = -1f)
         {
-            if (roll < 0f) roll = UnityEngine.Random.value;
-            return roll < 0.60f ? 1 : 2;
+            return 2;
         }
 
         /// <summary>
@@ -960,11 +958,15 @@ namespace TrashTD.Operators
             if (data == null) return string.Empty;
             if (data.drawTwoCardsOnDeath)
             {
+                if (currentRarity >= OperatorRarity.Star3)
+                {
+                    return "When Drawgoo dies, draw 2 2x Upgraded operator cards from the pool. Cannot be healed by other operators.";
+                }
                 if (currentRarity >= OperatorRarity.Star2)
                 {
-                    return "When Drawgoo dies, draw 1 (60%) or 2 (40%) random 3-star operator cards from the pool. Cannot be healed by other operators.";
+                    return "When Drawgoo dies, draw 2 1x Upgraded operator cards from the pool. Cannot be healed by other operators.";
                 }
-                return "When Drawgoo dies, draw two random operator cards from the pool. Cannot be healed by other operators.";
+                return "When Drawgoo dies, draw 2 random operator cards from the pool. Cannot be healed by other operators.";
             }
             return data.skillDescription;
         }
@@ -986,14 +988,17 @@ namespace TrashTD.Operators
 
             PlayAbilitySound();
 
-            if (currentRarity >= OperatorRarity.Star2)
+            if (currentRarity >= OperatorRarity.Star3)
             {
-                int count = RollUpgradedDrawgooCardCount();
-                draftSystem.DrawRandomCardsToDeck(count, OperatorRarity.Star3);
+                draftSystem.DrawRandomCardsToDeck(2, upgradeTiers: 2);
+            }
+            else if (currentRarity >= OperatorRarity.Star2)
+            {
+                draftSystem.DrawRandomCardsToDeck(2, upgradeTiers: 1);
             }
             else
             {
-                draftSystem.DrawRandomCardsToDeck(2);
+                draftSystem.DrawRandomCardsToDeck(2, upgradeTiers: 0);
             }
         }
     }

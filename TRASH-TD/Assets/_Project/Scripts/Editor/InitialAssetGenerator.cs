@@ -29,6 +29,7 @@ namespace TrashTD.Editor
         private const string DeadeyeSkillDescription = "<color=#FFD700>Base (1★):</color> Deals 20% more damage to flying enemies, but his attack interval is 20% longer while an aerial target is in range.\n<color=#FFD700>1st upgrade (2★):</color> Removes the attack interval penalty while keeping the flying-enemy damage bonus. Each landed hit against the same target adds 2% of ATK as damage, starting on the first hit and capped at +100%; switching targets resets the bonus.\n<color=#FFD700>2nd upgrade (3★):</color> After killing an enemy, his next shot deals an additional 100% damage.";
         private const string PompothSkillDescription = "<color=#FFD700>Base (1★):</color> Rapid-fire sniper with lower per-shot damage but equal total DPS. Gains +10% attack speed per enemy in range, capped at +100%.\n<color=#FFD700>1st upgrade (2★):</color> Each landed hit against the same enemy ignores 1% of its DEF, stacking to 100%; switching targets resets this bonus.\n<color=#FFD700>2nd upgrade (3★):</color> Increases the attack-speed passive to +30% per enemy, capped at +300%.";
         private const string BubbletsSkillDescription = "<color=#FFD700>Base (3★):</color> Grants an allied operator in range a bubble shield that negates 1 instance of damage. When popped, the bubble heals the operator and deals Arts damage equal to 30% of Bubblets' ATK to enemies on that tile and surrounding tiles.\n<color=#FFD700>1st upgrade (4★):</color> Arts damage increases to 50%.\n<color=#FFD700>2nd upgrade (5★):</color> Gives bubble shield to an additional operator. Allies in range gain +5 RES and +20 DEF.";
+        private const string DrawgooSkillDescription = "<color=#FFD700>Base (1★):</color> When Drawgoo dies, draw 2 random operator cards from the pool. Cannot be healed by other operators.\n<color=#FFD700>1st upgrade (2★):</color> Gives 2 1x Upgraded cards.\n<color=#FFD700>2nd upgrade (3★):</color> Gives 2 2x Upgraded cards.";
         private const string EnemyDataFolder = "Assets/_Project/Data/Enemies";
         private const string StageDataFolder = "Assets/Resources/Stages";
         private const string OperatorPrefabFolder = "Assets/_Project/Prefabs/Operators";
@@ -891,6 +892,13 @@ namespace TrashTD.Editor
             framiliar.roleTags = new[] { "Specialist", "Mimic", "Deck" };
             framiliar.skillDescription = "<color=#FFD700>Base (2★):</color> Copies any operator in your deck, taking on their form in grayscale. When retreated in the same preparation phase, returns as Framiliar; if retreated in the next prep phase, returns as the copied operator. Specialists have no retreat cooldown.\n<color=#FFD700>1st upgrade (3★):</color> Copies any operator in your deck as 1x Upgraded (or their upgrade level if higher).\n<color=#FFD700>2nd upgrade (4★):</color> Copies any operator in your deck as 2x Upgraded.";
             EditorUtility.SetDirty(framiliar);
+
+            var drawgoo = AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Specialist_Drawgoo.asset");
+            if (drawgoo != null)
+            {
+                drawgoo.skillDescription = DrawgooSkillDescription;
+                EditorUtility.SetDirty(drawgoo);
+            }
         }
 
         private static GameObject CreateFramiliarPrefab(Sprite[] frames)

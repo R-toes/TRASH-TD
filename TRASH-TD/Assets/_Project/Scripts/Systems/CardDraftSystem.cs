@@ -228,8 +228,9 @@ namespace TrashTD.Systems
         /// Draw random eligible operator cards directly into the player's deck.
         /// Cards can be queued by PlayerDeck when all deck slots are occupied.
         /// If targetRarity is specified, draws only operators matching that base rarity.
+        /// upgradeTiers adds bonus upgrade levels to the drawn cards (e.g. 1 = 1x upgraded card, 2 = 2x upgraded card).
         /// </summary>
-        public int DrawRandomCardsToDeck(int count, OperatorRarity? targetRarity = null)
+        public int DrawRandomCardsToDeck(int count, int upgradeTiers = 0, OperatorRarity? targetRarity = null)
         {
             if (count <= 0) return 0;
 
@@ -276,7 +277,8 @@ namespace TrashTD.Systems
             for (int i = 0; i < count; i++)
             {
                 OperatorData chosenOperator = eligibleOperators[UnityEngine.Random.Range(0, eligibleOperators.Count)];
-                var card = new DraftCard(chosenOperator, chosenOperator.baseRarity);
+                OperatorRarity cardRarity = (OperatorRarity)Mathf.Clamp((int)chosenOperator.baseRarity + upgradeTiers, 1, 5);
+                var card = new DraftCard(chosenOperator, cardRarity);
                 if (!PlayerDeck.Instance.AddReturnedCard(card))
                 {
                     Debug.LogError($"CardDraftSystem: Failed to add drawn card for {chosenOperator.operatorName} to the player's deck.");
@@ -287,6 +289,11 @@ namespace TrashTD.Systems
             }
 
             return drawnCount;
+        }
+
+        public int DrawRandomCardsToDeck(int count, OperatorRarity targetRarity)
+        {
+            return DrawRandomCardsToDeck(count, 0, targetRarity);
         }
 
         /// <summary>
