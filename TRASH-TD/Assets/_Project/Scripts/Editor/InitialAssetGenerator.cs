@@ -462,7 +462,7 @@ namespace TrashTD.Editor
                 hp: 140, atk: 85, def: 20, res: 0, blockCount: 2, range: 2, interval: 1.1f,
                 new[] { new Vector2Int(1, 0), new Vector2Int(2, 0) },
                 scrapperFrame0, guardPrefab);
-            scrapper.skillDescription = "Base (1★): When attacking, has a 20% chance to Stun the target for 2 seconds. 1st upgrade (2★): Stun chance increases to 30%. 2nd upgrade (3★): Stun chance increases to 50% and attacks on the first tile become AoE.";
+            scrapper.skillDescription = "Base (1★): When attacking, has a 20% chance to Stun the target for 2 seconds. 1st upgrade (2★): Stun chance increases to 30%. 2nd upgrade (3★): Stun chance increases to 40% and attacks on the adjacent tile trigger a shockwave dealing 50% damage to all enemies on that tile.";
             EditorUtility.SetDirty(scrapper);
 
             var echosquireFrameOne = LoadSprite("Echosquire-Sheet.png", "Echosquire-Sheet_0");
@@ -582,7 +582,7 @@ namespace TrashTD.Editor
                 stagger.damageType = DamageType.Physical;
                 stagger.roleTags = new[] { "Multi-Target", "Brawler" };
                 stagger.skillDescription =
-                    "Passive - Six-Limb Slugger: When attacking, strikes all blocked enemies on his tile and in range ahead simultaneously (including enemies blocked by allies). If no enemies are blocked, attacks a single target in range. Has a 20% to dodge any attack, atk then increase by 50% in the next attack if the dodge is successful";
+                    "Base (2★): When attacking, strikes all enemies on his tile and in range ahead simultaneously. Has a 20% chance to dodge any attack; a successful dodge increases the next attack's damage by 50%. 1st upgrade (3★): Dodge chance increases to 30% and heals 10% of max HP when killing an enemy. 2nd upgrade (4★): Dodge chance increases to 40% and heals 5% of max HP when successfully dodging. When receiving fatal damage, prevents HP from falling below 1 for 10 seconds (recharges upon reaching full HP or when the wave ends).";
                 EditorUtility.SetDirty(stagger);
             }
 

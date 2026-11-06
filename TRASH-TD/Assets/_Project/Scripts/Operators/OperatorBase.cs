@@ -842,8 +842,12 @@ namespace TrashTD.Operators
             {
                 TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualHealing, DamageType.Physical, true);
                 TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
+                OnHealed(actualHealing);
             }
         }
+
+        /// <summary>Called after this operator receives healing and HP increases.</summary>
+        protected virtual void OnHealed(int amount) { }
 
         /// <summary>
         /// Handle operator death — retreat and destroy.

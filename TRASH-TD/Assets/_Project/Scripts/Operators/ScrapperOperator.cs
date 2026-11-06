@@ -13,7 +13,8 @@ namespace TrashTD.Operators
     /// Trait:
     /// - Base (1★): When attacking, has a 20% chance to Stun the target for 2 seconds.
     /// - 1st upgrade (2★): Stun chance increases to 30%.
-    /// - 2nd upgrade (3★): Stun chance increases to 50% and attacks on the first tile become AoE.
+    /// - 2nd upgrade (3★): Stun chance increases to 40% and has a second instance (shockwave AoE)
+    ///   dealing 50% damage to all enemies on the adjacent tile (including the target). Stun chance rolls on both instances.
     /// Uses 64x64 sledgehammer attack animation with bottom-right 32x32 pivot offset (0.75, 0.25)
     /// to keep Scrapper centered on the deployed tile while the hammer swings through the forward tiles.
     /// Direct melee damage is applied instantly on swing without any projectile.
@@ -22,7 +23,7 @@ namespace TrashTD.Operators
     {
         public const float BaseStunChance = 0.20f;
         public const float Star2StunChance = 0.30f;
-        public const float Star3StunChance = 0.50f;
+        public const float Star3StunChance = 0.40f;
         public const float StunDuration = 2.0f;
 
         public float CurrentStunChance => GetStunChance(currentRarity);
@@ -70,8 +71,21 @@ namespace TrashTD.Operators
         {
             var gm = GetGridManager();
             if (gm == null || deployedCell == null) return null;
-            Vector2Int forwardOffset = Facing == OperatorFacing.Right ? Vector2Int.right : Vector2Int.left;
-            return gm.GetCell(deployedCell.GridPosition + forwardOffset);
+            GridCell[] cells = gm.GetCellsInRange(deployedCell.GridPosition, new[] { new Vector2Int(1, 0) }, Facing);
+            return cells != null && cells.Length > 0 ? cells[0] : null;
+        }
+
+        public bool IsTargetOnFirstTile(EnemyBase target, GridCell firstCell)
+        {
+            if (target == null || firstCell == null) return false;
+            var gm = GetGridManager();
+            if (gm == null) return false;
+
+            Vector2Int targetGridPos = gm.WorldToGridPosition(target.transform.position);
+            if (targetGridPos == firstCell.GridPosition) return true;
+            if (Vector2.Distance(target.transform.position, firstCell.WorldPosition) <= 0.6f) return true;
+
+            return false;
         }
 
         private void Awake()
@@ -122,61 +136,12 @@ namespace TrashTD.Operators
             MeleeSwipeVisual.Play(transform.position, target.VisualPosition, new Color(1f, 0.78f, 0.3f, 1f), MeleeSlashSize, MeleeSlashStyle);
 
             GridCell firstCell = GetFirstForwardCell();
-            bool isFirstTileAttack = false;
-            if (firstCell != null)
-            {
-                var gm = GetGridManager();
-                if (gm != null)
-                {
-                    Vector2Int targetPos = gm.WorldToGridPosition(target.transform.position);
-                    if (targetPos == firstCell.GridPosition)
-                    {
-                        isFirstTileAttack = true;
-                    }
-                }
-            }
+            bool isFirstTileAttack = IsTargetOnFirstTile(target, firstCell);
 
             float stunChance = CurrentStunChance;
             DamageType dmgType = data != null ? data.damageType : DamageType.Physical;
 
-            if (HasFirstTileAoeUpgrade && isFirstTileAttack && firstCell != null && EnemyManager.Instance != null)
-            {
-                // 2x Upgraded (3★): attacks from the first tile become AoE (hitting all enemies on that tile)
-                List<EnemyBase> enemiesOnTile = EnemyManager.Instance.GetEnemiesInCells(new[] { firstCell }, data != null ? data.position : OperatorPosition.Melee);
-                if (enemiesOnTile != null && enemiesOnTile.Count > 0)
-                {
-                    if (!enemiesOnTile.Contains(target))
-                    {
-                        enemiesOnTile.Add(target);
-                    }
-
-                    bool hitAny = false;
-                    bool stunnedAny = false;
-                    for (int i = 0; i < enemiesOnTile.Count; i++)
-                    {
-                        EnemyBase enemy = enemiesOnTile[i];
-                        if (enemy == null || enemy.IsDead) continue;
-
-                        int damage = DamageCalculator.CalculateDamage(CurrentATK, GetTargetMitigation(enemy));
-                        if (enemy.TryTakeAttackDamage(damage, dmgType, this))
-                        {
-                            hitAny = true;
-                        }
-
-                        if (Random.value < stunChance && enemy != null && !enemy.IsDead)
-                        {
-                            enemy.ApplyStun(StunDuration);
-                            stunnedAny = true;
-                        }
-                    }
-
-                    if (hitAny) PlayImpactSound();
-                    if (stunnedAny) PlayAbilitySound();
-                    return;
-                }
-            }
-
-            // Deal direct attack damage without firing any projectile
+            // 1. Primary strike: deals direct attack damage to target
             int singleDamage = DamageCalculator.CalculateDamage(CurrentATK, GetTargetMitigation(target));
             if (target.TryTakeAttackDamage(singleDamage, dmgType, this))
             {
@@ -187,6 +152,41 @@ namespace TrashTD.Operators
             {
                 target.ApplyStun(StunDuration);
                 PlayAbilitySound();
+            }
+
+            // 2. Second instance (2x Upgraded, attacking at the 1 tile close to it):
+            // Shockwave AoE dealing 50% damage to all enemies on that tile (including the target), rolling stun on each
+            if (HasFirstTileAoeUpgrade && isFirstTileAttack && firstCell != null && EnemyManager.Instance != null)
+            {
+                List<EnemyBase> enemiesOnTile = EnemyManager.Instance.GetEnemiesInCells(new[] { firstCell }, data != null ? data.position : OperatorPosition.Melee);
+                if (enemiesOnTile == null) enemiesOnTile = new List<EnemyBase>();
+                if (target != null && !target.IsDead && !enemiesOnTile.Contains(target))
+                {
+                    enemiesOnTile.Add(target);
+                }
+
+                int shockwaveAtk = Mathf.Max(1, Mathf.RoundToInt(CurrentATK * 0.5f));
+                bool stunnedAny = false;
+
+                for (int i = 0; i < enemiesOnTile.Count; i++)
+                {
+                    EnemyBase enemy = enemiesOnTile[i];
+                    if (enemy == null || enemy.IsDead) continue;
+
+                    int aoeDamage = DamageCalculator.CalculateDamage(shockwaveAtk, GetTargetMitigation(enemy));
+                    enemy.TryTakeAttackDamage(aoeDamage, dmgType, this);
+
+                    if (Random.value < stunChance && enemy != null && !enemy.IsDead)
+                    {
+                        enemy.ApplyStun(StunDuration);
+                        stunnedAny = true;
+                    }
+                }
+
+                if (stunnedAny)
+                {
+                    PlayAbilitySound();
+                }
             }
         }
     }

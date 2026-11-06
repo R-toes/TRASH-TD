@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using TrashTD.Audio;
 using TrashTD.Combat;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
@@ -10,20 +12,48 @@ namespace TrashTD.Operators
 {
     /// <summary>
     /// Stag-ger — 2-Star Guard (2 Block).
-    /// Ability: Six-Limb Slugger — Deals damage to all blocked enemies in reach
-    /// (including his tile and forward range where enemies are blocked).
-    /// If no enemies are blocked, attacks a single unblocked enemy in range ahead.
-    /// Has a 20% to dodge any attack, atk then increase by 50% in the next attack if the dodge is successful.
+    /// Ability: Six-Limb Slugger — Pure AoE melee brawler.
+    /// Base (2★): When attacking, strikes all enemies on his tile and in range ahead simultaneously.
+    ///   Has a 20% chance to dodge any attack; a successful dodge increases the next attack's damage by 50%.
+    /// 1st upgrade (3★): Dodge chance increases to 30% and heals 10% of max HP when killing an enemy.
+    /// 2nd upgrade (4★): Dodge chance increases to 40% and heals 5% of max HP when successfully dodging.
+    ///   When receiving fatal damage, prevents HP from falling below 1 for 10 seconds (recharges upon reaching full HP or when the wave ends).
     /// Uses 48x32 Six-Limb Slugger attack animation with right 32x32 pivot offset (2/3, 0.5)
     /// to keep Stag-ger centered on the deployed tile while the flurry of punches extends into the forward tile.
     /// </summary>
     public class StaggerOperator : GuardOperator
     {
-        public const float DodgeChance = 0.20f;
+        public const float BaseDodgeChance = 0.20f;
+        public const float Star3DodgeChance = 0.30f;
+        public const float Star4DodgeChance = 0.40f;
+        public const float KillHealPercent = 0.10f;
+        public const float DodgeHealPercent = 0.05f;
+        public const float FatalPreventionDuration = 10.0f;
+
+        public static float GetDodgeChance(OperatorRarity rarity)
+        {
+            if (rarity >= OperatorRarity.Star4) return Star4DodgeChance;
+            if (rarity >= OperatorRarity.Star3) return Star3DodgeChance;
+            return BaseDodgeChance;
+        }
+
+        public float CurrentDodgeChance => GetDodgeChance(currentRarity);
+        public bool HasKillHealUpgrade => currentRarity >= OperatorRarity.Star3;
+        public bool HasDodgeHealUpgrade => currentRarity >= OperatorRarity.Star4;
+        public bool HasFatalPreventionUpgrade => currentRarity >= OperatorRarity.Star4;
+
+        public bool IsFatalPreventionReady => isFatalPreventionReady;
+        public bool IsFatalPreventionActive => fatalPreventionTimer > 0f;
+        public float FatalPreventionTimer => fatalPreventionTimer;
 
         private readonly List<EnemyBase> targetBuffer = new List<EnemyBase>();
         private bool hasDodgeAtkBuff;
         private StaggerSpriteAnimation spriteAnimation;
+
+        private bool isFatalPreventionReady = true;
+        private float fatalPreventionTimer = 0f;
+        private bool wasWaveActive;
+        private TrashTD.Core.GameLoop.WaveManager cachedWaveManager;
 
         public bool HasDodgeAtkBuff => hasDodgeAtkBuff;
 
@@ -68,30 +98,155 @@ namespace TrashTD.Operators
         /// Random value generator for dodge roll in [0, 1).
         /// Overridable in unit tests for deterministic testing.
         /// </summary>
-        public System.Func<float> RandomValueProvider { get; set; } = () => Random.value;
+        public Func<float> RandomValueProvider { get; set; } = () => UnityEngine.Random.value;
+
+        public override void Initialize(OperatorData operatorData, OperatorRarity rarity, OperatorFacing operatorFacing = OperatorFacing.Right)
+        {
+            base.Initialize(operatorData, rarity, operatorFacing);
+            ReloadFatalPrevention();
+        }
 
         protected override void OnDeployed()
         {
             base.OnDeployed();
             hasDodgeAtkBuff = false;
+            ReloadFatalPrevention();
             EnsureStaggerAnimation();
+            SubscribeToGameEvents();
         }
 
         protected override void OnRetreated()
         {
             hasDodgeAtkBuff = false;
+            ReloadFatalPrevention();
             SpriteAnimation?.CancelAttack();
+            UnsubscribeFromGameEvents();
             base.OnRetreated();
+        }
+
+        private void OnDestroy()
+        {
+            UnsubscribeFromGameEvents();
+        }
+
+        private void SubscribeToGameEvents()
+        {
+            if (TrashTD.Core.GameLoop.GameManager.Instance != null)
+            {
+                TrashTD.Core.GameLoop.GameManager.Instance.OnPhaseChanged -= HandlePhaseChanged;
+                TrashTD.Core.GameLoop.GameManager.Instance.OnPhaseChanged += HandlePhaseChanged;
+            }
+
+            var wm = GetWaveManager();
+            if (wm != null)
+            {
+                wm.OnSingleWaveFinished -= ReloadFatalPrevention;
+                wm.OnSingleWaveFinished += ReloadFatalPrevention;
+                wm.OnAllWavesCleared -= ReloadFatalPrevention;
+                wm.OnAllWavesCleared += ReloadFatalPrevention;
+            }
+        }
+
+        private void UnsubscribeFromGameEvents()
+        {
+            if (TrashTD.Core.GameLoop.GameManager.Instance != null)
+            {
+                TrashTD.Core.GameLoop.GameManager.Instance.OnPhaseChanged -= HandlePhaseChanged;
+            }
+
+            if (cachedWaveManager != null)
+            {
+                cachedWaveManager.OnSingleWaveFinished -= ReloadFatalPrevention;
+                cachedWaveManager.OnAllWavesCleared -= ReloadFatalPrevention;
+            }
+        }
+
+        private void HandlePhaseChanged(TrashTD.Core.GameLoop.StagePhase phase)
+        {
+            if (phase == TrashTD.Core.GameLoop.StagePhase.Preparation || phase == TrashTD.Core.GameLoop.StagePhase.CardPick)
+            {
+                ReloadFatalPrevention();
+            }
+        }
+
+        private TrashTD.Core.GameLoop.WaveManager GetWaveManager()
+        {
+            if (cachedWaveManager == null)
+            {
+                cachedWaveManager = FindAnyObjectByType<TrashTD.Core.GameLoop.WaveManager>();
+            }
+            return cachedWaveManager;
+        }
+
+        public void ReloadFatalPrevention()
+        {
+            fatalPreventionTimer = 0f;
+            isFatalPreventionReady = true;
+        }
+
+        protected override void OnHealed(int amount)
+        {
+            base.OnHealed(amount);
+            CheckFullHpReload();
+        }
+
+        public void CheckFullHpReload()
+        {
+            if (HasFatalPreventionUpgrade && !isFatalPreventionReady && currentHP >= maxHP)
+            {
+                ReloadFatalPrevention();
+            }
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            if (!isDeployed) return;
+
+            if (fatalPreventionTimer > 0f && !IsCombatPaused)
+            {
+                fatalPreventionTimer = Mathf.Max(0f, fatalPreventionTimer - Time.deltaTime);
+            }
+
+            CheckFullHpReload();
+            CheckWaveStateTransitions();
+        }
+
+        private void CheckWaveStateTransitions()
+        {
+            if (IsCombatPaused && (!isFatalPreventionReady || fatalPreventionTimer > 0f))
+            {
+                ReloadFatalPrevention();
+            }
+
+            var wm = GetWaveManager();
+            if (wm != null)
+            {
+                bool isWaveActive = wm.IsWaveInProgress;
+                if (wasWaveActive && !isWaveActive)
+                {
+                    ReloadFatalPrevention();
+                }
+                wasWaveActive = isWaveActive;
+            }
         }
 
         public bool TryRollDodge()
         {
-            float roll = RandomValueProvider != null ? RandomValueProvider() : Random.value;
-            if (roll < DodgeChance)
+            float roll = RandomValueProvider != null ? RandomValueProvider() : UnityEngine.Random.value;
+            if (roll < CurrentDodgeChance)
             {
                 hasDodgeAtkBuff = true;
                 FloatingCombatNumber.ShowText(transform.position, "DODGE!", new Color(0.2f, 0.85f, 1f));
                 PlayAbilitySound("Dodge");
+
+                if (HasDodgeHealUpgrade)
+                {
+                    int healAmount = Mathf.Max(1, Mathf.RoundToInt(maxHP * DodgeHealPercent));
+                    Heal(healAmount);
+                }
+
                 return true;
             }
 
@@ -102,14 +257,21 @@ namespace TrashTD.Operators
         {
             if (IsCombatPaused || currentHP <= 0 || rawATK <= 0) return;
 
-            // Attacks from enemies can be dodged (20% chance).
+            // Attacks from enemies can be dodged
             // Environmental damage (overheat from stage 4, acid pools, etc.) has attacker == null and cannot be dodged.
             if (attacker != null && TryRollDodge())
             {
                 return;
             }
 
-            base.TakeDamage(rawATK, damageType, attacker);
+            var shield = GetComponent<BubbleShield>();
+            if (shield != null && shield.TryConsume(rawATK, damageType))
+            {
+                return;
+            }
+
+            int damage = Combat.DamageCalculator.CalculateDamage(rawATK, CurrentDEF, CurrentRES, damageType);
+            ApplyCalculatedDamage(damage, damageType);
         }
 
         public override bool TakeTrueDamage(int damage, bool ignoreShieldNegation = false, bool canDodge = false)
@@ -124,35 +286,177 @@ namespace TrashTD.Operators
                 return false;
             }
 
-            return base.TakeTrueDamage(damage, ignoreShieldNegation, canDodge);
+            var shield = GetComponent<BubbleShield>();
+            if (shield != null && shield.IsActive)
+            {
+                if (ignoreShieldNegation)
+                {
+                    shield.Pop(false);
+                }
+                else if (shield.TryConsume(damage, DamageType.True))
+                {
+                    return false;
+                }
+            }
+
+            return ApplyCalculatedDamage(damage, DamageType.True) > 0;
+        }
+
+        private int ApplyCalculatedDamage(int damage, DamageType damageType)
+        {
+            if (damage <= 0 || currentHP <= 0) return 0;
+
+            int previousHP = currentHP;
+
+            if (HasFatalPreventionUpgrade)
+            {
+                if (fatalPreventionTimer > 0f)
+                {
+                    // Continuously prevent HP from falling below 1 for the 10-second duration
+                    currentHP = Mathf.Max(1, currentHP - damage);
+                }
+                else if (damage >= currentHP && isFatalPreventionReady)
+                {
+                    // Fatal damage received: trigger 10s immortality window and clamp HP to 1
+                    TriggerFatalPrevention();
+                    currentHP = 1;
+                }
+                else
+                {
+                    currentHP = Mathf.Max(0, currentHP - damage);
+                }
+            }
+            else
+            {
+                currentHP = Mathf.Max(0, currentHP - damage);
+            }
+
+            int actualDamage = previousHP - currentHP;
+            if (actualDamage > 0)
+            {
+                FloatingCombatNumber.Show(transform.position, actualDamage, damageType);
+                WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
+                HitReaction.Play(gameObject, transform.position, actualDamage, maxHP);
+            }
+            else if (fatalPreventionTimer > 0f)
+            {
+                HitReaction.Play(gameObject, transform.position, 0, maxHP);
+            }
+
+            if (currentHP <= 0)
+            {
+                Die();
+            }
+
+            return actualDamage;
+        }
+
+        private void TriggerFatalPrevention()
+        {
+            isFatalPreventionReady = false;
+            fatalPreventionTimer = FatalPreventionDuration;
+            FloatingCombatNumber.ShowText(transform.position, "UNDYING!", new Color(1f, 0.45f, 0.1f));
+            PlayAbilitySound("Undying", SfxId.CombatStun);
+        }
+
+        protected override void Die()
+        {
+            if (HasFatalPreventionUpgrade)
+            {
+                if (fatalPreventionTimer > 0f)
+                {
+                    currentHP = 1;
+                    WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
+                    return;
+                }
+
+                if (isFatalPreventionReady)
+                {
+                    TriggerFatalPrevention();
+                    currentHP = 1;
+                    WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
+                    return;
+                }
+            }
+
+            base.Die();
+        }
+
+        public List<EnemyBase> GetTargetsInRange()
+        {
+            targetBuffer.Clear();
+            if (!isDeployed || deployedCell == null) return targetBuffer;
+
+            GridManager gridManager = FindAnyObjectByType<GridManager>();
+            if (gridManager == null || EnemyManager.Instance == null) return targetBuffer;
+
+            List<GridCell> reachCells = new List<GridCell> { deployedCell };
+            if (data != null && data.rangePattern != null)
+            {
+                GridCell[] forwardCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
+                if (forwardCells != null)
+                {
+                    for (int i = 0; i < forwardCells.Length; i++)
+                    {
+                        GridCell cell = forwardCells[i];
+                        if (cell != null && !reachCells.Contains(cell))
+                        {
+                            reachCells.Add(cell);
+                        }
+                    }
+                }
+            }
+
+            List<EnemyBase> candidates = EnemyManager.Instance.GetEnemiesInCells(reachCells, data != null ? data.position : OperatorPosition.Melee);
+            if (candidates != null)
+            {
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    EnemyBase enemy = candidates[i];
+                    if (enemy != null && !enemy.IsDead && !targetBuffer.Contains(enemy))
+                    {
+                        targetBuffer.Add(enemy);
+                    }
+                }
+            }
+
+            // Also check any enemies directly blocked by Stag-ger
+            for (int i = 0; i < blockedEnemies.Count; i++)
+            {
+                EnemyBase enemy = blockedEnemies[i];
+                if (enemy != null && !enemy.IsDead && !targetBuffer.Contains(enemy))
+                {
+                    targetBuffer.Add(enemy);
+                }
+            }
+
+            return targetBuffer;
         }
 
         protected override EnemyBase FindTarget()
         {
             if (!isDeployed) return null;
 
-            // 1. If any enemies are blocked (by Stag-ger or in range ahead), prioritize blocked targets
-            List<EnemyBase> blockedTargets = GetBlockedTargetsInRange();
-            if (blockedTargets.Count > 0)
+            List<EnemyBase> targets = GetTargetsInRange();
+            if (targets == null || targets.Count == 0) return null;
+
+            EnemyBase bestTarget = null;
+            int lowestHP = int.MaxValue;
+            for (int i = 0; i < targets.Count; i++)
             {
-                EnemyBase lowestHP = null;
-                int lowestHPValue = int.MaxValue;
-                for (int i = 0; i < blockedTargets.Count; i++)
+                EnemyBase enemy = targets[i];
+                if (enemy == null || enemy.IsDead) continue;
+
+                bool isTaunt = enemy.HasTaunt;
+                bool bestIsTaunt = bestTarget != null && bestTarget.HasTaunt;
+                if (bestTarget == null || (isTaunt && !bestIsTaunt) || (isTaunt == bestIsTaunt && enemy.CurrentHP < lowestHP))
                 {
-                    EnemyBase enemy = blockedTargets[i];
-                    bool isTaunt = enemy != null && enemy.HasTaunt;
-                    bool bestIsTaunt = lowestHP != null && lowestHP.HasTaunt;
-                    if (enemy != null && !enemy.IsDead && (lowestHP == null || (isTaunt && !bestIsTaunt) || (isTaunt == bestIsTaunt && enemy.CurrentHP < lowestHPValue)))
-                    {
-                        lowestHP = enemy;
-                        lowestHPValue = enemy.CurrentHP;
-                    }
+                    bestTarget = enemy;
+                    lowestHP = enemy.CurrentHP;
                 }
-                return lowestHP;
             }
 
-            // 2. If no enemies are blocked, single-target lowest HP enemy in range ahead
-            return FindUnblockedTargetInRange();
+            return bestTarget;
         }
 
         public override void Attack(EnemyBase target)
@@ -165,201 +469,52 @@ namespace TrashTD.Operators
             // Trigger the 48x32 Six-Limb Slugger attack animation
             SpriteAnimation?.PlayAttack();
 
-            List<EnemyBase> blockedTargets = GetBlockedTargetsInRange();
-
             int attackAtk = hasDodgeAtkBuff
                 ? Mathf.RoundToInt(currentATK * 1.5f)
                 : currentATK;
             if (hasDodgeAtkBuff) PlayAbilitySound("Empowered");
 
-            // Ability: If any enemies are blocked, strike ALL blocked enemies simultaneously
-            if (blockedTargets.Count > 0)
+            PlayAttackSound();
+
+            List<EnemyBase> targets = GetTargetsInRange();
+            if (!targets.Contains(target))
             {
-                PlayAttackSound();
-
-                for (int i = 0; i < blockedTargets.Count; i++)
-                {
-                    EnemyBase enemy = blockedTargets[i];
-                    if (enemy == null || enemy.IsDead) continue;
-
-                    MeleeSwipeVisual.Play(
-                        transform.position,
-                        enemy.VisualPosition,
-                        hasDodgeAtkBuff
-                            ? new Color(1f, 0.92f, 0.25f, 1f)
-                            : new Color(1f, 0.45f, 0.1f, 1f));
-
-                    int damage = DamageCalculator.CalculateDamage(attackAtk, GetTargetMitigation(enemy));
-                    if (enemy.TryTakeAttackDamage(damage, data.damageType, this))
-                    {
-                        PlayImpactSound();
-                    }
-                }
-
-                hasDodgeAtkBuff = false;
-                return;
+                targets.Add(target);
             }
 
-            // Single-target attack if no enemies are blocked
-            PlayAttackSound();
-            MeleeSwipeVisual.Play(
-                transform.position,
-                target.VisualPosition,
-                hasDodgeAtkBuff
-                    ? new Color(1f, 0.95f, 0.35f, 1f)
-                    : new Color(1f, 0.78f, 0.3f, 1f));
+            bool hitAny = false;
+            for (int i = 0; i < targets.Count; i++)
+            {
+                EnemyBase enemy = targets[i];
+                if (enemy == null || enemy.IsDead) continue;
 
-            int singleDamage = DamageCalculator.CalculateDamage(attackAtk, GetTargetMitigation(target));
-            if (target.TryTakeAttackDamage(singleDamage, data.damageType, this))
+                MeleeSwipeVisual.Play(
+                    transform.position,
+                    enemy.VisualPosition,
+                    hasDodgeAtkBuff
+                        ? new Color(1f, 0.92f, 0.25f, 1f)
+                        : new Color(1f, 0.45f, 0.1f, 1f));
+
+                int damage = DamageCalculator.CalculateDamage(attackAtk, GetTargetMitigation(enemy));
+                if (enemy.TryTakeAttackDamage(damage, data.damageType, this))
+                {
+                    hitAny = true;
+
+                    // 1x Upgrade: Heals 10% of max HP when killing an enemy
+                    if (HasKillHealUpgrade && (enemy.IsDead || enemy.CurrentHP <= 0))
+                    {
+                        int healAmount = Mathf.Max(1, Mathf.RoundToInt(maxHP * KillHealPercent));
+                        Heal(healAmount);
+                    }
+                }
+            }
+
+            if (hitAny)
             {
                 PlayImpactSound();
             }
+
             hasDodgeAtkBuff = false;
-        }
-
-        /// <summary>
-        /// Gathers all blocked enemies in reach:
-        /// - Enemies blocked by Stag-ger directly
-        /// - Enemies blocked on Stag-ger's own tile or within forward range pattern
-        /// - Enemies blocked by allies deployed within his attack range
-        /// </summary>
-        private List<EnemyBase> GetBlockedTargetsInRange()
-        {
-            targetBuffer.Clear();
-
-            // 1. Enemies blocked directly by Stag-ger
-            for (int i = 0; i < blockedEnemies.Count; i++)
-            {
-                EnemyBase enemy = blockedEnemies[i];
-                if (enemy != null && !enemy.IsDead && enemy.IsBlocked)
-                {
-                    if (!targetBuffer.Contains(enemy))
-                    {
-                        targetBuffer.Add(enemy);
-                    }
-                }
-            }
-
-            // 2. Check Stag-ger's own tile and forward range pattern tiles
-            if (deployedCell != null)
-            {
-                GridManager gridManager = FindAnyObjectByType<GridManager>();
-                if (gridManager != null)
-                {
-                    List<GridCell> reachCells = new List<GridCell>();
-
-                    // Stag-ger's own cell
-                    reachCells.Add(deployedCell);
-
-                    // Forward range pattern cells
-                    if (data != null && data.rangePattern != null)
-                    {
-                        GridCell[] rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
-                        if (rangeCells != null)
-                        {
-                            for (int r = 0; r < rangeCells.Length; r++)
-                            {
-                                GridCell cell = rangeCells[r];
-                                if (cell != null && !reachCells.Contains(cell))
-                                {
-                                    reachCells.Add(cell);
-                                }
-                            }
-                        }
-                    }
-
-                    // Check all enemies physically inside these reach cells (must be blocked)
-                    if (EnemyManager.Instance != null)
-                    {
-                        List<EnemyBase> cellEnemies = EnemyManager.Instance.GetEnemiesInCells(reachCells, data.position);
-                        for (int e = 0; e < cellEnemies.Count; e++)
-                        {
-                            EnemyBase enemy = cellEnemies[e];
-                            if (enemy != null && !enemy.IsDead && enemy.IsBlocked)
-                            {
-                                if (!targetBuffer.Contains(enemy))
-                                {
-                                    targetBuffer.Add(enemy);
-                                }
-                            }
-                        }
-                    }
-
-                    // Check any deployed ally on these reach cells and include their blocked enemies
-                    if (OperatorManager.Instance != null)
-                    {
-                        var deployedOps = OperatorManager.Instance.DeployedOperators;
-                        for (int o = 0; o < deployedOps.Count; o++)
-                        {
-                            OperatorBase ally = deployedOps[o];
-                            if (ally != null && ally != this && ally.IsDeployed && ally.DeployedCell != null)
-                            {
-                                if (reachCells.Contains(ally.DeployedCell))
-                                {
-                                    var allyBlocked = ally.BlockedEnemies;
-                                    if (allyBlocked != null)
-                                    {
-                                        for (int b = 0; b < allyBlocked.Count; b++)
-                                        {
-                                            EnemyBase enemy = allyBlocked[b];
-                                            if (enemy != null && !enemy.IsDead && enemy.IsBlocked)
-                                            {
-                                                if (!targetBuffer.Contains(enemy))
-                                                {
-                                                    targetBuffer.Add(enemy);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            return targetBuffer;
-        }
-
-        private EnemyBase FindUnblockedTargetInRange()
-        {
-            if (deployedCell == null || EnemyManager.Instance == null || data == null || data.rangePattern == null)
-            {
-                return null;
-            }
-
-            GridManager gridManager = FindAnyObjectByType<GridManager>();
-            if (gridManager == null) return null;
-
-            GridCell[] rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
-            List<GridCell> targetCells = new List<GridCell>();
-            if (rangeCells != null)
-            {
-                targetCells.AddRange(rangeCells);
-            }
-            if (!targetCells.Contains(deployedCell))
-            {
-                targetCells.Add(deployedCell);
-            }
-
-            var candidates = EnemyManager.Instance.GetEnemiesInCells(targetCells, data.position);
-
-            EnemyBase lowestHP = null;
-            int lowestHPValue = int.MaxValue;
-
-            for (int i = 0; i < candidates.Count; i++)
-            {
-                EnemyBase enemy = candidates[i];
-                bool isTaunt = enemy != null && enemy.HasTaunt;
-                bool bestIsTaunt = lowestHP != null && lowestHP.HasTaunt;
-                if (enemy != null && !enemy.IsDead && (lowestHP == null || (isTaunt && !bestIsTaunt) || (isTaunt == bestIsTaunt && enemy.CurrentHP < lowestHPValue)))
-                {
-                    lowestHP = enemy;
-                    lowestHPValue = enemy.CurrentHP;
-                }
-            }
-
-            return lowestHP;
         }
     }
 }

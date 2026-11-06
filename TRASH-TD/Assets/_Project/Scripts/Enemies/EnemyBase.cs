@@ -504,7 +504,7 @@ namespace TrashTD.Enemies
             if (isDead) return;
 
             UpdateChillStatus(deltaTime);
-            if (isFrozen) return;
+            if (isFrozen || isStunned) return;
 
             if (isPushingBack)
             {

@@ -32,7 +32,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Passive - Six-Limb Slugger: When attacking, strikes all blocked enemies on his tile and in range ahead simultaneously (including enemies blocked by allies). If no enemies are blocked, attacks a single target in range. Has a 20% to dodge any attack, atk then increase by 50% in the next attack if the dodge is successful'
+  skillDescription: 'Base (2★): When attacking, strikes all enemies on his tile and in range ahead simultaneously. Has a 20% chance to dodge any attack; a successful dodge increases the next attack''s damage by 50%. 1st upgrade (3★): Dodge chance increases to 30% and heals 10% of max HP when killing an enemy. 2nd upgrade (4★): Dodge chance increases to 40% and heals 5% of max HP when successfully dodging. When receiving fatal damage, prevents HP from falling below 1 for 10 seconds (recharges upon reaching full HP or when the wave ends).'
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
