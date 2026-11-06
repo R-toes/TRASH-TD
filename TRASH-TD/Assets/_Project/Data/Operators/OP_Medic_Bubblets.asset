@@ -40,7 +40,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Passive - Protective Bubble: Grants an allied operator in range a bubble shield that negates 1 instance of damage. When popped, the bubble heals the operator and deals Arts damage equal to 30% of Bubblets'' ATK to enemies on that tile or directly in front.'
+  skillDescription: "<color=#FFD700>Base (3★):</color> Grants an allied operator in range a bubble shield that negates 1 instance of damage. When popped, the bubble heals the operator and deals Arts damage equal to 30% of Bubblets' ATK to enemies on that tile and surrounding tiles.\n<color=#FFD700>1st upgrade (4★):</color> Arts damage increases to 50%.\n<color=#FFD700>2nd upgrade (5★):</color> Gives bubble shield to an additional operator. Allies in range gain +5 RES and +20 DEF."
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5

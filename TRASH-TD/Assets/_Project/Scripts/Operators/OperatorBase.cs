@@ -469,6 +469,24 @@ namespace TrashTD.Operators
                 TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
             }
         }
+
+        /// <summary>
+        /// Modifies this operator's DEF by delta (e.g. Bubblets aura, buffs).
+        /// </summary>
+        public void ModifyDEF(int delta)
+        {
+            if (delta == 0) return;
+            currentDEF += delta;
+        }
+
+        /// <summary>
+        /// Modifies this operator's RES by delta (e.g. Bubblets aura, buffs).
+        /// </summary>
+        public void ModifyRES(int delta)
+        {
+            if (delta == 0) return;
+            currentRES += delta;
+        }
         public DamageType GetDamageType() => data.damageType;
 
         /// <summary>

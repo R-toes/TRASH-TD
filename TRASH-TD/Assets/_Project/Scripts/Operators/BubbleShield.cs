@@ -31,12 +31,14 @@ namespace TrashTD.Operators
         private OperatorBase recipient;
         private int bubbletATK;
         private BubbletsOperator source;
+        private float artsDamageMultiplier = 0.30f;
         private GameObject visualObject;
         private SpriteRenderer visualRenderer;
         private bool isActive;
 
         public bool IsActive => isActive;
         public int BubbletATK => bubbletATK;
+        public float ArtsDamageMultiplier => source != null ? source.ArtsDamageMultiplier : artsDamageMultiplier;
         public GameObject VisualObject => visualObject;
         public SpriteRenderer VisualRenderer => visualRenderer;
 
@@ -68,6 +70,7 @@ namespace TrashTD.Operators
             recipient = target;
             bubbletATK = atk;
             source = caster;
+            artsDamageMultiplier = caster != null ? caster.ArtsDamageMultiplier : 0.30f;
             isActive = true;
 
             CreateVisual();
@@ -77,6 +80,7 @@ namespace TrashTD.Operators
         {
             bubbletATK = atk;
             source = caster;
+            artsDamageMultiplier = caster != null ? caster.ArtsDamageMultiplier : 0.30f;
             isActive = true;
 
             if (visualObject == null)
@@ -264,7 +268,8 @@ namespace TrashTD.Operators
             }
 
             int baseAtk = bubbletATK > 0 ? bubbletATK : (source != null ? source.CurrentATK : 45);
-            int damageValue = Mathf.Max(1, Mathf.RoundToInt(baseAtk * 0.30f));
+            float multiplier = source != null ? source.ArtsDamageMultiplier : artsDamageMultiplier;
+            int damageValue = Mathf.Max(1, Mathf.RoundToInt(baseAtk * multiplier));
 
             foreach (var enemy in hitEnemies)
             {

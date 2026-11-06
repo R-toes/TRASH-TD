@@ -165,7 +165,7 @@ namespace TrashTD.Operators
             if (target == null || !isDeployed) return;
 
             int primaryHeal = GetHealAmount();
-            PlayAttackSound();
+            Audio.UnitSfx.Play(data, Audio.UnitSfxEvent.Attack);
 
             // Resolve the full chain of targets and bounce amounts (including self-heal as a bounce/target)
             var hops = ResolveChain(target, primaryHeal);
