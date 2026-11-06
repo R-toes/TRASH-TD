@@ -462,7 +462,7 @@ namespace TrashTD.Editor
                 hp: 140, atk: 85, def: 20, res: 0, blockCount: 2, range: 2, interval: 1.1f,
                 new[] { new Vector2Int(1, 0), new Vector2Int(2, 0) },
                 scrapperFrame0, guardPrefab);
-            scrapper.skillDescription = "Base (1★): When attacking, has a 20% chance to Stun the target for 2 seconds. 1st upgrade (2★): Stun chance increases to 30%. 2nd upgrade (3★): Stun chance increases to 40% and attacks on the adjacent tile trigger a shockwave dealing 50% damage to all enemies on that tile.";
+            scrapper.skillDescription = "<color=#FFD700>Base (1★):</color> When attacking, has a 20% chance to Stun the target for 2 seconds.\n<color=#FFD700>1st upgrade (2★):</color> Stun chance increases to 30%.\n<color=#FFD700>2nd upgrade (3★):</color> Stun chance increases to 40% and attacks on the adjacent tile trigger a shockwave dealing 50% damage to all enemies on that tile.";
             EditorUtility.SetDirty(scrapper);
 
             var echosquireFrameOne = LoadSprite("Echosquire-Sheet.png", "Echosquire-Sheet_0");
@@ -582,7 +582,7 @@ namespace TrashTD.Editor
                 stagger.damageType = DamageType.Physical;
                 stagger.roleTags = new[] { "Multi-Target", "Brawler" };
                 stagger.skillDescription =
-                    "Base (2★): When attacking, strikes all enemies on his tile and in range ahead simultaneously. Has a 20% chance to dodge any attack; a successful dodge increases the next attack's damage by 50%. 1st upgrade (3★): Dodge chance increases to 30% and heals 10% of max HP when killing an enemy. 2nd upgrade (4★): Dodge chance increases to 40% and heals 5% of max HP when successfully dodging. When receiving fatal damage, prevents HP from falling below 1 for 10 seconds (recharges upon reaching full HP or when the wave ends).";
+                    "<color=#FFD700>Base (2★):</color> When attacking, strikes all enemies on his tile and in range ahead simultaneously. Has a 20% chance to dodge any attack; a successful dodge increases the next attack's damage by 50%.\n<color=#FFD700>1st upgrade (3★):</color> Dodge chance increases to 30% and heals 10% of max HP when killing an enemy.\n<color=#FFD700>2nd upgrade (4★):</color> Dodge chance increases to 40% and heals 5% of max HP when successfully dodging. When receiving fatal damage, prevents HP from falling below 1 for 10 seconds (recharges upon reaching full HP or when the wave ends).";
                 EditorUtility.SetDirty(stagger);
             }
 
@@ -651,7 +651,7 @@ namespace TrashTD.Editor
                     mossmoFrameOne, mossmoPrefab);
                 mossmo.roleTags = new[] { "Defense", "Support" };
                 mossmo.skillDescription =
-                    "Base (3★): Does not attack and taunts nearby ranged enemies. When taking damage, heals up to 2 operators in range (including himself). If a blocked enemy is stalled for 20s, the enemy becomes Enraged: gains +35% ATK, but loses 5% max HP per second until defeated. 1st upgrade (4★): Automatically heals operators in range if their HP is below 50%, and expands taunt range by 1 additional tile radius. 2nd upgrade (5★): Expands healing range and reduces Enraged enemy damage by 10%.";
+                    "<color=#FFD700>Base (3★):</color> Does not attack and taunts nearby ranged enemies. When taking damage, heals up to 2 operators in range (including himself). If a blocked enemy is stalled for 20s, the enemy becomes Enraged: gains +35% ATK, but loses 5% max HP per second until defeated.\n<color=#FFD700>1st upgrade (4★):</color> Automatically heals operators in range if their HP is below 50%, and expands taunt range by 1 additional tile radius.\n<color=#FFD700>2nd upgrade (5★):</color> Expands healing range and reduces Enraged enemy damage by 10%.";
                 EditorUtility.SetDirty(mossmo);
             }
 
@@ -818,7 +818,7 @@ namespace TrashTD.Editor
                     new Vector2Int(1, 1), new Vector2Int(-1, -1)
                 },
                 coalesceFrame0 ?? LoadSprite("tex_op_medic.png"), coalescePrefab);
-            coalesce.skillDescription = "Base (1★): Healing an operator with HP below 30% has a 20% chance to trigger an extra healing. 1st upgrade (2★): Extra healing chance increases to 40%. 2nd upgrade (3★): HP requirement increases to below 60% and increases the Max HP of operators in range by 10%.";
+            coalesce.skillDescription = "<color=#FFD700>Base (1★):</color> Healing an operator with HP below 30% has a 20% chance to trigger an extra healing.\n<color=#FFD700>1st upgrade (2★):</color> Extra healing chance increases to 40%.\n<color=#FFD700>2nd upgrade (3★):</color> HP requirement increases to below 60% and increases the Max HP of operators in range by 10%.";
             EditorUtility.SetDirty(coalesce);
 
             // 5b. Medic (Bubblets)
@@ -888,7 +888,7 @@ namespace TrashTD.Editor
                 framiliarFrame0, framiliarPrefab);
             framiliar.damageType = DamageType.Physical;
             framiliar.roleTags = new[] { "Specialist", "Mimic", "Deck" };
-            framiliar.skillDescription = "Base (2★): Copies any operator in your deck, taking on their form in grayscale. When retreated in the same preparation phase, returns as Framiliar; if retreated in the next prep phase, returns as the copied operator. Specialists have no retreat cooldown. 1st upgrade (3★): Copies any operator in your deck as 1x Upgraded (or their upgrade level if higher). 2nd upgrade (4★): Copies any operator in your deck as 2x Upgraded.";
+            framiliar.skillDescription = "<color=#FFD700>Base (2★):</color> Copies any operator in your deck, taking on their form in grayscale. When retreated in the same preparation phase, returns as Framiliar; if retreated in the next prep phase, returns as the copied operator. Specialists have no retreat cooldown.\n<color=#FFD700>1st upgrade (3★):</color> Copies any operator in your deck as 1x Upgraded (or their upgrade level if higher).\n<color=#FFD700>2nd upgrade (4★):</color> Copies any operator in your deck as 2x Upgraded.";
             EditorUtility.SetDirty(framiliar);
         }
 

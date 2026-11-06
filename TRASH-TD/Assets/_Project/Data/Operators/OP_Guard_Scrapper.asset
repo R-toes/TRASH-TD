@@ -28,7 +28,7 @@ MonoBehaviour:
   - {x: 1, y: 0}
   - {x: 2, y: 0}
   damageType: 0
-  skillDescription: 'Base (1★): When attacking, has a 20% chance to Stun the target for 2 seconds. 1st upgrade (2★): Stun chance increases to 30%. 2nd upgrade (3★): Stun chance increases to 40% and attacks on the adjacent tile trigger a shockwave dealing 50% damage to all enemies on that tile.'
+  skillDescription: "<color=#FFD700>Base (1★):</color> When attacking, has a 20% chance to Stun the target for 2 seconds.\n<color=#FFD700>1st upgrade (2★):</color> Stun chance increases to 30%.\n<color=#FFD700>2nd upgrade (3★):</color> Stun chance increases to 40% and attacks on the adjacent tile trigger a shockwave dealing 50% damage to all enemies on that tile."
   portrait: {fileID: -705202181, guid: 98e7a721d66dd4c48acc4d1cf6e1541e, type: 3}
   operatorPrefab: {fileID: 4120733290429841632, guid: 76c65d7809ca45a9be8991dc10622e37, type: 3}
   intelQuote: "Bonk first. Questions never."
