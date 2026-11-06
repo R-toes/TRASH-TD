@@ -238,6 +238,7 @@ namespace TrashTD.Operators
             if (roll < CurrentDodgeChance)
             {
                 hasDodgeAtkBuff = true;
+                Combat.DodgeAfterimageVisual.Play(gameObject);
                 FloatingCombatNumber.ShowText(transform.position, "DODGE!", new Color(0.2f, 0.85f, 1f));
                 PlayAbilitySound("Dodge");
 

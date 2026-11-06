@@ -210,4 +210,129 @@ namespace TrashTD.Combat
             return flashMaterial;
         }
     }
+
+    public sealed class DodgeAfterimageVisual : MonoBehaviour
+    {
+        private const float Duration = 0.3f;
+        private const float OscillationSeconds = 0.2f;
+        private const float HorizontalOffset = 0.12f;
+        private static readonly Color AfterimageColor = new Color(0.25f, 0.25f, 0.25f, 0.85f);
+
+        private readonly List<SpriteRenderer> sourceRenderers = new List<SpriteRenderer>();
+        private readonly List<SpriteRenderer> afterimageRenderers = new List<SpriteRenderer>();
+        private readonly List<bool> sourceEnabledStates = new List<bool>();
+        private float elapsed;
+
+        public static void Play(GameObject target)
+        {
+            if (target == null) return;
+
+            DodgeAfterimageVisual visual = target.GetComponent<DodgeAfterimageVisual>();
+            if (visual == null) visual = target.AddComponent<DodgeAfterimageVisual>();
+            visual.StartDodge();
+        }
+
+        private void StartDodge()
+        {
+            if (sourceRenderers.Count == 0)
+                CacheRenderers();
+
+            elapsed = 0f;
+            enabled = true;
+            UpdateAfterimages();
+        }
+
+        private void CacheRenderers()
+        {
+            SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);
+            foreach (SpriteRenderer source in renderers)
+            {
+                if (source == null || source.gameObject.name == "DodgeAfterimage")
+                    continue;
+
+                Transform parent = source.transform == transform ? transform : source.transform.parent;
+                GameObject afterimageObject = new GameObject("DodgeAfterimage");
+                afterimageObject.transform.SetParent(parent, false);
+
+                SpriteRenderer afterimage = afterimageObject.AddComponent<SpriteRenderer>();
+                afterimage.sharedMaterial = source.sharedMaterial;
+                afterimage.sortingLayerID = source.sortingLayerID;
+                afterimage.sortingOrder = source.sortingOrder + 1;
+                afterimage.maskInteraction = source.maskInteraction;
+                afterimage.drawMode = source.drawMode;
+                afterimage.size = source.size;
+                afterimage.tileMode = source.tileMode;
+
+                sourceRenderers.Add(source);
+                afterimageRenderers.Add(afterimage);
+                sourceEnabledStates.Add(source.enabled);
+            }
+        }
+
+        private void Update()
+        {
+            if (elapsed >= Duration)
+            {
+                EndDodge();
+                return;
+            }
+
+            elapsed += Time.deltaTime;
+            UpdateAfterimages();
+        }
+
+        private void UpdateAfterimages()
+        {
+            float progress = Mathf.Clamp01(elapsed / Duration);
+            float offset = Mathf.Sin(elapsed * Mathf.PI * 2f / OscillationSeconds) * HorizontalOffset;
+            float alpha = AfterimageColor.a * (1f - progress);
+
+            for (int i = 0; i < sourceRenderers.Count; i++)
+            {
+                SpriteRenderer source = sourceRenderers[i];
+                SpriteRenderer afterimage = afterimageRenderers[i];
+                if (source == null || afterimage == null) continue;
+
+                Transform afterimageTransform = afterimage.transform;
+                afterimage.sprite = source.sprite;
+                afterimage.flipX = source.flipX;
+                afterimage.flipY = source.flipY;
+                afterimage.enabled = sourceEnabledStates[i] && source.gameObject.activeInHierarchy && alpha > 0f;
+                afterimage.color = new Color(AfterimageColor.r, AfterimageColor.g, AfterimageColor.b,
+                    alpha * source.color.a);
+                source.enabled = false;
+                afterimageTransform.localPosition = source.transform == transform
+                    ? new Vector3(offset, 0f, 0f)
+                    : source.transform.localPosition + new Vector3(offset, 0f, 0f);
+                afterimageTransform.localRotation = source.transform.localRotation;
+                afterimageTransform.localScale = source.transform == transform
+                    ? Vector3.one
+                    : source.transform.localScale;
+            }
+        }
+
+        private void EndDodge()
+        {
+            for (int i = 0; i < sourceRenderers.Count; i++)
+            {
+                if (sourceRenderers[i] != null)
+                    sourceRenderers[i].enabled = sourceEnabledStates[i];
+                if (afterimageRenderers[i] != null)
+                    afterimageRenderers[i].enabled = false;
+            }
+
+            enabled = false;
+        }
+
+        private void OnDestroy()
+        {
+            for (int i = 0; i < sourceRenderers.Count; i++)
+            {
+                if (sourceRenderers[i] != null)
+                    sourceRenderers[i].enabled = sourceEnabledStates[i];
+                if (afterimageRenderers[i] != null)
+                    Destroy(afterimageRenderers[i].gameObject);
+            }
+        }
+    }
 }

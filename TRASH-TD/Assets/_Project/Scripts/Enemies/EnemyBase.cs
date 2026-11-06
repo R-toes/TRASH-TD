@@ -1245,6 +1245,7 @@ namespace TrashTD.Enemies
                 if (data != null && data.operatorAttackMissChance > 0f &&
                     !Combat.StageCombatModifiers.TryAttackHit(data.operatorAttackMissChance))
                 {
+                    Combat.DodgeAfterimageVisual.Play(gameObject);
                     FloatingCombatNumber.ShowMiss(VisualPosition);
                     AudioManager.Instance?.PlaySfx(SfxId.CombatMiss, 0.6f);
                     return false;
