@@ -197,6 +197,10 @@ namespace TrashTD.Data
             {
                 return TrashTD.Operators.ProgenyOperator.GetRangePatternForRarity(this, rarity);
             }
+            if (operatorName == "Proxishot" || operatorName == "Proxyshot")
+            {
+                return TrashTD.Operators.ProxishotOperator.GetRangePatternForRarity(this, rarity);
+            }
             return rangePattern;
         }
     }

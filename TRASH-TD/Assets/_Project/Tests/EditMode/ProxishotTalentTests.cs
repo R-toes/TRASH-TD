@@ -1,5 +1,7 @@
 using NUnit.Framework;
 using UnityEngine;
+using System.Collections.Generic;
+using System.Reflection;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
 using TrashTD.Enemies;
@@ -36,6 +38,13 @@ namespace TrashTD.Tests
             proxishotData.baseATK = 150;
             proxishotData.baseDEF = 10;
             proxishotData.damageType = DamageType.Physical;
+            proxishotData.baseRarity = OperatorRarity.Star2;
+            proxishotData.rangePattern = new[]
+            {
+                new Vector2Int(1, -1),
+                new Vector2Int(1, 0),
+                new Vector2Int(1, 1)
+            };
 
             normalOperatorData = ScriptableObject.CreateInstance<OperatorData>();
             normalOperatorData.operatorName = "NormalOp";
@@ -154,6 +163,81 @@ namespace TrashTD.Tests
             Assert.AreEqual(1.0f, spriteRenderer.color.a, 0.001f, "Sprite alpha should be restored to 1.0 on retreat.");
         }
 
+        [Test]
+        public void GetRangePatternForRarity_AddsFiveTileConeAtFourStars()
+        {
+            Vector2Int[] baseRange = ProxishotOperator.GetRangePatternForRarity(proxishotData, OperatorRarity.Star2);
+            Vector2Int[] firstUpgradeRange = ProxishotOperator.GetRangePatternForRarity(proxishotData, OperatorRarity.Star3);
+            Vector2Int[] upgradedRange = proxishotData.GetRangePatternForRarity(OperatorRarity.Star4);
+
+            Assert.AreEqual(3, baseRange.Length);
+            Assert.AreEqual(3, firstUpgradeRange.Length);
+            Assert.AreEqual(8, upgradedRange.Length);
+            for (int y = -2; y <= 2; y++)
+                CollectionAssert.Contains(upgradedRange, new Vector2Int(2, y));
+        }
+
+        [Test]
+        public void CamouflageCounterattack_HalfMultiplierDealsHalfOfMitigatedDamage()
+        {
+            proxishot.Initialize(proxishotData, OperatorRarity.Star3);
+            FieldInfo camouflageTimer = typeof(ProxishotOperator).GetField(
+                "camouflageTimer", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(camouflageTimer);
+            camouflageTimer.SetValue(proxishot, ProxishotOperator.CamouflageDuration);
+            int startingHP = evasiveEnemy.CurrentHP;
+            MethodInfo applyShotgunDamage = typeof(ProxishotOperator).GetMethod(
+                "ApplyShotgunDamage", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Assert.IsNotNull(applyShotgunDamage);
+            applyShotgunDamage.Invoke(proxishot, new object[]
+            {
+                new List<EnemyBase> { evasiveEnemy },
+                0.5f
+            });
+
+            int fullDamage = TrashTD.Combat.DamageCalculator.CalculateDamage(
+                proxishot.CurrentATK, evasiveEnemy.CurrentDEF);
+            Assert.AreEqual(startingHP - Mathf.Max(1, Mathf.RoundToInt(fullDamage * 0.5f)), evasiveEnemy.CurrentHP);
+            Assert.IsTrue(proxishot.IsCamouflaged, "The counterattack must not cancel camouflage.");
+        }
+
+        [Test]
+        public void CamouflageDefenseBonus_AddsFiftyPercentOfCurrentDefense()
+        {
+            proxishot.Initialize(proxishotData, OperatorRarity.Star3);
+            FieldInfo defenseTimer = typeof(ProxishotOperator).GetField(
+                "camouflageDefenseTimer", BindingFlags.Instance | BindingFlags.NonPublic);
+            int baseDefense = proxishot.CurrentDEF;
+
+            Assert.IsNotNull(defenseTimer);
+            defenseTimer.SetValue(proxishot, 1f);
+            Assert.AreEqual(Mathf.RoundToInt(baseDefense * 1.5f), proxishot.CurrentDEF);
+            Assert.AreEqual(1f, proxishot.CamouflageDefenseTimeRemaining, 0.001f);
+
+            defenseTimer.SetValue(proxishot, 0f);
+            Assert.AreEqual(baseDefense, proxishot.CurrentDEF);
+        }
+
+        [Test]
+        public void CamouflageHealing_HealsTwentyFivePercentOfMaxHpAcrossItsDuration()
+        {
+            proxishot.Initialize(proxishotData, OperatorRarity.Star3);
+            proxishot.TakeDamage(40, DamageType.Physical);
+            int startingHP = proxishot.CurrentHP;
+            int expectedHealing = Mathf.RoundToInt(proxishot.MaxHP * ProxishotOperator.CamouflageHealMaxHpRatio);
+            MethodInfo updateHealing = typeof(ProxishotOperator).GetMethod(
+                "UpdateCamouflageHealing", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Assert.IsNotNull(updateHealing);
+            proxishot.ActivateCamouflage();
+            updateHealing.Invoke(proxishot, new object[] { ProxishotOperator.CamouflageDuration * 0.5f });
+            Assert.AreEqual(startingHP + expectedHealing / 2, proxishot.CurrentHP);
+
+            updateHealing.Invoke(proxishot, new object[] { ProxishotOperator.CamouflageDuration * 0.5f });
+            Assert.AreEqual(startingHP + expectedHealing, proxishot.CurrentHP);
+        }
+
 #if UNITY_EDITOR
         [Test]
         public void OperatorStats_BasurocketAndProxyshot_MatchExpectedValues()
@@ -167,6 +251,10 @@ namespace TrashTD.Tests
             var proxishot = UnityEditor.AssetDatabase.LoadAssetAtPath<OperatorData>("Assets/_Project/Data/Operators/OP_Sniper_Proxishot.asset");
             Assert.IsNotNull(proxishot, "OP_Sniper_Proxishot asset should exist.");
             Assert.AreEqual(2.3f, proxishot.attackInterval, 0.001f, "Proxyshot attack interval should be 2.3.");
+            StringAssert.Contains("<color=#FFD700>Base (2★):</color>", proxishot.skillDescription);
+            StringAssert.Contains("<color=#FFD700>1st upgrade (3★):</color>", proxishot.skillDescription);
+            StringAssert.Contains("Heals 25% of max HP over its duration.", proxishot.skillDescription);
+            StringAssert.Contains("<color=#FFD700>2nd upgrade (4★):</color>", proxishot.skillDescription);
         }
 #endif
     }

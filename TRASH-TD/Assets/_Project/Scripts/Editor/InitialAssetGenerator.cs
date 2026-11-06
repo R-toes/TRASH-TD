@@ -736,6 +736,7 @@ namespace TrashTD.Editor
             if (proxishot != null)
             {
                 proxishot.attackInterval = 2.3f;
+                proxishot.skillDescription = "<color=#FFD700>Base (2★):</color> Octo-Scatter ignores enemy and stage miss mechanics. When attacked by an enemy, gains Camouflage for 5 seconds and cannot be targeted.\n<color=#FFD700>1st upgrade (3★):</color> On entering Camouflage, immediately fires a shotgun attack at enemies in range for 50% damage without ending Camouflage. Heals 25% of max HP over its duration. When Camouflage ends, gains +50% DEF for 3 seconds.\n<color=#FFD700>2nd upgrade (4★):</color> Range expands from the original 3-tile fan to a cone of 8 tiles, adding 5 tiles in the next forward column.";
                 EditorUtility.SetDirty(proxishot);
             }
 

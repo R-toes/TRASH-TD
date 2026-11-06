@@ -40,13 +40,14 @@ namespace TrashTD.Operators
 
         protected override EnemyBase FindTarget()
         {
-            if (EnemyManager.Instance == null || deployedCell == null || data == null || data.rangePattern == null)
+            Vector2Int[] rangePattern = GetRangePattern();
+            if (EnemyManager.Instance == null || deployedCell == null || data == null || rangePattern == null)
                 return null;
 
             var gridManager = FindAnyObjectByType<GridManager>();
             if (gridManager == null) return null;
 
-            var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, data.rangePattern, Facing);
+            var rangeCells = gridManager.GetCellsInRange(deployedCell.GridPosition, rangePattern, Facing);
             var candidates = EnemyManager.Instance.GetEnemiesInCells(rangeCells, data.position);
             if (candidates == null || candidates.Count == 0) return null;
 

@@ -48,7 +48,7 @@ namespace TrashTD.UI
         // Range tiles (same colours as the draft range preview)
         private static readonly Color RangeSelfColor = new Color(0.15f, 0.85f, 1f, 1f);
         private static readonly Color RangeHitColor = new Color(0.15f, 1f, 0.28f, 1f);
-        private static readonly Color RangeUpgradeColor = new Color(0.78f, 0.38f, 1f, 1f);
+        private static readonly Color RangeUpgradeColor = new Color(1f, 0.85f, 0.2f, 1f);
         private static readonly Color RangeTalentColor = new Color(1f, 0.75f, 0.2f, 1f);
         private static readonly Color RangeEmptyColor = new Color(1f, 1f, 1f, 0.22f);
         private static readonly Color EnemySelfColor = new Color(1f, 0.42f, 0.38f, 1f);
@@ -1394,6 +1394,13 @@ namespace TrashTD.UI
                         foreach (Vector2Int cell in upgradedRange)
                             if (cell != Vector2Int.zero && !hitCells.Contains(cell)) upgradeCells.Add(cell);
                 }
+                else if (op.operatorName == "Proxishot" || op.operatorName == "Proxyshot")
+                {
+                    Vector2Int[] upgradedRange = TrashTD.Operators.ProxishotOperator.GetRangePatternForRarity(op, OperatorRarity.Star4);
+                    if (upgradedRange != null)
+                        foreach (Vector2Int cell in upgradedRange)
+                            if (cell != Vector2Int.zero && !hitCells.Contains(cell)) upgradeCells.Add(cell);
+                }
 
                 Vector2Int[] talent = op.GetTalentRangePattern();
                 if (talent != null) foreach (Vector2Int cell in talent) if (cell != Vector2Int.zero && !hitCells.Contains(cell) && !upgradeCells.Contains(cell)) talentCells.Add(cell);
@@ -1413,6 +1420,8 @@ namespace TrashTD.UI
                                 ? displayedRangeCount + " TILES AT 5\u2605, SURROUNDING"
                                 : op.operatorName == "Progeny"
                                     ? displayedRangeCount + " TILES AT 3\u2605, CROSS"
+                                    : op.operatorName == "Proxishot" || op.operatorName == "Proxyshot"
+                                        ? displayedRangeCount + " TILES AT 4\u2605, CONE"
                                     : hitCells.Count + " TILES, FACING RIGHT";
 
                 float x = AddLegend(0f, selfColor, "SELF");
@@ -1420,6 +1429,7 @@ namespace TrashTD.UI
                 if (upgradeCells.Count > 0)
                 {
                     string bonusLabel = (op.operatorName == "Ignisaur" || op.operatorName == "Progeny") ? "3\u2605 BONUS"
+                        : (op.operatorName == "Proxishot" || op.operatorName == "Proxyshot") ? "4\u2605 BONUS"
                         : op.operatorName == "Mossmo" ? "5\u2605 BONUS"
                         : "2\u2605 BONUS";
                     x = AddLegend(x, RangeUpgradeColor, bonusLabel);
