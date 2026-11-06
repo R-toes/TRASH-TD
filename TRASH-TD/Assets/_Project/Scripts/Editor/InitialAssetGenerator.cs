@@ -651,7 +651,7 @@ namespace TrashTD.Editor
                     mossmoFrameOne, mossmoPrefab);
                 mossmo.roleTags = new[] { "Defense", "Support" };
                 mossmo.skillDescription =
-                    "Passive - Symbiotic Spores: Mossmo does not attack. Every time he takes damage, he heals up to 2 operators in adjacent tiles (including himself).";
+                    "Base (3★): Does not attack and taunts nearby ranged enemies. When taking damage, heals up to 2 operators in range (including himself). If a blocked enemy is stalled for 20s, the enemy becomes Enraged: gains +35% ATK, but loses 5% max HP per second until defeated. 1st upgrade (4★): Automatically heals operators in range if their HP is below 50%, and expands taunt range by 1 additional tile radius. 2nd upgrade (5★): Expands healing range and reduces Enraged enemy damage by 10%.";
                 EditorUtility.SetDirty(mossmo);
             }
 

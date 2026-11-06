@@ -947,7 +947,7 @@ namespace TrashTD.Enemies
                 SpriteRenderer sr = renderers[i];
                 if (sr != null)
                 {
-                    if (sr.gameObject.name == "AirShadow") continue;
+                    if (sr.gameObject.name == "AirShadow" || sr.gameObject.name.StartsWith("StunStars") || sr.gameObject.name.StartsWith("EnragedVisual")) continue;
                     sr.flipX = isFacingLeft;
                 }
             }
