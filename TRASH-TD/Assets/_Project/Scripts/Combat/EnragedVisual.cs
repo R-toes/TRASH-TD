@@ -187,6 +187,13 @@ namespace TrashTD.Combat
         {
             if (target == null) return null;
 
+            EnemyBase enemy = target.GetComponent<EnemyBase>();
+            if (enemy != null)
+            {
+                SpriteRenderer primary = enemy.GetPrimaryVisualRenderer();
+                if (primary != null) return primary;
+            }
+
             var renderers = target.GetComponentsInChildren<SpriteRenderer>(true);
             for (int i = 0; i < renderers.Length; i++)
             {
@@ -271,16 +278,81 @@ namespace TrashTD.Combat
                 centerZ = targetTransform.position.z - 0.05f;
             }
 
-            // Enraged sprite is 16 pixels high (0.5 units). Pivot is center (0.5, 0.5).
-            // Position pivot slightly above the top edge of the head/sprite (~0.18 units).
-            transform.position = new Vector3(centerX, topY + 0.18f, centerZ);
-
-            // Mirror when the enemy is facing right
             EnemyBase enemy = targetTransform != null ? targetTransform.GetComponent<EnemyBase>() : null;
-            bool isFacingRight = enemy != null ? !enemy.IsFacingLeft : (targetRenderer != null && !targetRenderer.flipX);
+            bool isFacingLeft = enemy != null ? enemy.IsFacingLeft : (targetRenderer != null && targetRenderer.flipX);
+            float facingDir = isFacingLeft ? -1f : 1f;
+
+            // Check specific large 64x64 enemies
+            bool isEradicator = false;
+            bool isSandHulk = false;
+            if (enemy != null && enemy.Data != null && !string.IsNullOrEmpty(enemy.Data.enemyName))
+            {
+                string enemyName = enemy.Data.enemyName;
+                if (enemyName.IndexOf("Eradicator", StringComparison.OrdinalIgnoreCase) >= 0) isEradicator = true;
+                if (enemyName.IndexOf("Sand Hulk", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    enemyName.IndexOf("SandHulk", StringComparison.OrdinalIgnoreCase) >= 0) isSandHulk = true;
+            }
+            if (targetTransform != null)
+            {
+                string objName = targetTransform.name;
+                if (objName.IndexOf("Eradicator", StringComparison.OrdinalIgnoreCase) >= 0) isEradicator = true;
+                if (objName.IndexOf("Sand Hulk", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    objName.IndexOf("SandHulk", StringComparison.OrdinalIgnoreCase) >= 0) isSandHulk = true;
+            }
+            if (targetRenderer != null && targetRenderer.sprite != null)
+            {
+                string spriteName = targetRenderer.sprite.name;
+                if (spriteName.IndexOf("Eradicator", StringComparison.OrdinalIgnoreCase) >= 0) isEradicator = true;
+                if (spriteName.IndexOf("Sand Hulk", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    spriteName.IndexOf("SandHulk", StringComparison.OrdinalIgnoreCase) >= 0) isSandHulk = true;
+            }
+
+            bool isLargeEnemy = isEradicator || isSandHulk;
+            if (!isLargeEnemy && targetRenderer != null)
+            {
+                if (targetRenderer.sprite != null && (targetRenderer.sprite.rect.width >= 48f || targetRenderer.sprite.rect.height >= 48f))
+                {
+                    isLargeEnemy = true;
+                }
+                else if (targetRenderer.bounds.size.y >= 1.4f || targetRenderer.bounds.size.x >= 1.4f)
+                {
+                    isLargeEnemy = true;
+                }
+            }
+
+            // Offset tuning:
+            // - Eradicator: up by 4 pixels (+4/32 units) from 0.18f
+            // - Sand Hulk: down by 4 pixels (-4/32 units) from 0.18f
+            // - Other 64x64 enemies: 0.18f baseline
+            // - Standard (32x32) enemies: down by 1 pixel (-1/32 units), back by 2 pixels (-2/32 units)
+            const float PixelSize = 1f / 32f;
+            float frontOffset = isLargeEnemy ? 0.08f : (0.08f - 2f * PixelSize);
+            float verticalOffset;
+            if (isEradicator)
+            {
+                verticalOffset = 0.18f + 4f * PixelSize;
+            }
+            else if (isSandHulk)
+            {
+                verticalOffset = 0.18f - 4f * PixelSize;
+            }
+            else if (isLargeEnemy)
+            {
+                verticalOffset = 0.18f;
+            }
+            else
+            {
+                verticalOffset = 0.18f - 1f * PixelSize;
+            }
+
+            float targetX = centerX + facingDir * frontOffset;
+            float targetY = topY + verticalOffset;
+
+            transform.position = new Vector3(targetX, targetY, centerZ);
+
             if (spriteRenderer != null)
             {
-                spriteRenderer.flipX = isFacingRight;
+                spriteRenderer.flipX = isFacingLeft;
             }
 
             // Compensate for parent scale so enraged visual always renders at 1:1 pixel size (32x16 at 32 PPU)

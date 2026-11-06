@@ -270,7 +270,7 @@ namespace TrashTD.Combat
             }
 
             // Stun stars sprite is 16 pixels high (0.5 units). Pivot is center (0.5, 0.5).
-            // Position pivot slightly above the top edge of the head/sprite (~0.18 units).
+            // Position above the top edge of the head/sprite (~0.18 units).
             transform.position = new Vector3(centerX, topY + 0.18f, centerZ);
 
             // Compensate for parent scale so stun stars always render at 1:1 pixel size (32x16 at 32 PPU)
