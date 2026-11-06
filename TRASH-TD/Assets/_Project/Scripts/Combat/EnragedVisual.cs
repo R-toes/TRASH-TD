@@ -191,15 +191,23 @@ namespace TrashTD.Combat
             if (enemy != null)
             {
                 SpriteRenderer primary = enemy.GetPrimaryVisualRenderer();
-                if (primary != null) return primary;
+                if (primary != null && primary.enabled) return primary;
             }
 
-            var renderers = target.GetComponentsInChildren<SpriteRenderer>(true);
+            Transform visual = target.transform.Find("EnemyVisual");
+            if (visual != null)
+            {
+                SpriteRenderer r = visual.GetComponent<SpriteRenderer>();
+                if (r != null && r.enabled) return r;
+            }
+
+            var renderers = target.GetComponentsInChildren<SpriteRenderer>(false);
             for (int i = 0; i < renderers.Length; i++)
             {
                 var r = renderers[i];
-                if (r != null && r.gameObject != gameObject && r.gameObject.name != "AirShadow" &&
-                    !r.gameObject.name.StartsWith("StunStars") && !r.gameObject.name.StartsWith("EnragedVisual"))
+                if (r != null && r.enabled && r.gameObject != gameObject && r.gameObject.name != "AirShadow" &&
+                    !r.gameObject.name.StartsWith("StunStars") && !r.gameObject.name.StartsWith("EnragedVisual") &&
+                    r.sprite != null)
                 {
                     return r;
                 }
@@ -237,7 +245,7 @@ namespace TrashTD.Combat
                 if (targetTransform == null) return;
             }
 
-            if (targetRenderer == null)
+            if (targetRenderer == null || !targetRenderer.enabled)
             {
                 targetRenderer = FindTargetRenderer(targetTransform.gameObject);
             }

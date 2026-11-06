@@ -36,7 +36,7 @@ namespace TrashTD.Enemies
         protected override bool HandlesOwnAttacks => true;
 
         /// <summary>The operator this flyer is fighting this frame (null with nothing in range).</summary>
-        protected OperatorBase CurrentAirTarget => lockedTarget;
+        public OperatorBase CurrentAirTarget => lockedTarget;
 
         public override void Initialize(EnemyData enemyData, int difficultyLevel)
         {

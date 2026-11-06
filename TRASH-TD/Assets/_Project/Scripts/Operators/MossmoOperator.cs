@@ -61,7 +61,49 @@ namespace TrashTD.Operators
 
         private readonly Dictionary<EnemyBase, float> blockedStallTimers = new Dictionary<EnemyBase, float>();
         private readonly Dictionary<EnemyBase, int> blockedLastHPs = new Dictionary<EnemyBase, int>();
+        private readonly Dictionary<EnemyBase, float> talonRatAttackTimeouts = new Dictionary<EnemyBase, float>();
         private readonly List<EnemyBase> stallCleanupList = new List<EnemyBase>();
+        private readonly List<EnemyBase> activeStallCandidates = new List<EnemyBase>();
+        private readonly List<EnemyBase> enragedEnemies = new List<EnemyBase>();
+
+        public IReadOnlyList<EnemyBase> EnragedEnemies => enragedEnemies;
+
+        public void RegisterEnragedEnemy(EnemyBase enemy)
+        {
+            if (enemy != null && !enragedEnemies.Contains(enemy))
+            {
+                enragedEnemies.Add(enemy);
+            }
+        }
+
+        public void UnregisterEnragedEnemy(EnemyBase enemy)
+        {
+            if (enemy != null)
+            {
+                enragedEnemies.Remove(enemy);
+            }
+        }
+
+        public static bool IsTalonRat(EnemyBase enemy)
+        {
+            if (enemy == null) return false;
+            if (enemy is MeleeFlyingEnemy) return true;
+            if (enemy.Data != null && !string.IsNullOrEmpty(enemy.Data.enemyName))
+            {
+                return enemy.Data.enemyName.IndexOf("Talon", System.StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+            return false;
+        }
+
+        public bool IsTalonRatAttackingMossmo(EnemyBase enemy)
+        {
+            if (!IsTalonRat(enemy) || enemy.IsDead || !isDeployed || currentHP <= 0) return false;
+            if (enemy is AirCombatEnemy air)
+            {
+                return air.CurrentAirTarget == this;
+            }
+            return false;
+        }
 
         public override bool HasTaunt => true;
 
@@ -175,7 +217,68 @@ namespace TrashTD.Operators
 
         public void UpdateBlockedEnemiesStall(float deltaTime)
         {
-            if (blockedEnemies == null || blockedEnemies.Count == 0)
+            // Update Talon Rat attack timeouts
+            stallCleanupList.Clear();
+            foreach (var kvp in talonRatAttackTimeouts)
+            {
+                if (kvp.Key == null || kvp.Key.IsDead)
+                {
+                    stallCleanupList.Add(kvp.Key);
+                }
+            }
+            for (int i = 0; i < stallCleanupList.Count; i++)
+            {
+                talonRatAttackTimeouts.Remove(stallCleanupList[i]);
+            }
+
+            var timeoutKeys = new List<EnemyBase>(talonRatAttackTimeouts.Keys);
+            for (int i = 0; i < timeoutKeys.Count; i++)
+            {
+                EnemyBase e = timeoutKeys[i];
+                float remaining = talonRatAttackTimeouts[e] - deltaTime;
+                if (remaining <= 0f && !IsTalonRatAttackingMossmo(e))
+                {
+                    talonRatAttackTimeouts.Remove(e);
+                }
+                else
+                {
+                    talonRatAttackTimeouts[e] = remaining;
+                }
+            }
+
+            // Gather all active stall candidates: blocked ground enemies + attacking Talon Rats
+            activeStallCandidates.Clear();
+            if (blockedEnemies != null)
+            {
+                for (int i = 0; i < blockedEnemies.Count; i++)
+                {
+                    if (blockedEnemies[i] != null && !blockedEnemies[i].IsDead)
+                    {
+                        activeStallCandidates.Add(blockedEnemies[i]);
+                    }
+                }
+            }
+            foreach (var kvp in talonRatAttackTimeouts)
+            {
+                if (kvp.Key != null && !kvp.Key.IsDead && !activeStallCandidates.Contains(kvp.Key))
+                {
+                    activeStallCandidates.Add(kvp.Key);
+                }
+            }
+            if (EnemyManager.Instance != null)
+            {
+                var enemies = EnemyManager.Instance.ActiveEnemies;
+                for (int i = 0; i < enemies.Count; i++)
+                {
+                    EnemyBase e = enemies[i];
+                    if (e != null && !e.IsDead && IsTalonRatAttackingMossmo(e) && !activeStallCandidates.Contains(e))
+                    {
+                        activeStallCandidates.Add(e);
+                    }
+                }
+            }
+
+            if (activeStallCandidates.Count == 0)
             {
                 if (blockedStallTimers.Count > 0)
                 {
@@ -188,7 +291,7 @@ namespace TrashTD.Operators
             stallCleanupList.Clear();
             foreach (var kvp in blockedStallTimers)
             {
-                if (kvp.Key == null || kvp.Key.IsDead || !blockedEnemies.Contains(kvp.Key))
+                if (kvp.Key == null || kvp.Key.IsDead || !activeStallCandidates.Contains(kvp.Key))
                 {
                     stallCleanupList.Add(kvp.Key);
                 }
@@ -199,9 +302,9 @@ namespace TrashTD.Operators
                 blockedLastHPs.Remove(stallCleanupList[i]);
             }
 
-            for (int i = 0; i < blockedEnemies.Count; i++)
+            for (int i = 0; i < activeStallCandidates.Count; i++)
             {
-                EnemyBase enemy = blockedEnemies[i];
+                EnemyBase enemy = activeStallCandidates[i];
                 if (enemy == null || enemy.IsDead || enemy.IsEnraged) continue;
 
                 if (!blockedStallTimers.ContainsKey(enemy))
@@ -228,10 +331,13 @@ namespace TrashTD.Operators
 
                     if (elapsed >= StallEnrageDuration)
                     {
-                        float multiplier = HasSecondUpgrade
+                        // Talon Rat: does not receive the ATK buff, only the minus health over time (multiplier = 0f)
+                        bool isTalonRat = IsTalonRat(enemy);
+                        float multiplier = isTalonRat ? 0f : (HasSecondUpgrade
                             ? MossmoEnragedEffect.UpgradedAtkMultiplier
-                            : MossmoEnragedEffect.DefaultAtkMultiplier;
-                        MossmoEnragedEffect.Apply(enemy, multiplier);
+                            : MossmoEnragedEffect.DefaultAtkMultiplier);
+
+                        MossmoEnragedEffect.Apply(enemy, multiplier, this);
                         blockedStallTimers.Remove(enemy);
                         blockedLastHPs.Remove(enemy);
                     }
@@ -242,6 +348,12 @@ namespace TrashTD.Operators
         public override void TakeDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
         {
             if (currentHP <= 0 || rawATK <= 0) return;
+
+            // Track Talon Rat attacking Mossmo
+            if (attacker != null && IsTalonRat(attacker) && !attacker.IsDead)
+            {
+                talonRatAttackTimeouts[attacker] = 3.5f;
+            }
 
             // 2x Upgrade (5★): Reduce damage from Enraged enemies by 10%
             if (HasSecondUpgrade && attacker != null && attacker.IsEnraged)
@@ -367,6 +479,55 @@ namespace TrashTD.Operators
                     target.Heal(healAmount);
                 }
             }
+        }
+
+        /// <summary>
+        /// Removes the enraged effect from all enemies that were enraged by this Mossmo.
+        /// </summary>
+        public void RemoveAllEnragedEffectsFromEnemies()
+        {
+            blockedStallTimers.Clear();
+            blockedLastHPs.Clear();
+            talonRatAttackTimeouts.Clear();
+
+            var enemiesToClean = new List<EnemyBase>(enragedEnemies);
+            enragedEnemies.Clear();
+
+            for (int i = 0; i < enemiesToClean.Count; i++)
+            {
+                EnemyBase enemy = enemiesToClean[i];
+                if (enemy != null)
+                {
+                    var effect = enemy.GetComponent<MossmoEnragedEffect>();
+                    if (effect != null && effect.SourceMossmo == this)
+                    {
+                        effect.Remove();
+                    }
+                }
+            }
+        }
+
+        protected override void Die()
+        {
+            RemoveAllEnragedEffectsFromEnemies();
+            base.Die();
+        }
+
+        protected override void OnDeath()
+        {
+            RemoveAllEnragedEffectsFromEnemies();
+            base.OnDeath();
+        }
+
+        protected override void OnRetreated()
+        {
+            RemoveAllEnragedEffectsFromEnemies();
+            base.OnRetreated();
+        }
+
+        private void OnDestroy()
+        {
+            RemoveAllEnragedEffectsFromEnemies();
         }
     }
 }

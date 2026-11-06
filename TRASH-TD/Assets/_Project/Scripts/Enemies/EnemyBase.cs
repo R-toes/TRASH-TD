@@ -179,18 +179,25 @@ namespace TrashTD.Enemies
 
         public SpriteRenderer GetPrimaryVisualRenderer()
         {
-            if (animationRenderers == null)
-                animationRenderers = GetComponentsInChildren<SpriteRenderer>(true);
-
-            if (animationRenderers != null)
+            Transform visual = transform.Find("EnemyVisual");
+            if (visual != null)
             {
-                for (int i = 0; i < animationRenderers.Length; i++)
+                SpriteRenderer visualRenderer = visual.GetComponent<SpriteRenderer>();
+                if (visualRenderer != null && visualRenderer.enabled && visualRenderer.sprite != null)
                 {
-                    SpriteRenderer renderer = animationRenderers[i];
-                    if (renderer != null && renderer.gameObject.name != "AirShadow" && !renderer.gameObject.name.StartsWith("StunStars") && renderer.sprite != null)
-                    {
-                        return renderer;
-                    }
+                    return visualRenderer;
+                }
+            }
+
+            SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(false);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                SpriteRenderer renderer = renderers[i];
+                if (renderer != null && renderer.enabled && renderer.gameObject.name != "AirShadow" &&
+                    !renderer.gameObject.name.StartsWith("StunStars") && !renderer.gameObject.name.StartsWith("EnragedVisual") &&
+                    renderer.sprite != null)
+                {
+                    return renderer;
                 }
             }
             return GetComponent<SpriteRenderer>();

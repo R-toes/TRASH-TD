@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using TrashTD.Enemies;
 using TrashTD.Operators;
 
 namespace TrashTD.Combat
@@ -186,11 +187,25 @@ namespace TrashTD.Combat
         {
             if (target == null) return null;
 
-            var renderers = target.GetComponentsInChildren<SpriteRenderer>(true);
+            EnemyBase enemy = target.GetComponent<EnemyBase>();
+            if (enemy != null)
+            {
+                SpriteRenderer primary = enemy.GetPrimaryVisualRenderer();
+                if (primary != null && primary.enabled) return primary;
+            }
+
+            Transform visual = target.transform.Find("EnemyVisual");
+            if (visual != null)
+            {
+                SpriteRenderer r = visual.GetComponent<SpriteRenderer>();
+                if (r != null && r.enabled) return r;
+            }
+
+            var renderers = target.GetComponentsInChildren<SpriteRenderer>(false);
             for (int i = 0; i < renderers.Length; i++)
             {
                 var r = renderers[i];
-                if (r != null && r.gameObject != gameObject && r.gameObject.name != "AirShadow" && !r.gameObject.name.StartsWith("StunStars"))
+                if (r != null && r.enabled && r.gameObject != gameObject && r.gameObject.name != "AirShadow" && !r.gameObject.name.StartsWith("StunStars") && r.sprite != null)
                 {
                     return r;
                 }
@@ -228,7 +243,7 @@ namespace TrashTD.Combat
                 if (targetTransform == null) return;
             }
 
-            if (targetRenderer == null)
+            if (targetRenderer == null || !targetRenderer.enabled)
             {
                 targetRenderer = FindTargetRenderer(targetTransform.gameObject);
             }
