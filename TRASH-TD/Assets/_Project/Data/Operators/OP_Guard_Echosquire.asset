@@ -30,9 +30,10 @@ MonoBehaviour:
   - {x: 1, y: 0}
   damageType: 0
   drawTwoCardsOnDeath: 0
+  cannotBeHealed: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: "<color=#FFD700>Base (2★):</color> ATK, DEF, and RES increase as HP falls: +1% per 1% HP missing, up to +60% at 40% HP or lower. Attack speed is not affected. Restores 20% of physical damage dealt as HP and cannot be healed by other operators.\n<color=#FFD700>1st upgrade (3★):</color> after landing a hit, has a 100% chance to dodge incoming attacks for 0.5 seconds.\n<color=#FFD700>2nd upgrade (4★):</color> the first time HP reaches 0 each wave, revives with at least 50% HP; reaching 0 again that wave is fatal."
+  skillDescription: "<color=#FFD700>Base (2\u2605):</color> ATK, DEF, and RES increase as HP falls: +1% per 1% HP missing, up to +60% at 40% HP or lower. Restores 20% of physical damage dealt as HP and cannot be healed by other operators.\n<color=#FFD700>1st upgrade (3\u2605):</color> after landing a hit, has a 100% chance to dodge incoming attacks for 0.5 seconds.\n<color=#FFD700>2nd upgrade (4\u2605):</color> the first time HP reaches 0 each wave, revives with at least 50% HP; reaching 0 again that wave is fatal."
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
@@ -41,5 +42,6 @@ MonoBehaviour:
   portrait: {fileID: 7841794329617421502, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
   operatorPrefab: {fileID: 4120733290429841632, guid: 48933fd514214022a8d3a5712d7c24d5, type: 3}
   projectileOrigin: {x: -0.34, y: 0.22}
-  intelQuote: "Every cut comes back to me."
-  intelLore: "A long-eared knight in a tattered cape who learned to fight by sparring with its own echo. Echosquire draws strength back from every physical blow it lands and refuses outside healing on principle. Its armor squeaks. It does not find this funny."
+  intelQuote: Every cut comes back to me.
+  intelLore: A long-eared knight in a tattered cape who learned to fight by sparring with its own echo. Echosquire draws strength back from every physical blow it lands and refuses outside healing on principle. Its armor squeaks. It does not find this funny.
+  talentRangePattern: []

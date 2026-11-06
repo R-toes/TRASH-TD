@@ -69,7 +69,39 @@ namespace TrashTD.UI
         // Title screen
         private static readonly Color PrimaryLabel = new Color(0.02f, 0.10f, 0.05f, 1f);
         private static readonly Color RecRed = new Color(1f, 0.27f, 0.22f, 1f);
-        private const float MenuColumnX = 144f;
+
+        // Sidebar: the tall logo PNG (252x480: emblem, title plate, hazard stripes) sits on top of a full-height
+        // yellow bar, and the menu rows stack on the yellow underneath it. Sizes are canvas units (1920x1080).
+        private static readonly Color SidebarYellow = new Color32(255, 208, 32, 255); // same yellow as the logo PNG (#FFD020)
+        private static readonly Color SidebarInk = new Color32(12, 12, 12, 255);      // same black as the logo PNG (#0C0C0C)
+        private const float SidebarLeft = 96f;                                        // black margin left of the bar (0 = flush to the edge)
+        private const float SidebarLogoHeight = 640f;                                 // width follows the PNG's 252:480 shape
+        private const float SidebarWidth = SidebarLogoHeight * 252f / 480f;           // 336
+        private const float SidebarRight = SidebarLeft + SidebarWidth;
+        private const float MenuButtonInset = 40f;                                    // yellow margin either side of a row
+        private const float MenuButtonX = SidebarLeft + MenuButtonInset;
+        private const float MenuButtonWidth = SidebarWidth - 2f * MenuButtonInset;    // 256
+        private const float MenuAreaTop = SidebarLogoHeight + 36f;                    // first row starts just under the stripes
+        private const float MenuPlayHeight = 64f;
+        private const float MenuRowHeight = 52f;
+        private const float MenuRowGap = 10f;
+        private const float MenuHintTop = MenuAreaTop + MenuPlayHeight + 3f * (MenuRowGap + MenuRowHeight) + 12f;
+
+        /// <summary>Row 0 = PLAY, 1 = INTEL, 2 = SETTINGS, 3 = EXIT, stacked under the logo on the yellow bar.</summary>
+        private static void PlaceMenuRow(RectTransform rect, int row)
+        {
+            float top = MenuAreaTop;
+            float height = MenuPlayHeight;
+            if (row > 0)
+            {
+                top += MenuPlayHeight + MenuRowGap + (row - 1) * (MenuRowHeight + MenuRowGap);
+                height = MenuRowHeight;
+            }
+
+            var topLeft = new Vector2(0f, 1f);
+            Place(rect, topLeft, topLeft, new Vector2(MenuButtonX, -top), new Vector2(MenuButtonWidth, height));
+        }
+
         private const float MenuButtonLabelInset = 56f;
         private const string StageActTitle = "ACT 1";
         private const string StageZoneTitle = "NERC Development Zone";
@@ -304,13 +336,13 @@ namespace TrashTD.UI
                 intelUI = ReclaimersIntelUI.Create(
                     menuCanvas.transform,
                     mainMenuPanel.transform,
-                    button => StyleMainMenuButton(button, "INTEL", "02", false),
-                    rect => Place(rect, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(MenuColumnX, -144f), new Vector2(440f, 56f)));
+                    button => StyleMainMenuButton(button, "INTEL", false),
+                    rect => PlaceMenuRow(rect, 1));
                 audioSettingsUI = AudioSettingsUI.Create(
                     menuCanvas.transform,
                     mainMenuPanel.transform,
-                    button => StyleMainMenuButton(button, "SETTINGS", "03", false),
-                    rect => Place(rect, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(MenuColumnX, -216f), new Vector2(440f, 56f)));
+                    button => StyleMainMenuButton(button, "SETTINGS", false),
+                    rect => PlaceMenuRow(rect, 2));
             }
             RegisterEntranceItems();
             UpdateDifficultyDisplay();
@@ -581,7 +613,7 @@ namespace TrashTD.UI
 
             // ACT 1 title (prominent large font size)
             var actTitle = MakeText(stageSelectionPanel.transform, "StageSelectorActTitle", StageActTitle, 38, TextAnchor.MiddleLeft,
-                AccentBright, FontStyle.Bold);
+                SidebarYellow, FontStyle.Bold);
             actTitle.horizontalOverflow = HorizontalWrapMode.Overflow;
             actTitle.verticalOverflow = VerticalWrapMode.Overflow;
             Place(actTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(headerX + 18f, headerY - 10f), new Vector2(280f, 44f));
@@ -749,12 +781,12 @@ namespace TrashTD.UI
 
         /// <summary>
         /// The start screen: a live stage-art backdrop with an enemy parade (MainMenuBackdrop) inside a camera
-        /// viewfinder, the custom Tiny Reclaimers logo, and a terminal-style menu column.
+        /// viewfinder, a full-height yellow sidebar carrying the tall Tiny Reclaimers logo, and the terminal-style
+        /// menu rows on the yellow below it.
         /// </summary>
         private void BuildTitleScreen()
         {
             Transform panel = mainMenuPanel.transform;
-            var left = new Vector2(0f, 0.5f);
 
             // Live backdrop (filled in by InitializeMenuBackdrop once the stages are loaded), toxic motes over it
             var backdropGo = new GameObject("MenuBackdrop", typeof(RectTransform));
@@ -764,7 +796,7 @@ namespace TrashTD.UI
             CreateAmbientLayer(panel, 30);
             backdropGo.transform.SetAsFirstSibling();
 
-            // Camera viewfinder: corner brackets, version top-left, REC light + feed caption top-right
+            // Camera viewfinder: corner brackets, REC light + feed caption top-right
             var viewfinder = new GameObject("Viewfinder", typeof(RectTransform));
             viewfinder.transform.SetParent(panel, false);
             var viewfinderRect = viewfinder.GetComponent<RectTransform>();
@@ -774,8 +806,8 @@ namespace TrashTD.UI
             viewfinderRect.offsetMax = new Vector2(-28f, -28f);
             AddCornerBrackets(viewfinderRect, 54f, 3f, TerminalLine);
 
-            var versionText = MakeText(panel, "VersionText", "TINY RECLAIMERS TD  //  v0.1 EARLY ACCESS", 12, TextAnchor.UpperLeft, TerminalText);
-            Place(versionText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(56f, -50f), new Vector2(600f, 20f));
+            var versionText = MakeText(panel, "VersionText", "TINY RECLAIMERS TD  //  v0.1 EARLY ACCESS", 12, TextAnchor.LowerRight, TerminalText);
+            Place(versionText.rectTransform, Vector2.one, Vector2.one, new Vector2(-56f, 64f), new Vector2(600f, 20f));
             mainVersion = versionText.rectTransform;
 
             var feedStatus = new GameObject("FeedStatus", typeof(RectTransform));
@@ -797,25 +829,32 @@ namespace TrashTD.UI
             menuFeedCaption.horizontalOverflow = HorizontalWrapMode.Overflow;
             Place(menuFeedCaption.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -30f), new Vector2(720f, 20f));
 
-            // ── Custom logo ──────────────────────────────────
-            var titleBlockGo = new GameObject("TitleBlock", typeof(RectTransform));
-            titleBlockGo.transform.SetParent(panel, false);
-            titleBlock = titleBlockGo.GetComponent<RectTransform>();
-            Place(titleBlock, left, left, new Vector2(MenuColumnX - 80f, 165f), new Vector2(640f, 326f));
+            // ── Sidebar: full-height yellow bar, tall logo on top, menu rows on the yellow below ──
+            var sidebarGo = new GameObject("Sidebar", typeof(RectTransform));
+            sidebarGo.transform.SetParent(panel, false);
+            titleBlock = sidebarGo.GetComponent<RectTransform>();
+            titleBlock.anchorMin = new Vector2(0f, 0f);
+            titleBlock.anchorMax = new Vector2(0f, 1f);
+            titleBlock.pivot = new Vector2(0f, 0.5f);
+            titleBlock.sizeDelta = new Vector2(SidebarWidth, 0f);
+            titleBlock.anchoredPosition = new Vector2(SidebarLeft, 0f);
+
+            // The logo PNG only covers the top of the bar, so this yellow rectangle runs behind it, top to bottom
+            Image sidebarBar = CreateBlock(titleBlock, "SidebarBar", SidebarYellow);
+            StretchFill(sidebarBar.rectTransform);
 
             Sprite logo = LoadSpriteSafely(
-                "UI/Tiny Reclaimers Logo Wide",
-                "Assets/Resources/UI/Tiny Reclaimers Logo Wide.png");
+                "UI/Tiny Reclaimers Logo Tall",
+                "Assets/Resources/UI/Tiny Reclaimers Logo Tall.png");
             if (logo == null)
             {
-                Debug.LogError("Main menu logo sprite 'UI/Tiny Reclaimers Logo Wide' could not be loaded.");
+                Debug.LogError("Main menu logo sprite 'UI/Tiny Reclaimers Logo Tall' could not be loaded.");
             }
             else
             {
                 var logoObject = new GameObject("TinyReclaimersLogo", typeof(RectTransform), typeof(Image));
                 logoObject.transform.SetParent(titleBlock, false);
-                var logoRect = logoObject.GetComponent<RectTransform>();
-                Place(logoRect, left, left, Vector2.zero, new Vector2(640f, 326f));
+                StretchTop(logoObject.GetComponent<RectTransform>(), 0f, 0f, 0f, SidebarLogoHeight);
                 var logoImage = logoObject.GetComponent<Image>();
                 logoImage.sprite = logo;
                 logoImage.preserveAspect = true;
@@ -823,38 +862,40 @@ namespace TrashTD.UI
                 logoImage.raycastTarget = false;
             }
 
-            // ── Menu column (INTEL is row 02 and SETTINGS row 03, added by ReclaimersIntelUI / AudioSettingsUI in Awake) ──
+            // ── Menu rows (INTEL is row 1 and SETTINGS row 2, added by ReclaimersIntelUI / AudioSettingsUI in Awake) ──
             if (startButton == null)
             {
                 startButton = CreateButtonChild(panel, "StartButton", "PLAY");
             }
-            Place(startButton.GetComponent<RectTransform>(), left, left, new Vector2(MenuColumnX, -64f), new Vector2(440f, 72f));
-            StyleMainMenuButton(startButton, "PLAY", "01", true);
+            PlaceMenuRow(startButton.GetComponent<RectTransform>(), 0);
+            StyleMainMenuButton(startButton, "PLAY", true);
 
             if (exitButton == null)
             {
                 exitButton = CreateButtonChild(panel, "ExitButton", "EXIT");
             }
-            Place(exitButton.GetComponent<RectTransform>(), left, left, new Vector2(MenuColumnX, -288f), new Vector2(440f, 56f));
-            StyleMainMenuButton(exitButton, "EXIT", "04", false);
+            PlaceMenuRow(exitButton.GetComponent<RectTransform>(), 3);
+            StyleMainMenuButton(exitButton, "EXIT", false);
 
+            // Hint sits at the foot of the bar, so it's dark ink on yellow
+            var topLeft = new Vector2(0f, 1f);
             menuHintText = MakeText(panel, "MenuHint", "[ARROWS] SELECT    [ENTER] CONFIRM", 11, TextAnchor.MiddleLeft,
-                new Color(TerminalText.r, TerminalText.g, TerminalText.b, 0.6f));
-            Place(menuHintText.rectTransform, left, left, new Vector2(MenuColumnX, -352f), new Vector2(600f, 20f));
+                new Color(SidebarInk.r, SidebarInk.g, SidebarInk.b, 0.65f));
+            Place(menuHintText.rectTransform, topLeft, topLeft, new Vector2(MenuButtonX, -MenuHintTop), new Vector2(MenuButtonWidth, 20f));
         }
 
         /// <summary>
-        /// Terminal menu row: label on the left, index on the right, and a caret plus bracket frame while the row
+        /// Terminal menu row: label and a caret plus bracket frame while the row
         /// is selected. Hovering selects the row, so mouse and keyboard share a single highlight.
         /// </summary>
-        private void StyleMainMenuButton(Button button, string label, string index, bool primary)
+        private void StyleMainMenuButton(Button button, string label, bool primary)
         {
             if (button == null) return;
 
             var image = button.GetComponent<Image>();
             image.sprite = null;
             image.type = Image.Type.Simple;
-            image.color = primary ? AccentColor : TerminalButton;
+            image.color = primary ? AccentColor : SidebarInk;
 
             Text labelText = button.GetComponentInChildren<Text>();
             if (labelText != null)
@@ -864,7 +905,7 @@ namespace TrashTD.UI
                 labelText.fontSize = primary ? 26 : 18;
                 labelText.fontStyle = FontStyle.Normal;
                 labelText.alignment = TextAnchor.MiddleLeft;
-                labelText.color = primary ? PrimaryLabel : TerminalText;
+                labelText.color = primary ? PrimaryLabel : AccentColor;
                 RectTransform labelRect = labelText.rectTransform;
                 labelRect.anchorMin = Vector2.zero;
                 labelRect.anchorMax = Vector2.one;
@@ -883,13 +924,9 @@ namespace TrashTD.UI
                 barRect.offsetMin = Vector2.zero;
                 barRect.offsetMax = new Vector2(4f, 0f);
                 var barImage = bar.GetComponent<Image>();
-                barImage.color = TerminalLine;
+                barImage.color = AccentColor;
                 barImage.raycastTarget = false;
             }
-
-            Text indexText = MakeText(button.transform, "Index", index, 11, TextAnchor.MiddleRight,
-                primary ? new Color(PrimaryLabel.r, PrimaryLabel.g, PrimaryLabel.b, 0.55f) : TerminalLine);
-            indexText.rectTransform.offsetMax = new Vector2(-20f, 0f);
 
             Text caret = MakeText(button.transform, "Caret", ">", primary ? 26 : 18, TextAnchor.MiddleLeft,
                 new Color(primary ? PrimaryLabel.r : AccentBright.r, primary ? PrimaryLabel.g : AccentBright.g, primary ? PrimaryLabel.b : AccentBright.b, 0f));
@@ -899,7 +936,7 @@ namespace TrashTD.UI
             frame.transform.SetParent(button.transform, false);
             var frameRect = frame.GetComponent<RectTransform>();
             StretchFill(frameRect);
-            AddCornerBrackets(frameRect, 14f, 3f, AccentBright, -8f);
+            AddCornerBrackets(frameRect, 14f, 3f, SidebarInk, -6f);
             var frameGroup = frame.GetComponent<CanvasGroup>();
             frameGroup.alpha = 0f;
             frameGroup.blocksRaycasts = false;
@@ -2246,7 +2283,7 @@ namespace TrashTD.UI
             RegisterEntrance(mainEntrance, audioSettingsUI != null ? audioSettingsUI.SettingsButton : null, new Vector2(-70f, 0f), 0.34f);
             RegisterEntrance(mainEntrance, exitButton, new Vector2(-70f, 0f), 0.40f);
             RegisterEntrance(mainEntrance, menuHintText, Vector2.zero, 0.48f);
-            RegisterEntrance(mainEntrance, mainVersion, new Vector2(0f, 20f), 0.30f);
+            RegisterEntrance(mainEntrance, mainVersion, new Vector2(0f, -20f), 0.30f);
             RegisterEntrance(mainEntrance, menuFeedStatus, new Vector2(0f, 20f), 0.30f);
 
             // Stage selector header (cards were registered in BuildStageButtons)

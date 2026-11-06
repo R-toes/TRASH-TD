@@ -69,7 +69,7 @@ namespace TrashTD.UI
         /// </summary>
         public static Settings ClassicTelevision => new Settings
         {
-            curvature = 0.10f,
+            curvature = 0.05f,
             cornerRadius = 0.04f,
             sharpness = 1f,
             scanlineStrength = 0.38f,

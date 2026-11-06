@@ -36,9 +36,10 @@ MonoBehaviour:
   - {x: 3, y: 1}
   damageType: 0
   drawTwoCardsOnDeath: 0
+  cannotBeHealed: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: "<color=#FFD700>Base (1★):</color> Rapid-fire sniper with lower per-shot damage but equal total DPS. Gains +10% attack speed per enemy in range, capped at +100%.\n<color=#FFD700>1st upgrade (2★):</color> Each landed hit against the same enemy ignores 1% of its DEF, stacking to 100%; switching targets resets this bonus.\n<color=#FFD700>2nd upgrade (3★):</color> Increases the attack-speed passive to +30% per enemy, capped at +300%."
+  skillDescription: "<color=#FFD700>Base (1\u2605):</color> Rapid-fire sniper with lower per-shot damage. Gains +10% attack speed per enemy in range, capped at +100%.\n<color=#FFD700>1st upgrade (2\u2605):</color> Each landed hit against the same enemy ignores 1% of its DEF, stacking to 100%; switching targets resets this bonus.\n<color=#FFD700>2nd upgrade (3\u2605):</color> Increases the attack-speed passive to +30% per enemy, capped at +300%."
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
@@ -46,6 +47,7 @@ MonoBehaviour:
   chillFreezeDuration: 1.5
   portrait: {fileID: 6034814416671764318, guid: 0c6f277420ab35e418cfc632e091eb41, type: 3}
   operatorPrefab: {fileID: 7111000000000001, guid: ed808369bcbe44249cd67b7a106e48da, type: 3}
-  projectileOrigin: {x: 0.0, y: 0.05}
-  intelQuote: "More bullets, same result."
-  intelLore: "Pompoth fires in rapid bursts, keeping enemies suppressed with a relentless stream of shots. The more crowded her range, the more she gets into the rhythm — her trigger finger tightens with every new target."
+  projectileOrigin: {x: 0, y: 0.05}
+  intelQuote: More bullets, same result.
+  intelLore: "Pompoth fires in rapid bursts, keeping enemies suppressed with a relentless stream of shots. The more crowded her range, the more she gets into the rhythm \u2014 her trigger finger tightens with every new target."
+  talentRangePattern: []
