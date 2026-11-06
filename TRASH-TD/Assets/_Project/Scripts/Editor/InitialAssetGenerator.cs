@@ -818,7 +818,7 @@ namespace TrashTD.Editor
                     new Vector2Int(1, 1), new Vector2Int(-1, -1)
                 },
                 coalesceFrame0 ?? LoadSprite("tex_op_medic.png"), coalescePrefab);
-            coalesce.skillDescription = "Healing an operator with HP below 30% has a 20% chance to trigger an extra healing.";
+            coalesce.skillDescription = "Base (1★): Healing an operator with HP below 30% has a 20% chance to trigger an extra healing. 1st upgrade (2★): Extra healing chance increases to 40%. 2nd upgrade (3★): HP requirement increases to below 60% and increases the Max HP of operators in range by 10%.";
             EditorUtility.SetDirty(coalesce);
 
             // 5b. Medic (Bubblets)
@@ -888,7 +888,7 @@ namespace TrashTD.Editor
                 framiliarFrame0, framiliarPrefab);
             framiliar.damageType = DamageType.Physical;
             framiliar.roleTags = new[] { "Specialist", "Mimic", "Deck" };
-            framiliar.skillDescription = "Copies any operator in your deck, taking on their form in grayscale. When retreated in the same preparation phase, returns as Framiliar; if retreated in the next prep phase, returns as the copied operator. Specialists have no retreat cooldown.";
+            framiliar.skillDescription = "Base (2★): Copies any operator in your deck, taking on their form in grayscale. When retreated in the same preparation phase, returns as Framiliar; if retreated in the next prep phase, returns as the copied operator. Specialists have no retreat cooldown. 1st upgrade (3★): Copies any operator in your deck as 1x Upgraded (or their upgrade level if higher). 2nd upgrade (4★): Copies any operator in your deck as 2x Upgraded.";
             EditorUtility.SetDirty(framiliar);
         }
 

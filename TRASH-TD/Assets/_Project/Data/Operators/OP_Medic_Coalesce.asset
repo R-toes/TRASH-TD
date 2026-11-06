@@ -36,7 +36,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Healing an operator with HP below 30% has a 20% chance to trigger an extra healing.'
+  skillDescription: 'Base (1★): Healing an operator with HP below 30% has a 20% chance to trigger an extra healing. 1st upgrade (2★): Extra healing chance increases to 40%. 2nd upgrade (3★): HP requirement increases to below 60% and increases the Max HP of operators in range by 10%.'
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
