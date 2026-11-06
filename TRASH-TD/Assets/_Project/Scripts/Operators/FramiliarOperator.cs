@@ -34,6 +34,36 @@ namespace TrashTD.Operators
         public DraftCard CopiedCard => copiedCard;
         public Sprite[] FramiliarFrames => framiliarFrames;
 
+        public bool HasFirstUpgrade => CurrentRarity >= OperatorRarity.Star3 || OriginalFramiliarRarity >= OperatorRarity.Star3;
+        public bool HasSecondUpgrade => CurrentRarity >= OperatorRarity.Star4 || OriginalFramiliarRarity >= OperatorRarity.Star4;
+
+        public int UpgradeLevel
+        {
+            get
+            {
+                OperatorRarity r = OriginalFramiliarRarity != 0 ? OriginalFramiliarRarity : CurrentRarity;
+                int baseR = OriginalFramiliarData != null ? (int)OriginalFramiliarData.baseRarity : (int)OperatorRarity.Star2;
+                return Mathf.Clamp((int)r - baseR, 0, 2);
+            }
+        }
+
+        public static int CalculateEffectiveUpgradeLevel(int framiliarUpgradeLevel, int targetCardUpgradeLevel)
+        {
+            return Mathf.Max(Mathf.Clamp(framiliarUpgradeLevel, 0, 2), Mathf.Clamp(targetCardUpgradeLevel, 0, 2));
+        }
+
+        public static OperatorRarity CalculateEffectiveRarity(OperatorData targetData, int framiliarUpgradeLevel, int targetCardUpgradeLevel)
+        {
+            if (targetData == null) return OperatorRarity.Star1;
+            int effectiveUpgrade = CalculateEffectiveUpgradeLevel(framiliarUpgradeLevel, targetCardUpgradeLevel);
+            int maxRarity = Mathf.Min((int)OperatorRarity.Star5, (int)targetData.baseRarity + 2);
+            return (OperatorRarity)Mathf.Clamp((int)targetData.baseRarity + effectiveUpgrade, (int)targetData.baseRarity, maxRarity);
+        }
+
+        public override string GetSkillDescription() =>
+            GetSkillDescription(OriginalFramiliarData != null ? OriginalFramiliarData : data,
+                OriginalFramiliarRarity != 0 ? OriginalFramiliarRarity : currentRarity);
+
         public void ConfigureAnimationFrames(Sprite[] frames)
         {
             framiliarFrames = frames;
@@ -293,12 +323,13 @@ namespace TrashTD.Operators
         public OperatorBase CopyOperator(DraftCard targetCard)
         {
             if (targetCard == null || targetCard.operatorData == null) return null;
+            copiedCard = targetCard;
             return CopyOperator(targetCard.operatorData, targetCard.rarity);
         }
 
         /// <summary>
         /// Transforms Framiliar into a copy of the target OperatorData and rarity.
-        /// If Framiliar is upgraded, the copied operator inherits that upgrade level.
+        /// Always checks which upgrade level is higher: Framiliar or the target operator, picking the highest.
         /// Ground compatibility is strictly enforced (no high ground op on low ground, and vice versa).
         /// </summary>
         public OperatorBase CopyOperator(OperatorData targetData, OperatorRarity rarity)
@@ -316,11 +347,11 @@ namespace TrashTD.Operators
                 return null;
             }
 
-            // Inherit Framiliar's upgrade levels (e.g. 3 copies merged -> +1 upgrade tier)
-            int framiliarUpgradeLevels = Mathf.Max(0, (int)CurrentRarity - (int)(OriginalFramiliarData != null ? OriginalFramiliarData.baseRarity : (data != null ? data.baseRarity : OperatorRarity.Star2)));
-            int targetCardUpgradeLevels = Mathf.Max(0, (int)rarity - (int)targetData.baseRarity);
-            int effectiveUpgradeLevel = Mathf.Max(framiliarUpgradeLevels, targetCardUpgradeLevels);
-            OperatorRarity effectiveRarity = (OperatorRarity)Mathf.Clamp((int)targetData.baseRarity + effectiveUpgradeLevel, (int)targetData.baseRarity, (int)OperatorRarity.Star5);
+            // Always check which upgrade is higher: Framiliar or the target operator. Pick the highest always.
+            int framiliarUpgradeLevels = UpgradeLevel;
+            int targetCardUpgradeLevels = Mathf.Clamp((int)rarity - (int)targetData.baseRarity, 0, 2);
+            int effectiveUpgradeLevel = CalculateEffectiveUpgradeLevel(framiliarUpgradeLevels, targetCardUpgradeLevels);
+            OperatorRarity effectiveRarity = CalculateEffectiveRarity(targetData, framiliarUpgradeLevels, targetCardUpgradeLevels);
 
             if (OperatorManager.Instance != null)
             {

@@ -3111,7 +3111,7 @@ namespace TrashTD.UI
                 // Dynamic size: 1 row is 196f (shorter/wider aspect), 2 rows is 260f (longer)
                 labelRect.sizeDelta = new Vector2(280f, hasTwoRows ? 260f : 196f);
 
-                int framiliarUpgradeLevels = Mathf.Max(0, (int)framiliar.CurrentRarity - (int)(framiliar.OriginalFramiliarData != null ? framiliar.OriginalFramiliarData.baseRarity : (framiliar.Data != null ? framiliar.Data.baseRarity : OperatorRarity.Star2)));
+                int framiliarUpgradeLevels = framiliar.UpgradeLevel;
 
                 const float btnWidth = 54f;
                 const float btnSpacing = 8f;
@@ -3160,10 +3160,10 @@ namespace TrashTD.UI
                         framiliarCopyClassIconImages[i].color = Color.white;
                         framiliarCopyClassBadges[i].SetActive(true);
 
-                        // Upgrade inheritance
-                        int cardUpgrade = Mathf.Max(0, (int)card.rarity - (int)card.operatorData.baseRarity);
-                        int effectiveUpgrade = Mathf.Max(framiliarUpgradeLevels, cardUpgrade);
-                        OperatorRarity effectiveRarity = (OperatorRarity)Mathf.Clamp((int)card.operatorData.baseRarity + effectiveUpgrade, (int)card.operatorData.baseRarity, (int)OperatorRarity.Star5);
+                        // Upgrade inheritance: always check which upgrade is higher: Framiliar or the target operator. Pick highest.
+                        int cardUpgrade = Mathf.Clamp((int)card.rarity - (int)card.operatorData.baseRarity, 0, 2);
+                        int effectiveUpgrade = TrashTD.Operators.FramiliarOperator.CalculateEffectiveUpgradeLevel(framiliarUpgradeLevels, cardUpgrade);
+                        OperatorRarity effectiveRarity = TrashTD.Operators.FramiliarOperator.CalculateEffectiveRarity(card.operatorData, framiliarUpgradeLevels, cardUpgrade);
 
                         string stars = new string('★', (int)effectiveRarity);
                         if (effectiveUpgrade > cardUpgrade)

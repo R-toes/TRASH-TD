@@ -933,6 +933,18 @@ namespace TrashTD.Operators
                 }
                 return "When Drawgoo dies, draw two random operator cards from the pool. Cannot be healed by other operators.";
             }
+            if (data.operatorName == "Framiliar")
+            {
+                if (currentRarity >= OperatorRarity.Star4)
+                {
+                    return "Copies any operator in your deck as 2x Upgraded (or their upgrade level if higher), taking on their form in grayscale. When retreated in the same preparation phase, returns as Framiliar; if retreated in the next prep phase, returns as the copied operator. Specialists have no retreat cooldown.";
+                }
+                if (currentRarity >= OperatorRarity.Star3)
+                {
+                    return "Copies any operator in your deck as 1x Upgraded (or their upgrade level if higher), taking on their form in grayscale. When retreated in the same preparation phase, returns as Framiliar; if retreated in the next prep phase, returns as the copied operator. Specialists have no retreat cooldown.";
+                }
+                return data.skillDescription;
+            }
             return data.skillDescription;
         }
 
