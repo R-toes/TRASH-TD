@@ -86,17 +86,22 @@ namespace TrashTD.Enemies
         private float sluggishMoveSpeedMultiplier = 1f;
         private float sluggishAttackIntervalMultiplier = 1f;
         private bool isSluggish;
+        private int resicochetCharge;
+        public int ResicochetCharge => resicochetCharge;
         private int highestResicochetCharge;
         public int HighestResicochetCharge => highestResicochetCharge;
         public bool IsEnraged { get; set; }
 
         public void ApplyResicochetHit(int chargeLevel)
         {
-            if (chargeLevel > highestResicochetCharge)
+            if (isDead) return;
+            resicochetCharge = Mathf.Clamp(chargeLevel, 1, 3);
+            highestResicochetCharge = Mathf.Max(highestResicochetCharge, resicochetCharge);
+            if (sluggishTimer <= 0f && !isSluggish)
             {
-                highestResicochetCharge = Mathf.Clamp(chargeLevel, 1, 3);
-                UpdateChillVisual();
+                ApplySluggish();
             }
+            UpdateChillVisual();
         }
 
         public void ModifyATK(int delta)
@@ -264,10 +269,7 @@ namespace TrashTD.Enemies
             sluggishTimer = 0f;
             sluggishMoveSpeedMultiplier = 1f;
             sluggishAttackIntervalMultiplier = 1f;
-            isSluggish = false;
-            sluggishTimer = 0f;
-            sluggishMoveSpeedMultiplier = 1f;
-            sluggishAttackIntervalMultiplier = 1f;
+            resicochetCharge = 0;
             highestResicochetCharge = 0;
             IsEnraged = false;
             CacheChillRenderers();
@@ -1654,11 +1656,7 @@ namespace TrashTD.Enemies
             sluggishAttackIntervalMultiplier = Mathf.Max(sluggishAttackIntervalMultiplier, Mathf.Max(1f, attackIntervalMultiplier));
             sluggishTimer = Mathf.Max(sluggishTimer, duration);
 
-            if (!isSluggish)
-            {
-                isSluggish = true;
-                Combat.FloatingCombatNumber.ShowText(VisualPosition, "SLUGGISH!", new Color(0.75f, 0.45f, 1f));
-            }
+            isSluggish = true;
 
             if (!isFrozen && !isStunned)
             {
@@ -1705,6 +1703,7 @@ namespace TrashTD.Enemies
                     isSluggish = false;
                     sluggishMoveSpeedMultiplier = 1f;
                     sluggishAttackIntervalMultiplier = 1f;
+                    resicochetCharge = 0;
                 }
             }
 
@@ -1730,30 +1729,73 @@ namespace TrashTD.Enemies
             UpdateChillVisual();
         }
 
+        public static Color GetResicochetChargeColor(int charge)
+        {
+            return charge switch
+            {
+                1 => ResicochetOperator.Charge1ProjectileColor, // Orange
+                2 => ResicochetOperator.Charge2ProjectileColor, // Green
+                3 => ResicochetOperator.Charge3ProjectileColor, // Blue
+                _ => ResicochetOperator.Charge1ProjectileColor
+            };
+        }
+
         private void CacheChillRenderers()
         {
+            if (chillRenderers != null && originalRendererColors != null && chillRenderers.Length > 0)
+                return;
+
             chillRenderers = GetComponentsInChildren<SpriteRenderer>(true);
             originalRendererColors = new Color[chillRenderers.Length];
             for (int i = 0; i < chillRenderers.Length; i++)
             {
-                originalRendererColors[i] = chillRenderers[i].color;
+                originalRendererColors[i] = chillRenderers[i] != null ? chillRenderers[i].color : Color.white;
             }
         }
 
         private void UpdateChillVisual()
         {
-            if (chillRenderers == null || originalRendererColors == null) return;
+            if (chillRenderers == null || originalRendererColors == null)
+            {
+                CacheChillRenderers();
+                if (chillRenderers == null || originalRendererColors == null) return;
+            }
 
-            float tintAmount = isFrozen ? 0.95f : isStunned ? 0.85f : slowTimer > 0f ? 0.8f : 0f;
+            float tintAmount = 0f;
+            Color effectColor = Color.white;
+
+            if (isFrozen)
+            {
+                tintAmount = 0.95f;
+                effectColor = new Color(0.1f, 0.6f, 1f);
+            }
+            else if (isStunned)
+            {
+                tintAmount = 0.85f;
+                effectColor = new Color(1f, 0.9f, 0.15f);
+            }
+            else if (slowTimer > 0f)
+            {
+                tintAmount = 0.8f;
+                effectColor = new Color(0.1f, 0.6f, 1f);
+            }
+            else if (resicochetCharge > 0 && isSluggish)
+            {
+                tintAmount = 0.85f;
+                effectColor = GetResicochetChargeColor(resicochetCharge);
+            }
+
             for (int i = 0; i < chillRenderers.Length; i++)
             {
                 if (chillRenderers[i] == null) continue;
+                if (chillRenderers[i].gameObject.name == "AirShadow" ||
+                    chillRenderers[i].gameObject.name.StartsWith("StunStars") ||
+                    chillRenderers[i].gameObject.name.StartsWith("EnragedVisual"))
+                    continue;
 
                 Color original = originalRendererColors[i];
-                Color effectColor = isStunned
-                    ? new Color(1f, 0.9f, 0.15f, original.a)
-                    : new Color(0.1f, 0.6f, 1f, original.a);
-                chillRenderers[i].color = Color.Lerp(original, effectColor, tintAmount);
+                Color target = new Color(effectColor.r, effectColor.g, effectColor.b, original.a);
+                chillRenderers[i].color = Color.Lerp(original, target, tintAmount);
             }
         }
     }
