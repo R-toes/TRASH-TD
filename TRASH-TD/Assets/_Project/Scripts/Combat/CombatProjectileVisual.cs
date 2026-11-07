@@ -238,28 +238,50 @@ namespace TrashTD.Combat
                    style == ProjectileStyle.ThornchinSpike || style == ProjectileStyle.SpoilcupineSpike;
         }
 
-        private void ApplyOrientation(Vector2 direction)
+        public void ApplyOrientation(Vector2 direction)
         {
             if (!IsOriented(style) || direction.sqrMagnitude < 0.0001f) return;
 
             if (style == ProjectileStyle.ThornchinSpike || style == ProjectileStyle.SpoilcupineSpike)
             {
                 // The source spike sprites face LEFT by default.
-                // If moving predominantly vertically:
-                if (Mathf.Abs(direction.y) > Mathf.Abs(direction.x) * 1.2f)
+                float moveAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+                float snappedAngle = Mathf.Round(moveAngle / 45f) * 45f;
+                while (snappedAngle > 180f) snappedAngle -= 360f;
+                while (snappedAngle <= -180f) snappedAngle += 360f;
+
+                if (Mathf.Approximately(snappedAngle, 0f))
                 {
+                    // Pure right
+                    transform.rotation = Quaternion.identity;
+                    if (body != null) body.flipX = true;
+                }
+                else if (Mathf.Approximately(Mathf.Abs(snappedAngle), 180f))
+                {
+                    // Pure left
+                    transform.rotation = Quaternion.identity;
                     if (body != null) body.flipX = false;
-                    float angle = direction.y > 0f ? -90f : 90f;
-                    transform.rotation = Quaternion.Euler(0f, 0f, angle);
+                }
+                else if (Mathf.Approximately(snappedAngle, 90f))
+                {
+                    // Pure up
+                    if (body != null) body.flipX = false;
+                    transform.rotation = Quaternion.Euler(0f, 0f, -90f);
+                }
+                else if (Mathf.Approximately(snappedAngle, -90f))
+                {
+                    // Pure down
+                    if (body != null) body.flipX = false;
+                    transform.rotation = Quaternion.Euler(0f, 0f, 90f);
                 }
                 else
                 {
-                    // Moving predominantly horizontally:
-                    transform.rotation = Quaternion.identity;
-                    if (body != null)
-                    {
-                        body.flipX = direction.x > 0f;
-                    }
+                    // Diagonals (45, 135, -135, -45)
+                    if (body != null) body.flipX = false;
+                    float rotZ = snappedAngle - 180f;
+                    while (rotZ <= -180f) rotZ += 360f;
+                    while (rotZ > 180f) rotZ -= 360f;
+                    transform.rotation = Quaternion.Euler(0f, 0f, rotZ);
                 }
                 return;
             }

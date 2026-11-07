@@ -201,6 +201,10 @@ namespace TrashTD.Data
             {
                 return TrashTD.Operators.ProxishotOperator.GetRangePatternForRarity(this, rarity);
             }
+            if (operatorName == "Thornchin")
+            {
+                return TrashTD.Operators.ThornchinOperator.GetRangePatternForRarity(this, rarity);
+            }
             return rangePattern;
         }
     }

@@ -32,7 +32,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: "<color=#FFD700>Base (2★):</color> Whenever Thornchin is attacked, it retaliates against the attacker with sharp urchin spines, dealing Physical damage equal to Thornchin's ATK.\n<color=#FFD700>1st upgrade (3★):</color> Retaliate spikes deal additional DOT that deals 5 Arts damage for 5 seconds (stacks up to 4 times).\n<color=#FFD700>2nd upgrade (4★):</color> Deals additional AoE damage in the adjacent tiles that can stack up to 4 times."
+  skillDescription: "<color=#FFD700>Base (2★):</color> Whenever Thornchin is attacked, it retaliates against the attacker with sharp urchin spines, dealing Physical damage equal to Thornchin's ATK.\n<color=#FFD700>1st upgrade (3★):</color> Retaliate spikes deal an additional DOT of 5 Arts damage for 5 seconds (stacks up to 4 times) and deal additional AoE damage in adjacent tiles.\n<color=#FFD700>2nd upgrade (4★):</color> AoE damage expands to all surrounding tiles."
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
