@@ -9,7 +9,7 @@ namespace TrashTD.Combat
     /// Thrown 16x16 healing vial projectile for Panacea:
     /// - Plays the 8-frame liquid swirl animation while flying.
     /// - Spins continuously along its trajectory.
-    /// - Leaves a green "meteor" trail with tapering width and particle motes.
+    /// - Leaves a pixelated green "meteor" trail composed of crisp stage-art pixel motes and sparkle crosses.
     /// - Arcs gracefully in a parabolic curve unless throwing directly up or down (same vertical line).
     /// - Shatters into green healing droplets, sparkles and heals the target on impact.
     /// </summary>
@@ -38,14 +38,15 @@ namespace TrashTD.Combat
         private GameObject visualRoot;
         private SpriteRenderer vialRenderer;
         private SpriteRenderer glowRenderer;
-        private TrailRenderer meteorTrail;
-        private float particleTimer;
+
+        private Vector3 prevPos;
+        private float trailDistance;
 
         public float ArcHeight => arcHeight;
         public bool IsCurved => arcHeight > 0.01f;
         public float Duration => duration;
         public SpriteRenderer VialRenderer => vialRenderer;
-        public TrailRenderer MeteorTrail => meteorTrail;
+        public TrailRenderer MeteorTrail => null;
 
         public static PanaceaVialProjectile Spawn(
             Vector3 start,
@@ -74,6 +75,8 @@ namespace TrashTD.Combat
             frames = vialAnimationFrames;
 
             transform.position = startPos;
+            prevPos = startPos;
+            trailDistance = 0f;
             elapsed = 0f;
             currentFrame = 0;
             animTimer = 0f;
@@ -85,16 +88,14 @@ namespace TrashTD.Combat
             // Throw duration clamped between 0.22s and 0.65s
             duration = dist > 0.01f ? Mathf.Clamp(dist / DefaultSpeed, MinDuration, MaxDuration) : 0.3f;
 
-            // "make the throw a bit curved to the target unless going directly down or up"
+            // Curved parabolic throw unless going directly up or down
             bool isDirectlyVertical = Mathf.Abs(dx) < 0.35f;
             if (isDirectlyVertical)
             {
-                // Going directly up or down -> straight line throw
                 arcHeight = 0f;
             }
             else
             {
-                // Curved parabolic throw
                 arcHeight = Mathf.Clamp(dist * 0.28f, 0.45f, 1.4f);
             }
 
@@ -120,47 +121,15 @@ namespace TrashTD.Combat
                 vialRenderer.sprite = frames[0];
             }
 
-            // Green Meteor Trail
-            var trailObj = new GameObject("MeteorTrail");
-            trailObj.transform.SetParent(transform, false);
-            meteorTrail = trailObj.AddComponent<TrailRenderer>();
-            meteorTrail.time = 0.28f;
-            meteorTrail.startWidth = 0.22f;
-            meteorTrail.endWidth = 0.0f;
-            meteorTrail.autodestruct = false;
-            meteorTrail.sortingLayerID = GridSorting.DefaultLayerId;
-            meteorTrail.sortingOrder = 38;
-
-            Material trailMat = GetTrailMaterial();
-            meteorTrail.sharedMaterial = trailMat;
-
-            // Meteor gradient: Lime/white head -> Emerald body -> Deep transparent tail
-            Gradient gradient = new Gradient();
-            gradient.SetKeys(
-                new[]
-                {
-                    new GradientColorKey(new Color(0.75f, 1.0f, 0.45f), 0.0f),
-                    new GradientColorKey(new Color(0.20f, 0.95f, 0.35f), 0.3f),
-                    new GradientColorKey(new Color(0.05f, 0.65f, 0.15f), 1.0f)
-                },
-                new[]
-                {
-                    new GradientAlphaKey(0.95f, 0.0f),
-                    new GradientAlphaKey(0.80f, 0.35f),
-                    new GradientAlphaKey(0.0f, 1.0f)
-                }
-            );
-            meteorTrail.colorGradient = gradient;
-
-            // Soft green glowing head
+            // Crisp pixelated green head star glow
             var glowObj = new GameObject("MeteorHeadGlow");
             glowObj.transform.SetParent(visualRoot.transform, false);
             glowRenderer = glowObj.AddComponent<SpriteRenderer>();
             glowRenderer.sortingLayerID = GridSorting.DefaultLayerId;
             glowRenderer.sortingOrder = 39;
-            glowRenderer.sprite = CombatFxArt.Dot2();
-            glowRenderer.color = new Color(0.35f, 1.0f, 0.45f, 0.65f);
-            glowRenderer.transform.localScale = Vector3.one * 1.8f;
+            glowRenderer.sprite = CombatFxArt.Flash5();
+            glowRenderer.color = new Color(0.4f, 1.0f, 0.5f, 0.7f);
+            glowRenderer.transform.localScale = Vector3.one;
         }
 
         private void Update()
@@ -173,6 +142,10 @@ namespace TrashTD.Combat
             float arc = 4f * t * (1f - t) * arcHeight;
             Vector3 currentPos = linear + new Vector3(0f, arc, 0f);
             transform.position = currentPos;
+
+            // Emit crisp pixelated green meteor trail
+            EmitPixelMeteorTrail(prevPos, currentPos);
+            prevPos = currentPos;
 
             // Vial 8-frame swirl animation
             if (frames != null && frames.Length > 0)
@@ -196,18 +169,71 @@ namespace TrashTD.Combat
                 visualRoot.transform.localRotation = Quaternion.Euler(0f, 0f, spinAngle);
             }
 
-            // Meteor particle trail (green sparks & droplets)
-            particleTimer += Time.deltaTime;
-            if (particleTimer >= 0.025f)
-            {
-                particleTimer = 0f;
-                CombatFx.Sparks(currentPos, new Color(0.35f, 1f, 0.45f), 1, 0.4f, life: 0.18f);
-                CombatFx.Droplets(currentPos, new Color(0.2f, 0.95f, 0.35f), 1, 0.8f);
-            }
-
             if (t >= 1.0f)
             {
                 OnImpact();
+            }
+        }
+
+        private void EmitPixelMeteorTrail(Vector3 from, Vector3 to)
+        {
+            float spacing = 1.5f * CombatFxArt.Pixel; // Emit pixel motes every 1.5 map pixels (~0.047 units)
+            float length = Vector3.Distance(from, to);
+            if (length <= 0.0001f) return;
+
+            Vector3 delta = to - from;
+            Vector3 direction = delta.normalized;
+
+            trailDistance += length;
+            while (trailDistance >= spacing)
+            {
+                trailDistance -= spacing;
+                Vector3 point = to - direction * trailDistance;
+                EmitMeteorPixel(point, direction);
+            }
+        }
+
+        private void EmitMeteorPixel(Vector3 point, Vector3 direction)
+        {
+            // 1. Hot pixel core: bright lime/white 2x2 dot
+            PixelParticles.Emit(new PixelParticle
+            {
+                Position = point,
+                Life = 0.16f,
+                StartColor = new Color(0.85f, 1.0f, 0.6f, 0.95f),
+                EndColor = new Color(0.2f, 0.95f, 0.35f, 0f),
+                Sprite = CombatFxArt.Dot2(),
+                SortingOrder = 38
+            });
+
+            // 2. Dense tapered pixel tail: emerald green trailing motes with drag
+            Vector2 jitter = UnityEngine.Random.insideUnitCircle * (CombatFxArt.Pixel * 1.5f);
+            PixelParticles.Emit(new PixelParticle
+            {
+                Position = (Vector2)point + jitter,
+                Velocity = (Vector2)(-direction * 0.45f) + UnityEngine.Random.insideUnitCircle * 0.12f,
+                Drag = 2.5f,
+                Life = UnityEngine.Random.Range(0.22f, 0.38f),
+                StartColor = new Color(0.25f, 0.95f, 0.4f, 0.9f),
+                EndColor = new Color(0.05f, 0.55f, 0.15f, 0f),
+                Sprite = UnityEngine.Random.value < 0.4f ? CombatFxArt.Dot2() : CombatFxArt.Dot1(),
+                SortingOrder = 37
+            });
+
+            // 3. Occasional pixel sparkle cross (~25% chance per step)
+            if (UnityEngine.Random.value < 0.25f)
+            {
+                PixelParticles.Emit(new PixelParticle
+                {
+                    Position = (Vector2)point + UnityEngine.Random.insideUnitCircle * (CombatFxArt.Pixel * 2f),
+                    Velocity = UnityEngine.Random.insideUnitCircle * 0.2f,
+                    Drag = 1.5f,
+                    Life = UnityEngine.Random.Range(0.2f, 0.35f),
+                    StartColor = new Color(0.9f, 1.0f, 0.7f, 0.95f),
+                    EndColor = new Color(0.15f, 0.85f, 0.3f, 0f),
+                    Sprite = CombatFxArt.Plus3(),
+                    SortingOrder = 39
+                });
             }
         }
 
@@ -227,16 +253,5 @@ namespace TrashTD.Combat
 
             Destroy(gameObject);
         }
-
-        private static Material sharedTrailMaterial;
-        private static Material GetTrailMaterial()
-        {
-            if (sharedTrailMaterial != null) return sharedTrailMaterial;
-            Shader shader = Shader.Find("Sprites/Default");
-            if (shader == null) shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
-            sharedTrailMaterial = new Material(shader);
-            return sharedTrailMaterial;
-        }
     }
 }
-
