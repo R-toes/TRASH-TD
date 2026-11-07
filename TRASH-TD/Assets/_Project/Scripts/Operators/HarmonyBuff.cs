@@ -33,8 +33,16 @@ namespace TrashTD.Operators
         {
             new Color(0.38f, 0.82f, 0.72f),
             new Color(0.98f, 0.91f, 0.72f),
-            new Color(0.98f, 0.74f, 0.24f)
+            new Color(0.98f, 0.74f, 0.24f),
+            new Color(0.92f, 0.42f, 0.85f)
         };
+
+        public static Color GetStackColor(int stackCount)
+        {
+            if (StackColors == null || StackColors.Length == 0) return Color.white;
+            int idx = Mathf.Clamp(stackCount - 1, 0, StackColors.Length - 1);
+            return StackColors[idx];
+        }
 
         // ---- Orbit look ----
         private const string NotesObjectName = "HarmonyNotes";
@@ -59,13 +67,17 @@ namespace TrashTD.Operators
             public SpriteRenderer renderer;
         }
 
-        private readonly List<Stack> stacks = new List<Stack>(MaxStacks);
+        private readonly List<Stack> stacks = new List<Stack>(4);
+        private int maxStacks = MaxStacks;
+        private float bonusPerStack = BonusPerStack;
         private OperatorBase owner;
         private SpriteRenderer body;
         private Transform notesRoot;
         private float sparkleTimer;
 
         public int Stacks => stacks.Count;
+        public int CurrentMaxStacks => maxStacks;
+        public float CurrentBonusPerStack => bonusPerStack;
 
         public static HarmonyBuff GetOrAdd(OperatorBase target)
         {
@@ -108,13 +120,16 @@ namespace TrashTD.Operators
         /// stack takes the new note). The note joins the orbit after <paramref name="revealDelay"/> seconds, when
         /// the flying note lands. With no note (tests), nothing is drawn. Returns the stack count afterwards.
         /// </summary>
-        public int AddStack(Sprite note = null, Color color = default, float revealDelay = 0f)
+        public int AddStack(Sprite note = null, Color color = default, float revealDelay = 0f, float bonusPerStack = BonusPerStack, int maxStacks = MaxStacks)
         {
+            this.maxStacks = Mathf.Max(this.maxStacks, maxStacks);
+            this.bonusPerStack = Mathf.Max(this.bonusPerStack, bonusPerStack);
+
             for (int i = stacks.Count - 1; i >= 0; i--)
                 if (stacks[i].remaining <= ExpiringSoonSeconds) RemoveStackAt(i, burst: true);
 
             Stack stack;
-            if (stacks.Count < MaxStacks)
+            if (stacks.Count < this.maxStacks)
             {
                 stack = new Stack { phase = stacks.Count > 0 ? stacks[stacks.Count - 1].phase + Mathf.PI : 0f };
                 stacks.Add(stack);
@@ -195,7 +210,7 @@ namespace TrashTD.Operators
         private void Apply()
         {
             if (owner == null) owner = GetComponent<OperatorBase>();
-            if (owner != null) owner.SetHarmonyStacks(stacks.Count);
+            if (owner != null) owner.SetHarmonyStacks(stacks.Count, bonusPerStack, maxStacks);
         }
 
         private void RemoveStackAt(int index, bool burst)

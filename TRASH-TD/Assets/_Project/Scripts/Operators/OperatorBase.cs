@@ -404,34 +404,44 @@ namespace TrashTD.Operators
         // ========================
 
         private int harmonyStacks;
+        private float harmonyBonusPerStack = HarmonyBuff.BonusPerStack;
+        private int harmonyMaxStacks = HarmonyBuff.MaxStacks;
         private int harmonyDEF;
         private int harmonyRES;
         private int harmonyHP;
 
         public int HarmonyStacks => harmonyStacks;
-        private float HarmonyBonus => HarmonyBuff.BonusPerStack * harmonyStacks;
+        public float HarmonyBonusPerStack => harmonyBonusPerStack;
+        public float HarmonyBonus => harmonyBonusPerStack * harmonyStacks;
 
-        /// <summary>Snipers and Medics attack (heal) 4% faster per Harmony stack: the interval is divided by this.</summary>
+        /// <summary>Snipers and Medics attack (heal) faster per Harmony stack: the interval is divided by this.</summary>
         public float HarmonyAttackSpeedMultiplier =>
             data != null && (data.operatorClass == OperatorClass.Sniper || data.operatorClass == OperatorClass.Medic)
                 ? 1f + HarmonyBonus
                 : 1f;
 
-        /// <summary>Casters deal 4% more Arts damage per Harmony stack, after RES (applied in EnemyBase.TryTakeAttackDamage).</summary>
+        /// <summary>Casters deal more Arts damage per Harmony stack, after RES (applied in EnemyBase.TryTakeAttackDamage).</summary>
         public float OutgoingArtsDamageMultiplier =>
             data != null && data.operatorClass == OperatorClass.Caster ? 1f + HarmonyBonus : 1f;
 
         /// <summary>
-        /// Sets the Harmony stack count (HarmonyBuff calls this). Each stack adds 4% of the rarity-scaled base
+        /// Sets the Harmony stack count (HarmonyBuff calls this). Each stack adds a percentage of the rarity-scaled base
         /// stat for this operator's class: Guard RES, Defender DEF, Specialist max HP (current HP rises with it
         /// and is clamped when it drops). Snipers, Medics and Casters read the count through the multipliers above.
         /// A Framiliar copy is the copied operator's class, so it gets that class's bonus.
         /// </summary>
         public void SetHarmonyStacks(int stacks)
         {
+            SetHarmonyStacks(stacks, harmonyBonusPerStack > 0f ? harmonyBonusPerStack : HarmonyBuff.BonusPerStack, harmonyMaxStacks > 0 ? harmonyMaxStacks : HarmonyBuff.MaxStacks);
+        }
+
+        public void SetHarmonyStacks(int stacks, float bonusPerStack, int maxStacks = HarmonyBuff.MaxStacks)
+        {
             if (data == null) return;
 
-            harmonyStacks = Mathf.Clamp(stacks, 0, HarmonyBuff.MaxStacks);
+            harmonyBonusPerStack = bonusPerStack;
+            harmonyMaxStacks = Mathf.Max(HarmonyBuff.MaxStacks, maxStacks);
+            harmonyStacks = Mathf.Clamp(stacks, 0, harmonyMaxStacks);
             float bonus = HarmonyBonus;
             OperatorClass operatorClass = data.operatorClass;
 

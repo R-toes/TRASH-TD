@@ -3,6 +3,7 @@ using UnityEngine;
 using TrashTD.Audio;
 using TrashTD.Combat;
 using TrashTD.Core.Grid;
+using TrashTD.Data;
 using TrashTD.Enemies;
 using TrashTD.Systems;
 
@@ -27,6 +28,18 @@ namespace TrashTD.Operators
 
         private GridManager gridManager;
         private readonly List<OperatorBase> alliesInRange = new List<OperatorBase>();
+
+        public bool HasFirstUpgrade => currentRarity >= OperatorRarity.Star3;
+        public bool HasSecondUpgrade => currentRarity >= OperatorRarity.Star4;
+
+        public float CurrentBonusPerStack => HasSecondUpgrade ? 0.08f : (HasFirstUpgrade ? 0.06f : 0.04f);
+        public int CurrentMaxStacks => (HasFirstUpgrade || HasSecondUpgrade) ? 4 : 3;
+        public int StacksGrantedPerCast => HasSecondUpgrade ? 2 : 1;
+
+        public void SetRarityForTesting(OperatorRarity rarity)
+        {
+            currentRarity = rarity;
+        }
 
         protected override void Update()
         {
@@ -73,21 +86,33 @@ namespace TrashTD.Operators
         public override void Attack(EnemyBase target) { }
 
         /// <summary>
-        /// Gives the ally one Harmony stack. A music note flies to it, then joins the notes circling the ally
-        /// (it appears in the orbit when the flight lands).
+        /// Gives the ally Harmony stack(s). Music notes fly to it, then join the notes circling the ally
+        /// (appearing in the orbit when the flight lands).
+        /// 1x Upgraded: 6% bonus per stack, cap 4.
+        /// 2x Upgraded: 8% bonus per stack, cap 4, gives 2 stacks default per cast.
         /// </summary>
         public void CastHarmony(OperatorBase target)
         {
             if (target == null || isStunned || isBound) return;
 
-            // The count after this stack: the note's colour row shows it (teal 1, cream 2, gold 3).
-            int stacksAfter = Mathf.Min(HarmonyBuff.ActiveStacksOn(target) + 1, HarmonyBuff.MaxStacks);
-            Color color = HarmonyBuff.StackColors[stacksAfter - 1];
-            Sprite note = PickNote(stacksAfter);
+            int count = StacksGrantedPerCast;
+            float bonus = CurrentBonusPerStack;
+            int maxCap = CurrentMaxStacks;
+            HarmonyBuff buff = HarmonyBuff.GetOrAdd(target);
 
-            HarmonyBuff.GetOrAdd(target).AddStack(note, color, MusicNoteVisual.FlightSeconds);
+            for (int i = 0; i < count; i++)
+            {
+                int currentActive = HarmonyBuff.ActiveStacksOn(target);
+                int stacksAfter = Mathf.Min(currentActive + 1, maxCap);
+                Color color = HarmonyBuff.GetStackColor(stacksAfter);
+                Sprite note = PickNote(stacksAfter);
+
+                float flightDelay = MusicNoteVisual.FlightSeconds + (i * 0.08f);
+                buff.AddStack(note, color, flightDelay, bonus, maxCap);
+                MusicNoteVisual.Fire(ProjectileOrigin, target, note, color);
+            }
+
             UnitSfx.Play(data, UnitSfxEvent.Attack);
-            MusicNoteVisual.Fire(ProjectileOrigin, target, note, color);
         }
 
         /// <summary>
@@ -144,10 +169,14 @@ namespace TrashTD.Operators
         {
             if (noteSprites == null || noteSprites.Length == 0) return null;
 
-            int row = Mathf.Clamp(stacks, 1, HarmonyBuff.MaxStacks) - 1;
+            int row = Mathf.Clamp(stacks, 1, CurrentMaxStacks) - 1;
             int rowStart = row * NotesPerRow;
-            if (rowStart + NotesPerRow > noteSprites.Length) rowStart = 0;
+            if (rowStart + NotesPerRow > noteSprites.Length)
+            {
+                rowStart = Mathf.Max(0, (noteSprites.Length / NotesPerRow - 1) * NotesPerRow);
+            }
             int count = Mathf.Min(NotesPerRow, noteSprites.Length - rowStart);
+            if (count <= 0) return null;
             return noteSprites[rowStart + Random.Range(0, count)];
         }
     }
