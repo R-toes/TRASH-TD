@@ -596,7 +596,7 @@ namespace TrashTD.Editor
                 stagger.damageType = DamageType.Physical;
                 stagger.roleTags = new[] { "Multi-Target", "Brawler" };
                 stagger.skillDescription =
-                    "<color=#FFD700>Base (2★):</color> When attacking, strikes all enemies on his tile and in range ahead simultaneously. Has a 20% chance to dodge any attack; a successful dodge increases the next attack's damage by 50%.\n<color=#FFD700>1st upgrade (3★):</color> Dodge chance increases to 30% and heals 10% of max HP when killing an enemy.\n<color=#FFD700>2nd upgrade (4★):</color> Dodge chance increases to 40% and heals 5% of max HP when successfully dodging. When receiving fatal damage, prevents HP from falling below 1 for 10 seconds (recharges upon reaching full HP or when the wave ends).";
+                    "<color=#FFD700>Base (2★):</color> When attacking, strikes all enemies on his tile and in range ahead simultaneously. Has a 20% chance to dodge any attack; a successful dodge increases the next attack's damage by 50%.\n<color=#FFD700>1st upgrade (3★):</color> Block count increases by 1. Dodge chance increases to 30% and heals 5% of max HP when successfully dodging.\n<color=#FFD700>2nd upgrade (4★):</color> Dodge chance increases to 40% and heals 10% of max HP when killing an enemy. Every enemy that comes to the tile before or to the sides of his front tile range gets pulled into it and stopped for 1 second (except tanks and flying enemies).";
                 EditorUtility.SetDirty(stagger);
             }
 

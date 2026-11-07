@@ -15,9 +15,9 @@ namespace TrashTD.Operators
     /// Ability: Six-Limb Slugger — Pure AoE melee brawler.
     /// Base (2★): When attacking, strikes all enemies on his tile and in range ahead simultaneously.
     ///   Has a 20% chance to dodge any attack; a successful dodge increases the next attack's damage by 50%.
-    /// 1st upgrade (3★): Dodge chance increases to 30% and heals 10% of max HP when killing an enemy.
-    /// 2nd upgrade (4★): Dodge chance increases to 40% and heals 5% of max HP when successfully dodging.
-    ///   When receiving fatal damage, prevents HP from falling below 1 for 10 seconds (recharges upon reaching full HP or when the wave ends).
+    /// 1x upgrade (3★): Block count increases by 1. Dodge chance increases to 30% and heals 5% of max HP when successfully dodging.
+    /// 2nd upgrade (4★): Dodge chance increases to 40% and heals 10% of max HP when killing an enemy.
+    ///   Every enemy that comes to the tile before or to the sides of his front tile range gets pulled into it and stopped for 1 second (except tanks and flying enemies).
     /// Uses 48x32 Six-Limb Slugger attack animation with right 32x32 pivot offset (2/3, 0.5)
     /// to keep Stag-ger centered on the deployed tile while the flurry of punches extends into the forward tile.
     /// </summary>
@@ -28,7 +28,9 @@ namespace TrashTD.Operators
         public const float Star4DodgeChance = 0.40f;
         public const float KillHealPercent = 0.10f;
         public const float DodgeHealPercent = 0.05f;
-        public const float FatalPreventionDuration = 10.0f;
+        public const float PullStopDuration = 1.0f;
+        public const float PullMoveDuration = 0.2f;
+        public const int ExtraBlockCount = 1;
 
         public static float GetDodgeChance(OperatorRarity rarity)
         {
@@ -38,20 +40,72 @@ namespace TrashTD.Operators
         }
 
         public float CurrentDodgeChance => GetDodgeChance(currentRarity);
-        public bool HasKillHealUpgrade => currentRarity >= OperatorRarity.Star3;
-        public bool HasDodgeHealUpgrade => currentRarity >= OperatorRarity.Star4;
-        public bool HasFatalPreventionUpgrade => currentRarity >= OperatorRarity.Star4;
+        public bool HasDodgeHealUpgrade => currentRarity >= OperatorRarity.Star3;
+        public bool HasExtraBlockUpgrade => currentRarity >= OperatorRarity.Star3;
+        public bool HasKillHealUpgrade => currentRarity >= OperatorRarity.Star4;
+        public bool HasPullUpgrade => currentRarity >= OperatorRarity.Star4;
 
-        public bool IsFatalPreventionReady => isFatalPreventionReady;
-        public bool IsFatalPreventionActive => fatalPreventionTimer > 0f;
-        public float FatalPreventionTimer => fatalPreventionTimer;
+        public override int GetBlockCount()
+        {
+            int blockCount = base.GetBlockCount();
+            return blockCount > 0 && HasExtraBlockUpgrade ? blockCount + ExtraBlockCount : blockCount;
+        }
+
+        public void SetRarityForTesting(OperatorRarity rarity)
+        {
+            currentRarity = rarity;
+        }
+
+        public void SetDeployedForTesting(GridCell cell, OperatorFacing facingDirection = OperatorFacing.Right)
+        {
+            deployedCell = cell;
+            isDeployed = true;
+            facing = facingDirection;
+        }
 
         private readonly List<EnemyBase> targetBuffer = new List<EnemyBase>();
+        private readonly HashSet<EnemyBase> pulledEnemies = new HashSet<EnemyBase>();
         private bool hasDodgeAtkBuff;
         private StaggerSpriteAnimation spriteAnimation;
 
-        private bool isFatalPreventionReady = true;
-        private float fatalPreventionTimer = 0f;
+        public bool HasPulledEnemy(EnemyBase enemy) => enemy != null && pulledEnemies.Contains(enemy);
+        public void ResetPulledEnemiesForTesting() => pulledEnemies.Clear();
+
+        public static bool IsImmuneToPull(EnemyBase enemy)
+        {
+            if (enemy == null) return true;
+            if (enemy.Data != null)
+            {
+                if (enemy.Data.archetype == EnemyArchetype.Tank) return true;
+                if (enemy.Data.movementType == EnemyMovementType.Air || enemy.Data.archetype == EnemyArchetype.Flyer) return true;
+            }
+            if (enemy is TankEnemy || enemy is JunkernautEnemy) return true;
+            if (enemy is FlyerEnemy) return true;
+            return false;
+        }
+
+        public static Vector2Int GetFacingOffset(OperatorFacing facing)
+        {
+            return facing switch
+            {
+                OperatorFacing.Up => new Vector2Int(0, 1),
+                OperatorFacing.Left => new Vector2Int(-1, 0),
+                OperatorFacing.Down => new Vector2Int(0, -1),
+                _ => new Vector2Int(1, 0)
+            };
+        }
+
+        public static Vector2Int GetSideOffset(OperatorFacing facing)
+        {
+            return facing switch
+            {
+                OperatorFacing.Up => new Vector2Int(-1, 0),
+                OperatorFacing.Down => new Vector2Int(1, 0),
+                OperatorFacing.Left => new Vector2Int(0, -1),
+                _ => new Vector2Int(0, 1) // OperatorFacing.Right
+            };
+        }
+
         private bool wasWaveActive;
         private TrashTD.Core.GameLoop.WaveManager cachedWaveManager;
 
@@ -103,14 +157,14 @@ namespace TrashTD.Operators
         public override void Initialize(OperatorData operatorData, OperatorRarity rarity, OperatorFacing operatorFacing = OperatorFacing.Right)
         {
             base.Initialize(operatorData, rarity, operatorFacing);
-            ReloadFatalPrevention();
+            ResetPulledEnemies();
         }
 
         protected override void OnDeployed()
         {
             base.OnDeployed();
             hasDodgeAtkBuff = false;
-            ReloadFatalPrevention();
+            ResetPulledEnemies();
             EnsureStaggerAnimation();
             SubscribeToGameEvents();
         }
@@ -118,7 +172,7 @@ namespace TrashTD.Operators
         protected override void OnRetreated()
         {
             hasDodgeAtkBuff = false;
-            ReloadFatalPrevention();
+            ResetPulledEnemies();
             SpriteAnimation?.CancelAttack();
             UnsubscribeFromGameEvents();
             base.OnRetreated();
@@ -140,10 +194,10 @@ namespace TrashTD.Operators
             var wm = GetWaveManager();
             if (wm != null)
             {
-                wm.OnSingleWaveFinished -= ReloadFatalPrevention;
-                wm.OnSingleWaveFinished += ReloadFatalPrevention;
-                wm.OnAllWavesCleared -= ReloadFatalPrevention;
-                wm.OnAllWavesCleared += ReloadFatalPrevention;
+                wm.OnSingleWaveFinished -= ResetPulledEnemies;
+                wm.OnSingleWaveFinished += ResetPulledEnemies;
+                wm.OnAllWavesCleared -= ResetPulledEnemies;
+                wm.OnAllWavesCleared += ResetPulledEnemies;
             }
         }
 
@@ -156,8 +210,8 @@ namespace TrashTD.Operators
 
             if (cachedWaveManager != null)
             {
-                cachedWaveManager.OnSingleWaveFinished -= ReloadFatalPrevention;
-                cachedWaveManager.OnAllWavesCleared -= ReloadFatalPrevention;
+                cachedWaveManager.OnSingleWaveFinished -= ResetPulledEnemies;
+                cachedWaveManager.OnAllWavesCleared -= ResetPulledEnemies;
             }
         }
 
@@ -165,7 +219,7 @@ namespace TrashTD.Operators
         {
             if (phase == TrashTD.Core.GameLoop.StagePhase.Preparation || phase == TrashTD.Core.GameLoop.StagePhase.CardPick)
             {
-                ReloadFatalPrevention();
+                ResetPulledEnemies();
             }
         }
 
@@ -178,24 +232,14 @@ namespace TrashTD.Operators
             return cachedWaveManager;
         }
 
+        public void ResetPulledEnemies()
+        {
+            pulledEnemies.Clear();
+        }
+
         public void ReloadFatalPrevention()
         {
-            fatalPreventionTimer = 0f;
-            isFatalPreventionReady = true;
-        }
-
-        protected override void OnHealed(int amount)
-        {
-            base.OnHealed(amount);
-            CheckFullHpReload();
-        }
-
-        public void CheckFullHpReload()
-        {
-            if (HasFatalPreventionUpgrade && !isFatalPreventionReady && currentHP >= maxHP)
-            {
-                ReloadFatalPrevention();
-            }
+            ResetPulledEnemies();
         }
 
         protected override void Update()
@@ -204,29 +248,99 @@ namespace TrashTD.Operators
 
             if (!isDeployed) return;
 
-            if (fatalPreventionTimer > 0f && !IsCombatPaused)
+            CheckWaveStateTransitions();
+
+            if (!IsCombatPaused)
             {
-                fatalPreventionTimer = Mathf.Max(0f, fatalPreventionTimer - Time.deltaTime);
+                CheckPullEnemies();
+            }
+        }
+
+        public void CheckPullEnemies()
+        {
+            if (!HasPullUpgrade || !isDeployed || deployedCell == null || isStunned || isBound) return;
+
+            GridManager gridManager = FindAnyObjectByType<GridManager>();
+            if (gridManager == null) return;
+
+            Vector2Int forwardDir = GetFacingOffset(Facing);
+            Vector2Int sideDir = GetSideOffset(Facing);
+
+            Vector2Int frontPos = deployedCell.GridPosition + forwardDir;
+            GridCell frontCell = gridManager.GetCell(frontPos);
+            if (frontCell == null) return;
+
+            Vector2Int aheadPos = frontPos + forwardDir;
+            Vector2Int sidePos1 = frontPos + sideDir;
+            Vector2Int sidePos2 = frontPos - sideDir;
+
+            var triggerCells = new List<GridCell>(3);
+            GridCell aheadCell = gridManager.GetCell(aheadPos);
+            if (aheadCell != null) triggerCells.Add(aheadCell);
+
+            GridCell sideCell1 = gridManager.GetCell(sidePos1);
+            if (sideCell1 != null) triggerCells.Add(sideCell1);
+
+            GridCell sideCell2 = gridManager.GetCell(sidePos2);
+            if (sideCell2 != null) triggerCells.Add(sideCell2);
+
+            if (triggerCells.Count == 0) return;
+
+            Vector3 destination = frontCell.WorldPosition;
+
+            pulledEnemies.RemoveWhere(e => e == null || e.IsDead);
+
+            List<EnemyBase> candidates = null;
+            if (EnemyManager.Instance != null)
+            {
+                candidates = EnemyManager.Instance.GetEnemiesInCells(triggerCells);
+            }
+            else
+            {
+                candidates = new List<EnemyBase>();
+                EnemyBase[] allEnemies = FindObjectsByType<EnemyBase>();
+                for (int i = 0; i < allEnemies.Length; i++)
+                {
+                    EnemyBase e = allEnemies[i];
+                    if (e != null && !e.IsDead)
+                    {
+                        Vector2Int ePos = gridManager.WorldToGridPosition(e.transform.position);
+                        if (ePos == aheadPos || ePos == sidePos1 || ePos == sidePos2)
+                        {
+                            candidates.Add(e);
+                        }
+                    }
+                }
             }
 
-            CheckFullHpReload();
-            CheckWaveStateTransitions();
+            if (candidates == null || candidates.Count == 0) return;
+
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                EnemyBase enemy = candidates[i];
+                if (enemy == null || enemy.IsDead || enemy.IsInsideHole) continue;
+                if (pulledEnemies.Contains(enemy)) continue;
+                if (IsImmuneToPull(enemy)) continue;
+
+                pulledEnemies.Add(enemy);
+                bool pulled = enemy.PullTo(destination, PullStopDuration, PullMoveDuration);
+                if (pulled)
+                {
+                    MeleeSwipeVisual.Play(transform.position, destination, new Color(1f, 0.6f, 0.2f, 0.8f));
+                    PlayAbilitySound("Pull", SfxId.CombatStun);
+                }
+            }
         }
 
         private void CheckWaveStateTransitions()
         {
-            if (IsCombatPaused && (!isFatalPreventionReady || fatalPreventionTimer > 0f))
-            {
-                ReloadFatalPrevention();
-            }
-
             var wm = GetWaveManager();
             if (wm != null)
             {
                 bool isWaveActive = wm.IsWaveInProgress;
                 if (wasWaveActive && !isWaveActive)
                 {
-                    ReloadFatalPrevention();
+                    ResetPulledEnemies();
                 }
                 wasWaveActive = isWaveActive;
             }
@@ -308,29 +422,7 @@ namespace TrashTD.Operators
             if (damage <= 0 || currentHP <= 0) return 0;
 
             int previousHP = currentHP;
-
-            if (HasFatalPreventionUpgrade)
-            {
-                if (fatalPreventionTimer > 0f)
-                {
-                    // Continuously prevent HP from falling below 1 for the 10-second duration
-                    currentHP = Mathf.Max(1, currentHP - damage);
-                }
-                else if (damage >= currentHP && isFatalPreventionReady)
-                {
-                    // Fatal damage received: trigger 10s immortality window and clamp HP to 1
-                    TriggerFatalPrevention();
-                    currentHP = 1;
-                }
-                else
-                {
-                    currentHP = Mathf.Max(0, currentHP - damage);
-                }
-            }
-            else
-            {
-                currentHP = Mathf.Max(0, currentHP - damage);
-            }
+            currentHP = Mathf.Max(0, currentHP - damage);
 
             int actualDamage = previousHP - currentHP;
             if (actualDamage > 0)
@@ -339,10 +431,6 @@ namespace TrashTD.Operators
                 WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
                 HitReaction.Play(gameObject, transform.position, actualDamage, maxHP);
             }
-            else if (fatalPreventionTimer > 0f)
-            {
-                HitReaction.Play(gameObject, transform.position, 0, maxHP);
-            }
 
             if (currentHP <= 0)
             {
@@ -350,37 +438,6 @@ namespace TrashTD.Operators
             }
 
             return actualDamage;
-        }
-
-        private void TriggerFatalPrevention()
-        {
-            isFatalPreventionReady = false;
-            fatalPreventionTimer = FatalPreventionDuration;
-            FloatingCombatNumber.ShowText(transform.position, "UNDYING!", new Color(1f, 0.45f, 0.1f));
-            PlayAbilitySound("Undying", SfxId.CombatStun);
-        }
-
-        protected override void Die()
-        {
-            if (HasFatalPreventionUpgrade)
-            {
-                if (fatalPreventionTimer > 0f)
-                {
-                    currentHP = 1;
-                    WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
-                    return;
-                }
-
-                if (isFatalPreventionReady)
-                {
-                    TriggerFatalPrevention();
-                    currentHP = 1;
-                    WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
-                    return;
-                }
-            }
-
-            base.Die();
         }
 
         public List<EnemyBase> GetTargetsInRange()
@@ -501,7 +558,7 @@ namespace TrashTD.Operators
                 {
                     hitAny = true;
 
-                    // 1x Upgrade: Heals 10% of max HP when killing an enemy
+                    // 2x Upgrade: Heals 10% of max HP when killing an enemy
                     if (HasKillHealUpgrade && (enemy.IsDead || enemy.CurrentHP <= 0))
                     {
                         int healAmount = Mathf.Max(1, Mathf.RoundToInt(maxHP * KillHealPercent));

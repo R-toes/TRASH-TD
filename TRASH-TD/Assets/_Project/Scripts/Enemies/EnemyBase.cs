@@ -336,6 +336,12 @@ namespace TrashTD.Enemies
             if (isDead) return;
 
             UpdateChillStatus(Time.deltaTime);
+
+            if (isPushingBack)
+            {
+                UpdatePushback();
+            }
+
             if (isFrozen || isStunned) return;
 
             if (isBlocked)
@@ -360,11 +366,7 @@ namespace TrashTD.Enemies
                 // hit lands as soon as an operator blocks this enemy instead of a full interval later.
                 ChargeMeleeAttack(Time.deltaTime);
 
-                if (isPushingBack)
-                {
-                    UpdatePushback();
-                }
-                else
+                if (!isPushingBack)
                 {
                     // Move along path
                     MoveAlongPath();
@@ -391,13 +393,13 @@ namespace TrashTD.Enemies
             if (isDead) return false;
 
             UpdateChillStatus(deltaTime);
-            if (isFrozen || isStunned) return false;
 
             if (isPushingBack)
             {
                 UpdatePushback();
-                return false;
             }
+
+            if (isFrozen || isStunned) return false;
 
             return true;
         }
@@ -1089,6 +1091,54 @@ namespace TrashTD.Enemies
 
             pushbackStartPosition = transform.position;
             pushbackTargetPosition = pushedPosition;
+            pushbackTargetPathIndex = nextPathIndex;
+            pushbackElapsed = 0f;
+            pushbackDuration = Mathf.Max(0.01f, duration);
+            isPushingBack = true;
+            return true;
+        }
+
+        /// <summary>
+        /// Pull this enemy to the specified destination, stopping its movement and attacks for stopDuration seconds.
+        /// Returns true if the pull was initiated.
+        /// </summary>
+        public bool PullTo(Vector3 destination, float stopDuration = 2f, float duration = 0.2f)
+        {
+            if (isDead || isInsideHole)
+                return false;
+
+            if (isBlocked && blockingOperator != null)
+                blockingOperator.ReleaseBlock(this);
+
+            int nextPathIndex = currentPathIndex;
+            if (path != null && path.Count > 0)
+            {
+                int closestIndex = 0;
+                float closestDist = float.MaxValue;
+                for (int i = 0; i < path.Count; i++)
+                {
+                    float d = Vector3.Distance(destination, path[i]);
+                    if (d < closestDist)
+                    {
+                        closestDist = d;
+                        closestIndex = i;
+                    }
+                }
+                nextPathIndex = Mathf.Clamp(closestIndex + 1, 0, path.Count - 1);
+            }
+
+            ApplyStun(stopDuration);
+
+            if (!Application.isPlaying)
+            {
+                transform.position = destination;
+                currentPathIndex = nextPathIndex;
+                isPushingBack = false;
+                return true;
+            }
+
+            pushbackStartPosition = transform.position;
+            pushbackTargetPosition = destination;
             pushbackTargetPathIndex = nextPathIndex;
             pushbackElapsed = 0f;
             pushbackDuration = Mathf.Max(0.01f, duration);
