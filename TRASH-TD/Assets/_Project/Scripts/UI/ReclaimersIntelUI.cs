@@ -968,7 +968,11 @@ namespace TrashTD.UI
                 PlaceTopLeft(portraitBack.rectTransform, 10f, 10f, TileWidth - 20f, 112f);
                 Image portrait = CreateImage(portraitBack.rectTransform, "Portrait", Color.white);
                 portrait.rectTransform.anchorMin = portrait.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-                SetPixelSprite(portrait, entry.Frames.Length > 0 ? entry.Frames[0] : null, 104f);
+                SetPixelSprite(
+                    portrait,
+                    entry.Frames.Length > 0 ? entry.Frames[0] : null,
+                    104f,
+                    GetIntelSpriteReferenceWidth(entry));
                 SetSilhouette(portrait, entry.Locked);
 
                 if (entry.Operator != null)
@@ -1040,7 +1044,11 @@ namespace TrashTD.UI
             playingFrameDuration = Mathf.Max(0.04f, entry.FrameDuration);
             frameIndex = 0;
             frameTimer = 0f;
-            SetPixelSprite(stageSprite, playingFrames.Length > 0 ? playingFrames[0] : null, StageSize - 28f);
+            SetPixelSprite(
+                stageSprite,
+                playingFrames.Length > 0 ? playingFrames[0] : null,
+                StageSize - 28f,
+                GetIntelSpriteReferenceWidth(entry));
             SetSilhouette(stageSprite, entry.Locked);
             scrambled.RemoveAll(item => item.text == nameText);
 
@@ -1657,7 +1665,12 @@ namespace TrashTD.UI
         }
 
         /// <summary>Shows a sprite at the largest whole-number scale that fits <paramref name="maxSize"/> (pixel art stays crisp).</summary>
-        private static void SetPixelSprite(Image image, Sprite sprite, float maxSize)
+        private static float GetIntelSpriteReferenceWidth(IntelEntry entry)
+        {
+            return entry.Operator != null && entry.Operator.operatorName == "Echosquire" ? 32f : 0f;
+        }
+
+        private static void SetPixelSprite(Image image, Sprite sprite, float maxSize, float referenceWidth = 0f)
         {
             if (image == null) return;
             image.sprite = sprite;
@@ -1665,8 +1678,10 @@ namespace TrashTD.UI
             if (sprite == null) return;
 
             Vector2 pixels = sprite.rect.size;
-            float scale = Mathf.Max(1f, Mathf.Floor(maxSize / Mathf.Max(pixels.x, pixels.y)));
-            if (Mathf.Max(pixels.x, pixels.y) > maxSize) scale = maxSize / Mathf.Max(pixels.x, pixels.y);
+            float sizingWidth = referenceWidth > 0f ? referenceWidth : pixels.x;
+            float sizingDimension = Mathf.Max(sizingWidth, pixels.y);
+            float scale = Mathf.Max(1f, Mathf.Floor(maxSize / sizingDimension));
+            if (sizingDimension > maxSize) scale = maxSize / sizingDimension;
             image.rectTransform.sizeDelta = pixels * scale;
         }
 
