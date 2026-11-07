@@ -121,6 +121,105 @@ namespace TrashTD.Tests
         }
 
         [Test]
+        public void PerfectParry_ReducesDirectDamageAndReflectsWithPerAttackerCooldown()
+        {
+            SetRarity(OperatorRarity.Star4);
+            TankEnemy firstAttacker = CreateEnemy<TankEnemy>(EnemyArchetype.Tank);
+            TankEnemy secondAttacker = CreateEnemy<TankEnemy>(EnemyArchetype.Tank);
+            int startingHP = shadeslice.CurrentHP;
+            int firstAttackerHP = firstAttacker.CurrentHP;
+            int secondAttackerHP = secondAttacker.CurrentHP;
+
+            Assert.IsTrue(shadeslice.TryTakeAttackDamage(100, DamageType.True, firstAttacker));
+            Assert.AreEqual(startingHP - 65, shadeslice.CurrentHP);
+            Assert.AreEqual(firstAttackerHP - 20, firstAttacker.CurrentHP);
+
+            Assert.IsTrue(shadeslice.TryTakeAttackDamage(100, DamageType.True, firstAttacker));
+            Assert.AreEqual(startingHP - 130, shadeslice.CurrentHP);
+            Assert.AreEqual(firstAttackerHP - 20, firstAttacker.CurrentHP,
+                "The same attacker must respect the 0.6 second reflection cooldown.");
+
+            Assert.IsTrue(shadeslice.TryTakeAttackDamage(100, DamageType.True, secondAttacker));
+            Assert.AreEqual(secondAttackerHP - 20, secondAttacker.CurrentHP,
+                "A different attacker has an independent reflection cooldown.");
+        }
+
+        [Test]
+        public void PerfectParry_DoesNotReduceOrReflectAreaOrEnvironmentalDamage()
+        {
+            SetRarity(OperatorRarity.Star4);
+            TankEnemy attacker = CreateEnemy<TankEnemy>(EnemyArchetype.Tank);
+            int attackerHP = attacker.CurrentHP;
+            int startingHP = shadeslice.CurrentHP;
+
+            Assert.IsTrue(shadeslice.TryTakeAreaAttackDamage(100, DamageType.True, attacker));
+            Assert.AreEqual(startingHP - 100, shadeslice.CurrentHP);
+            Assert.AreEqual(attackerHP, attacker.CurrentHP);
+
+            Assert.IsTrue(shadeslice.TakeTrueDamage(100));
+            Assert.AreEqual(startingHP - 200, shadeslice.CurrentHP);
+            Assert.AreEqual(attackerHP, attacker.CurrentHP);
+        }
+
+        [Test]
+        public void PerfectParry_IsLockedAtShadeslicesBaseRarity()
+        {
+            TankEnemy attacker = CreateEnemy<TankEnemy>(EnemyArchetype.Tank);
+            int startingHP = shadeslice.CurrentHP;
+            int attackerHP = attacker.CurrentHP;
+
+            Assert.IsTrue(shadeslice.TryTakeAttackDamage(100, DamageType.True, attacker));
+            Assert.AreEqual(startingHP - 100, shadeslice.CurrentHP);
+            Assert.AreEqual(attackerHP, attacker.CurrentHP);
+        }
+
+        [Test]
+        public void PhantomPursuit_UsesExitProximityAndAppliesIsolationMultiplierOnce()
+        {
+            GruntEnemy fartherEnemy = CreateEnemy<GruntEnemy>(EnemyArchetype.Grunt);
+            GruntEnemy closestEnemy = CreateEnemy<GruntEnemy>(EnemyArchetype.Grunt);
+            fartherEnemy.SetPath(new List<Vector3> { Vector3.zero, new Vector3(3f, 0f, 0f) });
+            closestEnemy.SetPath(new List<Vector3> { Vector3.zero, new Vector3(2f, 0f, 0f) });
+            typeof(EnemyBase).GetField("currentPathIndex", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(closestEnemy, 1);
+            fartherEnemy.transform.position = Vector3.zero;
+            closestEnemy.transform.position = new Vector3(1.9f, 0f, 0f);
+
+            Assert.AreSame(closestEnemy,
+                ShadesliceOperator.FindClosestToExitTarget(new EnemyBase[] { fartherEnemy, closestEnemy }));
+            Assert.AreEqual(330, ShadesliceOperator.CalculatePhantomAttackPower(110, 2f, false));
+            Assert.AreEqual(660, ShadesliceOperator.CalculatePhantomAttackPower(110, 2f, true),
+                "The existing 2x isolation multiplier must only be applied once.");
+        }
+
+        [Test]
+        public void PhantomPursuit_CounterPersistsAcrossTargetsAndResetsEveryThirdSuccessfulHit()
+        {
+            SetRarity(OperatorRarity.Star5);
+            TankEnemy attacker = CreateEnemy<TankEnemy>(EnemyArchetype.Tank);
+            int startingHP = shadeslice.CurrentHP;
+            int attackerHP = attacker.CurrentHP;
+            Assert.IsTrue(shadeslice.TryTakeAttackDamage(100, DamageType.True, attacker));
+            Assert.AreEqual(startingHP - 65, shadeslice.CurrentHP);
+            Assert.AreEqual(attackerHP - 20, attacker.CurrentHP,
+                "The 2x upgrade must retain the 1x Perfect Parry ability.");
+
+            GruntEnemy firstTarget = CreateEnemy<GruntEnemy>(EnemyArchetype.Grunt);
+            GruntEnemy secondTarget = CreateEnemy<GruntEnemy>(EnemyArchetype.Grunt);
+            MethodInfo applyAttackDamage = typeof(ShadesliceOperator).GetMethod(
+                "ApplyAttackDamage",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(applyAttackDamage);
+
+            applyAttackDamage.Invoke(shadeslice, new object[] { firstTarget, 1 });
+            Assert.AreEqual(1, shadeslice.SuccessfulNormalAttackCount);
+            applyAttackDamage.Invoke(shadeslice, new object[] { secondTarget, 1 });
+            Assert.AreEqual(2, shadeslice.SuccessfulNormalAttackCount);
+            applyAttackDamage.Invoke(shadeslice, new object[] { secondTarget, 1 });
+            Assert.AreEqual(0, shadeslice.SuccessfulNormalAttackCount);
+        }
+
+        [Test]
         public void FlyingEnemy_CannotTargetUnblockedShadeslice()
         {
             RangedFlyingEnemy attacker = CreateEnemy<RangedFlyingEnemy>(EnemyArchetype.Flyer);
@@ -290,6 +389,12 @@ namespace TrashTD.Tests
             TEnemy enemy = enemyObject.AddComponent<TEnemy>();
             enemy.Initialize(data, 1);
             return enemy;
+        }
+
+        private void SetRarity(OperatorRarity rarity)
+        {
+            typeof(OperatorBase).GetField("currentRarity", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(shadeslice, rarity);
         }
     }
 }

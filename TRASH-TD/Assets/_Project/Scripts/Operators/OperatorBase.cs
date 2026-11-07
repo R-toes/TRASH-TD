@@ -781,7 +781,8 @@ namespace TrashTD.Operators
                 return;
             }
 
-            int damage = Combat.DamageCalculator.CalculateDamage(rawATK, CurrentDEF, CurrentRES, damageType);
+            int calculatedDamage = Combat.DamageCalculator.CalculateDamage(rawATK, CurrentDEF, CurrentRES, damageType);
+            int damage = Mathf.Max(0, ModifyDamageAfterMitigation(calculatedDamage, damageType, attacker));
             int previousHP = currentHP;
             currentHP = Mathf.Max(0, currentHP - damage);
             int actualDamage = previousHP - currentHP;
@@ -790,6 +791,7 @@ namespace TrashTD.Operators
                 TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualDamage, damageType);
                 TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
                 TrashTD.Combat.HitReaction.Play(gameObject, transform.position, actualDamage, maxHP);
+                OnDamageApplied(calculatedDamage, actualDamage, damageType, attacker);
             }
 
             if (currentHP <= 0)
@@ -933,6 +935,12 @@ namespace TrashTD.Operators
         // ========================
         // Virtual Hooks (for subclass-specific behavior)
         // ========================
+
+        /// <summary>Adjusts damage after normal mitigation and before HP is changed.</summary>
+        protected virtual int ModifyDamageAfterMitigation(int damage, DamageType damageType, EnemyBase attacker) => damage;
+
+        /// <summary>Called after a hit has actually reduced this operator's HP.</summary>
+        protected virtual void OnDamageApplied(int calculatedDamage, int actualDamage, DamageType damageType, EnemyBase attacker) { }
 
         /// <summary>Called after successful deployment.</summary>
         protected virtual void OnDeployed() { }
