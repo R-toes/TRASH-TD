@@ -25,7 +25,7 @@ namespace TrashTD.UI
         // Enemy parade: kept low so it never reaches the menu column
         private const float FloorHeight = 16f;
         private const float ParadeScale = 3f;
-        private const float MaxParadeHeight = 108f;
+        private const float MaxParadeHeight = 256f;
         private const float ParadeAirHeight = 64f;
         private const int MaxWalkers = 5;
 
@@ -47,6 +47,7 @@ namespace TrashTD.UI
             public Sprite[] frames;
             public float frameRate;
             public float speed;
+            public float visualScale;
             public bool flying;
         }
 
@@ -363,11 +364,24 @@ namespace TrashTD.UI
                             frames = frames,
                             frameRate = frameRate,
                             speed = Mathf.Clamp(50f + data.moveSpeed * 40f, 45f, 170f),
+                            visualScale = GetParadeVisualScale(data),
                             flying = data.movementType == EnemyMovementType.Air
                         });
                     }
                 }
             }
+        }
+
+        private static float GetParadeVisualScale(EnemyData data)
+        {
+            float scale = Mathf.Max(0.01f, data.visualScale);
+            if (string.Equals(data.enemyName, "Sand Hulk", System.StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(data.enemyName, "THE ERADICATOR", System.StringComparison.OrdinalIgnoreCase))
+            {
+                scale *= 2f;
+            }
+
+            return scale;
         }
 
         private void UpdateParade(float dt)
@@ -412,8 +426,9 @@ namespace TrashTD.UI
         {
             ParadeEnemy enemy = paradeEnemies[Random.Range(0, paradeEnemies.Count)];
             Vector2 frameSize = enemy.frames[0].rect.size;
-            float scale = Mathf.Max(1f, Mathf.Floor(Mathf.Min(ParadeScale, MaxParadeHeight / frameSize.y)));
-            Vector2 size = frameSize * scale;
+            float visualHeight = frameSize.y * enemy.visualScale;
+            float pixelScale = Mathf.Max(1f, Mathf.Floor(Mathf.Min(ParadeScale, MaxParadeHeight / visualHeight)));
+            Vector2 size = frameSize * (pixelScale * enemy.visualScale);
             int count = Random.Range(1, 3);
             float spacing = size.x * 1.1f + Random.Range(10f, 40f);
 
