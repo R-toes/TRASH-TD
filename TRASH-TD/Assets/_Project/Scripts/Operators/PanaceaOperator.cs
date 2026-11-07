@@ -261,10 +261,18 @@ namespace TrashTD.Operators
             });
         }
 
+        public Vector3 GetThrowOrigin()
+        {
+            bool facingRight = spriteAnimation != null && spriteAnimation.GetComponent<SpriteRenderer>() != null &&
+                               spriteAnimation.GetComponent<SpriteRenderer>().flipX;
+            float dir = facingRight ? 1f : -1f;
+            return transform.position + new Vector3(dir * 0.42f, 0.08f, 0f);
+        }
+
         private void SpawnVialForTarget(OperatorBase target)
         {
             if (target == null) return;
-            Vector3 startPos = transform.position + new Vector3(0f, 0.25f, 0f);
+            Vector3 startPos = GetThrowOrigin();
             Vector3 targetPos = target.transform.position + new Vector3(0f, 0.25f, 0f);
             int healAmount = GetHealAmount();
 

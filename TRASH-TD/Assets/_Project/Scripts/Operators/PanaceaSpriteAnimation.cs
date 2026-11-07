@@ -8,10 +8,9 @@ namespace TrashTD.Operators
     /// Panacea's sprite animation controller:
     /// - Idle: 8-frame loop ("Panacea Sheet.png") at 0.125s per frame (8 fps).
     /// - Attack (Throw): 12 frames (top row of "Panacea-Throw-Reload.png", 64x32).
-    /// - Reload: 12 frames (bottom row of "Panacea-Throw-Reload.png", 64x32).
-    /// Both throw and reload play sequentially upon attack (24 frames total = 3.0s at 0.125s/frame).
-    /// When both finish, returns to idle animation.
-    /// If cooldown is less than 3s, playback is scaled down to fit within the cooldown.
+    ///   The actual throw occurs on the 11th frame (index 10), launching the projectile from Panacea's hand.
+    /// - Reload: 12 frames (bottom row of "Panacea-Throw-Reload.png", 64x32), played after throw finishes.
+    /// - Idle Return: When both finish, returns to idle animation.
     /// </summary>
     [RequireComponent(typeof(SpriteRenderer))]
     public class PanaceaSpriteAnimation : MonoBehaviour, IOperatorSpriteFrames
@@ -19,8 +18,10 @@ namespace TrashTD.Operators
         public const int IdleFrameCount = 8;
         public const int ThrowFrameCount = 12;
         public const int ReloadFrameCount = 12;
-        public const int ReleaseFrameIndex = 5; // frame at which vial is launched forward
-        public const float DefaultFrameDuration = 0.125f;
+        public const int ReleaseFrameIndex = 10; // 11th frame (0-indexed: 10)
+        public const float DefaultIdleFrameDuration = 0.125f;
+        public const float DefaultThrowFrameDuration = 0.06f;
+        public const float DefaultReloadFrameDuration = 0.07f;
 
         public enum AnimState
         {
@@ -30,10 +31,10 @@ namespace TrashTD.Operators
         }
 
         [SerializeField] private Sprite[] idleFrames;
-        [SerializeField] private Sprite[] frames;
+        [SerializeField] private Sprite[] frames; // fallback/alias for prefab compatibility
         [SerializeField] private Sprite[] throwFrames;
         [SerializeField] private Sprite[] reloadFrames;
-        [SerializeField, Min(0.01f)] private float idleFrameDuration = DefaultFrameDuration;
+        [SerializeField, Min(0.01f)] private float idleFrameDuration = DefaultIdleFrameDuration;
 
         public Sprite[] Frames => idleFrames != null && idleFrames.Length > 0 ? idleFrames : frames;
         public float FrameDuration => idleFrameDuration;
@@ -43,12 +44,15 @@ namespace TrashTD.Operators
         public AnimState CurrentState => currentState;
         public int CurrentFrameIndex => currentFrameIndex;
         public bool IsAttacking => currentState == AnimState.Throw || currentState == AnimState.Reload;
+        public float ThrowAnimDuration => throwAnimDuration;
+        public float ReloadAnimDuration => reloadAnimDuration;
 
         private SpriteRenderer spriteRenderer;
         private AnimState currentState = AnimState.Idle;
         private int currentFrameIndex = 0;
         private float frameTimer = 0f;
-        private float animFrameDuration = DefaultFrameDuration;
+        private float throwAnimDuration = DefaultThrowFrameDuration;
+        private float reloadAnimDuration = DefaultReloadFrameDuration;
         private Action onThrowCallback;
 
         public void Configure(Sprite[] idle, Sprite[] throwAnim, Sprite[] reloadAnim)
@@ -63,9 +67,9 @@ namespace TrashTD.Operators
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
             EnsureFramesLoaded();
-            if (spriteRenderer != null && idleFrames != null && idleFrames.Length > 0 && spriteRenderer.sprite == null)
+            if (spriteRenderer != null && Frames != null && Frames.Length > 0 && spriteRenderer.sprite == null)
             {
-                spriteRenderer.sprite = idleFrames[0];
+                spriteRenderer.sprite = Frames[0];
             }
         }
 
@@ -141,7 +145,6 @@ namespace TrashTD.Operators
                 {
                     if (a is Sprite s) allSprites.Add(s);
                 }
-                // Sort by name (e.g. Panacea-Throw-Reload_0, _1, ... _23)
                 allSprites.Sort((a, b) =>
                 {
                     int numA = ExtractTrailingNumber(a.name);
@@ -175,7 +178,7 @@ namespace TrashTD.Operators
 
                     for (int i = 0; i < ThrowFrameCount; i++)
                     {
-                        // Top row in Unity Texture2D coordinates: y = 32
+                        // Top row: y = 32
                         throwFrames[i] = Sprite.Create(tex, new Rect(i * 64, 32, 64, 32), pivot, ppu);
                         // Bottom row: y = 0
                         reloadFrames[i] = Sprite.Create(tex, new Rect(i * 64, 0, 64, 32), pivot, ppu);
@@ -203,15 +206,19 @@ namespace TrashTD.Operators
         {
             EnsureFramesLoaded();
 
-            // Total 24 frames at DefaultFrameDuration (0.125s) = 3.0s.
-            // "adjust if not applicable when upgraded to 3 secs. but if the frames are exact, dont speed it up."
-            if (currentCooldown < 3.0f && currentCooldown > 0.05f)
+            float totalAnimTime = (ThrowFrameCount * DefaultThrowFrameDuration) + (ReloadFrameCount * DefaultReloadFrameDuration);
+
+            // Scale down only if cooldown is shorter than total animation time
+            if (currentCooldown < totalAnimTime && currentCooldown > 0.05f)
             {
-                animFrameDuration = currentCooldown / 24f;
+                float scale = currentCooldown / totalAnimTime;
+                throwAnimDuration = DefaultThrowFrameDuration * scale;
+                reloadAnimDuration = DefaultReloadFrameDuration * scale;
             }
             else
             {
-                animFrameDuration = DefaultFrameDuration;
+                throwAnimDuration = DefaultThrowFrameDuration;
+                reloadAnimDuration = DefaultReloadFrameDuration;
             }
 
             currentState = AnimState.Throw;
@@ -234,9 +241,9 @@ namespace TrashTD.Operators
             onThrowCallback = null;
 
             if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
-            if (spriteRenderer != null && idleFrames != null && idleFrames.Length > 0)
+            if (spriteRenderer != null && Frames != null && Frames.Length > 0)
             {
-                spriteRenderer.sprite = idleFrames[0];
+                spriteRenderer.sprite = Frames[0];
             }
         }
 
@@ -258,11 +265,12 @@ namespace TrashTD.Operators
             switch (currentState)
             {
                 case AnimState.Throw:
-                    while (frameTimer >= animFrameDuration)
+                    while (frameTimer >= throwAnimDuration)
                     {
-                        frameTimer -= animFrameDuration;
+                        frameTimer -= throwAnimDuration;
                         currentFrameIndex++;
 
+                        // 11th frame (index 10): projectile comes out of Panacea
                         if (currentFrameIndex == ReleaseFrameIndex)
                         {
                             onThrowCallback?.Invoke();
@@ -271,7 +279,6 @@ namespace TrashTD.Operators
 
                         if (currentFrameIndex >= ThrowFrameCount)
                         {
-                            // Throw animation ends -> Switch to Reload animation
                             if (onThrowCallback != null)
                             {
                                 onThrowCallback.Invoke();
@@ -294,19 +301,18 @@ namespace TrashTD.Operators
                     break;
 
                 case AnimState.Reload:
-                    while (frameTimer >= animFrameDuration)
+                    while (frameTimer >= reloadAnimDuration)
                     {
-                        frameTimer -= animFrameDuration;
+                        frameTimer -= reloadAnimDuration;
                         currentFrameIndex++;
 
                         if (currentFrameIndex >= ReloadFrameCount)
                         {
-                            // Reload animation ends -> Return to Idle animation
                             currentState = AnimState.Idle;
                             currentFrameIndex = 0;
-                            if (idleFrames != null && idleFrames.Length > 0)
+                            if (Frames != null && Frames.Length > 0)
                             {
-                                spriteRenderer.sprite = idleFrames[0];
+                                spriteRenderer.sprite = Frames[0];
                             }
                             break;
                         }
@@ -322,10 +328,10 @@ namespace TrashTD.Operators
                     while (frameTimer >= idleFrameDuration)
                     {
                         frameTimer -= idleFrameDuration;
-                        if (idleFrames != null && idleFrames.Length > 0)
+                        if (Frames != null && Frames.Length > 0)
                         {
-                            currentFrameIndex = (currentFrameIndex + 1) % idleFrames.Length;
-                            spriteRenderer.sprite = idleFrames[currentFrameIndex];
+                            currentFrameIndex = (currentFrameIndex + 1) % Frames.Length;
+                            spriteRenderer.sprite = Frames[currentFrameIndex];
                         }
                     }
                     break;
