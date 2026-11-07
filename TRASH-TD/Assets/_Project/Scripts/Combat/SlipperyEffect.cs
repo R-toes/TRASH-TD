@@ -18,6 +18,7 @@ namespace TrashTD.Combat
         [SerializeField] private float durationRemaining = 10f;
         [SerializeField] private bool isFading = false;
         private bool isExpired = false;
+        private PersistentStatusText statusText;
 
         public OperatorBase TargetOperator => targetOperator;
         public int BlockReduction => blockReduction;
@@ -25,6 +26,7 @@ namespace TrashTD.Combat
         public float DurationRemaining => durationRemaining;
         public bool IsFading => isFading;
         public bool IsExpired => isExpired;
+        public PersistentStatusText StatusText => statusText;
 
         public static SlipperyEffect Apply(OperatorBase target, int reduction = 1, float fadeDuration = 10f)
         {
@@ -39,7 +41,12 @@ namespace TrashTD.Combat
             effect.isExpired = false;
 
             target.ModifyBlockCount(-reduction);
-            FloatingCombatNumber.ShowText(target.transform.position, "SLIPPERY", new Color(0.4f, 0.85f, 1f));
+            effect.statusText = PersistentStatusText.Show(
+                target.gameObject,
+                $"-{reduction} BLOCK",
+                Color.white,
+                0.7f,
+                "SlipperyBlock");
 
             return effect;
         }
@@ -95,7 +102,6 @@ namespace TrashTD.Combat
             if (targetOperator != null)
             {
                 targetOperator.ModifyBlockCount(blockReduction);
-                FloatingCombatNumber.ShowText(targetOperator.transform.position, $"+{blockReduction} BLOCK (RECOVERED)", new Color(0.4f, 1f, 0.5f));
             }
 
             SafeDestroy();
@@ -110,6 +116,7 @@ namespace TrashTD.Combat
 
         private void SafeDestroy()
         {
+            ClearStatusText();
             if (Application.isPlaying)
             {
                 Destroy(this);
@@ -117,6 +124,24 @@ namespace TrashTD.Combat
             else
             {
                 DestroyImmediate(this);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            ClearStatusText();
+        }
+
+        private void ClearStatusText()
+        {
+            if (statusText != null)
+            {
+                statusText.Dismiss();
+                statusText = null;
+            }
+            if (targetOperator != null)
+            {
+                PersistentStatusText.Hide(targetOperator.gameObject, "SlipperyBlock");
             }
         }
     }

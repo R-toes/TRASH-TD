@@ -26,6 +26,10 @@ namespace TrashTD.Enemies
         [Range(0f, 1f)]
         [SerializeField] private float operatorDefReductionPercent = DefaultOperatorDefReductionPercent;
 
+        private PersistentStatusText duelStatusText;
+
+        public PersistentStatusText DuelStatusText => duelStatusText;
+
         public float SelfDefReductionPercent
         {
             get => selfDefReductionPercent;
@@ -73,7 +77,7 @@ namespace TrashTD.Enemies
         {
             if (!CanReceiveDamageFrom(attacker))
             {
-                FloatingCombatNumber.ShowText(VisualPosition, "DUEL!", new Color(1f, 0.85f, 0.3f));
+                FloatingCombatNumber.ShowText(VisualPosition, "DUEL", Color.white);
                 return false;
             }
 
@@ -83,7 +87,49 @@ namespace TrashTD.Enemies
         public override void OnBlocked(OperatorBase blocker)
         {
             base.OnBlocked(blocker);
-            FloatingCombatNumber.ShowText(VisualPosition, "DUEL!", new Color(1f, 0.45f, 0.2f));
+            ClearDuelStatusText();
+            duelStatusText = PersistentStatusText.Show(
+                gameObject,
+                "DUEL",
+                Color.white,
+                0.75f,
+                "Duel");
+        }
+
+        public override void OnUnblocked()
+        {
+            base.OnUnblocked();
+            ClearDuelStatusText();
+        }
+
+        protected override void Die()
+        {
+            ClearDuelStatusText();
+            base.Die();
+        }
+
+        protected virtual void OnDestroy()
+        {
+            ClearDuelStatusText();
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+            if (duelStatusText != null && (!isBlocked || blockingOperator == null || isDead))
+            {
+                ClearDuelStatusText();
+            }
+        }
+
+        private void ClearDuelStatusText()
+        {
+            if (duelStatusText != null)
+            {
+                duelStatusText.Dismiss();
+                duelStatusText = null;
+            }
+            PersistentStatusText.Hide(gameObject, "Duel");
         }
     }
 }

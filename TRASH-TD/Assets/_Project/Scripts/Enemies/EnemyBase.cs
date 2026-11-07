@@ -1278,7 +1278,7 @@ namespace TrashTD.Enemies
 
             if (!CanReceiveDamageFrom(attacker))
             {
-                FloatingCombatNumber.ShowText(VisualPosition, "DUEL!", new Color(1f, 0.85f, 0.3f));
+                FloatingCombatNumber.ShowText(VisualPosition, "DUEL", Color.white);
                 return false;
             }
             bool bypassAirImmunity = canHitAir || (attacker != null && attacker.CanHitAir);

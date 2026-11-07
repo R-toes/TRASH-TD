@@ -277,6 +277,7 @@ namespace TrashTD.Operators
                 }
             }
             blockCountModifier = 0;
+            ClearBoundStatusText();
 
             deployedCell?.Vacate();
             deployedCell = null;
@@ -603,6 +604,9 @@ namespace TrashTD.Operators
         // Bind System
         // ========================
 
+        private PersistentStatusText boundStatusText;
+        public PersistentStatusText BoundStatusText => boundStatusText;
+
         /// <summary>
         /// Applies a bind to this operator. While bound, an operator cannot attack, block, or use abilities.
         /// </summary>
@@ -614,10 +618,6 @@ namespace TrashTD.Operators
             if (!isBound)
             {
                 isBound = true;
-                Color textColor = (source is HextensionEnemy hex)
-                    ? WireColorPalette.GetCoreColor(hex.CurrentWireColor)
-                    : new Color(0.72f, 0.45f, 0.95f);
-                TrashTD.Combat.FloatingCombatNumber.ShowText(transform.position, "BOUND!", textColor);
             }
 
             // Immediately release any currently blocked enemies
@@ -635,6 +635,7 @@ namespace TrashTD.Operators
             {
                 isBound = false;
                 bindTimer = 0f;
+                ClearBoundStatusText();
                 UpdateStunVisual();
             }
         }
@@ -647,9 +648,20 @@ namespace TrashTD.Operators
                 if (bindTimer <= 0f)
                 {
                     isBound = false;
+                    ClearBoundStatusText();
                     UpdateStunVisual();
                 }
             }
+        }
+
+        private void ClearBoundStatusText()
+        {
+            if (boundStatusText != null)
+            {
+                boundStatusText.Dismiss();
+                boundStatusText = null;
+            }
+            PersistentStatusText.Hide(gameObject, "Bound");
         }
 
         protected virtual void UpdateStunVisual()
