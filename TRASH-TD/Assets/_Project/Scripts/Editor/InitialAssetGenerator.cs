@@ -33,6 +33,7 @@ namespace TrashTD.Editor
         private const string ResicochetSkillDescription = "<color=#FFD700>Base (3★):</color> Stores a charge every 5 seconds (up to 3). Attacks fire 1 projectile per charge that bounces to up to 4 targets, dealing less damage each bounce.\n<color=#FFD700>1st upgrade (4★):</color> Charging is updated to 3 seconds. Additional 1 bounce.\n<color=#FFD700>2nd upgrade (5★):</color> Bounce doesn't get reduced damage anymore. Operators in range act as an extension of Resicochet's range, but doesn't attack on the extension range if not fully charged.";
         private const string FlurmonicaSkillDescription = "<color=#FFD700>Base (2★):</color> Does not heal. Every 2s, gives 1 Harmony stack to a random ally in range with the fewest stacks (max 3, each lasts 8s). Each stack: Guard +4% RES, Defender +4% DEF, Sniper and Medic +4% attack speed, Caster +4% Arts damage, Specialist +4% max HP.\n<color=#FFD700>1st upgrade (3★):</color> Talent improvements become 6%, stack cap increased to 4.\n<color=#FFD700>2nd upgrade (4★):</color> Talent improvements become 8%, grants 2 stacks by default on each cast.";
         private const string ThornchinSkillDescription = "<color=#FFD700>Base (2★):</color> Whenever Thornchin is attacked, it retaliates against the attacker with sharp urchin spines, dealing Physical damage equal to Thornchin's ATK.\n<color=#FFD700>1st upgrade (3★):</color> Retaliate spikes deal additional DOT that deals 5 Arts damage for 5 seconds (stacks up to 4 times).\n<color=#FFD700>2nd upgrade (4★):</color> Deals additional AoE damage in the adjacent tiles that can stack up to 4 times.";
+        private const string PanaceaSkillDescription = "<color=#FFD700>Base (3★):</color> Global range. Every 5s, heals the operator with the lowest HP% anywhere on the field.\n<color=#FFD700>1st upgrade (4★):</color> Cooldown is changed to 3s. Heals up to 2 operators.\n<color=#FFD700>2nd upgrade (5★):</color> Restores HP of all operators on the map by a fixed +5 HP per second (excluding Drawgoo).";
         private const string EnemyDataFolder = "Assets/_Project/Data/Enemies";
         private const string StageDataFolder = "Assets/Resources/Stages";
         private const string OperatorPrefabFolder = "Assets/_Project/Prefabs/Operators";
@@ -871,6 +872,14 @@ namespace TrashTD.Editor
                 progeny.skillDescription =
                     "<color=#FFD700>Base (2★):</color> Heals bounce between 2 operators (healing reduced by 50% when it bounces).\n<color=#FFD700>1st upgrade (3★):</color> Additional 1 bounce, and increases range by 1 tile at every adjacent tile.\n<color=#FFD700>2nd upgrade (4★):</color> Healing bounces are no longer reduced.";
                 EditorUtility.SetDirty(progeny);
+            }
+
+            // 5d. Medic (Panacea)
+            var panacea = AssetDatabase.LoadAssetAtPath<OperatorData>($"{OperatorDataFolder}/OP_Medic_Panacea.asset");
+            if (panacea != null)
+            {
+                panacea.skillDescription = PanaceaSkillDescription;
+                EditorUtility.SetDirty(panacea);
             }
 
             // 6. Specialist (Framiliar)

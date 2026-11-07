@@ -32,7 +32,7 @@ MonoBehaviour:
   cannotBeHealed: 0
   bonusWhenIsolated: 0
   isolatedAttackMultiplier: 1.5
-  skillDescription: 'Passive - Panacea: Global range. Every 5s, heals the operator with the lowest HP% anywhere on the field.'
+  skillDescription: "<color=#FFD700>Base (3★):</color> Global range. Every 5s, heals the operator with the lowest HP% anywhere on the field.\n<color=#FFD700>1st upgrade (4★):</color> Cooldown is changed to 3s. Heals up to 2 operators.\n<color=#FFD700>2nd upgrade (5★):</color> Restores HP of all operators on the map by a fixed +5 HP per second (excluding Drawgoo)."
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5
