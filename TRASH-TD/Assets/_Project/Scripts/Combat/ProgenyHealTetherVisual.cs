@@ -5,29 +5,44 @@ using UnityEngine;
 namespace TrashTD.Combat
 {
     /// <summary>
-    /// Seamless connected fading moving line visual for Progeny's chain heal.
-    /// Draws a single continuous multi-segment glowing beam (LineRenderer with corner rounding)
-    /// that streams from Progeny's red pod through each bounce target in sequence.
-    /// As the leading head reaches each target, the onReachTarget callback triggers the heal
-    /// and restorative cross splash particles.
+    /// Seamless connected fading moving pixel-art line visual for Progeny's chain heal.
+    /// Draws a continuous multi-segment glowing pixel-art line (rasterized onto the 32 PPU grid
+    /// using Bresenham's line algorithm into 1-pixel quads) that streams from Progeny's red pod
+    /// through each bounce target in sequence.
+    /// A white-hot core (CoreColor) is bordered by a 1px vivid red glow (BrightRed), with a leading
+    /// ArtsOrb at the head. As the leading head reaches each target, the onReachPoint callback
+    /// triggers the heal and restorative cross splash particles.
     /// </summary>
     public sealed class ProgenyHealTetherVisual : MonoBehaviour
     {
+        public const float ArtPixel = 1f / 32f; // one stage-art pixel in world units (32 PPU)
         public const float DefaultLifetime = 0.35f;
         public const float TravelSpeed = 16f; // units per second
-        public const float FadeDuration = 0.22f; // fade after head arrives
-        private const float DefaultWidth = 0.07f;
+        public const float FadeDuration = 0.66f; // fade after head arrives (x3 slower so it doesn't fade too fast at 3x game speed)
+        public const float DefaultWidth = 0.07f; // legacy width reference (~2.24 art pixels)
 
-        public static readonly Color BrightRed = new Color(1f, 0.16f, 0.22f, 1f);
-        public static readonly Color CoreColor = new Color(1f, 0.82f, 0.85f, 1f);
+        // Darker rich red palette matching Progeny's pods (#CC3636 and #761F28) — no pale/pink washed-out tones
+        public static readonly Color BrightRed = new Color(0.85f, 0.12f, 0.16f, 1f);
+        public static readonly Color DarkRed = new Color(0.46f, 0.08f, 0.11f, 1f);
+        public static readonly Color CoreColor = new Color(0.85f, 0.12f, 0.16f, 1f);
+
+        private static readonly Vector2Int[] CardinalNeighbors = new[]
+        {
+            new Vector2Int(0, 1),
+            new Vector2Int(0, -1),
+            new Vector2Int(1, 0),
+            new Vector2Int(-1, 0)
+        };
 
         private static Material sharedMaterial;
 
-        private LineRenderer mainLine;
-        private LineRenderer coreLine;
+        private Mesh lineMesh;
+        private MeshFilter meshFilter;
+        private MeshRenderer meshRenderer;
         private SpriteRenderer leadingOrb;
         private SpriteRenderer leadingHalo;
 
+        private Color baseColor = BrightRed;
         private Vector3[] pathPoints;
         private float[] segmentLengths;
         private float[] prefixLengths;
@@ -42,7 +57,22 @@ namespace TrashTD.Combat
         private bool isHeadArrived;
         private float elapsed;
 
-        private readonly List<Vector3> subPoints = new List<Vector3>(8);
+        // Reused scratch buffers to eliminate garbage collection allocations
+        private readonly List<Vector3> subPoints = new List<Vector3>(16);
+        private readonly HashSet<Vector2Int> corePixels = new HashSet<Vector2Int>();
+        private readonly HashSet<Vector2Int> borderPixels = new HashSet<Vector2Int>();
+        private readonly List<Vector3> vertices = new List<Vector3>(1024);
+        private readonly List<Color32> colors = new List<Color32>(1024);
+        private readonly List<int> triangles = new List<int>(1536);
+
+        public MeshRenderer LineMeshRenderer => meshRenderer;
+        public Mesh LineMesh => lineMesh;
+        public SpriteRenderer LeadingOrb => leadingOrb;
+        public SpriteRenderer LeadingHalo => leadingHalo;
+        public bool IsHeadArrived => isHeadArrived;
+        public float HeadDistance => headDistance;
+        public float TailDistance => tailDistance;
+        public float TotalLength => totalLength;
 
         public static ProgenyHealTetherVisual PlayChain(
             Vector3[] points,
@@ -67,8 +97,9 @@ namespace TrashTD.Combat
             return PlayChain(new[] { start, end }, null, color);
         }
 
-        private void Initialize(Vector3[] points, Action<int>[] callbacks, Color color)
+        public void Initialize(Vector3[] points, Action<int>[] callbacks, Color color)
         {
+            baseColor = color;
             pathPoints = new Vector3[points.Length];
             for (int i = 0; i < points.Length; i++)
             {
@@ -93,33 +124,19 @@ namespace TrashTD.Combat
 
             Material mat = GetSharedMaterial();
 
-            // Main outer glowing line (numCornerVertices = 4 ensures perfectly smooth rounded seamless corners)
-            GameObject mainObj = new GameObject("ChainMainLine");
-            mainObj.transform.SetParent(transform, false);
-            mainLine = mainObj.AddComponent<LineRenderer>();
-            mainLine.useWorldSpace = true;
-            mainLine.numCapVertices = 4;
-            mainLine.numCornerVertices = 4;
-            mainLine.startWidth = DefaultWidth;
-            mainLine.endWidth = DefaultWidth;
-            mainLine.sortingOrder = 80;
-            mainLine.sharedMaterial = mat;
-            mainLine.startColor = color;
-            mainLine.endColor = color;
+            // Dynamic pixel-art line mesh (1-pixel quads on the 32 PPU grid)
+            GameObject meshObj = new GameObject("PixelLineMesh");
+            meshObj.transform.SetParent(transform, false);
+            meshFilter = meshObj.AddComponent<MeshFilter>();
+            meshRenderer = meshObj.AddComponent<MeshRenderer>();
+            meshRenderer.sharedMaterial = mat;
+            meshRenderer.sortingOrder = 80;
+            meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            meshRenderer.receiveShadows = false;
 
-            // Inner hot core
-            GameObject coreObj = new GameObject("ChainCoreLine");
-            coreObj.transform.SetParent(transform, false);
-            coreLine = coreObj.AddComponent<LineRenderer>();
-            coreLine.useWorldSpace = true;
-            coreLine.numCapVertices = 4;
-            coreLine.numCornerVertices = 4;
-            coreLine.startWidth = DefaultWidth * 0.45f;
-            coreLine.endWidth = DefaultWidth * 0.45f;
-            coreLine.sortingOrder = 81;
-            coreLine.sharedMaterial = mat;
-            coreLine.startColor = CoreColor;
-            coreLine.endColor = CoreColor;
+            lineMesh = new Mesh { name = "ProgenyPixelLine" };
+            lineMesh.MarkDynamic();
+            meshFilter.sharedMesh = lineMesh;
 
             // Leading red ArtsOrb at the head of the beam
             GameObject orbObj = new GameObject("LeadingOrb");
@@ -141,7 +158,7 @@ namespace TrashTD.Combat
             isHeadArrived = false;
             elapsed = 0f;
 
-            UpdatePositions();
+            UpdatePositions(1f);
         }
 
         private void Update()
@@ -175,7 +192,7 @@ namespace TrashTD.Combat
             if (isHeadArrived)
             {
                 headArrivalTimer += dt;
-                float catchUpSpeed = TravelSpeed * 1.5f;
+                float catchUpSpeed = beamLength / FadeDuration;
                 tailDistance = Mathf.Min(totalLength, tailDistance + catchUpSpeed * dt);
             }
             else
@@ -183,47 +200,41 @@ namespace TrashTD.Combat
                 tailDistance = Mathf.Max(0f, headDistance - beamLength);
             }
 
-            // Calculate alpha fade
+            // Calculate alpha fade (x3 slower)
             float alpha = 1f;
             if (isHeadArrived)
             {
                 alpha = Mathf.Clamp01(1f - (headArrivalTimer / FadeDuration));
             }
 
-            // Update line colors
-            Color cMain = BrightRed;
-            cMain.a = alpha;
-            mainLine.startColor = cMain;
-            mainLine.endColor = cMain;
-
-            Color cCore = CoreColor;
-            cCore.a = alpha;
-            coreLine.startColor = cCore;
-            coreLine.endColor = cCore;
-
+            // Update leading orb & halo alpha
             if (leadingOrb != null)
             {
-                Color oCol = Color.white;
-                oCol.a = alpha;
-                leadingOrb.color = oCol;
+                leadingOrb.color = new Color(1f, 1f, 1f, alpha);
             }
 
             if (leadingHalo != null)
             {
-                Color hCol = new Color(BrightRed.r, BrightRed.g, BrightRed.b, 0.5f * alpha);
-                leadingHalo.color = hCol;
+                leadingHalo.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0.5f * alpha);
             }
 
-            UpdatePositions();
+            UpdatePositions(alpha);
 
             // Destroy when completely finished and faded
-            if (isHeadArrived && (tailDistance >= totalLength || headArrivalTimer >= FadeDuration))
+            if (isHeadArrived && headArrivalTimer >= FadeDuration)
             {
-                Destroy(gameObject);
+                if (Application.isPlaying)
+                {
+                    Destroy(gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(gameObject);
+                }
             }
         }
 
-        private void UpdatePositions()
+        public void UpdatePositions(float alpha)
         {
             subPoints.Clear();
 
@@ -242,27 +253,127 @@ namespace TrashTD.Combat
                 }
             }
 
-            if (Vector3.Distance(tailPos, headPos) > 0.01f)
+            if (Vector3.Distance(tailPos, headPos) > 0.005f)
             {
                 subPoints.Add(headPos);
             }
-            else if (subPoints.Count == 1)
+
+            // Rasterize into pixel grid
+            corePixels.Clear();
+            borderPixels.Clear();
+            vertices.Clear();
+            colors.Clear();
+            triangles.Clear();
+
+            if (subPoints.Count >= 2)
             {
-                subPoints.Add(headPos + new Vector3(0.001f, 0f, 0f));
+                for (int i = 0; i < subPoints.Count - 1; i++)
+                {
+                    Vector2Int from = ToPixel(subPoints[i]);
+                    Vector2Int to = ToPixel(subPoints[i + 1]);
+                    AppendBresenham(from, to, corePixels);
+                }
+
+                // Generate 1-pixel border around core pixels
+                foreach (Vector2Int cell in corePixels)
+                {
+                    for (int k = 0; k < CardinalNeighbors.Length; k++)
+                    {
+                        Vector2Int neighbor = cell + CardinalNeighbors[k];
+                        if (!corePixels.Contains(neighbor))
+                        {
+                            borderPixels.Add(neighbor);
+                        }
+                    }
+                }
+
+                // Outline / border quads (drawn first) - darker crimson red shade (no pale tones)
+                Color bColor = new Color(baseColor.r * 0.52f, baseColor.g * 0.52f, baseColor.b * 0.52f, baseColor.a * alpha);
+                foreach (Vector2Int cell in borderPixels)
+                {
+                    AddPixelQuad(cell, bColor);
+                }
+
+                // Inner core quads (drawn over outline) - pure rich red
+                Color cColor = new Color(baseColor.r, baseColor.g, baseColor.b, baseColor.a * alpha);
+                foreach (Vector2Int cell in corePixels)
+                {
+                    AddPixelQuad(cell, cColor);
+                }
             }
 
-            mainLine.positionCount = subPoints.Count;
-            coreLine.positionCount = subPoints.Count;
-            for (int i = 0; i < subPoints.Count; i++)
-            {
-                mainLine.SetPosition(i, subPoints[i]);
-                coreLine.SetPosition(i, subPoints[i]);
-            }
+            WriteMesh(lineMesh);
 
+            // Update leading orb position snapped to art pixel grid
             if (leadingOrb != null)
             {
-                leadingOrb.transform.position = headPos;
+                Vector2Int headPixel = ToPixel(headPos);
+                leadingOrb.transform.position = new Vector3(
+                    (headPixel.x + 0.5f) * ArtPixel,
+                    (headPixel.y + 0.5f) * ArtPixel,
+                    -0.16f);
             }
+        }
+
+        private static Vector2Int ToPixel(Vector3 world)
+        {
+            return new Vector2Int(Mathf.FloorToInt(world.x / ArtPixel), Mathf.FloorToInt(world.y / ArtPixel));
+        }
+
+        private static void AppendBresenham(Vector2Int from, Vector2Int to, HashSet<Vector2Int> set)
+        {
+            int dx = Mathf.Abs(to.x - from.x);
+            int dy = -Mathf.Abs(to.y - from.y);
+            int sx = from.x < to.x ? 1 : -1;
+            int sy = from.y < to.y ? 1 : -1;
+            int error = dx + dy;
+            int x = from.x;
+            int y = from.y;
+
+            while (true)
+            {
+                set.Add(new Vector2Int(x, y));
+                if (x == to.x && y == to.y) break;
+                int e2 = 2 * error;
+                if (e2 >= dy) { error += dy; x += sx; }
+                if (e2 <= dx) { error += dx; y += sy; }
+            }
+        }
+
+        private void AddPixelQuad(Vector2Int cell, Color color)
+        {
+            int index = vertices.Count;
+            float x = cell.x * ArtPixel;
+            float y = cell.y * ArtPixel;
+
+            vertices.Add(new Vector3(x, y, -0.15f));
+            vertices.Add(new Vector3(x, y + ArtPixel, -0.15f));
+            vertices.Add(new Vector3(x + ArtPixel, y + ArtPixel, -0.15f));
+            vertices.Add(new Vector3(x + ArtPixel, y, -0.15f));
+
+            Color32 c = color;
+            colors.Add(c);
+            colors.Add(c);
+            colors.Add(c);
+            colors.Add(c);
+
+            triangles.Add(index);
+            triangles.Add(index + 1);
+            triangles.Add(index + 2);
+            triangles.Add(index);
+            triangles.Add(index + 2);
+            triangles.Add(index + 3);
+        }
+
+        private void WriteMesh(Mesh mesh)
+        {
+            if (mesh == null) return;
+            mesh.Clear();
+            if (vertices.Count > 65000) mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            mesh.SetVertices(vertices);
+            mesh.SetColors(colors);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateBounds();
         }
 
         private Vector3 SamplePosition(float dist)
@@ -283,13 +394,26 @@ namespace TrashTD.Combat
             return pathPoints[pathPoints.Length - 1];
         }
 
+        private void OnDestroy()
+        {
+            if (lineMesh != null)
+            {
+                if (Application.isPlaying) Destroy(lineMesh);
+                else DestroyImmediate(lineMesh);
+                lineMesh = null;
+            }
+        }
+
         private static Material GetSharedMaterial()
         {
             if (sharedMaterial != null) return sharedMaterial;
 
             Shader shader = Shader.Find("Sprites/Default");
             if (shader == null) shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
-            sharedMaterial = new Material(shader);
+            sharedMaterial = new Material(shader)
+            {
+                name = "ProgenyPixelLineMaterial"
+            };
             return sharedMaterial;
         }
     }
