@@ -72,39 +72,33 @@ namespace TrashTD.Enemies
             {
                 int reflectDamage = Mathf.Max(1, Mathf.RoundToInt(incomingDamage * reflectionPercent));
 
-                // Floating text indicator
-                FloatingCombatNumber.ShowText(VisualPosition, "REFLECT!", new Color(1f, 0.45f, 0.15f));
+                // Floating text indicator removed per user request
                 PlayAttackSound();
 
-                Vector3 startPos = VisualPosition;
                 Vector3 targetPos = targetOperator.transform.position;
-                float distance = Vector2.Distance(startPos, targetPos);
                 Color quillColor = new Color(0.95f, 0.45f, 0.15f, 1f);
 
-                if (distance <= 1.5f)
+                if (!Application.isPlaying)
                 {
-                    MeleeSwipeVisual.Play(startPos, targetPos, quillColor, 1f, MeleeStyle.Spikes);
                     targetOperator.TakeDamage(reflectDamage, reflectDamageType, this);
                 }
-                else
-                {
-                    CombatProjectileVisual.Fire(
-                        ProjectileOrigin,
-                        targetPos,
-                        quillColor,
-                        14f,
-                        0.09f,
-                        0.04f,
-                        false,
-                        () =>
+
+                CombatProjectileVisual.Fire(
+                    ProjectileOrigin,
+                    targetPos,
+                    quillColor,
+                    16f,
+                    0.09f,
+                    0.04f,
+                    false,
+                    () =>
+                    {
+                        if (Application.isPlaying && targetOperator != null && targetOperator.IsDeployed && targetOperator.CurrentHP > 0)
                         {
-                            if (targetOperator != null && targetOperator.IsDeployed && targetOperator.CurrentHP > 0)
-                            {
-                                targetOperator.TakeDamage(reflectDamage, reflectDamageType, this);
-                            }
-                        },
-                        ProjectileStyle.Quill);
-                }
+                            targetOperator.TakeDamage(reflectDamage, reflectDamageType, this);
+                        }
+                    },
+                    ProjectileStyle.SpoilcupineSpike);
             }
             finally
             {

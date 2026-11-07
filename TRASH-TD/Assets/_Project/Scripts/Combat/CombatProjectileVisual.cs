@@ -23,7 +23,9 @@ namespace TrashTD.Combat
         Sludge,   // Lobbed toxic glob that splats (enemy shots; purple for acid)
         Sand,     // Lobbed clod of sand that bursts into dust
         Glass,    // Skyshard's glass shard: glints in flight; the shatter is drawn by the AoE
-        Plasma    // Robodrone's energy bolt: glowing core with a flickering halo, ember trail, spark burst
+        Plasma,   // Robodrone's energy bolt: glowing core with a flickering halo, ember trail, spark burst
+        ThornchinSpike,
+        SpoilcupineSpike
     }
 
     /// <summary>
@@ -209,6 +211,8 @@ namespace TrashTD.Combat
                 ProjectileStyle.Sand => CombatFxArt.SandClod(),
                 ProjectileStyle.Glass => CombatFxArt.GlassShard(color),
                 ProjectileStyle.Plasma => CombatFxArt.PlasmaBolt(color),
+                ProjectileStyle.ThornchinSpike => CombatFxArt.ThornchinSpike(),
+                ProjectileStyle.SpoilcupineSpike => CombatFxArt.SpoilcupineSpike(),
                 _ => CombatFxArt.Bolt(color)
             };
         }
@@ -230,12 +234,36 @@ namespace TrashTD.Combat
         {
             return style == ProjectileStyle.Bolt || style == ProjectileStyle.Bullet || style == ProjectileStyle.Frost ||
                    style == ProjectileStyle.Rocket || style == ProjectileStyle.HeavyRocket || style == ProjectileStyle.Quill ||
-                   style == ProjectileStyle.Glass || style == ProjectileStyle.Plasma;
+                   style == ProjectileStyle.Glass || style == ProjectileStyle.Plasma ||
+                   style == ProjectileStyle.ThornchinSpike || style == ProjectileStyle.SpoilcupineSpike;
         }
 
         private void ApplyOrientation(Vector2 direction)
         {
             if (!IsOriented(style) || direction.sqrMagnitude < 0.0001f) return;
+
+            if (style == ProjectileStyle.ThornchinSpike || style == ProjectileStyle.SpoilcupineSpike)
+            {
+                // The source spike sprites face LEFT by default.
+                // If moving predominantly vertically:
+                if (Mathf.Abs(direction.y) > Mathf.Abs(direction.x) * 1.2f)
+                {
+                    if (body != null) body.flipX = false;
+                    float angle = direction.y > 0f ? -90f : 90f;
+                    transform.rotation = Quaternion.Euler(0f, 0f, angle);
+                }
+                else
+                {
+                    // Moving predominantly horizontally:
+                    transform.rotation = Quaternion.identity;
+                    if (body != null)
+                    {
+                        body.flipX = direction.x > 0f;
+                    }
+                }
+                return;
+            }
+
             transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
         }
 
@@ -358,6 +386,8 @@ namespace TrashTD.Combat
                 ProjectileStyle.Bubble => 7f,
                 ProjectileStyle.Sludge => 5f,
                 ProjectileStyle.Quill => 0f,
+                ProjectileStyle.ThornchinSpike => 0f,
+                ProjectileStyle.SpoilcupineSpike => 0f,
                 ProjectileStyle.Glass => 4f,
                 ProjectileStyle.Plasma => 2f,
                 _ => 3f
@@ -613,6 +643,8 @@ namespace TrashTD.Combat
                     CombatFx.Sparks(position, color, 2, 1.2f, 0.08f, direction: direction, coneDegrees: 100f);
                     break;
                 case ProjectileStyle.Quill:
+                case ProjectileStyle.ThornchinSpike:
+                case ProjectileStyle.SpoilcupineSpike:
                     CombatFx.Sparks(position, color, 3, 1.5f, 0.15f);
                     break;
                 case ProjectileStyle.ArtsOrb:

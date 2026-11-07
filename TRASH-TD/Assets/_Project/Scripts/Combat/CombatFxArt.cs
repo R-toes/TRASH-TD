@@ -96,6 +96,69 @@ namespace TrashTD.Combat
             "DCCCCLLWW",
             "DD.......");
 
+        private static Sprite thornchinSpikeSprite;
+        private static Sprite spoilcupineSpikeSprite;
+
+        public static Sprite ThornchinSpike()
+        {
+            if (thornchinSpikeSprite != null) return thornchinSpikeSprite;
+#if UNITY_EDITOR
+            var all = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Thornchin-Spike.png");
+            if (all != null)
+            {
+                for (int i = 0; i < all.Length; i++)
+                {
+                    if (all[i] is Sprite sp)
+                    {
+                        thornchinSpikeSprite = sp;
+                        return thornchinSpikeSprite;
+                    }
+                }
+            }
+#endif
+            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Thornchin-Spike.png");
+            if (System.IO.File.Exists(path))
+            {
+                byte[] raw = System.IO.File.ReadAllBytes(path);
+                var tex = new Texture2D(16, 16, TextureFormat.RGBA32, false);
+                tex.filterMode = FilterMode.Point;
+                tex.LoadImage(raw);
+                thornchinSpikeSprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), PixelsPerUnit);
+                return thornchinSpikeSprite;
+            }
+            return Quill(new Color(0.75f, 0.2f, 0.85f));
+        }
+
+        public static Sprite SpoilcupineSpike()
+        {
+            if (spoilcupineSpikeSprite != null) return spoilcupineSpikeSprite;
+#if UNITY_EDITOR
+            var all = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Enemies/Spoilcupine-Spike.png");
+            if (all != null)
+            {
+                for (int i = 0; i < all.Length; i++)
+                {
+                    if (all[i] is Sprite sp)
+                    {
+                        spoilcupineSpikeSprite = sp;
+                        return spoilcupineSpikeSprite;
+                    }
+                }
+            }
+#endif
+            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Enemies/Spoilcupine-Spike.png");
+            if (System.IO.File.Exists(path))
+            {
+                byte[] raw = System.IO.File.ReadAllBytes(path);
+                var tex = new Texture2D(16, 16, TextureFormat.RGBA32, false);
+                tex.filterMode = FilterMode.Point;
+                tex.LoadImage(raw);
+                spoilcupineSpikeSprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), PixelsPerUnit);
+                return spoilcupineSpikeSprite;
+            }
+            return Quill(new Color(0.95f, 0.45f, 0.15f));
+        }
+
         public static Sprite HealCross(Color color) => Shaded("healcross", color,
             "..OOO..",
             "..OWO..",
