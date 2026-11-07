@@ -1,0 +1,52 @@
+Echosquire alignment report
+===========================
+Idle placement: x=18, y=0 before baseline corrections.
+Idle vertical corrections by frame: [-1, -1, -1, -1, 0, 0, -1, -1]; top-edge opaque pixels clipped: [2, 2, 0, 0, 0, 0, 0, 0]
+Feet target: fill row 29, outline row 30.
+Attack corrections are integer vertical translations only; no horizontal attack shifts.
+Attack frame 1, 9, and 10 are replaced by the corresponding aligned idle poses.
+Impact starts on attack frame 6 at 530 ms; attack sequence duration is 1115 ms.
+GIF timing uses 10 ms ticks: idle 120/130 ms alternating (125 ms average), frame 6 rounds from 55 to 60 ms.
+
+Attack source measurements:
+frame | source foot-fill row | vertical correction
+------+----------------------+--------------------
+    1 |                   30 | -1 px; clipped pixels: 2
+    2 |                   30 | -1 px; clipped pixels: 0
+    3 |                   29 | +0 px; clipped pixels: 0
+    4 |                   29 | +0 px; clipped pixels: 0
+    5 |                   29 | +0 px; clipped pixels: 0
+    6 |                   29 | +0 px; clipped pixels: 0
+    7 |                   29 | +0 px; clipped pixels: 0
+    8 |                   29 | +0 px; clipped pixels: 0
+    9 |                   30 | -1 px; clipped pixels: 0
+   10 |                   30 | -1 px; clipped pixels: 2
+
+Aligned attack-frame measurements:
+frame | foot-fill row | body X* | left opaque X | right opaque X
+------+---------------+---------+---------------+----------------
+    1 |            29 |    34.5 |            20 |             47
+    2 |            29 |    27.5 |            15 |             40
+    3 |            29 |    37.0 |            14 |             60
+    4 |            29 |    24.0 |             8 |             40
+    5 |            29 |    25.0 |             2 |             48
+    6 |            29 |    23.5 |             1 |             46
+    7 |            29 |    25.0 |             4 |             46
+    8 |            29 |    24.5 |            11 |             38
+    9 |            29 |    34.5 |            20 |             47
+   10 |            29 |    34.5 |            20 |             47
+
+* Body X is the midpoint of the opaque bounds; wide weapon effects can shift this proxy.
+
+Required loop continuity:
+PASS: Attack frame 1 == idle frame 1
+PASS: Attack frame 9 == idle frame 3
+PASS: Attack frame 10 == idle frame 1
+PASS: all aligned frames are RGBA 64x32.
+PASS: every aligned frame's lowest identified foot-fill pixel is row 29.
+PASS: aligned PNG colors are a subset of the source palettes.
+PASS: preview encodes 41 frames for the 42-step order, with 33 locked colors, no frame-local palettes, and preserved total timing.
+
+Idle PNG: Echosquire_Idle_Aligned_64x32.png (512x32)
+Attack PNG: Echosquire_Attack_Aligned_64x32.png (640x32)
+Preview GIF: echosquire_alignment_preview.gif (10x nearest-neighbor)

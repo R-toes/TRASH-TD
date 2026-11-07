@@ -471,15 +471,23 @@ namespace TrashTD.Editor
             scrapper.skillDescription = "<color=#FFD700>Base (1★):</color> When attacking, has a 20% chance to Stun the target for 2 seconds.\n<color=#FFD700>1st upgrade (2★):</color> Stun chance increases to 30%.\n<color=#FFD700>2nd upgrade (3★):</color> Stun chance increases to 40% and attacks on the adjacent tile trigger a shockwave dealing 50% damage to all enemies on that tile.";
             EditorUtility.SetDirty(scrapper);
 
-            var echosquireFrameOne = LoadSprite("Echosquire-Sheet.png", "Echosquire-Sheet_0");
-            var echosquireFrameTwo = LoadSprite("Echosquire-Sheet.png", "Echosquire-Sheet_1");
-            if (echosquireFrameOne == null || echosquireFrameTwo == null)
+            Sprite[] echosquireIdleFrames = LoadSpriteFrames(
+                "Echosquire_Idle_Aligned_64x32.png",
+                "Echosquire_Idle_Aligned_64x32",
+                EchosquireSpriteAnimation.IdleFrameCount);
+            Sprite[] echosquireAttackFrames = LoadSpriteFrames(
+                "Echosquire_Attack_Aligned_64x32.png",
+                "Echosquire_Attack_Aligned_64x32",
+                EchosquireSpriteAnimation.AttackFrameCount);
+            if (System.Array.Exists(echosquireIdleFrames, frame => frame == null) ||
+                System.Array.Exists(echosquireAttackFrames, frame => frame == null))
             {
-                Debug.LogError("Echosquire-Sheet.png must contain the imported Echosquire-Sheet_0 and Echosquire-Sheet_1 sprites.");
+                Debug.LogError("Echosquire aligned idle and attack sheets must be imported and contain every frame.");
             }
             else
             {
-                var echosquirePrefab = CreateEchosquirePrefab(echosquireFrameOne, echosquireFrameTwo);
+                var echosquireFrameOne = echosquireIdleFrames[0];
+                var echosquirePrefab = CreateEchosquirePrefab(echosquireIdleFrames, echosquireAttackFrames);
                 var echosquire = CreateOperator(
                     "OP_Guard_Echosquire",
                     "Echosquire",
@@ -1048,24 +1056,47 @@ namespace TrashTD.Editor
             return prefab;
         }
 
-        private static GameObject CreateEchosquirePrefab(Sprite firstFrame, Sprite secondFrame)
+        private static GameObject CreateEchosquirePrefab(Sprite[] idleFrames, Sprite[] attackFrames)
         {
             const string prefabName = "Prefab_OP_Echosquire";
             string path = $"{OperatorPrefabFolder}/{prefabName}.prefab";
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (existing != null) return existing;
+            if (existing != null)
+            {
+                var contents = PrefabUtility.LoadPrefabContents(path);
+                try
+                {
+                    ConfigureEchosquirePrefab(contents, idleFrames, attackFrames);
+                    return PrefabUtility.SaveAsPrefabAsset(contents, path);
+                }
+                finally
+                {
+                    PrefabUtility.UnloadPrefabContents(contents);
+                }
+            }
 
             var go = new GameObject(prefabName);
-            var spriteRenderer = go.AddComponent<SpriteRenderer>();
-            spriteRenderer.sprite = firstFrame;
-            spriteRenderer.sortingOrder = 5;
             go.AddComponent<EchosquireOperator>();
-            var animation = go.AddComponent<OperatorSpriteAnimation>();
-            animation.Configure(new[] { firstFrame, secondFrame });
+            ConfigureEchosquirePrefab(go, idleFrames, attackFrames);
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
             Object.DestroyImmediate(go);
             return prefab;
+        }
+
+        private static void ConfigureEchosquirePrefab(GameObject prefab, Sprite[] idleFrames, Sprite[] attackFrames)
+        {
+            var spriteRenderer = prefab.GetComponent<SpriteRenderer>();
+            if (spriteRenderer == null) spriteRenderer = prefab.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = idleFrames[0];
+            spriteRenderer.sortingOrder = 5;
+
+            var legacyAnimation = prefab.GetComponent<OperatorSpriteAnimation>();
+            if (legacyAnimation != null) Object.DestroyImmediate(legacyAnimation, true);
+
+            var animation = prefab.GetComponent<EchosquireSpriteAnimation>();
+            if (animation == null) animation = prefab.AddComponent<EchosquireSpriteAnimation>();
+            animation.Configure(idleFrames, attackFrames);
         }
 
         private static GameObject CreateQiFuPrefab(Sprite[] frames, Sprite[] attackFrames)

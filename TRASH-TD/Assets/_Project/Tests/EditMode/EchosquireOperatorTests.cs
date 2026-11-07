@@ -3,12 +3,79 @@ using NUnit.Framework;
 using TrashTD.Core.GameLoop;
 using TrashTD.Data;
 using TrashTD.Operators;
+using UnityEditor;
 using UnityEngine;
 
 namespace TrashTD.Tests
 {
     public class EchosquireOperatorTests
     {
+        private const string PrefabPath = "Assets/_Project/Prefabs/Operators/Prefab_OP_Echosquire.prefab";
+        private const string IdleSheetPath = "Assets/_Project/Art/Operators/Echosquire_Idle_Aligned_64x32.png";
+        private const string AttackSheetPath = "Assets/_Project/Art/Operators/Echosquire_Attack_Aligned_64x32.png";
+
+        [Test]
+        public void Prefab_UsesAlignedIdleAndAttackSheets()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+            Assert.IsNotNull(prefab);
+
+            EchosquireSpriteAnimation animation = prefab.GetComponent<EchosquireSpriteAnimation>();
+            Assert.IsNotNull(animation);
+            Assert.AreEqual(EchosquireSpriteAnimation.IdleFrameCount, animation.Frames.Length);
+            Assert.AreEqual(EchosquireSpriteAnimation.AttackFrameCount, animation.AttackFrames.Length);
+            Assert.IsNull(prefab.GetComponent<OperatorSpriteAnimation>());
+
+            AssertFrames(animation.Frames, IdleSheetPath);
+            AssertFrames(animation.AttackFrames, AttackSheetPath);
+            AssertImporterSettings(IdleSheetPath);
+            AssertImporterSettings(AttackSheetPath);
+        }
+
+        [Test]
+        public void AttackTiming_MatchesFrameTableAndBeginsImpactOnFrameSix()
+        {
+            float[] expectedDurations =
+            {
+                0.14f, 0.11f, 0.17f, 0.06f, 0.05f,
+                0.055f, 0.09f, 0.10f, 0.12f, 0.22f
+            };
+            float totalDuration = 0f;
+            float windupDuration = 0f;
+            for (int i = 0; i < expectedDurations.Length; i++)
+            {
+                Assert.AreEqual(expectedDurations[i], EchosquireSpriteAnimation.GetAttackFrameDuration(i), 0.0001f);
+                totalDuration += expectedDurations[i];
+                if (i < EchosquireSpriteAnimation.ImpactFrameIndex)
+                    windupDuration += expectedDurations[i];
+            }
+
+            Assert.AreEqual(1.115f, totalDuration, 0.0001f);
+            Assert.AreEqual(totalDuration, EchosquireSpriteAnimation.AttackDuration, 0.0001f);
+            Assert.AreEqual(0.53f, EchosquireSpriteAnimation.WindupSeconds, 0.0001f);
+            Assert.AreEqual(EchosquireSpriteAnimation.WindupSeconds, windupDuration, 0.0001f);
+
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+            GameObject instance = Object.Instantiate(prefab);
+            try
+            {
+                EchosquireSpriteAnimation animation = instance.GetComponent<EchosquireSpriteAnimation>();
+                SpriteRenderer renderer = instance.GetComponent<SpriteRenderer>();
+
+                animation.BeginAttack(EchosquireSpriteAnimation.WindupSeconds);
+                Assert.AreSame(animation.AttackFrames[0], renderer.sprite);
+
+                animation.BeginImpact();
+                Assert.AreEqual(EchosquireSpriteAnimation.ImpactFrameIndex, animation.CurrentAttackFrame);
+                Assert.AreSame(animation.AttackFrames[EchosquireSpriteAnimation.ImpactFrameIndex], renderer.sprite);
+                Assert.IsTrue(animation.IsRecovering);
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
+            }
+        }
+
         [Test]
         public void LowHealthStats_IncreaseWithMissingHealthAndCapAtSixtyPercentWithoutChangingAttackSpeed()
         {
@@ -88,6 +155,27 @@ namespace TrashTD.Tests
                 if (floatingNumber.name == "FloatingCombatNumber" &&
                     !existingFloatingNumbers.Contains(floatingNumber))
                     Object.DestroyImmediate(floatingNumber);
+        }
+
+        private static void AssertFrames(Sprite[] frames, string expectedPath)
+        {
+            foreach (Sprite frame in frames)
+            {
+                Assert.AreEqual(expectedPath, AssetDatabase.GetAssetPath(frame));
+                Assert.AreEqual(64f, frame.rect.width);
+                Assert.AreEqual(32f, frame.rect.height);
+                Assert.AreEqual(32f, frame.pixelsPerUnit);
+                Assert.AreEqual(new Vector2(32f, 16f), frame.pivot);
+            }
+        }
+
+        private static void AssertImporterSettings(string path)
+        {
+            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            Assert.IsNotNull(importer);
+            Assert.AreEqual(32, importer.spritePixelsPerUnit);
+            Assert.AreEqual(FilterMode.Point, importer.filterMode);
+            Assert.AreEqual(SpriteImportMode.Multiple, importer.spriteImportMode);
         }
     }
 }

@@ -83,7 +83,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 5
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 7841794329617421502, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
+  m_Sprite: {fileID: 7841794329617421502, guid: aa0c020617394829a8a25b9d1c5e74f1, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -116,16 +116,27 @@ MonoBehaviour:
   m_GameObject: {fileID: 4120733290429841632}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 15730cd9b1a04c21b3c152b454d2f53a, type: 3}
+  m_Script: {fileID: 11500000, guid: cc2e2428395b4a4b9d1c5e74f1a0b7c3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
-  frames:
-  - {fileID: 7841794329617421502, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
-  - {fileID: 523648466364858218, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
-  - {fileID: -837147388, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
-  - {fileID: 1142371386, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
-  - {fileID: -1415482300, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
-  - {fileID: -1355444340, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
-  - {fileID: 1609194568, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
-  - {fileID: -1068655876, guid: 87b1cb0a581803941868e91f592eee68, type: 3}
-  frameDuration: 0.125
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.EchosquireSpriteAnimation
+  idleFrames:
+  - {fileID: 7841794329617421502, guid: aa0c020617394829a8a25b9d1c5e74f1, type: 3}
+  - {fileID: 523648466364858218, guid: aa0c020617394829a8a25b9d1c5e74f1, type: 3}
+  - {fileID: -837147388, guid: aa0c020617394829a8a25b9d1c5e74f1, type: 3}
+  - {fileID: 1142371386, guid: aa0c020617394829a8a25b9d1c5e74f1, type: 3}
+  - {fileID: -1415482300, guid: aa0c020617394829a8a25b9d1c5e74f1, type: 3}
+  - {fileID: -1355444340, guid: aa0c020617394829a8a25b9d1c5e74f1, type: 3}
+  - {fileID: 1609194568, guid: aa0c020617394829a8a25b9d1c5e74f1, type: 3}
+  - {fileID: -1068655876, guid: aa0c020617394829a8a25b9d1c5e74f1, type: 3}
+  attackFrames:
+  - {fileID: 8931711473772582028, guid: bb1d1317284a493aa9b36cae2d6f8502, type: 3}
+  - {fileID: 464284638746671369, guid: bb1d1317284a493aa9b36cae2d6f8502, type: 3}
+  - {fileID: -6093667170385184434, guid: bb1d1317284a493aa9b36cae2d6f8502, type: 3}
+  - {fileID: 5773207495206052359, guid: bb1d1317284a493aa9b36cae2d6f8502, type: 3}
+  - {fileID: 408756017840664818, guid: bb1d1317284a493aa9b36cae2d6f8502, type: 3}
+  - {fileID: -598964639437151268, guid: bb1d1317284a493aa9b36cae2d6f8502, type: 3}
+  - {fileID: -6012473284030398231, guid: bb1d1317284a493aa9b36cae2d6f8502, type: 3}
+  - {fileID: -7741109047117711701, guid: bb1d1317284a493aa9b36cae2d6f8502, type: 3}
+  - {fileID: 4662877692184907558, guid: bb1d1317284a493aa9b36cae2d6f8502, type: 3}
+  - {fileID: -1953135051299375961, guid: bb1d1317284a493aa9b36cae2d6f8502, type: 3}
+  idleFrameDuration: 0.125

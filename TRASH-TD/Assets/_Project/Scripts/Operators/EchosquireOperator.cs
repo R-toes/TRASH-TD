@@ -19,6 +19,16 @@ namespace TrashTD.Operators
         private float dodgeTimer;
         private int secondChanceWave = int.MinValue;
         private bool usedSecondChanceThisWave;
+        private EchosquireSpriteAnimation spriteAnimation;
+
+        private EchosquireSpriteAnimation SpriteAnimation
+        {
+            get
+            {
+                if (spriteAnimation == null) spriteAnimation = GetComponent<EchosquireSpriteAnimation>();
+                return spriteAnimation;
+            }
+        }
 
         public override bool CanReceiveHealing => false;
         public override int CurrentATK => Mathf.RoundToInt(currentATK * LowHealthStatMultiplier);
@@ -40,7 +50,63 @@ namespace TrashTD.Operators
             if (dodgeTimer > 0f && !IsCombatPaused)
                 dodgeTimer = Mathf.Max(0f, dodgeTimer - Time.deltaTime);
 
+            UpdateAttackWindup();
             base.Update();
+        }
+
+        private void UpdateAttackWindup()
+        {
+            EchosquireSpriteAnimation anim = SpriteAnimation;
+            if (anim == null || !anim.HasAttackAnimation) return;
+
+            if (!isDeployed)
+            {
+                anim.CancelAttack();
+                return;
+            }
+
+            if (IsCombatPaused || isStunned || isBound)
+            {
+                anim.CancelWindup();
+                return;
+            }
+
+            if (anim.IsWindingUp)
+            {
+                EnemyBase windupTarget = FindTarget();
+                if (windupTarget == null || !CanAttackTarget(windupTarget))
+                    anim.CancelWindup();
+                return;
+            }
+
+            if (anim.IsRecovering) return;
+
+            EnemyBase target = FindTarget();
+            if (target == null || !CanAttackTarget(target)) return;
+
+            float attackInterval = GetAttackInterval();
+            float timeUntilImpact = attackInterval - attackTimer;
+            if (timeUntilImpact > EchosquireSpriteAnimation.WindupSeconds) return;
+
+            if (timeUntilImpact <= 0f)
+            {
+                timeUntilImpact = EchosquireSpriteAnimation.WindupSeconds;
+                attackTimer = Mathf.Max(0f, attackInterval - timeUntilImpact);
+            }
+
+            anim.BeginAttack(timeUntilImpact);
+        }
+
+        protected override void OnDeployed()
+        {
+            base.OnDeployed();
+            SpriteAnimation?.CancelAttack();
+        }
+
+        protected override void OnRetreated()
+        {
+            SpriteAnimation?.CancelAttack();
+            base.OnRetreated();
         }
 
         public override void TakeDamage(int rawATK, DamageType damageType, EnemyBase attacker = null)
@@ -109,6 +175,7 @@ namespace TrashTD.Operators
         {
             if (target == null || !isDeployed) return;
 
+            SpriteAnimation?.BeginImpact();
             MeleeSwipeVisual.Play(
                 transform.position,
                 target.VisualPosition,
@@ -120,7 +187,7 @@ namespace TrashTD.Operators
                 ProjectileOrigin,
                 target,
                 new Color(0.9f, 0.12f, 0.24f),
-                12f,
+                24f,
                 0.1f,
                 0.05f,
                 false,
