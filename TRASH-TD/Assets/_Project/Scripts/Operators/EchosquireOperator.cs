@@ -167,7 +167,7 @@ namespace TrashTD.Operators
         private void ShowDodge()
         {
             DodgeAfterimageVisual.Play(gameObject);
-            FloatingCombatNumber.ShowText(transform.position, "DODGE!", new Color(0.2f, 0.85f, 1f));
+            FloatingCombatNumber.ShowText(transform.position, "DODGE!", new Color(0.2f, 0.85f, 1f), this);
             PlayAbilitySound("Dodge");
         }
 

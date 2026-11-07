@@ -353,7 +353,7 @@ namespace TrashTD.Operators
             {
                 hasDodgeAtkBuff = true;
                 Combat.DodgeAfterimageVisual.Play(gameObject);
-                FloatingCombatNumber.ShowText(transform.position, "DODGE!", new Color(0.2f, 0.85f, 1f));
+                FloatingCombatNumber.ShowText(transform.position, "DODGE!", new Color(0.2f, 0.85f, 1f), this);
                 PlayAbilitySound("Dodge");
 
                 if (HasDodgeHealUpgrade)
@@ -427,7 +427,7 @@ namespace TrashTD.Operators
             int actualDamage = previousHP - currentHP;
             if (actualDamage > 0)
             {
-                FloatingCombatNumber.Show(transform.position, actualDamage, damageType);
+                FloatingCombatNumber.Show(transform.position, actualDamage, damageType, false, this);
                 WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
                 HitReaction.Play(gameObject, transform.position, actualDamage, maxHP);
             }

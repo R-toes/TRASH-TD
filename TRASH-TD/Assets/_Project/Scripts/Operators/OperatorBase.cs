@@ -800,7 +800,7 @@ namespace TrashTD.Operators
             int actualDamage = previousHP - currentHP;
             if (actualDamage > 0)
             {
-                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualDamage, damageType);
+                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualDamage, damageType, false, this);
                 TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
                 TrashTD.Combat.HitReaction.Play(gameObject, transform.position, actualDamage, maxHP);
                 OnDamageApplied(calculatedDamage, actualDamage, damageType, attacker);
@@ -841,7 +841,7 @@ namespace TrashTD.Operators
             int actualDamage = previousHP - currentHP;
             if (actualDamage > 0)
             {
-                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualDamage, DamageType.True);
+                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualDamage, DamageType.True, false, this);
                 TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
                 TrashTD.Combat.HitReaction.Play(gameObject, transform.position, actualDamage, maxHP);
             }
@@ -897,7 +897,7 @@ namespace TrashTD.Operators
             int actualHealing = currentHP - previousHP;
             if (actualHealing > 0)
             {
-                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualHealing, DamageType.Physical, true);
+                TrashTD.Combat.FloatingCombatNumber.Show(transform.position, actualHealing, DamageType.Physical, true, this);
                 TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
                 OnHealed(actualHealing);
             }

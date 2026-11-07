@@ -77,7 +77,7 @@ namespace TrashTD.Enemies
         {
             if (!CanReceiveDamageFrom(attacker))
             {
-                FloatingCombatNumber.ShowText(VisualPosition, "DUEL", Color.white);
+                FloatingCombatNumber.ShowText(VisualPosition, "DUEL", Color.white, this);
                 return false;
             }
 
@@ -93,7 +93,8 @@ namespace TrashTD.Enemies
                 "DUEL",
                 Color.white,
                 0.75f,
-                "Duel");
+                "Duel",
+                new Color(1f, 0.45f, 0.2f));
         }
 
         public override void OnUnblocked()

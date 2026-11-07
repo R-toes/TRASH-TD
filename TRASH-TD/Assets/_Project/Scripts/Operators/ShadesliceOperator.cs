@@ -302,7 +302,7 @@ namespace TrashTD.Operators
             if (Time.unscaledTime >= nextParryVisualTime)
             {
                 nextParryVisualTime = Time.unscaledTime + 0.18f;
-                FloatingCombatNumber.ShowText(transform.position, "PARRY", ParryColor);
+                FloatingCombatNumber.ShowText(transform.position, "PARRY", ParryColor, this);
                 MeleeSwipeVisual.Play(transform.position, transform.position + Vector3.up * 0.2f,
                     new Color(0.55f, 0.78f, 1f, 0.8f), 0.75f, MeleeStyle.Impact);
             }

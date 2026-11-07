@@ -46,7 +46,8 @@ namespace TrashTD.Combat
                 $"-{reduction} BLOCK",
                 Color.white,
                 0.7f,
-                "SlipperyBlock");
+                "SlipperyBlock",
+                new Color(0.4f, 0.85f, 1f));
 
             return effect;
         }

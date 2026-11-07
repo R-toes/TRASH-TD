@@ -77,6 +77,7 @@ namespace TrashTD.Enemies
             {
                 activeJunkernauts.Add(junkernaut);
             }
+            JunkernautAuraVisual.EnsureInstance();
         }
 
         public static void UnregisterActive(JunkernautEnemy junkernaut)

@@ -1229,7 +1229,7 @@ namespace TrashTD.Enemies
             int actualDamage = previousHP - currentHP;
             if (actualDamage > 0)
             {
-                FloatingCombatNumber.Show(VisualPosition, actualDamage, damageType);
+                FloatingCombatNumber.Show(VisualPosition, actualDamage, damageType, false, this);
                 WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
                 HitReaction.Play(gameObject, VisualPosition, actualDamage, maxHP);
             }
@@ -1278,7 +1278,7 @@ namespace TrashTD.Enemies
 
             if (!CanReceiveDamageFrom(attacker))
             {
-                FloatingCombatNumber.ShowText(VisualPosition, "DUEL", Color.white);
+                FloatingCombatNumber.ShowText(VisualPosition, "DUEL", Color.white, this);
                 return false;
             }
             bool bypassAirImmunity = canHitAir || (attacker != null && attacker.CanHitAir);
@@ -1298,7 +1298,7 @@ namespace TrashTD.Enemies
                     !Combat.StageCombatModifiers.TryAttackHit(data.operatorAttackMissChance))
                 {
                     Combat.DodgeAfterimageVisual.Play(gameObject);
-                    FloatingCombatNumber.ShowMiss(VisualPosition);
+                    FloatingCombatNumber.ShowMiss(VisualPosition, this);
                     AudioManager.Instance?.PlaySfx(SfxId.CombatMiss, 0.6f);
                     return false;
                 }
@@ -1317,6 +1317,7 @@ namespace TrashTD.Enemies
                 if (junkernautReduction > 0f)
                 {
                     damage = Mathf.Max(1, Mathf.RoundToInt(damage * (1f - junkernautReduction)));
+                    JunkernautAuraVisual.NotifyProtectedHit(this);
                 }
 
                 if (isFrozen && ChillpathOperator.IsFrozenDamageBonusActive)
