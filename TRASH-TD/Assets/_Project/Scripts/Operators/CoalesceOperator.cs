@@ -49,20 +49,67 @@ namespace TrashTD.Operators
             return roll < CurrentExtraHealChance;
         }
 
+        public Vector3 GetMouthPosition()
+        {
+            SpriteRenderer sr = GetComponent<SpriteRenderer>();
+            if (sr == null) sr = GetComponentInChildren<SpriteRenderer>();
+            bool isFlipped = sr != null ? sr.flipX : (facing == OperatorFacing.Right);
+            float dir = isFlipped ? 1f : -1f;
+
+            if (facing == OperatorFacing.Up)
+            {
+                return transform.position + new Vector3(dir * 0.15f, 0.28f, 0f);
+            }
+            if (facing == OperatorFacing.Down)
+            {
+                return transform.position + new Vector3(dir * 0.15f, -0.15f, 0f);
+            }
+
+            // Green mouth line below the front of the 2x2 black eye box:
+            // Pixel x=8.5, y=13 relative to center pivot (16, 16): (-0.23f, +0.08f) when facing left, mirrored when facing right
+            return transform.position + new Vector3(dir * 0.23f, 0.08f, 0f);
+        }
+
         public override void Heal(OperatorBase target)
         {
-            if (target == null) return;
+            if (target == null || isStunned || isBound) return;
 
             bool wasBelowThreshold = target.MaxHP > 0 && ((float)target.CurrentHP / target.MaxHP) < CurrentHpThreshold;
+            bool extraHeal = wasBelowThreshold && TryRollExtraHeal();
 
-            base.Heal(target);
+            int healAmount = GetHealAmount();
+            Audio.UnitSfx.Play(data, Audio.UnitSfxEvent.Attack);
 
-            if (wasBelowThreshold && TryRollExtraHeal())
+            if (!Application.isPlaying)
             {
-                int extraAmount = GetHealAmount();
-                target.Heal(extraAmount);
+                target.Heal(healAmount);
+                if (extraHeal)
+                {
+                    target.Heal(healAmount);
+                    PlayAbilitySound();
+                }
+                return;
+            }
+
+            Vector3 startPos = GetMouthPosition();
+            Vector3 targetPos = target.transform.position + new Vector3(0f, 0.25f, 0f);
+
+            CoalesceHealProjectile.Spawn(startPos, target, targetPos, healAmount);
+
+            if (extraHeal)
+            {
                 PlayAbilitySound();
-                FloatingCombatNumber.ShowText(target.transform.position + Vector3.up * 0.6f, "EXTRA HEAL!", new Color(0.25f, 1f, 0.38f));
+                StartCoroutine(FireExtraHealRoutine(target, targetPos, healAmount));
+            }
+        }
+
+        private System.Collections.IEnumerator FireExtraHealRoutine(OperatorBase target, Vector3 targetPos, int healAmount)
+        {
+            yield return new WaitForSeconds(0.12f);
+            if (target != null && target.IsDeployed && target.CurrentHP > 0)
+            {
+                Vector3 startPos = GetMouthPosition();
+                CoalesceHealProjectile.Spawn(startPos, target, targetPos, healAmount, extraArc: 0.18f);
             }
         }
 
