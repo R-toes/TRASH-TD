@@ -18,7 +18,7 @@ namespace TrashTD.Combat
     /// - Text changes only on spawn / merge; the animation only moves and scales transforms.
     /// Look: Press Start 2P with a 1-pixel dark outline and a 2-pixel drop shadow, coloured by damage type,
     /// slammed in, risen on an ease-out, snapped to the art-pixel grid and squashed out at the end.
-    /// Edit Mode (tests) never creates popups.
+    /// Outside Play Mode (EditMode tests) each popup is a plain, unanimated TextMesh object instead.
     /// </summary>
     public sealed class FloatingCombatNumber : MonoBehaviour
     {
@@ -101,13 +101,17 @@ namespace TrashTD.Combat
         public static void Show(Vector3 position, int amount, DamageType damageType, bool healing, Object anchor)
         {
             if (amount <= 0) return;
-            FloatingCombatNumber manager = GetInstance();
-            if (manager == null) return;
-
             PopupKind kind = healing ? PopupKind.Heal
                 : damageType == DamageType.Arts ? PopupKind.Arts
                 : damageType == DamageType.True ? PopupKind.True
                 : PopupKind.Physical;
+
+            FloatingCombatNumber manager = GetInstance();
+            if (manager == null)
+            {
+                ShowInEditMode(position, FormatNumber(amount, healing), ColorFor(kind));
+                return;
+            }
             manager.SpawnNumber(position, amount, kind, anchor);
         }
 
@@ -119,7 +123,11 @@ namespace TrashTD.Combat
         public static void ShowMiss(Vector3 position, Object anchor)
         {
             FloatingCombatNumber manager = GetInstance();
-            if (manager == null) return;
+            if (manager == null)
+            {
+                ShowInEditMode(position, "MISS", MissColor);
+                return;
+            }
             manager.SpawnCallout(position, "MISS", MissColor, PopupKind.Miss, anchor);
         }
 
@@ -132,7 +140,11 @@ namespace TrashTD.Combat
         {
             if (string.IsNullOrEmpty(message)) return;
             FloatingCombatNumber manager = GetInstance();
-            if (manager == null) return;
+            if (manager == null)
+            {
+                ShowInEditMode(position, message, color);
+                return;
+            }
             manager.SpawnCallout(position, message, color, PopupKind.Callout, anchor);
         }
 
@@ -144,6 +156,25 @@ namespace TrashTD.Combat
                 instance = new GameObject("FloatingCombatNumbers").AddComponent<FloatingCombatNumber>();
             }
             return instance;
+        }
+
+        /// <summary>
+        /// Outside Play Mode (EditMode tests) there is no manager: a popup is a plain static TextMesh object named
+        /// "FloatingCombatNumber", as before the pooled version, so tests can find its text and clean it up.
+        /// </summary>
+        private static void ShowInEditMode(Vector3 position, string message, Color color)
+        {
+            var go = new GameObject("FloatingCombatNumber");
+            go.transform.position = position + Vector3.up * SpawnHeight;
+            TextMesh text = go.AddComponent<TextMesh>();
+            UIFontHelper.Apply(text, FontStyle.Normal);
+            text.fontSize = FontSize;
+            text.characterSize = CharacterSize;
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.text = message;
+            color.a = 1f;
+            text.color = color;
         }
 
         private void OnDestroy()
