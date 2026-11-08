@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 7111000000000003}
   - component: {fileID: 7111000000000004}
   - component: {fileID: 7111000000000005}
+  - component: {fileID: 7111000000000006}
   m_Layer: 0
   m_Name: Prefab_OP_Pompoth
   m_TagString: Untagged
@@ -126,3 +127,37 @@ MonoBehaviour:
   - {fileID: -2855423802529023372, guid: 0c6f277420ab35e418cfc632e091eb41, type: 3}
   - {fileID: -6066291989081123986, guid: 0c6f277420ab35e418cfc632e091eb41, type: 3}
   - {fileID: 5346254647881313312, guid: 0c6f277420ab35e418cfc632e091eb41, type: 3}
+--- !u!114 &7111000000000006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7111000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0014d81f6bd64e54a403c18db4e26f9e, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.PompothPowerVisuals
+  tier0Frames:
+  - {fileID: 6034814416671764318, guid: 0c6f277420ab35e418cfc632e091eb41, type: 3}
+  - {fileID: 5136118065530742780, guid: 0c6f277420ab35e418cfc632e091eb41, type: 3}
+  - {fileID: 8837891519914945210, guid: 0c6f277420ab35e418cfc632e091eb41, type: 3}
+  - {fileID: -2855423802529023372, guid: 0c6f277420ab35e418cfc632e091eb41, type: 3}
+  - {fileID: -6066291989081123986, guid: 0c6f277420ab35e418cfc632e091eb41, type: 3}
+  - {fileID: 5346254647881313312, guid: 0c6f277420ab35e418cfc632e091eb41, type: 3}
+  tier1Frames:
+  - {fileID: -8095526726055318891, guid: 8e98614269ac97047a203861d0c44a21, type: 3}
+  - {fileID: -695089108, guid: 8e98614269ac97047a203861d0c44a21, type: 3}
+  - {fileID: 1931279797, guid: 8e98614269ac97047a203861d0c44a21, type: 3}
+  - {fileID: 570765713, guid: 8e98614269ac97047a203861d0c44a21, type: 3}
+  - {fileID: -2089730069, guid: 8e98614269ac97047a203861d0c44a21, type: 3}
+  - {fileID: -1756095893, guid: 8e98614269ac97047a203861d0c44a21, type: 3}
+  tier2Frames:
+  - {fileID: 6494874542765989401, guid: e141270b6c429f34fb78f469e2e70dfb, type: 3}
+  - {fileID: -1504163123070991907, guid: e141270b6c429f34fb78f469e2e70dfb, type: 3}
+  - {fileID: -85224072389890, guid: e141270b6c429f34fb78f469e2e70dfb, type: 3}
+  - {fileID: -1167287178536887413, guid: e141270b6c429f34fb78f469e2e70dfb, type: 3}
+  - {fileID: 3593894528786505160, guid: e141270b6c429f34fb78f469e2e70dfb, type: 3}
+  - {fileID: -6628976222046520032, guid: e141270b6c429f34fb78f469e2e70dfb, type: 3}
+  downgradeDelay: 0.35

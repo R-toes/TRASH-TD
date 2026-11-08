@@ -26,7 +26,8 @@ namespace TrashTD.Combat
         Plasma,   // Robodrone's energy bolt: glowing core with a flickering halo, ember trail, spark burst
         ThornchinSpike,
         SpoilcupineSpike,
-        Proxishot
+        Proxishot,
+        PompothFullPower
     }
 
     /// <summary>
@@ -237,6 +238,7 @@ namespace TrashTD.Combat
             return style switch
             {
                 ProjectileStyle.Bullet => CombatFxArt.Bullet(color),
+                ProjectileStyle.PompothFullPower => CombatFxArt.SolidBullet(color),
                 ProjectileStyle.Pellet => CombatFxArt.Pellet(color),
                 ProjectileStyle.Pea => CombatFxArt.Pea(color),
                 ProjectileStyle.ArtsOrb => CombatFxArt.Orb(color),
@@ -272,7 +274,8 @@ namespace TrashTD.Combat
 
         private static bool IsOriented(ProjectileStyle style)
         {
-            return style == ProjectileStyle.Bolt || style == ProjectileStyle.Bullet || style == ProjectileStyle.Frost ||
+            return style == ProjectileStyle.Bolt || style == ProjectileStyle.Bullet ||
+                   style == ProjectileStyle.PompothFullPower || style == ProjectileStyle.Frost ||
                    style == ProjectileStyle.Rocket || style == ProjectileStyle.HeavyRocket || style == ProjectileStyle.Quill ||
                    style == ProjectileStyle.Glass || style == ProjectileStyle.Plasma ||
                    style == ProjectileStyle.ThornchinSpike || style == ProjectileStyle.SpoilcupineSpike;
@@ -335,6 +338,7 @@ namespace TrashTD.Combat
             switch (style)
             {
                 case ProjectileStyle.Bullet:
+                case ProjectileStyle.PompothFullPower:
                     CombatFx.Flash(muzzle, color, true);
                     CombatFx.Sparks(muzzle, color, 3, 2f, 0.1f, direction: direction, coneDegrees: 50f);
                     CombatFx.Smoke(muzzle, new Color(0.7f, 0.68f, 0.65f, 0.45f), 1, 0.03f, 0.3f, 0.2f, sortingOrder: CombatFx.TrailSortingOrder);
@@ -480,6 +484,7 @@ namespace TrashTD.Combat
             switch (style)
             {
                 case ProjectileStyle.Bullet:
+                case ProjectileStyle.PompothFullPower:
                 case ProjectileStyle.Pellet:
                 case ProjectileStyle.Pea:
                 case ProjectileStyle.Bolt:
@@ -710,6 +715,7 @@ namespace TrashTD.Combat
                     CombatFx.Sparks(position, color, 4, 2.2f);
                     break;
                 case ProjectileStyle.Bullet:
+                case ProjectileStyle.PompothFullPower:
                     CombatFx.Flash(position, color);
                     CombatFx.Sparks(position, color, 5, 3f, 0.18f, direction: direction, coneDegrees: 140f);
                     break;

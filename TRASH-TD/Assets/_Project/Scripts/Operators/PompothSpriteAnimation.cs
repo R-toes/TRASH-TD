@@ -17,6 +17,33 @@ namespace TrashTD.Operators
         private float frameTimer;
         private int currentFrame;
 
+        public int CurrentFrameIndex => currentFrame;
+        public float NormalizedFrameTime => frameTimer / FrameInterval;
+
+        public bool SetFramesPreservingPhase(Sprite[] replacementFrames)
+        {
+            if (frames == null || replacementFrames == null || replacementFrames.Length != frames.Length)
+            {
+                Debug.LogError("Pompoth animation sheets must have the same number of frames.", this);
+                return false;
+            }
+
+            for (int i = 0; i < replacementFrames.Length; i++)
+            {
+                if (replacementFrames[i] == null)
+                {
+                    Debug.LogError($"Pompoth animation replacement frame {i} is not assigned.", this);
+                    return false;
+                }
+            }
+
+            frames = replacementFrames;
+            if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
+            if (spriteRenderer != null)
+                spriteRenderer.sprite = frames[currentFrame % frames.Length];
+            return true;
+        }
+
         private void Awake()
         {
             spriteRenderer = GetComponent<SpriteRenderer>();

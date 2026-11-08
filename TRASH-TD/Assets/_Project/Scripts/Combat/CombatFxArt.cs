@@ -42,6 +42,10 @@ namespace TrashTD.Combat
             "OCLLWWW",
             "OCLLWWW");
 
+        public static Sprite SolidBullet(Color color) => Solid("solidbullet", color,
+            "OCCCCCC",
+            "OCCCCCC");
+
         public static Sprite Pellet(Color color) => Shaded("pellet", color,
             "LW",
             "WL");
@@ -827,6 +831,13 @@ namespace TrashTD.Combat
                     _ => Color.clear
                 });
             });
+        }
+
+        private static Sprite Solid(string shape, Color color, params string[] rows)
+        {
+            string key = shape + ColorUtility.ToHtmlStringRGBA(color);
+            return Cached(key, () => FromRows("Fx " + key, rows,
+                ch => ch == '.' ? Color.clear : color));
         }
 
         private static Sprite White(string key, params string[] rows) =>
