@@ -32,6 +32,10 @@ namespace TrashTD.Operators
         private int camouflageHealTotal;
         private OperatorData cachedRangeData;
         private Vector2Int[] cachedUpgradedRangePattern;
+        [SerializeField] private Sprite projectileSprite;
+        private ProxishotSpriteAnimation spriteAnimation;
+        private static Sprite cachedProjectileSprite;
+        private static readonly Color ProjectileGlowColor = new Color(0.55f, 0.9f, 0.28f, 0.35f);
 
         public override bool IgnoresMissMechanic => true;
 
@@ -43,6 +47,16 @@ namespace TrashTD.Operators
 
         public float CamouflageTimeRemaining => Mathf.Max(0f, camouflageTimer);
         public float CamouflageDefenseTimeRemaining => Mathf.Max(0f, camouflageDefenseTimer);
+        private Sprite ProjectileSprite => projectileSprite != null ? projectileSprite : FindProjectileSprite();
+
+        private ProxishotSpriteAnimation SpriteAnimation
+        {
+            get
+            {
+                if (spriteAnimation == null) spriteAnimation = GetComponent<ProxishotSpriteAnimation>();
+                return spriteAnimation;
+            }
+        }
 
         public override Vector2Int[] GetRangePattern()
         {
@@ -86,6 +100,7 @@ namespace TrashTD.Operators
 
         protected override void Update()
         {
+            UpdateAttackWindup();
             base.Update();
 
             if (camouflageTimer > 0f)
@@ -200,6 +215,7 @@ namespace TrashTD.Operators
         protected override void OnDeployed()
         {
             base.OnDeployed();
+            SpriteAnimation?.CancelAttack();
             camouflageTimer = 0f;
             camouflageDefenseTimer = 0f;
             ResetCamouflageHealing();
@@ -208,6 +224,7 @@ namespace TrashTD.Operators
 
         protected override void OnRetreated()
         {
+            SpriteAnimation?.CancelAttack();
             camouflageTimer = 0f;
             camouflageDefenseTimer = 0f;
             ResetCamouflageHealing();
@@ -257,6 +274,7 @@ namespace TrashTD.Operators
             }
             if (rangeDistance <= 0f) return;
 
+            SpriteAnimation?.ShotFired();
             PlayAttackSound();
 
             minLateralOffset -= gridManager.CellSize * 0.5f;
@@ -274,7 +292,64 @@ namespace TrashTD.Operators
                 0.06f,
                 PelletCount,
                 () => ApplyShotgunDamage(targets, damageMultiplier),
-                target);
+                target,
+                ProjectileSprite,
+                ProjectileGlowColor,
+                1f);
+        }
+
+        private Sprite FindProjectileSprite()
+        {
+            if (cachedProjectileSprite != null) return cachedProjectileSprite;
+
+            Sprite[] loadedSprites = Resources.FindObjectsOfTypeAll<Sprite>();
+            for (int i = 0; i < loadedSprites.Length; i++)
+            {
+                if (loadedSprites[i] != null && loadedSprites[i].name == "Proxishot Projectile_0")
+                {
+                    cachedProjectileSprite = loadedSprites[i];
+                    return cachedProjectileSprite;
+                }
+            }
+
+            Debug.LogError("Proxishot projectile sprite is not assigned or loaded.", this);
+            return null;
+        }
+
+        private void UpdateAttackWindup()
+        {
+            ProxishotSpriteAnimation anim = SpriteAnimation;
+            if (anim == null || !anim.HasAttackAnimation) return;
+
+            if (!isDeployed)
+            {
+                anim.CancelAttack();
+                return;
+            }
+
+            if (IsCombatPaused || isStunned || isBound)
+            {
+                anim.CancelAttack();
+                return;
+            }
+
+            if (anim.IsWindingUp)
+            {
+                EnemyBase windupTarget = FindTarget();
+                if (windupTarget == null || !CanAttackTarget(windupTarget))
+                    anim.CancelAttack();
+                return;
+            }
+
+            if (anim.IsRecovering) return;
+
+            float timeUntilShot = GetAttackInterval() - attackTimer;
+            if (timeUntilShot <= 0f || timeUntilShot > ProxishotSpriteAnimation.WindupDuration)
+                return;
+
+            EnemyBase target = FindTarget();
+            if (target != null && CanAttackTarget(target))
+                anim.BeginAttack(timeUntilShot);
         }
 
         private void ApplyShotgunDamage(List<EnemyBase> targets, float damageMultiplier)

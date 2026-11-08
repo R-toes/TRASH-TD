@@ -105,6 +105,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.ProxishotOperator
   data: {fileID: 0}
+  projectileSprite: {fileID: 3361530555749014163, guid: 83c16b925dcfe184ebdd5cd806606e02, type: 3}
 --- !u!114 &7058294136912038845
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -114,9 +115,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 685036189517171224}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 15730cd9b1a04c21b3c152b454d2f53a, type: 3}
+  m_Script: {fileID: 11500000, guid: 40a36199ecdf4f60917255b089c26cbe, type: 3}
   m_Name:
-  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.ProxishotSpriteAnimation
   frames:
   - {fileID: 4798833663072170488, guid: 323ca61e4bd2cd24199506d2ec39cad4, type: 3}
   - {fileID: -8095954848244489250, guid: 323ca61e4bd2cd24199506d2ec39cad4, type: 3}
@@ -126,3 +127,12 @@ MonoBehaviour:
   - {fileID: 8026092216111491574, guid: 323ca61e4bd2cd24199506d2ec39cad4, type: 3}
   - {fileID: 4537794310108289203, guid: 323ca61e4bd2cd24199506d2ec39cad4, type: 3}
   - {fileID: -5142090602808236432, guid: 323ca61e4bd2cd24199506d2ec39cad4, type: 3}
+  attackFrames:
+  - {fileID: -5072928503664868793, guid: 1314872a311d1ea49b6c8a141d5400ad, type: 3}
+  - {fileID: 5986685627306562599, guid: 1314872a311d1ea49b6c8a141d5400ad, type: 3}
+  - {fileID: 8471747665313133421, guid: 1314872a311d1ea49b6c8a141d5400ad, type: 3}
+  - {fileID: 937256151427798775, guid: 1314872a311d1ea49b6c8a141d5400ad, type: 3}
+  - {fileID: 6824186130996918657, guid: 1314872a311d1ea49b6c8a141d5400ad, type: 3}
+  - {fileID: -5229203612450271425, guid: 1314872a311d1ea49b6c8a141d5400ad, type: 3}
+  - {fileID: 1012784566, guid: 1314872a311d1ea49b6c8a141d5400ad, type: 3}
+  - {fileID: -1070491549, guid: 1314872a311d1ea49b6c8a141d5400ad, type: 3}

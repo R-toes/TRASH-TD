@@ -25,7 +25,8 @@ namespace TrashTD.Combat
         Glass,    // Skyshard's glass shard: glints in flight; the shatter is drawn by the AoE
         Plasma,   // Robodrone's energy bolt: glowing core with a flickering halo, ember trail, spark burst
         ThornchinSpike,
-        SpoilcupineSpike
+        SpoilcupineSpike,
+        Proxishot
     }
 
     /// <summary>
@@ -57,6 +58,7 @@ namespace TrashTD.Combat
         private float age;
         private SpriteRenderer body;
         private SpriteRenderer halo;
+        private bool pulseHalo;
 
         public static void Fire(
             Vector3 start,
@@ -110,9 +112,17 @@ namespace TrashTD.Combat
             float trailWidth,
             int pelletCount,
             Action onImpact = null,
-            EnemyBase aimTarget = null)
+            EnemyBase aimTarget = null,
+            Sprite customProjectileSprite = null,
+            Color customGlowColor = default,
+            float customProjectileScale = 1f)
         {
             if (pelletCount <= 0 || range <= 0f || direction.sqrMagnitude <= Mathf.Epsilon) return;
+            if (customProjectileSprite == null)
+            {
+                Debug.LogError("Proxishot shotgun attack has no custom projectile sprite; skipping the shot instead of showing the default pellet.");
+                return;
+            }
 
             direction.Normalize();
             Vector3 perpendicular = Vector3.Cross(direction, Vector3.forward).normalized;
@@ -132,13 +142,16 @@ namespace TrashTD.Combat
                 Action pelletImpact = i == pelletCount - 1 ? onImpact : null;
                 if (aimTarget != null)
                 {
-                    Spawn(start, aimTarget.VisualPosition, color, speed, ProjectileStyle.Pellet, pelletImpact,
-                        aimTarget, perpendicular * lateralOffset, false);
+                    Spawn(start, aimTarget.VisualPosition, color, speed, ProjectileStyle.Proxishot, pelletImpact,
+                        aimTarget, perpendicular * lateralOffset, false, customProjectileSprite, customGlowColor,
+                        customProjectileScale);
                 }
                 else
                 {
                     Vector3 pelletTarget = start + direction * range + perpendicular * lateralOffset;
-                    Spawn(start, pelletTarget, color, speed, ProjectileStyle.Pellet, pelletImpact, muzzleFlash: false);
+                    Spawn(start, pelletTarget, color, speed, ProjectileStyle.Proxishot, pelletImpact, muzzleFlash: false,
+                        customProjectileSprite: customProjectileSprite, customGlowColor: customGlowColor,
+                        customProjectileScale: customProjectileScale);
                 }
             }
         }
@@ -152,10 +165,21 @@ namespace TrashTD.Combat
             Action onImpact,
             EnemyBase targetEnemy = null,
             Vector3 targetOffset = default,
-            bool muzzleFlash = true)
+            bool muzzleFlash = true,
+            Sprite customProjectileSprite = null,
+            Color customGlowColor = default,
+            float customProjectileScale = 1f)
         {
+            if (style == ProjectileStyle.Proxishot && customProjectileSprite == null)
+            {
+                Debug.LogError("Proxishot projectile spawn was attempted without its custom sprite.");
+                return;
+            }
+
             color.a = 1f;
-            var projectile = new GameObject("CombatProjectileVisual");
+            var projectile = new GameObject(style == ProjectileStyle.Proxishot
+                ? "ProxishotProjectileVisual"
+                : "CombatProjectileVisual");
             projectile.transform.position = PixelParticles.Snap(start);
 
             var visual = projectile.AddComponent<CombatProjectileVisual>();
@@ -170,18 +194,32 @@ namespace TrashTD.Combat
             visual.lastVisual = start;
 
             visual.body = projectile.AddComponent<SpriteRenderer>();
-            visual.body.sprite = GetBodySprite(style, color);
+            visual.body.sprite = customProjectileSprite != null
+                ? customProjectileSprite
+                : GetBodySprite(style, color);
             visual.body.sortingOrder = BodySortingOrder;
+            if (customProjectileSprite != null)
+                visual.body.transform.localScale = Vector3.one * Mathf.Max(0.01f, customProjectileScale);
 
-            if (style == ProjectileStyle.ArtsOrb || style == ProjectileStyle.FireOrb || style == ProjectileStyle.HeavyRocket ||
-                style == ProjectileStyle.Plasma)
+            bool hasStyledHalo = style == ProjectileStyle.ArtsOrb || style == ProjectileStyle.FireOrb ||
+                                 style == ProjectileStyle.HeavyRocket || style == ProjectileStyle.Plasma;
+            if (hasStyledHalo || customProjectileSprite != null)
             {
                 var haloObject = new GameObject("Halo");
                 haloObject.transform.SetParent(projectile.transform, false);
                 visual.halo = haloObject.AddComponent<SpriteRenderer>();
-                visual.halo.sprite = CombatFxArt.PopRingFrames()[3];
-                visual.halo.color = new Color(color.r, color.g, color.b, 0.45f);
-                visual.halo.sortingOrder = HaloSortingOrder;
+                visual.pulseHalo = hasStyledHalo;
+                visual.halo.sprite = customProjectileSprite != null
+                    ? CombatFxArt.GlowDisc(8)
+                    : CombatFxArt.PopRingFrames()[3];
+                visual.halo.color = customProjectileSprite != null
+                    ? customGlowColor
+                    : new Color(color.r, color.g, color.b, 0.45f);
+                visual.halo.sortingOrder = customProjectileSprite != null
+                    ? BodySortingOrder - 1
+                    : HaloSortingOrder;
+                if (customProjectileSprite != null)
+                    visual.halo.transform.localScale = Vector3.one;
             }
 
             float distance = Vector2.Distance(start, visual.targetPosition);
@@ -189,6 +227,8 @@ namespace TrashTD.Combat
 
             Vector2 direction = ((Vector2)(visual.targetPosition - start)).normalized;
             visual.ApplyOrientation(direction);
+            if (customProjectileSprite != null && direction.sqrMagnitude > 0.0001f)
+                projectile.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
             if (muzzleFlash) PlayMuzzle(style, start, direction, color);
         }
 
@@ -382,7 +422,7 @@ namespace TrashTD.Combat
                     break;
             }
 
-            if (halo != null)
+            if (halo != null && pulseHalo)
             {
                 // Flicker between two ring sizes, like an unstable glow
                 Sprite[] rings = CombatFxArt.PopRingFrames();
@@ -404,6 +444,7 @@ namespace TrashTD.Combat
                 ProjectileStyle.HeavyRocket => 2f,
                 ProjectileStyle.Bolt => 2f,
                 ProjectileStyle.Pellet => 2f,
+                ProjectileStyle.Proxishot => 1f,
                 ProjectileStyle.Heal => 6f,
                 ProjectileStyle.Bubble => 7f,
                 ProjectileStyle.Sludge => 5f,
@@ -449,6 +490,20 @@ namespace TrashTD.Combat
                         StartColor = Color.Lerp(color, Color.white, 0.4f),
                         EndColor = faded,
                         Sprite = CombatFxArt.Dot1(),
+                        SortingOrder = CombatFx.TrailSortingOrder
+                    });
+                    break;
+
+                case ProjectileStyle.Proxishot:
+                    PixelParticles.Emit(new PixelParticle
+                    {
+                        Position = position,
+                        Life = 0.1f,
+                        StartColor = new Color(0.55f, 0.9f, 0.28f, 0.65f),
+                        EndColor = new Color(0.55f, 0.9f, 0.28f, 0f),
+                        StartScale = 1.4f,
+                        EndScale = 0.4f,
+                        Sprite = CombatFxArt.Dot2(),
                         SortingOrder = CombatFx.TrailSortingOrder
                     });
                     break;
@@ -660,6 +715,9 @@ namespace TrashTD.Combat
                     break;
                 case ProjectileStyle.Pellet:
                     CombatFx.Sparks(position, color, 2, 1.8f, 0.12f, direction: direction, coneDegrees: 120f);
+                    break;
+                case ProjectileStyle.Proxishot:
+                    CombatFx.Sparks(position, new Color(0.55f, 0.9f, 0.28f), 3, 1.8f, 0.12f, direction: direction, coneDegrees: 120f);
                     break;
                 case ProjectileStyle.Pea:
                     CombatFx.Sparks(position, color, 2, 1.2f, 0.08f, direction: direction, coneDegrees: 100f);

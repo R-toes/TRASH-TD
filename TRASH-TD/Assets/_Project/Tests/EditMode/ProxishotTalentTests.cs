@@ -105,6 +105,22 @@ namespace TrashTD.Tests
         }
 
         [Test]
+        public void AttackAnimation_UsesRequestedTimingsAndFiresOnFifthFrame()
+        {
+            Assert.AreEqual(8, ProxishotSpriteAnimation.AttackFrameCount);
+            Assert.AreEqual(4, ProxishotSpriteAnimation.FireFrame);
+            Assert.AreEqual(0.47f, ProxishotSpriteAnimation.WindupDuration, 0.0001f);
+            Assert.AreEqual(0.13f, ProxishotSpriteAnimation.GetAttackFrameDuration(0), 0.0001f);
+            Assert.AreEqual(0.11f, ProxishotSpriteAnimation.GetAttackFrameDuration(1), 0.0001f);
+            Assert.AreEqual(0.11f, ProxishotSpriteAnimation.GetAttackFrameDuration(2), 0.0001f);
+            Assert.AreEqual(0.12f, ProxishotSpriteAnimation.GetAttackFrameDuration(3), 0.0001f);
+            Assert.AreEqual(0.07f, ProxishotSpriteAnimation.GetAttackFrameDuration(4), 0.0001f);
+            Assert.AreEqual(0.10f, ProxishotSpriteAnimation.GetAttackFrameDuration(5), 0.0001f);
+            Assert.AreEqual(0.11f, ProxishotSpriteAnimation.GetAttackFrameDuration(6), 0.0001f);
+            Assert.AreEqual(0.14f, ProxishotSpriteAnimation.GetAttackFrameDuration(7), 0.0001f);
+        }
+
+        [Test]
         public void TryTakeAttackDamage_FromProxishot_IgnoresMissChance_WhileNormalOperatorMisses()
         {
             int startingHP = evasiveEnemy.CurrentHP;
