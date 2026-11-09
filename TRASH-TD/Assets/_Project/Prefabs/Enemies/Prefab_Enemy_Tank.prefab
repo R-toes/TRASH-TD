@@ -124,4 +124,8 @@ MonoBehaviour:
   - {fileID: -3015153167743582383, guid: aff895bdd49e6c249b6888ca33a1a0c7, type: 3}
   - {fileID: -4607681004209807219, guid: aff895bdd49e6c249b6888ca33a1a0c7, type: 3}
   - {fileID: 3306021186998334847, guid: aff895bdd49e6c249b6888ca33a1a0c7, type: 3}
-  frameDuration: 0.3
+  - {fileID: -878013098, guid: aff895bdd49e6c249b6888ca33a1a0c7, type: 3}
+  - {fileID: -544879034, guid: aff895bdd49e6c249b6888ca33a1a0c7, type: 3}
+  - {fileID: -1156455748, guid: aff895bdd49e6c249b6888ca33a1a0c7, type: 3}
+  - {fileID: -2041440753, guid: aff895bdd49e6c249b6888ca33a1a0c7, type: 3}
+  frameDuration: 0.15

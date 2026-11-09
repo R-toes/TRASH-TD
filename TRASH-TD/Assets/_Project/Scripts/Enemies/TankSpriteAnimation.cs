@@ -8,7 +8,6 @@ namespace TrashTD.Enemies
         [SerializeField] private Sprite[] frames;
         [SerializeField] private float frameDuration = 0.3f;
 
-        private SpriteRenderer spriteRenderer;
         private float frameTimer;
         private int currentFrame;
 
@@ -17,20 +16,18 @@ namespace TrashTD.Enemies
 
         private void Awake()
         {
-            spriteRenderer = GetComponent<SpriteRenderer>();
-
-            if (frames == null || frames.Length != 4 ||
-                frames[0] == null || frames[1] == null || frames[2] == null || frames[3] == null ||
+            if (frames == null || frames.Length < 2 ||
+                System.Array.Exists(frames, frame => frame == null) ||
                 frameDuration <= 0f)
             {
-                Debug.LogError($"{nameof(TankSpriteAnimation)} requires four sprites and a positive frame duration.", this);
+                Debug.LogError($"{nameof(TankSpriteAnimation)} requires at least two sprites and a positive frame duration.", this);
                 enabled = false;
                 return;
             }
 
             currentFrame = 0;
             frameTimer = 0f;
-            spriteRenderer.sprite = frames[currentFrame];
+            ApplyFrame();
         }
 
         private void Update()
@@ -42,7 +39,17 @@ namespace TrashTD.Enemies
             int elapsedFrames = Mathf.FloorToInt(frameTimer / frameDuration);
             frameTimer %= frameDuration;
             currentFrame = (currentFrame + elapsedFrames) % frames.Length;
-            spriteRenderer.sprite = frames[currentFrame];
+            ApplyFrame();
+        }
+
+        private void ApplyFrame()
+        {
+            SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null && renderers[i].gameObject.name != "AirShadow")
+                    renderers[i].sprite = frames[currentFrame];
+            }
         }
     }
 }
