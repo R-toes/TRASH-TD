@@ -168,10 +168,10 @@ namespace TrashTD.UI
         private StageData selectedStage;
         private int selectedStageIndex = -1;
         private StageDifficulty selectedDifficulty = StageDifficulty.Normal;
-        private Text difficultyHeading;
         private Text difficultyLabel;
-        private Text difficultyStats;
-        private Text difficultyBlurb;
+        private Text difficultyWavesValue;
+        private Text difficultyLivesValue;
+        private Text difficultyRecordLabel;
         private Text difficultyRecord; // Best stars on the selected difficulty, or what unlocks it
         private Text playStageLabel;
         private RectTransform difficultyBriefing;
@@ -181,7 +181,6 @@ namespace TrashTD.UI
         private Image modalAccentImage;
         private Color modalAccentTarget = AccentColor;
         private Text stageDetailsTag;
-        private Text stageDetailsNumber;
         private Text stageProgressText;
         private RectTransform mainVersion;
 
@@ -215,7 +214,6 @@ namespace TrashTD.UI
         private RectTransform stagePreviewFrame;
         private StageMapPreview stagePreview;
         private Text stagePreviewInfo;
-        private Text stageDetailsStats;
         private Transform stageDetailsDivider;
         private MapTutorialGuide mapGuide;
 
@@ -1518,17 +1516,11 @@ namespace TrashTD.UI
             stageDetailsDescription.text = selectedStage.shortDescription;
             bool tutorial = IsTutorialStage(selectedStage);
             int stageNumber = tutorial ? 0 : stageIndex + 1;
-            if (stageDetailsTag != null) stageDetailsTag.text = "STAGE " + stageNumber.ToString("00");
-            if (stageDetailsNumber != null) stageDetailsNumber.text = stageNumber.ToString("00");
-            if (stageDetailsStats != null)
-            {
-                stageDetailsStats.text = $"GRID {selectedStage.gridWidth}x{selectedStage.gridHeight}   //   SQUAD {selectedStage.squadSizeLimit}";
-            }
+            if (stageDetailsTag != null) stageDetailsTag.text = tutorial ? "◆ TUTORIAL" : "◆ STAGE " + stageNumber.ToString("00");
             if (!tutorial) selectedDifficulty = PickOpenDifficulty(selectedStage, selectedDifficulty);
             UpdateDifficultyDisplay();
 
             // The tutorial's dossier is just the preview, name, brief and Back / Play
-            SetDetailsBlockVisible(stageDetailsStats, !tutorial);
             SetDetailsBlockVisible(stageDetailsDivider, !tutorial);
             SetDetailsBlockVisible(difficultyLabel, !tutorial);
             SetDetailsBlockVisible(difficultySliderRoot, !tutorial);
@@ -1665,37 +1657,28 @@ namespace TrashTD.UI
             stageDetailsColumn.offsetMin = new Vector2(DossierPadding + PreviewFrameWidth + 32f, DossierPadding);
             stageDetailsColumn.offsetMax = new Vector2(-DossierPadding, -(DossierHeaderHeight + 24f));
 
-            // Faint stage number watermark
-            stageDetailsNumber = MakeText(column.transform, "StageDetailsNumber", "01", 130, TextAnchor.UpperRight,
-                new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.07f), FontStyle.Bold);
-            stageDetailsNumber.horizontalOverflow = HorizontalWrapMode.Overflow;
-            stageDetailsNumber.verticalOverflow = VerticalWrapMode.Overflow;
-            Place(stageDetailsNumber.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, 10f), new Vector2(260f, 150f));
-
-            stageDetailsTag = MakeText(column.transform, "StageDetailsTag", "STAGE 01", 13, TextAnchor.MiddleLeft, AccentBright, FontStyle.Bold);
+            stageDetailsTag = MakeText(column.transform, "StageDetailsTag", "◆ STAGE 01", 15, TextAnchor.MiddleLeft, AccentBright, FontStyle.Bold);
             StretchTop(stageDetailsTag.rectTransform, 0f, 0f, 0f, 22f);
 
-            stageDetailsTitle = MakeText(column.transform, "StageDetailsTitle", "Select a stage", 34, TextAnchor.MiddleLeft, Color.white, FontStyle.Bold);
+            stageDetailsTitle = MakeText(column.transform, "StageDetailsTitle", "Select a stage", 38, TextAnchor.UpperLeft, Color.white, FontStyle.Bold);
             stageDetailsTitle.resizeTextForBestFit = true;
-            stageDetailsTitle.resizeTextMinSize = 20;
-            stageDetailsTitle.resizeTextMaxSize = 34;
-            StretchTop(stageDetailsTitle.rectTransform, 0f, 0f, 24f, 52f);
+            stageDetailsTitle.resizeTextMinSize = 22;
+            stageDetailsTitle.resizeTextMaxSize = 38;
+            // Room for two lines (a long name wraps instead of shrinking to a sliver), with air between them
+            stageDetailsTitle.lineSpacing = 1.2f;
+            StretchTop(stageDetailsTitle.rectTransform, 0f, 0f, 26f, 82f);
 
             // Column blocks (622 px tall) are spaced evenly, DetailsGap apart: name (0..76), description,
-            // stats + divider, difficulty label + slider, info strip, and the Back / Play buttons at the bottom.
-            stageDetailsDescription = MakeText(column.transform, "StageDetailsDescription", "", 15, TextAnchor.UpperLeft, new Color(0.62f, 0.76f, 0.68f, 1f));
-            FitText(stageDetailsDescription, 11, 15);
-            stageDetailsDescription.lineSpacing = 1.25f;
+            // divider, difficulty label + slider, info strip, and the Back / Play buttons at the bottom.
+            stageDetailsDescription = MakeText(column.transform, "StageDetailsDescription", "", 18, TextAnchor.UpperLeft, new Color(0.78f, 0.90f, 0.83f, 1f));
+            FitText(stageDetailsDescription, 13, 18);
+            stageDetailsDescription.lineSpacing = 1.35f;
             StretchTop(stageDetailsDescription.rectTransform, 0f, 0f, DetailsDescriptionTop, DetailsDescriptionHeight);
-
-            stageDetailsStats = MakeText(column.transform, "StageDetailsStats", "", 12, TextAnchor.MiddleLeft, TerminalText, FontStyle.Bold);
-            FitText(stageDetailsStats, 10, 12);
-            StretchTop(stageDetailsStats.rectTransform, 0f, 0f, DetailsStatsTop, 22f);
 
             var divider = new GameObject("DetailsDivider", typeof(RectTransform), typeof(Image));
             divider.transform.SetParent(column.transform, false);
             stageDetailsDivider = divider.transform;
-            StretchTop(divider.GetComponent<RectTransform>(), 0f, 0f, DetailsStatsTop + 30f, 2f);
+            StretchTop(divider.GetComponent<RectTransform>(), 0f, 0f, DetailsDividerTop, 2f);
             var dividerImage = divider.GetComponent<Image>();
             dividerImage.color = new Color(TerminalLine.r, TerminalLine.g, TerminalLine.b, 0.25f);
             dividerImage.raycastTarget = false;
@@ -1722,14 +1705,14 @@ namespace TrashTD.UI
         private const float DossierPadding = 28f;
 
         // Details column layout (column pixels from the top; the column is 622 px tall, Back / Play fill 560..622).
-        // Blocks: name 0..76, description 96 px, stats + divider 32 px, difficulty label + slider 82 px, info strip
-        // 80 px, buttons 62 px; the 194 px left over is split evenly into five gaps.
-        private const float DetailsGap = 39f;
-        private const float DetailsDescriptionTop = 76f + DetailsGap;                                   // 115
-        private const float DetailsDescriptionHeight = 96f;
-        private const float DetailsStatsTop = DetailsDescriptionTop + DetailsDescriptionHeight + DetailsGap; // 250
-        private const float DifficultyLabelTop = DetailsStatsTop + 32f + DetailsGap;                   // 321
-        private const float DifficultyBriefingTop = DifficultyLabelTop + 82f + DetailsGap;             // 442
+        // Blocks: name 0..108, description 132 px, divider 2 px, difficulty label + slider 82 px, info strip
+        // 80 px, buttons 62 px; the description sits 20 px under the name, the other gaps are DetailsGap.
+        private const float DetailsGap = 34f;
+        private const float DetailsDescriptionTop = 108f + 20f;                                         // 128 (name block is 0..108)
+        private const float DetailsDescriptionHeight = 132f;
+        private const float DetailsDividerTop = DetailsDescriptionTop + DetailsDescriptionHeight + DetailsGap; // 294 (128 + 132 + 34)
+        private const float DifficultyLabelTop = DetailsDividerTop + 2f + DetailsGap;                  // 330
+        private const float DifficultyBriefingTop = DifficultyLabelTop + 82f + DetailsGap;             // 446
         private const float DifficultyBriefingHeight = 80f;
         private const float PreviewFrameWidth = 800f;
 
@@ -1793,7 +1776,8 @@ namespace TrashTD.UI
 
             BuildDifficultySlider(parent);
 
-            // Info strip under the slider: ◆ NORMAL ... WAVES 20 / LIVES 15, blurb underneath
+            // Info strip under the slider: three cells, each a small label over a large value:
+            // WAVES | LIVES | BEST (or LOCKED, with what unlocks it)
             var briefing = new GameObject("DifficultyBriefing", typeof(RectTransform), typeof(Image));
             briefing.transform.SetParent(parent, false);
             difficultyBriefing = briefing.GetComponent<RectTransform>();
@@ -1803,26 +1787,44 @@ namespace TrashTD.UI
             briefingImage.raycastTarget = false;
             AddCornerBrackets(difficultyBriefing, 10f, 2f, TerminalLine);
 
-            // Heading on the left half, waves/lives right-aligned in the right half (they never touch), blurb below
-            difficultyHeading = MakeText(briefing.transform, "DifficultyHeading", "◆ NORMAL", 14, TextAnchor.MiddleLeft, TextDim, FontStyle.Bold);
-            FitText(difficultyHeading, 11, 14);
-            StretchTop(difficultyHeading.rectTransform, 18f, 18f, 16f, 22f);
-            difficultyHeading.rectTransform.anchorMax = new Vector2(0.36f, 1f);
+            Text wavesLabel;
+            Text livesLabel;
+            BuildDifficultyCell(briefing.transform, "Waves", "WAVES", 0f, 0.26f, out wavesLabel, out difficultyWavesValue, 28);
+            BuildDifficultyCell(briefing.transform, "Lives", "LIVES", 0.26f, 0.50f, out livesLabel, out difficultyLivesValue, 28);
+            BuildDifficultyCell(briefing.transform, "Record", "BEST", 0.50f, 1f, out difficultyRecordLabel, out difficultyRecord, 26);
 
-            difficultyStats = MakeText(briefing.transform, "DifficultyStats", "", 12, TextAnchor.MiddleRight, TerminalText, FontStyle.Bold);
-            FitText(difficultyStats, 10, 12);
-            StretchTop(difficultyStats.rectTransform, 18f, 18f, 16f, 22f);
-            difficultyStats.rectTransform.anchorMin = new Vector2(0.36f, 1f);
+            // Hairlines between the cells
+            for (int i = 0; i < 2; i++)
+            {
+                float x = i == 0 ? 0.26f : 0.50f;
+                var line = new GameObject("CellDivider", typeof(RectTransform), typeof(Image));
+                line.transform.SetParent(briefing.transform, false);
+                var lineRect = line.GetComponent<RectTransform>();
+                lineRect.anchorMin = new Vector2(x, 0f);
+                lineRect.anchorMax = new Vector2(x, 1f);
+                lineRect.pivot = new Vector2(0.5f, 0.5f);
+                lineRect.sizeDelta = new Vector2(2f, -24f);
+                lineRect.anchoredPosition = Vector2.zero;
+                var lineImage = line.GetComponent<Image>();
+                lineImage.color = new Color(TerminalLine.r, TerminalLine.g, TerminalLine.b, 0.3f);
+                lineImage.raycastTarget = false;
+            }
+        }
 
-            difficultyBlurb = MakeText(briefing.transform, "DifficultyBlurb", "", 11, TextAnchor.MiddleLeft, new Color(0.62f, 0.76f, 0.68f, 0.85f));
-            FitText(difficultyBlurb, 9, 11);
-            StretchTop(difficultyBlurb.rectTransform, 18f, 18f, 46f, 20f);
-            difficultyBlurb.rectTransform.anchorMax = new Vector2(0.62f, 1f);
+        /// <summary>One cell of the info strip: a small dim label over a large value, between two x anchors.</summary>
+        private void BuildDifficultyCell(Transform strip, string name, string label, float xMin, float xMax,
+            out Text labelText, out Text valueText, int valueSize)
+        {
+            labelText = MakeText(strip, name + "Label", label, 11, TextAnchor.MiddleLeft, TextDim, FontStyle.Bold);
+            StretchTop(labelText.rectTransform, 18f, 18f, 12f, 16f);
+            labelText.rectTransform.anchorMin = new Vector2(xMin, 1f);
+            labelText.rectTransform.anchorMax = new Vector2(xMax, 1f);
 
-            difficultyRecord = MakeText(briefing.transform, "DifficultyRecord", "", 11, TextAnchor.MiddleRight, TextDim, FontStyle.Bold);
-            FitText(difficultyRecord, 9, 11);
-            StretchTop(difficultyRecord.rectTransform, 18f, 18f, 46f, 20f);
-            difficultyRecord.rectTransform.anchorMin = new Vector2(0.62f, 1f);
+            valueText = MakeText(strip, name + "Value", "", valueSize, TextAnchor.MiddleLeft, Color.white, FontStyle.Bold);
+            FitText(valueText, 12, valueSize);
+            StretchTop(valueText.rectTransform, 18f, 18f, 30f, 40f);
+            valueText.rectTransform.anchorMin = new Vector2(xMin, 1f);
+            valueText.rectTransform.anchorMax = new Vector2(xMax, 1f);
         }
 
         /// <summary>Lets a Text shrink (down to minSize) instead of being cut off by its rect.</summary>
@@ -2011,36 +2013,31 @@ namespace TrashTD.UI
                 }
             }
 
-            if (difficultyHeading != null)
-            {
-                difficultyHeading.text = $"◆ {selectedDifficulty.ToString().ToUpperInvariant()}";
-                difficultyHeading.color = selectedTint;
-            }
-
             bool unlocked = IsSelectedDifficultyUnlocked;
-            if (difficultyBlurb != null)
-            {
-                difficultyBlurb.text = GetDifficultyBlurb(selectedDifficulty);
-            }
+            bool hasStage = selectedStage != null && !IsTutorialStage(selectedStage);
+            Color gold = new Color(0.98f, 0.78f, 0.28f, 1f);
 
             if (difficultyRecord != null)
             {
-                if (selectedStage == null || IsTutorialStage(selectedStage))
+                if (!hasStage)
                 {
+                    difficultyRecordLabel.text = string.Empty;
                     difficultyRecord.text = string.Empty;
                 }
                 else if (!unlocked)
                 {
-                    difficultyRecord.text = "LOCKED // " + StageProgress.GetUnlockRequirement(selectedStage.stageId, selectedDifficulty);
+                    difficultyRecordLabel.text = "LOCKED";
+                    difficultyRecord.text = StageProgress.GetUnlockRequirement(selectedStage.stageId, selectedDifficulty);
                     difficultyRecord.color = LockedDifficultyColor;
                 }
                 else
                 {
                     int best = StageProgress.GetBestStars(selectedStage.stageId, selectedDifficulty);
+                    difficultyRecordLabel.text = "BEST";
                     difficultyRecord.text = best > 0
-                        ? "BEST " + new string('★', best) + "<color=#3C424D>" + new string('☆', 3 - best) + "</color>"
+                        ? new string('★', best) + "<color=#3C424D>" + new string('☆', 3 - best) + "</color>"
                         : "NOT CLEARED";
-                    difficultyRecord.color = best > 0 ? new Color(0.98f, 0.78f, 0.28f, 1f) : TextDim;
+                    difficultyRecord.color = best > 0 ? gold : TextDim;
                 }
             }
 
@@ -2053,13 +2050,14 @@ namespace TrashTD.UI
                 if (playStageLabel != null) playStageLabel.text = unlocked ? "▶  PLAY" : "LOCKED";
             }
 
-            if (difficultyStats != null)
+            if (difficultyWavesValue != null && difficultyLivesValue != null)
             {
                 int waves = GetSelectedStageWaveCount(selectedDifficulty);
                 int lives = selectedStage != null ? selectedStage.GetLifePoints(selectedDifficulty) : 0;
-                difficultyStats.text = selectedStage != null
-                    ? $"WAVES {(waves > 0 ? waves.ToString() : "?")} / LIVES {lives}"
-                    : string.Empty;
+                difficultyWavesValue.text = selectedStage != null ? (waves > 0 ? waves.ToString() : "?") : string.Empty;
+                difficultyLivesValue.text = selectedStage != null ? lives.ToString() : string.Empty;
+                difficultyWavesValue.color = selectedTint;
+                difficultyLivesValue.color = selectedTint;
             }
         }
 
@@ -2097,16 +2095,6 @@ namespace TrashTD.UI
                 case StageDifficulty.Easy: return 1;
                 case StageDifficulty.Hard: return 3;
                 default: return 2;
-            }
-        }
-
-        private static string GetDifficultyBlurb(StageDifficulty difficulty)
-        {
-            switch (difficulty)
-            {
-                case StageDifficulty.Easy: return "Relaxed pace. Room to experiment.";
-                case StageDifficulty.Hard: return "Relentless waves. No mercy.";
-                default: return "Balanced waves. The intended experience.";
             }
         }
 
@@ -2299,11 +2287,9 @@ namespace TrashTD.UI
             RegisterEntrance(stageEntrance, mapNavigator != null ? mapNavigator.HudRoot : null, new Vector2(40f, 0f), 0.18f);
 
             // Stage details modal
-            RegisterEntrance(detailsEntrance, stageDetailsNumber, Vector2.zero, 0.08f);
             RegisterEntrance(detailsEntrance, stageDetailsTag, new Vector2(0f, 12f), 0.05f);
             RegisterEntrance(detailsEntrance, stageDetailsTitle, new Vector2(0f, 12f), 0.08f);
             RegisterEntrance(detailsEntrance, stageDetailsDescription, new Vector2(0f, 12f), 0.12f);
-            RegisterEntrance(detailsEntrance, stageDetailsStats, new Vector2(0f, 12f), 0.14f);
             RegisterEntrance(detailsEntrance, stagePreviewFrame, new Vector2(-24f, 0f), 0.02f);
             RegisterEntrance(detailsEntrance, difficultyLabel, new Vector2(0f, 12f), 0.16f);
             RegisterEntrance(detailsEntrance, difficultySliderRoot, new Vector2(0f, 12f), 0.22f);
