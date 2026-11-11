@@ -207,6 +207,11 @@ namespace TrashTD.UI
         private Text abilityHeader;
         private Text abilityText;
         private Text loreText;
+        private ScrollRect loreScroll;
+
+        // Body text sizes for the field notes and the skill / ability description
+        private const int LoreFontSize = 17;
+        private const int NotesFontSize = 15;
         private Text sightedHeader;
         private Text sightedText;
         private int tierIndex;
@@ -708,14 +713,32 @@ namespace TrashTD.UI
             PlaceTopLeft(notesBar.rectTransform, InfoX, 248f, 4f, 148f);
             Text fieldNotesHeader = CreateText(galleryCard, "// FIELD NOTES", 12, TextAnchor.MiddleLeft, AccentColor);
             PlaceTopLeft(fieldNotesHeader.rectTransform, InfoX + 20f, 248f, InfoWidth - 20f, 20f);
-            loreText = CreateText(galleryCard, string.Empty, 13, TextAnchor.UpperLeft, BodyColor);
+            // Scrolls when the notes are longer than the box, so nothing is cut off
+            GameObject loreScrollObject = new GameObject("FieldNotesScroll", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
+            loreScrollObject.transform.SetParent(galleryCard, false);
+            RectTransform loreScrollRect = loreScrollObject.GetComponent<RectTransform>();
+            PlaceTopLeft(loreScrollRect, InfoX + 20f, 274f, InfoWidth - 20f, 122f);
+            loreScrollObject.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f); // invisible, but catches the mouse wheel
+
+            loreText = CreateText(loreScrollRect, string.Empty, LoreFontSize, TextAnchor.UpperLeft, BodyColor);
             loreText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            loreText.verticalOverflow = VerticalWrapMode.Truncate;
-            loreText.lineSpacing = 1.45f;
-            loreText.resizeTextForBestFit = true;
-            loreText.resizeTextMinSize = 10;
-            loreText.resizeTextMaxSize = 13;
-            PlaceTopLeft(loreText.rectTransform, InfoX + 20f, 274f, InfoWidth - 20f, 122f);
+            loreText.verticalOverflow = VerticalWrapMode.Overflow;
+            loreText.lineSpacing = 1.35f;
+            RectTransform loreTextRect = loreText.rectTransform;
+            loreTextRect.anchorMin = new Vector2(0f, 1f);
+            loreTextRect.anchorMax = new Vector2(1f, 1f);
+            loreTextRect.pivot = new Vector2(0.5f, 1f);
+            loreTextRect.offsetMin = new Vector2(0f, 0f);
+            loreTextRect.offsetMax = new Vector2(-10f, 0f); // right gutter so text never sits under the scrolling edge
+            loreText.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            loreScroll = loreScrollObject.GetComponent<ScrollRect>();
+            loreScroll.content = loreTextRect;
+            loreScroll.viewport = loreScrollRect;
+            loreScroll.horizontal = false;
+            loreScroll.movementType = ScrollRect.MovementType.Clamped;
+            loreScroll.scrollSensitivity = 30f;
+            AttachScrollbar(loreScroll);
 
             // ── Combat data ──
             Image statsPanel = CreateImage(galleryCard, "StatsPanel", new Color(0f, 0f, 0f, 0.22f));
@@ -770,11 +793,50 @@ namespace TrashTD.UI
             notesScroll.horizontal = false;
             notesScroll.movementType = ScrollRect.MovementType.Clamped;
             notesScroll.scrollSensitivity = 30f;
+            AttachScrollbar(notesScroll);
 
             abilityHeader = CreateNotesText(notesContent, "// ABILITY", 12, AccentColor);
-            abilityText = CreateNotesText(notesContent, string.Empty, 11, BodyColor);
+            abilityText = CreateNotesText(notesContent, string.Empty, NotesFontSize, BodyColor);
             sightedHeader = CreateNotesText(notesContent, "// SIGHTED AT", 12, AccentColor);
-            sightedText = CreateNotesText(notesContent, string.Empty, 11, BodyColor);
+            sightedText = CreateNotesText(notesContent, string.Empty, NotesFontSize, BodyColor);
+        }
+
+        /// <summary>
+        /// Adds a thin, dim scrollbar along the right edge of a vertical scroll view. It only shows when the
+        /// content is longer than the view, so it doubles as the "this scrolls" hint.
+        /// </summary>
+        private static void AttachScrollbar(ScrollRect scroll)
+        {
+            const float width = 4f;
+            const float inset = 3f;
+
+            GameObject barObject = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+            barObject.transform.SetParent(scroll.transform, false);
+            RectTransform barRect = barObject.GetComponent<RectTransform>();
+            barRect.anchorMin = new Vector2(1f, 0f);
+            barRect.anchorMax = new Vector2(1f, 1f);
+            barRect.pivot = new Vector2(1f, 0.5f);
+            barRect.sizeDelta = new Vector2(width, -inset * 2f);
+            barRect.anchoredPosition = new Vector2(-inset, 0f);
+
+            Image track = barObject.GetComponent<Image>();
+            track.color = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.12f);
+
+            GameObject handleObject = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+            handleObject.transform.SetParent(barObject.transform, false);
+            RectTransform handleRect = handleObject.GetComponent<RectTransform>();
+            handleRect.sizeDelta = Vector2.zero;
+            Image handle = handleObject.GetComponent<Image>();
+            handle.color = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.55f);
+
+            Scrollbar bar = barObject.GetComponent<Scrollbar>();
+            bar.direction = Scrollbar.Direction.BottomToTop;
+            bar.handleRect = handleRect;
+            bar.targetGraphic = handle;
+
+            scroll.verticalScrollbar = bar;
+            // AutoHide (not ...AndExpandViewport) keeps the text width fixed whether or not the bar shows
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
         }
 
         private Text CreateNotesText(RectTransform parent, string content, int size, Color color)
@@ -1078,6 +1140,7 @@ namespace TrashTD.UI
                 sightedText.text = stages.Count > 0 ? string.Join("\n", stages) : "No confirmed sightings in the field yet.";
             }
             notesScroll.verticalNormalizedPosition = 1f;
+            loreScroll.verticalNormalizedPosition = 1f;
 
             ConfigureTiers(entry);
             UpdateRange(entry);
@@ -1104,6 +1167,7 @@ namespace TrashTD.UI
             sightedText.gameObject.SetActive(true);
             sightedText.text = UnknownText;
             notesScroll.verticalNormalizedPosition = 1f;
+            loreScroll.verticalNormalizedPosition = 1f;
 
             foreach (TierButton tier in tierButtons) tier.Button.gameObject.SetActive(false);
             foreach (StatRow row in statRows)
