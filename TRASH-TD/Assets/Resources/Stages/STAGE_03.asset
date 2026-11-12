@@ -21,6 +21,8 @@ MonoBehaviour:
   mapVisualSprite: {fileID: 21300000, guid: 210c296c31fabf241803cb7e62591201, type: 3}
   loadingScreenMapSprite: {fileID: 21300000, guid: 87295b2a32df53243bad11671d2c215d, type: 3}
   backgroundVisualSprite: {fileID: 21300000, guid: 89180437e9e47274ea7d6783f5313fc3, type: 3}
+  cameraBoundsSprite: {fileID: -5226257367262765935, guid: 07b53b5d71a5cc24689af2a6c9273117, type: 3}
+  cameraBoundsTileOffset: {x: -3, y: -3}
   upperBackgroundVisualSprites:
   - {fileID: 21300000, guid: 095fce5d3eb9c9c44a696f565604df6f, type: 3}
   visualTilePixelSize: 32

@@ -90,10 +90,14 @@ namespace TrashTD.UI
             area.offsetMin = new Vector2(0f, BottomInset);
             area.offsetMax = new Vector2(0f, -TopInset);
 
-            // Soft vignette
-            Image vignette = CreateImage(area, "Vignette", new Color(0f, 0f, 0f, 0.35f));
+            // Soft vignette over the whole screen. It used to cover only the area between the HUD bars, so it was
+            // darkest along that area's bottom edge and then stopped dead, leaving a brightness step wherever the
+            // deck bar is see-through (between the discard monitor and the bottom-right panel). Now the bars simply
+            // sit on top of it.
+            Image vignette = CreateImage(rootRect, "Vignette", new Color(0f, 0f, 0f, 0.35f));
             vignette.sprite = CreateVignetteSprite();
             Stretch(vignette.rectTransform);
+            vignette.rectTransform.SetAsFirstSibling(); // under the brackets and text
 
             // Noise tear bars (hidden until interference)
             tearBars = new RawImage[6];

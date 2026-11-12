@@ -2223,7 +2223,9 @@ namespace TrashTD.UI
                 new Vector2(80f, 98f), new Vector2(0.5f, 0.5f));
 
             var image = zone.GetComponent<Image>();
-            image.color = new Color(0.10f, 0.05f, 0.07f, 0.25f);
+            // No backing tint: the discard monitor in the Deck BG art is the container. The image stays a
+            // raycast target so the button's hover feedback still works.
+            image.color = Color.clear;
             image.raycastTarget = true;
 
             var icon = new GameObject("TrashIcon", typeof(RectTransform), typeof(Image));

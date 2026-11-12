@@ -77,6 +77,13 @@ namespace TrashTD.Data
         [Tooltip("Optional background artwork rendered behind the main map artwork")]
         public Sprite backgroundVisualSprite;
 
+        [Tooltip("Optional non-playable art that extends the map on every side. It is drawn behind the map artwork, " +
+                 "and the gameplay camera can't move past its edges (without it the camera stops at the map art).")]
+        public Sprite cameraBoundsSprite;
+
+        [Tooltip("Offset in tiles of the camera bounds sprite's bottom-left corner from the grid's bottom-left (negative = extends past the grid)")]
+        public Vector2 cameraBoundsTileOffset;
+
         [Tooltip("Optional upper-layer artwork rendered above the main map artwork but below units")]
         public Sprite[] upperBackgroundVisualSprites;
 

@@ -45,6 +45,7 @@ namespace TrashTD.Core.GameLoop
         private Vector2 homePosition;
         private float homeSize;
         private Rect mapBounds;
+        private bool strictBounds;          // the whole view (not just the area between the HUD bars) stays inside mapBounds
         private bool initialized;
 
         private float zoom = 1f;
@@ -85,13 +86,18 @@ namespace TrashTD.Core.GameLoop
             if (Instance == this) Instance = null;
         }
 
-        /// <summary>Sets the home view (position and orthographic size) and the map art bounds to look around in.</summary>
-        public void Initialize(Camera camera, Vector2 position, float orthographicSize, Rect bounds)
+        /// <summary>
+        /// Sets the home view (position and orthographic size) and the bounds to look around in. With
+        /// <paramref name="strict"/> (a stage with a camera bounds sprite) the camera never shows anything past the
+        /// bounds, HUD bars included; otherwise the area between the HUD bars is kept within the map art.
+        /// </summary>
+        public void Initialize(Camera camera, Vector2 position, float orthographicSize, Rect bounds, bool strict = false)
         {
             cam = camera;
             homePosition = position;
             homeSize = Mathf.Max(0.1f, orthographicSize);
             mapBounds = bounds;
+            strictBounds = strict;
             zoom = targetZoom = 1f;
             offset = dragTarget = dragVelocity = Vector2.zero;
             lookInput = Vector2.zero;
@@ -130,7 +136,7 @@ namespace TrashTD.Core.GameLoop
             zoom = Mathf.Lerp(zoom, targetZoom, 1f - Mathf.Exp(-ZoomSharpness * dt));
             float size = homeSize / zoom;
             float aspect = cam.aspect > 0f ? cam.aspect : 16f / 9f;
-            Vector2 range = GetViewRange(size, aspect);
+            GetOffsetLimits(size, aspect, out Vector2 minOffset, out Vector2 maxOffset);
 
             if (DragMode)
             {
@@ -140,13 +146,15 @@ namespace TrashTD.Core.GameLoop
                     dragTarget += dragVelocity * dt;
                     dragVelocity *= Mathf.Exp(-InertiaDamping * dt);
                 }
-                dragTarget = new Vector2(Mathf.Clamp(dragTarget.x, -range.x, range.x), Mathf.Clamp(dragTarget.y, -range.y, range.y));
+                dragTarget = new Vector2(Mathf.Clamp(dragTarget.x, minOffset.x, maxOffset.x), Mathf.Clamp(dragTarget.y, minOffset.y, maxOffset.y));
                 offset = Vector2.Lerp(offset, dragTarget, 1f - Mathf.Exp(-DragSharpness * dt));
             }
             else
             {
                 // Look-around toward the cursor
-                Vector2 target = Vector2.Scale(lookInput, range);
+                Vector2 target = new Vector2(
+                    lookInput.x >= 0f ? lookInput.x * maxOffset.x : -lookInput.x * minOffset.x,
+                    lookInput.y >= 0f ? lookInput.y * maxOffset.y : -lookInput.y * minOffset.y);
                 float sharpness = returningHome ? ReturnSharpness : FollowSharpness;
                 offset = Vector2.Lerp(offset, target, 1f - Mathf.Exp(-sharpness * dt));
                 dragTarget = offset;
@@ -165,6 +173,7 @@ namespace TrashTD.Core.GameLoop
             }
 
             Vector2 position = homePosition + GetZoomCentreShift(size) + offset + shake;
+            if (strictBounds) position = ClampToBounds(position, size, aspect);
             cam.orthographicSize = size;
             cam.transform.position = new Vector3(position.x, position.y, cam.transform.position.z);
         }
@@ -177,6 +186,44 @@ namespace TrashTD.Core.GameLoop
         {
             float hudShift = (BottomHudFraction - TopHudFraction) * (homeSize - size);
             return new Vector2(0f, hudShift);
+        }
+
+        /// <summary>
+        /// The lowest and highest offset from the home framing the view may take per axis (lowest &lt;= 0 &lt;= highest).
+        /// </summary>
+        private void GetOffsetLimits(float size, float aspect, out Vector2 minOffset, out Vector2 maxOffset)
+        {
+            if (!strictBounds)
+            {
+                Vector2 range = GetViewRange(size, aspect);
+                minOffset = -range;
+                maxOffset = range;
+                return;
+            }
+
+            // Strict: the whole camera view stays inside the bounds, so nothing past their edge is ever on screen
+            Vector2 basePosition = homePosition + GetZoomCentreShift(size);
+            float halfWidth = size * aspect;
+            float halfHeight = size;
+            minOffset = new Vector2(
+                Mathf.Min(0f, mapBounds.xMin + halfWidth - basePosition.x),
+                Mathf.Min(0f, mapBounds.yMin + halfHeight - basePosition.y));
+            maxOffset = new Vector2(
+                Mathf.Max(0f, mapBounds.xMax - halfWidth - basePosition.x),
+                Mathf.Max(0f, mapBounds.yMax - halfHeight - basePosition.y));
+        }
+
+        /// <summary>Keeps the whole view inside the bounds (centres on an axis where the view is larger than them).</summary>
+        private Vector2 ClampToBounds(Vector2 position, float size, float aspect)
+        {
+            return new Vector2(
+                ClampAxis(position.x, mapBounds.xMin + size * aspect, mapBounds.xMax - size * aspect, mapBounds.center.x),
+                ClampAxis(position.y, mapBounds.yMin + size, mapBounds.yMax - size, mapBounds.center.y));
+        }
+
+        private static float ClampAxis(float value, float min, float max, float centre)
+        {
+            return min > max ? centre : Mathf.Clamp(value, min, max);
         }
 
         /// <summary>

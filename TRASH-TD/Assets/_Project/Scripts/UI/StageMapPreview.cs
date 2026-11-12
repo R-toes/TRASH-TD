@@ -231,7 +231,7 @@ namespace TrashTD.UI
 
             // Art layers in gameplay draw order, in tile space (origin = grid bottom-left)
             var layers = new List<(Sprite sprite, Vector2 min, Vector2 size, Sprite[] frames)>();
-            AddLayer(layers, stage.backgroundVisualSprite, true, mapSprite, mapOrigin, pixelsPerTile);
+            AddLayer(layers, stage.backgroundVisualSprite, true, mapSprite, mapOrigin, pixelsPerTile, stage);
             AddLayer(layers, mapSprite, false, mapSprite, mapOrigin, pixelsPerTile);
             if (stage.upperBackgroundVisualSprites != null)
             {
@@ -355,13 +355,14 @@ namespace TrashTD.UI
             bool alignToSourceRect,
             Sprite mapSprite,
             Vector2 mapOrigin,
-            float pixelsPerTile)
+            float pixelsPerTile,
+            StageData ownerStage = null)
         {
             if (sprite == null) return;
             if (sprite.texture != null) sprite.texture.filterMode = FilterMode.Point;
 
             Rect rect = sprite.rect;
-            Sprite[] frames = GetSheetFrames(sprite, mapSprite);
+            Sprite[] frames = GetSheetFrames(sprite, mapSprite, ownerStage);
             Vector2 pixelSize = frames != null ? frames[0].rect.size : rect.size;
             Vector2 min = mapOrigin + (alignToSourceRect ? rect.position / pixelsPerTile : Vector2.zero);
             layers.Add((sprite, min, pixelSize / pixelsPerTile, frames));
@@ -370,14 +371,30 @@ namespace TrashTD.UI
         /// <summary>
         /// A layer several map-widths wide (Stage 3's background) is a horizontal animation sheet:
         /// split it into frames the size of the map art, as StageBootstrapper.CreateSpriteSheetAnimation does.
+        /// When the stage has a camera bounds sprite and the sheet's frames are made for it (bounds-sized, so they
+        /// reach past the map), each frame is cut down to the part under the map art, so the preview and the menu
+        /// backdrop keep showing just the playable map.
         /// </summary>
-        internal static Sprite[] GetSheetFrames(Sprite sprite, Sprite mapSprite)
+        internal static Sprite[] GetSheetFrames(Sprite sprite, Sprite mapSprite, StageData stage = null)
         {
             if (mapSprite == null || sprite == mapSprite) return null;
 
-            float frameWidth = mapSprite.rect.width;
             Rect rect = sprite.rect;
-            if (frameWidth < 1f || rect.width < frameWidth * 2f || !Mathf.Approximately(rect.height, mapSprite.rect.height)) return null;
+            float frameWidth = mapSprite.rect.width;
+            float frameHeight = mapSprite.rect.height;
+            Vector2 cropOrigin = Vector2.zero; // where the map art starts inside a frame, in pixels
+
+            Sprite bounds = stage != null ? stage.cameraBoundsSprite : null;
+            if (bounds != null && Mathf.Approximately(rect.height, bounds.rect.height) &&
+                !Mathf.Approximately(rect.height, mapSprite.rect.height))
+            {
+                float pixelsPerTile = stage.visualTilePixelSize > 0 ? stage.visualTilePixelSize : 32f;
+                frameWidth = bounds.rect.width;
+                frameHeight = bounds.rect.height;
+                cropOrigin = (stage.visualTileOffset - stage.cameraBoundsTileOffset) * pixelsPerTile;
+            }
+
+            if (frameWidth < 1f || rect.width < frameWidth * 2f || !Mathf.Approximately(rect.height, frameHeight)) return null;
             if (!Mathf.Approximately(rect.width % frameWidth, 0f)) return null;
 
             if (SheetFrameCache.TryGetValue(sprite, out Sprite[] cached) && cached != null && cached.Length > 0 && cached[0] != null)
@@ -389,7 +406,7 @@ namespace TrashTD.UI
             {
                 frames[i] = Sprite.Create(
                     sprite.texture,
-                    new Rect(rect.x + i * frameWidth, rect.y, frameWidth, rect.height),
+                    new Rect(rect.x + i * frameWidth + cropOrigin.x, rect.y + cropOrigin.y, mapSprite.rect.width, mapSprite.rect.height),
                     new Vector2(0.5f, 0.5f),
                     sprite.pixelsPerUnit);
             }

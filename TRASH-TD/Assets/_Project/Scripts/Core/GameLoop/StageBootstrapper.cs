@@ -178,6 +178,8 @@ namespace TrashTD.Core.GameLoop
                     stageData.tileLayout = mapSource.tileLayout;
                     stageData.mapVisualSprite = mapSource.mapVisualSprite;
                     stageData.backgroundVisualSprite = mapSource.backgroundVisualSprite;
+                    stageData.cameraBoundsSprite = mapSource.cameraBoundsSprite;
+                    stageData.cameraBoundsTileOffset = mapSource.cameraBoundsTileOffset;
                     stageData.upperBackgroundVisualSprites = mapSource.upperBackgroundVisualSprites;
                     stageData.midgroundVisualSprites = mapSource.midgroundVisualSprites;
                     stageData.foregroundVisualSprite = mapSource.foregroundVisualSprite;
@@ -261,7 +263,9 @@ namespace TrashTD.Core.GameLoop
             if (operatorPool != null && operatorPool.Count > 0)
             {
                 cardDraftSystem.SetOperatorPool(operatorPool);
-                cardDraftSystem.OnCardSelected += HandleCardSelectedForDeployment;
+                // Not subscribed to cardDraftSystem.OnCardSelected: that fires when a card is picked from the draft,
+                // and a freshly picked card must not start placement by itself. Clicking a deck card (the HUD's
+                // SelectDeckSlot) raises PlayerDeck.OnCardSelectedForDeployment, which is handled below.
             }
             if (playerDeck != null)
             {
@@ -320,14 +324,29 @@ namespace TrashTD.Core.GameLoop
             Vector3 gridBottomLeft = gridManager.GridToWorldPosition(0, 0) - new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f);
             Vector3 targetBottomLeft = gridBottomLeft + new Vector3(stageData.visualTileOffset.x * cellSize, stageData.visualTileOffset.y * cellSize, 0f);
 
+            // Non-playable extension of the map (the camera stops at its edges), drawn under the map artwork.
+            // A background sheet made for it (frames the size of the bounds sprite) is placed with it.
+            Sprite boundsSprite = stageData.cameraBoundsSprite;
+            Vector3 boundsBottomLeft = gridBottomLeft + new Vector3(
+                stageData.cameraBoundsTileOffset.x * cellSize, stageData.cameraBoundsTileOffset.y * cellSize, 0f);
+            Sprite backgroundSprite = stageData.backgroundVisualSprite;
+            bool backgroundFitsBounds = boundsSprite != null && backgroundSprite != null &&
+                Mathf.Approximately(backgroundSprite.rect.height, boundsSprite.rect.height);
+
+            if (boundsSprite != null)
+            {
+                DrawMapArtworkLayer(gridContainer.transform, boundsSprite, "CameraBoundsArtwork", -1, boundsBottomLeft, true);
+            }
+
             DrawMapArtworkLayer(
                 gridContainer.transform,
-                stageData.backgroundVisualSprite,
+                backgroundSprite,
                 "BackgroundArtwork",
-                0,
-                targetBottomLeft,
+                boundsSprite != null ? -2 : 0,
+                backgroundFitsBounds ? boundsBottomLeft : targetBottomLeft,
                 true,
-                EnvironmentStageId == "STAGE_03");
+                EnvironmentStageId == "STAGE_03",
+                frameSize: backgroundFitsBounds ? boundsSprite.rect.size : (Vector2?)null);
 
             Sprite mapSprite = stageData.mapVisualSprite;
             DrawMapArtworkLayer(gridContainer.transform, mapSprite, "MapArtwork", 1, targetBottomLeft, false);
@@ -412,7 +431,8 @@ namespace TrashTD.Core.GameLoop
             bool alignToSourceRect,
             bool animateAsSpriteSheet = false,
             bool onGround = true,
-            int? sortingLayerId = null)
+            int? sortingLayerId = null,
+            Vector2? frameSize = null)
         {
             if (sprite == null) return;
 
@@ -436,7 +456,9 @@ namespace TrashTD.Core.GameLoop
                 CreateSpriteSheetAnimation(
                     spriteRenderer,
                     sprite,
-                    Stage3BackgroundAnimationFrameDuration);
+                    Stage3BackgroundAnimationFrameDuration,
+                    frameSize.HasValue ? Mathf.RoundToInt(frameSize.Value.x) : Stage3BackgroundFrameWidth,
+                    frameSize.HasValue ? Mathf.RoundToInt(frameSize.Value.y) : Stage3BackgroundFrameHeight);
             }
 
             Sprite placedSprite = spriteRenderer.sprite;
@@ -453,21 +475,23 @@ namespace TrashTD.Core.GameLoop
                 - Vector3.Scale(placedSprite.bounds.min, artworkScale);
         }
 
-        private void CreateSpriteSheetAnimation(SpriteRenderer spriteRenderer, Sprite sourceSprite, float frameDuration)
+        private void CreateSpriteSheetAnimation(
+            SpriteRenderer spriteRenderer, Sprite sourceSprite, float frameDuration, int frameWidth, int frameHeight)
         {
             Texture2D texture = sourceSprite.texture;
             if (!texture.isReadable ||
-                texture.width % Stage3BackgroundFrameWidth != 0 ||
-                texture.height != Stage3BackgroundFrameHeight ||
+                frameWidth <= 0 ||
+                texture.width % frameWidth != 0 ||
+                texture.height != frameHeight ||
                 frameDuration <= 0f)
             {
                 Debug.LogError(
-                    $"Stage 3 background animation requires a readable sheet of {Stage3BackgroundFrameWidth}x{Stage3BackgroundFrameHeight} frames and a positive frame duration.",
+                    $"Stage 3 background animation requires a readable sheet of {frameWidth}x{frameHeight} frames and a positive frame duration.",
                     this);
                 return;
             }
 
-            int frameCount = texture.width / Stage3BackgroundFrameWidth;
+            int frameCount = texture.width / frameWidth;
             Vector2 pivot = new Vector2(
                 sourceSprite.pivot.x / sourceSprite.rect.width,
                 sourceSprite.pivot.y / sourceSprite.rect.height);
@@ -477,10 +501,10 @@ namespace TrashTD.Core.GameLoop
                 frames[i] = Sprite.Create(
                     texture,
                     new Rect(
-                        i * Stage3BackgroundFrameWidth,
+                        i * frameWidth,
                         0f,
-                        Stage3BackgroundFrameWidth,
-                        Stage3BackgroundFrameHeight),
+                        frameWidth,
+                        frameHeight),
                     pivot,
                     sourceSprite.pixelsPerUnit,
                     0,
@@ -543,6 +567,19 @@ namespace TrashTD.Core.GameLoop
             float visualHeight = visualMaxY - visualMinY;
             float visualCenterY = (visualMinY + visualMaxY) * 0.5f;
 
+            // The home framing above is sized to the playable map art. The camera may only travel as far as the
+            // optional bounds sprite (the map's non-playable extension) reaches.
+            float limitMinX = visualMinX, limitMaxX = visualMaxX, limitMinY = visualMinY, limitMaxY = visualMaxY;
+            if (stageData.cameraBoundsSprite != null)
+            {
+                float boundsPixelsPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
+                Rect boundsRect = stageData.cameraBoundsSprite.rect;
+                limitMinX = Mathf.Min(limitMinX, stageData.cameraBoundsTileOffset.x * cellSize);
+                limitMinY = Mathf.Min(limitMinY, stageData.cameraBoundsTileOffset.y * cellSize);
+                limitMaxX = Mathf.Max(limitMaxX, (boundsRect.width / boundsPixelsPerTile + stageData.cameraBoundsTileOffset.x) * cellSize);
+                limitMaxY = Mathf.Max(limitMaxY, (boundsRect.height / boundsPixelsPerTile + stageData.cameraBoundsTileOffset.y) * cellSize);
+            }
+
             // Available vertical ratio between DeckBar (170px) and TopBar (90px) on 1080p reference (~76%)
             const float availableRatio = 0.759f;
             float requiredWorldHeight = (visualHeight + 0.35f) / availableRatio;
@@ -561,16 +598,12 @@ namespace TrashTD.Core.GameLoop
             var cameraController = cam.GetComponent<GameplayCameraController>();
             if (cameraController == null) cameraController = cam.gameObject.AddComponent<GameplayCameraController>();
             cameraController.Initialize(cam, new Vector2(centerX, camY), orthoSize,
-                Rect.MinMaxRect(visualMinX, visualMinY, visualMaxX, visualMaxY));
+                Rect.MinMaxRect(limitMinX, limitMinY, limitMaxX, limitMaxY),
+                stageData.cameraBoundsSprite != null);
         }
 
         private void OnDestroy()
         {
-            if (cardDraftSystem != null)
-            {
-                cardDraftSystem.OnCardSelected -= HandleCardSelectedForDeployment;
-            }
-
             if (playerDeck != null)
             {
                 playerDeck.OnCardSelectedForDeployment -= HandleCardSelectedForDeployment;

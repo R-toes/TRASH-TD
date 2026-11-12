@@ -206,7 +206,7 @@ namespace TrashTD.UI
             slide.animatedFrames = null;
             if (stage.backgroundVisualSprite != null)
             {
-                slide.animatedFrames = StageMapPreview.GetSheetFrames(stage.backgroundVisualSprite, map);
+                slide.animatedFrames = StageMapPreview.GetSheetFrames(stage.backgroundVisualSprite, map, stage);
                 slide.animatedLayer = SetLayer(slide, used++,
                     slide.animatedFrames != null ? slide.animatedFrames[0] : stage.backgroundVisualSprite);
                 if (slide.animatedFrames == null) slide.animatedLayer = null;

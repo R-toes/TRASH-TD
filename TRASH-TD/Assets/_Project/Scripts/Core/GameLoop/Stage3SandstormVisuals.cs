@@ -245,6 +245,16 @@ namespace TrashTD.Core.GameLoop
                 artMin = Vector2.Min(artMin, spriteMin);
                 artMax = Vector2.Max(artMax, spriteMax);
             }
+
+            // The map's non-playable extension (the camera bounds sprite) is in the storm too
+            if (stageData.cameraBoundsSprite != null)
+            {
+                float pixelPerTile = stageData.visualTilePixelSize > 0 ? stageData.visualTilePixelSize : 32f;
+                Vector2 boundsMin = gridMin + stageData.cameraBoundsTileOffset * cellSize;
+                Vector2 boundsMax = boundsMin + stageData.cameraBoundsSprite.rect.size / pixelPerTile * cellSize;
+                artMin = Vector2.Min(artMin, boundsMin);
+                artMax = Vector2.Max(artMax, boundsMax);
+            }
         }
 
         private void BuildDensityField()
