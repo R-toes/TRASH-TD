@@ -13,7 +13,8 @@ namespace TrashTD.Enemies
 
         protected override void Update()
         {
-            if ((IsFrozen || IsStunned) && tankAnimation != null)
+            // A frozen tank holds its attack pose and finishes the swing once thawed; a stun drops the attack
+            if (IsStunned && tankAnimation != null)
                 tankAnimation.CancelAttack();
 
             if (data != null && data.frontAreaAttackTiles > 0)

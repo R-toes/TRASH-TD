@@ -445,6 +445,7 @@ namespace TrashTD.Enemies
 
         protected override void UpdateSpriteAnimation(float deltaTime)
         {
+            if (IsFrozen) return; // Frozen solid: hold the current frame
             Sprite[] currentFrames = CurrentAnimationFrames;
             if (currentFrames == null || currentFrames.Length == 0)
                 return;

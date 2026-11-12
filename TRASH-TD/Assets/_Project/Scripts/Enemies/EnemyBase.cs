@@ -81,6 +81,8 @@ namespace TrashTD.Enemies
         private float speedBeforeChill;
         private float chillSlowMultiplier = 1f;
         private bool isFrozen;
+        private Combat.IceStatusVisual iceVisual;
+        private Combat.IceStatusState appliedIceState;
         private bool isStunned;
         private float sluggishTimer;
         private float sluggishMoveSpeedMultiplier = 1f;
@@ -213,6 +215,7 @@ namespace TrashTD.Enemies
                 SpriteRenderer renderer = renderers[i];
                 if (renderer != null && renderer.enabled && renderer.gameObject.name != "AirShadow" &&
                     !renderer.gameObject.name.StartsWith("StunStars") && !renderer.gameObject.name.StartsWith("EnragedVisual") &&
+                    !renderer.gameObject.name.StartsWith(Combat.IceStatusVisual.ObjectName) &&
                     renderer.sprite != null)
                 {
                     return renderer;
@@ -285,6 +288,7 @@ namespace TrashTD.Enemies
             resicochetCharge = 0;
             highestResicochetCharge = 0;
             IsEnraged = false;
+            appliedIceState = Combat.IceStatusState.None;
             CacheChillRenderers();
             UpdateChillVisual();
 
@@ -669,6 +673,7 @@ namespace TrashTD.Enemies
 
         protected virtual void UpdateSpriteAnimation(float deltaTime)
         {
+            if (isFrozen) return; // Frozen solid: the animation holds its current frame
             if (data == null || data.animationFrames == null || data.animationFrames.Length <= 1)
                 return;
 
@@ -971,7 +976,7 @@ namespace TrashTD.Enemies
                 SpriteRenderer sr = renderers[i];
                 if (sr != null)
                 {
-                    if (sr.gameObject.name == "AirShadow" || sr.gameObject.name.StartsWith("StunStars") || sr.gameObject.name.StartsWith("EnragedVisual")) continue;
+                    if (sr.gameObject.name == "AirShadow" || sr.gameObject.name.StartsWith("StunStars") || sr.gameObject.name.StartsWith("EnragedVisual") || sr.gameObject.name.StartsWith(Combat.IceStatusVisual.ObjectName)) continue;
                     sr.flipX = isFacingLeft;
                 }
             }
@@ -1368,6 +1373,12 @@ namespace TrashTD.Enemies
         {
             isDead = true;
             Combat.StunStarsVisual.Hide(gameObject);
+            if (iceVisual != null)
+            {
+                // A frozen enemy shatters as it dies
+                iceVisual.Apply(Combat.IceStatusState.None, null);
+                appliedIceState = Combat.IceStatusState.None;
+            }
 
             // Release from blocker if blocked
             if (isBlocked && blockingOperator != null)
@@ -1776,6 +1787,56 @@ namespace TrashTD.Enemies
             }
         }
 
+        private readonly List<MonoBehaviour> pausedAnimations = new List<MonoBehaviour>();
+        private bool animationsPaused;
+
+        /// <summary>
+        /// Freezes the sprite animation on its current frame while frozen. The enemy's sprite-sheet animation
+        /// components are switched off and back on (only the ones that were running), so every enemy type holds
+        /// its pose without each animation needing to know about freezing.
+        /// </summary>
+        private void SetAnimationsPaused(bool paused)
+        {
+            if (paused == animationsPaused) return;
+            animationsPaused = paused;
+
+            if (paused)
+            {
+                MonoBehaviour[] behaviours = GetComponentsInChildren<MonoBehaviour>(true);
+                for (int i = 0; i < behaviours.Length; i++)
+                {
+                    MonoBehaviour behaviour = behaviours[i];
+                    if (behaviour == null || behaviour == this || behaviour is EnemyBase) continue;
+                    if (!(behaviour is IEnemySpriteFrames) || !behaviour.enabled) continue;
+                    behaviour.enabled = false;
+                    pausedAnimations.Add(behaviour);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < pausedAnimations.Count; i++)
+                {
+                    if (pausedAnimations[i] != null) pausedAnimations[i].enabled = true;
+                }
+                pausedAnimations.Clear();
+            }
+        }
+
+        /// <summary>The ice art: frost while chilled, an ice block while frozen (on top of the blue tint).</summary>
+        private void UpdateIceVisual()
+        {
+            SetAnimationsPaused(isFrozen);
+
+            Combat.IceStatusState desired = isFrozen
+                ? Combat.IceStatusState.Ice
+                : (slowTimer > 0f ? Combat.IceStatusState.Frost : Combat.IceStatusState.None);
+            if (desired == appliedIceState) return;
+
+            appliedIceState = desired;
+            if (desired == Combat.IceStatusState.None && iceVisual == null) return;
+            iceVisual = Combat.IceStatusVisual.SetState(gameObject, desired, GetPrimaryVisualRenderer(), iceVisual);
+        }
+
         private void UpdateChillVisual()
         {
             if (chillRenderers == null || originalRendererColors == null)
@@ -1789,7 +1850,7 @@ namespace TrashTD.Enemies
 
             if (isFrozen)
             {
-                tintAmount = 0.95f;
+                tintAmount = 0.7f;
                 effectColor = new Color(0.1f, 0.6f, 1f);
             }
             else if (isStunned)
@@ -1799,7 +1860,7 @@ namespace TrashTD.Enemies
             }
             else if (slowTimer > 0f)
             {
-                tintAmount = 0.8f;
+                tintAmount = 0.3f;
                 effectColor = new Color(0.1f, 0.6f, 1f);
             }
             else if (resicochetCharge > 0 && isSluggish)
@@ -1808,12 +1869,15 @@ namespace TrashTD.Enemies
                 effectColor = GetResicochetChargeColor(resicochetCharge);
             }
 
+            UpdateIceVisual();
+
             for (int i = 0; i < chillRenderers.Length; i++)
             {
                 if (chillRenderers[i] == null) continue;
                 if (chillRenderers[i].gameObject.name == "AirShadow" ||
                     chillRenderers[i].gameObject.name.StartsWith("StunStars") ||
-                    chillRenderers[i].gameObject.name.StartsWith("EnragedVisual"))
+                    chillRenderers[i].gameObject.name.StartsWith("EnragedVisual") ||
+                    chillRenderers[i].gameObject.name.StartsWith(Combat.IceStatusVisual.ObjectName))
                     continue;
 
                 Color original = originalRendererColors[i];
