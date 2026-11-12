@@ -29,6 +29,9 @@ namespace TrashTD.UI
         private static readonly int UiTexId = Shader.PropertyToID("_UiTex");
         private static readonly int HasUiId = Shader.PropertyToID("_HasUi");
         private static readonly int HeatBlurId = Shader.PropertyToID("_HeatBlur");
+        private static readonly int HeatWarpId = Shader.PropertyToID("_HeatWarp");
+        private static readonly int HeatVentXId = Shader.PropertyToID("_HeatVentX");
+        private static readonly int HeatVentYId = Shader.PropertyToID("_HeatVentY");
 
         private CrtScreen.Settings settings = CrtScreen.Television;
 
@@ -80,6 +83,20 @@ namespace TrashTD.UI
         {
             if (instance == null || instance.material == null) return;
             instance.material.SetFloat(HeatBlurId, Mathf.Clamp01(amount));
+        }
+
+        /// <summary>
+        /// Stage 4 heat shimmer: ripples the game picture (never the UI) like air over hot metal. Strength is in
+        /// picture UV units (about 0.002 is a gentle ripple), the band is how far up the screen the floor haze
+        /// reaches (0-1), and up to four vents add rising columns of shimmer at their viewport positions
+        /// (x below 0 = unused). Strength 0 switches it off.
+        /// </summary>
+        public static void SetHeatWarp(float strength, float bandHeight, Vector4 ventX, Vector4 ventY)
+        {
+            if (instance == null || instance.material == null) return;
+            instance.material.SetVector(HeatWarpId, new Vector4(Mathf.Max(0f, strength), Mathf.Clamp01(bandHeight), 0f, 0f));
+            instance.material.SetVector(HeatVentXId, ventX);
+            instance.material.SetVector(HeatVentYId, ventY);
         }
 
         /// <summary>

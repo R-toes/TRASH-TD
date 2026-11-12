@@ -22,6 +22,9 @@ Shader "TrashTD/UI/CRT"
         _Legacy ("Classic (first version) look", Float) = 0
         _Passthrough ("Passthrough (brightness only)", Float) = 0
         _HeatBlur ("Heat Flare Blur", Range(0, 1)) = 0
+        _HeatWarp ("Heat Warp (strength in uv, band height 0-1)", Vector) = (0, 0.4, 0, 0)
+        _HeatVentX ("Heat Vent X (uv, negative = off)", Vector) = (-1, -1, -1, -1)
+        _HeatVentY ("Heat Vent Y (uv)", Vector) = (0, 0, 0, 0)
         _Color ("Tint", Color) = (1,1,1,1)
 
         _Curvature ("Curvature", Range(0, 0.5)) = 0.06
@@ -130,6 +133,9 @@ Shader "TrashTD/UI/CRT"
             float _Legacy;
             float _Passthrough;
             float _HeatBlur;
+            float4 _HeatWarp;
+            float4 _HeatVentX;
+            float4 _HeatVentY;
             fixed4 _Color;
             float4 _ClipRect;
 
@@ -173,12 +179,37 @@ Shader "TrashTD/UI/CRT"
                 return OUT;
             }
 
+            // Stage 4 heat shimmer: how far the game picture is shoved sideways and up/down at uv. Rippling bands rise
+            // from the floor (strongest at the bottom edge) and from columns above each steam vent. Only the game layer
+            // is warped, never the UI.
+            float2 HeatOffset(float2 uv)
+            {
+                float strength = _HeatWarp.x;
+                if (strength < 0.00001) return float2(0.0, 0.0);
+
+                float t = _CrtTime;
+                float band = saturate(1.0 - uv.y / max(_HeatWarp.y, 0.05));
+                float amount = band * band;
+
+                float4 dx = uv.x - _HeatVentX;
+                float4 rise = uv.y - _HeatVentY;
+                float4 column = exp(-dx * dx * 700.0) * step(0.0, rise) * saturate(1.0 - rise / 0.5) * step(0.0, _HeatVentX);
+                amount += (column.x + column.y + column.z + column.w) * 0.9;
+
+                float w1 = sin(uv.y * 85.0 - t * 2.8 + sin(uv.x * 11.0 + t * 0.9) * 2.2);
+                float w2 = sin(uv.y * 41.0 - t * 1.9 + uv.x * 23.0 + t * 0.4);
+                float2 offset;
+                offset.x = (w1 * 0.65 + w2 * 0.35) * amount;
+                offset.y = sin(uv.x * 37.0 + t * 1.6 + uv.y * 20.0) * 0.3 * amount;
+                return offset * strength;
+            }
+
             // The picture at uv: the game layer, with the UI layer on top when CrtDisplay supplies one.
             // The UI texture is rendered with normal alpha blending onto transparent black, so its colour is
             // already multiplied by coverage and its alpha is coverage squared (single layer).
             float4 Pic(float2 uv)
             {
-                float4 picture = tex2D(_MainTex, uv);
+                float4 picture = tex2D(_MainTex, uv + HeatOffset(uv));
                 if (_HasUi > 0.5)
                 {
                     float4 ui = tex2D(_UiTex, uv);
@@ -191,15 +222,16 @@ Shader "TrashTD/UI/CRT"
 
             float4 HeatPic(float2 uv)
             {
-                float4 picture = tex2D(_MainTex, uv);
+                float2 warped = uv + HeatOffset(uv);
+                float4 picture = tex2D(_MainTex, warped);
                 if (_HeatBlur > 0.001)
                 {
                     float2 offset = _HeatBlur * 1.5 / max(_CrtResolution.xy, float2(1.0, 1.0));
                     picture.rgb = picture.rgb * 0.4
-                        + tex2D(_MainTex, uv + float2(offset.x, 0.0)).rgb * 0.15
-                        + tex2D(_MainTex, uv - float2(offset.x, 0.0)).rgb * 0.15
-                        + tex2D(_MainTex, uv + float2(0.0, offset.y)).rgb * 0.15
-                        + tex2D(_MainTex, uv - float2(0.0, offset.y)).rgb * 0.15;
+                        + tex2D(_MainTex, warped + float2(offset.x, 0.0)).rgb * 0.15
+                        + tex2D(_MainTex, warped - float2(offset.x, 0.0)).rgb * 0.15
+                        + tex2D(_MainTex, warped + float2(0.0, offset.y)).rgb * 0.15
+                        + tex2D(_MainTex, warped - float2(0.0, offset.y)).rgb * 0.15;
                 }
 
                 if (_HasUi > 0.5)

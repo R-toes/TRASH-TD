@@ -22,11 +22,15 @@ namespace TrashTD.Core.GameLoop
     {
         public const int MaxHeatStacks = 5;
         public const float BurnIntervalSeconds = 1.0f;
-        public const int BurnDamagePerTick = 2;
+        public const int BurnDamagePerTick = 5;
         // Round-start furnace blast: glow, blur, embers, sparks, steam jets and smoke (see EmitHeatFlareBurst)
         public const float HeatFlareDurationSeconds = 2.2f;
         public const float FlareEmberMaxLifetime = 2.0f;
-        private const float NormalEmberEmissionRate = 10f;
+        private const float NormalEmberEmissionRate = 24f;
+        // Screen-space heat shimmer (CrtDisplay.SetHeatWarp): picture-UV strength, and how far up the screen it reaches
+        private const float AmbientHeatWarp = 0.0021f;
+        private const float FlareHeatWarp = 0.0032f;
+        private const float HeatWarpBand = 0.40f;
         private const int FlareEmberBurstCount = 96;
         private const float FlareEmberStreamRate = 70f;   // embers per second at full flare, fading with it
         private const int FlareSparkCount = 40;
@@ -86,7 +90,8 @@ namespace TrashTD.Core.GameLoop
             CreateHeatFlareOverlay();
             CreateDriftingEmbers();
             CreateIndustrialSteam();
-            CreateHeatDistortionEffect();
+            CreateVentEmbers();
+            CreateFloorMist();
             CreateHeatFlareParticles();
         }
 
@@ -111,6 +116,7 @@ namespace TrashTD.Core.GameLoop
             if (heatFlareSprite != null)
                 Destroy(heatFlareSprite);
             CrtDisplay.SetHeatBlur(0f);
+            CrtDisplay.SetHeatWarp(0f, HeatWarpBand, new Vector4(-1f, -1f, -1f, -1f), Vector4.zero);
         }
 
         private void CreateHeatFlareOverlay()
@@ -143,9 +149,38 @@ namespace TrashTD.Core.GameLoop
             heatFlareGlowRenderer.color = new Color(1f, 0.38f, 0.08f, 0f);
         }
 
+        /// <summary>
+        /// Drives the heat shimmer: a constant ripple over the hot floor with a slow breathing, a column of it above
+        /// each steam vent, and a stronger, taller surge while the round-start blast is running.
+        /// </summary>
+        private void UpdateHeatWarp(float flare)
+        {
+            if (heatFlareCamera == null) heatFlareCamera = Camera.main;
+
+            var ventX = new Vector4(-1f, -1f, -1f, -1f);
+            var ventY = Vector4.zero;
+            if (heatFlareCamera != null)
+            {
+                for (int i = 0; i < steamVentPositions.Count && i < 4; i++)
+                {
+                    Vector3 viewport = heatFlareCamera.WorldToViewportPoint(steamVentPositions[i]);
+                    ventX[i] = viewport.x;
+                    ventY[i] = viewport.y;
+                }
+            }
+
+            float breathing = 1f + 0.18f * Mathf.Sin(Time.unscaledTime * 0.7f);
+            CrtDisplay.SetHeatWarp(
+                AmbientHeatWarp * breathing + FlareHeatWarp * flare,
+                HeatWarpBand + 0.22f * flare,
+                ventX,
+                ventY);
+        }
+
         private float UpdateHeatFlare()
         {
             float flare = GetHeatFlareIntensity();
+            UpdateHeatWarp(flare);
             // The blur eases off sooner than the glow, so the picture is readable for most of the blast
             CrtDisplay.SetHeatBlur(0.8f * flare * flare);
             if (heatFlareTimer > 0f)
@@ -395,12 +430,12 @@ namespace TrashTD.Core.GameLoop
             main.loop = true;
             main.playOnAwake = true;
             main.prewarm = true; // Embers already active and in flight when map loads!
-            main.startLifetime = new ParticleSystem.MinMaxCurve(8f, 13f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.45f, 0.85f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.045f, 0.095f);
-            main.startColor = new Color(1f, 0.80f, 0.30f, 0.9f);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(5f, 10f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 1.1f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.035f, 0.13f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.86f, 0.42f, 0.95f), new Color(1f, 0.55f, 0.16f, 0.9f));
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 300;
+            main.maxParticles = 600;
 
             // Emission
             var emission = ps.emission;
@@ -415,18 +450,20 @@ namespace TrashTD.Core.GameLoop
             var velocity = ps.velocityOverLifetime;
             velocity.enabled = true;
             velocity.space = ParticleSystemSimulationSpace.World;
-            velocity.y = new ParticleSystem.MinMaxCurve(0.45f, 0.80f);
-            velocity.x = new ParticleSystem.MinMaxCurve(-0.10f, 0.10f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0.5f, 0.95f);
+            velocity.x = new ParticleSystem.MinMaxCurve(-0.14f, 0.14f);
             // All three axes must use the same curve mode (two constants), or Unity errors.
             velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
-            // Organic turbulence noise: creates natural lazy drifting and wandering
+            // Hot air buffets the embers: lively swirling, plus a size/spin noise that makes each one flicker
             var noise = ps.noise;
             noise.enabled = true;
-            noise.strength = 0.35f;
-            noise.frequency = 0.45f;
-            noise.scrollSpeed = 0.20f;
+            noise.strength = 0.6f;
+            noise.frequency = 0.7f;
+            noise.scrollSpeed = 0.45f;
             noise.damping = true;
+            noise.sizeAmount = new ParticleSystem.MinMaxCurve(0.55f);
+            noise.octaveCount = 2;
 
             // Size over lifetime: starts glowing, gently shrinks as it burns out
             var sizeOverLifetime = ps.sizeOverLifetime;
@@ -832,14 +869,14 @@ namespace TrashTD.Core.GameLoop
             var steamRoot = new GameObject("Stage4IndustrialSteam");
             steamRoot.transform.SetParent(transform, false);
 
-            // Three atmospheric steam vent positions in the factory machinery
+            // Three steam vents on the map's machinery, in tile units from the bottom-left corner: the left-hand
+            // tanks at the middle of the left edge, the big cogwheel, and the bottom-right corner machinery.
             Vector2[] ventGridCoords = new Vector2[]
             {
-                new Vector2(1.5f, 1.8f),
-                new Vector2(5.5f, 2.5f),
-                new Vector2(11.5f, 1.8f)
+                new Vector2(1.0f, 3.5f),
+                new Vector2(5.0f, 3.0f),
+                new Vector2(12.8f, 1.4f)
             };
-
             for (int i = 0; i < ventGridCoords.Length; i++)
             {
                 Vector3 ventPos = gridBottomLeft + new Vector3(
@@ -857,15 +894,17 @@ namespace TrashTD.Core.GameLoop
                 main.loop = true;
                 main.playOnAwake = true;
                 main.prewarm = true;
-                main.startLifetime = new ParticleSystem.MinMaxCurve(3.2f, 4.8f);
-                main.startSpeed = new ParticleSystem.MinMaxCurve(0.6f, 1.1f);
-                main.startSize = new ParticleSystem.MinMaxCurve(0.4f, 0.7f);
+                main.startLifetime = new ParticleSystem.MinMaxCurve(3.6f, 5.6f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(0.8f, 1.5f);
+                main.startSize = new ParticleSystem.MinMaxCurve(0.5f, 0.95f);
                 main.startRotation = new ParticleSystem.MinMaxCurve(0f, 360f * Mathf.Deg2Rad);
                 main.simulationSpace = ParticleSystemSimulationSpace.World;
-                main.maxParticles = 35;
+                main.maxParticles = 80;
 
                 var emission = ps.emission;
-                emission.rateOverTime = 4.5f;
+                emission.rateOverTime = 7f;
+                // A pressure hiss every few seconds, staggered between the vents
+                emission.SetBursts(new[] { new ParticleSystem.Burst(i * 1.9f, (short)7, (short)11, 0, 5.5f) });
 
                 var shape = ps.shape;
                 shape.shapeType = ParticleSystemShapeType.Cone;
@@ -888,9 +927,9 @@ namespace TrashTD.Core.GameLoop
                 var sizeOverLifetime = ps.sizeOverLifetime;
                 sizeOverLifetime.enabled = true;
                 AnimationCurve steamSizeCurve = new AnimationCurve(
-                    new Keyframe(0f, 0.5f),
-                    new Keyframe(0.3f, 1.2f),
-                    new Keyframe(1f, 2.4f)
+                    new Keyframe(0f, 0.45f),
+                    new Keyframe(0.25f, 1.25f),
+                    new Keyframe(1f, 3.1f)
                 );
                 sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, steamSizeCurve);
 
@@ -900,14 +939,15 @@ namespace TrashTD.Core.GameLoop
                 steamGrad.SetKeys(
                     new GradientColorKey[]
                     {
-                        new GradientColorKey(new Color(0.95f, 0.96f, 0.98f), 0f),
-                        new GradientColorKey(new Color(0.88f, 0.90f, 0.94f), 1f)
+                        new GradientColorKey(new Color(1f, 0.80f, 0.60f), 0f),    // lit warm by the furnace at the vent
+                        new GradientColorKey(new Color(0.96f, 0.92f, 0.90f), 0.3f),
+                        new GradientColorKey(new Color(0.74f, 0.77f, 0.83f), 1f)  // cooling to grey-blue as it spreads
                     },
                     new GradientAlphaKey[]
                     {
                         new GradientAlphaKey(0f, 0f),
-                        new GradientAlphaKey(0.24f, 0.2f),
-                        new GradientAlphaKey(0.18f, 0.55f),
+                        new GradientAlphaKey(0.40f, 0.12f),
+                        new GradientAlphaKey(0.30f, 0.5f),
                         new GradientAlphaKey(0f, 1f)
                     }
                 );
@@ -915,9 +955,9 @@ namespace TrashTD.Core.GameLoop
 
                 var noise = ps.noise;
                 noise.enabled = true;
-                noise.strength = 0.25f;
-                noise.frequency = 0.5f;
-                noise.scrollSpeed = 0.3f;
+                noise.strength = 0.55f;
+                noise.frequency = 0.65f;
+                noise.scrollSpeed = 0.4f;
                 noise.damping = true;
 
                 var renderer = ventObj.GetComponent<ParticleSystemRenderer>();
@@ -928,10 +968,78 @@ namespace TrashTD.Core.GameLoop
             }
         }
 
-        /// <summary>
-        /// Creates heat distortion shimmer waves that undulate upward from the hot industrial floor.
-        /// </summary>
-        private void CreateHeatDistortionEffect()
+        /// <summary>Small, fast embers spat out of each steam vent: they shoot up, wobble in the hot air and burn out.</summary>
+        private void CreateVentEmbers()
+        {
+            if (steamVentPositions.Count == 0) return;
+
+            var root = new GameObject("Stage4VentEmbers");
+            root.transform.SetParent(transform, false);
+
+            for (int i = 0; i < steamVentPositions.Count; i++)
+            {
+                var ventObj = new GameObject($"VentEmbers_{i + 1}");
+                ventObj.transform.SetParent(root.transform, false);
+                ventObj.transform.position = steamVentPositions[i] + new Vector3(0f, 0.05f, -0.02f);
+
+                ParticleSystem ps = ventObj.AddComponent<ParticleSystem>();
+                var main = ps.main;
+                main.loop = true;
+                main.playOnAwake = true;
+                main.prewarm = true;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(1.6f, 3.2f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(1.0f, 2.6f);
+                main.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.085f);
+                main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.95f, 0.7f, 1f), new Color(1f, 0.58f, 0.18f, 1f));
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                main.gravityModifier = -0.06f; // hot air lifts them
+                main.maxParticles = 90;
+
+                var emission = ps.emission;
+                emission.rateOverTime = 4.5f;
+                emission.SetBursts(new[] { new ParticleSystem.Burst(i * 1.9f + 0.1f, (short)5, (short)9, 0, 5.5f) }); // with the steam hiss
+
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Cone;
+                shape.angle = 24f;
+                shape.radius = 0.07f;
+                shape.rotation = new Vector3(-90f, 0f, 0f);
+
+                var noise = ps.noise;
+                noise.enabled = true;
+                noise.strength = 0.8f;
+                noise.frequency = 0.9f;
+                noise.scrollSpeed = 0.6f;
+                noise.damping = true;
+                noise.sizeAmount = new ParticleSystem.MinMaxCurve(0.5f);
+
+                var size = ps.sizeOverLifetime;
+                size.enabled = true;
+                size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                    new Keyframe(0f, 1f), new Keyframe(0.6f, 0.8f), new Keyframe(1f, 0.1f)));
+
+                var color = ps.colorOverLifetime;
+                color.enabled = true;
+                var gradient = new Gradient();
+                gradient.SetKeys(
+                    new[]
+                    {
+                        new GradientColorKey(new Color(1f, 0.98f, 0.8f), 0f),
+                        new GradientColorKey(new Color(1f, 0.6f, 0.18f), 0.4f),
+                        new GradientColorKey(new Color(0.9f, 0.2f, 0.05f), 1f)
+                    },
+                    new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.85f, 0.6f), new GradientAlphaKey(0f, 1f) });
+                color.color = new ParticleSystem.MinMaxGradient(gradient);
+
+                var renderer = ventObj.GetComponent<ParticleSystemRenderer>();
+                renderer.sortingOrder = 26;
+                renderer.sharedMaterial = GetEmberMaterial();
+                ps.Play();
+            }
+        }
+
+        /// <summary>A low, warm bank of mist rolling along the floor, as if the whole factory floor is sweating heat.</summary>
+        private void CreateFloorMist()
         {
             if (gridManager == null || stageData == null) return;
 
@@ -942,80 +1050,56 @@ namespace TrashTD.Core.GameLoop
                 - new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f);
             Vector3 mapCenter = gridBottomLeft + new Vector3(mapWidth * 0.5f, mapHeight * 0.5f, 0f);
 
-            var distortionRoot = new GameObject("Stage4HeatDistortion");
-            distortionRoot.transform.SetParent(transform, false);
+            var mistObj = new GameObject("Stage4FloorMist");
+            mistObj.transform.SetParent(transform, false);
+            mistObj.transform.position = mapCenter + new Vector3(0f, -mapHeight * 0.40f, -0.05f);
 
-            var waveObj = new GameObject("HeatHazeShimmer");
-            waveObj.transform.SetParent(distortionRoot.transform, false);
-            // Anchor emitter near lower third of the map
-            waveObj.transform.position = mapCenter + new Vector3(0f, -mapHeight * 0.25f, -0.06f);
-
-            ParticleSystem ps = waveObj.AddComponent<ParticleSystem>();
+            ParticleSystem ps = mistObj.AddComponent<ParticleSystem>();
             var main = ps.main;
             main.loop = true;
             main.playOnAwake = true;
             main.prewarm = true;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(3f, 5f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.15f, 0.35f);
-            main.startSize3D = true;
-            main.startSizeX = new ParticleSystem.MinMaxCurve(0.6f, 1.2f); // Narrow subtle shimmer wisps
-            main.startSizeY = new ParticleSystem.MinMaxCurve(0.08f, 0.15f);
-            main.startSizeZ = 1f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(6f, 9f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.05f, 0.18f);
+            main.startSize = new ParticleSystem.MinMaxCurve(1.6f, 2.8f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, 360f * Mathf.Deg2Rad);
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 15;
+            main.maxParticles = 40;
 
             var emission = ps.emission;
-            emission.rateOverTime = 1.5f;
+            emission.rateOverTime = 3.5f;
 
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Box;
-            shape.scale = new Vector3(mapWidth + 1f, mapHeight * 0.4f, 0.1f);
+            shape.scale = new Vector3(mapWidth + 2f, 0.7f, 0.1f);
 
             var velocity = ps.velocityOverLifetime;
             velocity.enabled = true;
             velocity.space = ParticleSystemSimulationSpace.World;
-            velocity.y = new ParticleSystem.MinMaxCurve(0.35f, 0.7f);
-            velocity.x = new ParticleSystem.MinMaxCurve(-0.1f, 0.1f);
-            // All three axes must use the same curve mode (two constants), or Unity errors.
+            velocity.x = new ParticleSystem.MinMaxCurve(-0.12f, 0.12f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0.04f, 0.14f);
             velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
-            // Horizontal optical waver / turbulence
-            var noise = ps.noise;
-            noise.enabled = true;
-            noise.strength = 0.45f;
-            noise.frequency = 0.65f;
-            noise.scrollSpeed = 0.35f;
-            noise.damping = true;
+            var rotation = ps.rotationOverLifetime;
+            rotation.enabled = true;
+            rotation.z = new ParticleSystem.MinMaxCurve(-8f * Mathf.Deg2Rad, 8f * Mathf.Deg2Rad);
 
-            var sizeOverLifetime = ps.sizeOverLifetime;
-            sizeOverLifetime.enabled = true;
-            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 0.7f, 1f, 1.4f));
-
-            // Optical refraction shimmer gradient (translucent with subtle warm highlight)
-            var colorOverLifetime = ps.colorOverLifetime;
-            colorOverLifetime.enabled = true;
-            Gradient hazeGrad = new Gradient();
-            hazeGrad.SetKeys(
-                new GradientColorKey[]
+            var color = ps.colorOverLifetime;
+            color.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[]
                 {
-                    new GradientColorKey(new Color(1f, 0.97f, 0.93f), 0f),  // Nearly white, barely warm
-                    new GradientColorKey(new Color(1f, 0.95f, 0.90f), 0.5f),
-                    new GradientColorKey(new Color(1f, 0.97f, 0.95f), 1f)
+                    new GradientColorKey(new Color(1f, 0.62f, 0.34f), 0f),   // lit by the furnace glow
+                    new GradientColorKey(new Color(0.85f, 0.55f, 0.40f), 0.6f),
+                    new GradientColorKey(new Color(0.55f, 0.45f, 0.42f), 1f)
                 },
-                new GradientAlphaKey[]
-                {
-                    new GradientAlphaKey(0f, 0f),
-                    new GradientAlphaKey(0.02f, 0.25f),  // Extremely subtle - barely perceptible
-                    new GradientAlphaKey(0.015f, 0.65f),
-                    new GradientAlphaKey(0f, 1f)
-                }
-            );
-            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(hazeGrad);
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.16f, 0.25f), new GradientAlphaKey(0.12f, 0.7f), new GradientAlphaKey(0f, 1f) });
+            color.color = new ParticleSystem.MinMaxGradient(gradient);
 
-            var renderer = waveObj.GetComponent<ParticleSystemRenderer>();
-            renderer.sortingOrder = 9; // In front of map artwork, behind characters
-            renderer.sharedMaterial = GetHeatHazeMaterial();
-
+            var renderer = mistObj.GetComponent<ParticleSystemRenderer>();
+            renderer.sortingOrder = 11; // Under the vent steam (12), over the map and tiles
+            renderer.sharedMaterial = GetSteamMaterial();
             ps.Play();
         }
 
@@ -1041,9 +1125,13 @@ namespace TrashTD.Core.GameLoop
             return steamMaterial;
         }
 
+        /// <summary>
+        /// A soft, billowy cloud puff: a ragged round edge and uneven density from layered noise, so rotated
+        /// copies of it overlap into convincing steam and smoke instead of identical round blobs.
+        /// </summary>
         private static Texture2D CreateSteamPuffTexture()
         {
-            const int size = 64;
+            const int size = 96;
             var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
             texture.filterMode = FilterMode.Bilinear;
             texture.wrapMode = TextureWrapMode.Clamp;
@@ -1056,66 +1144,22 @@ namespace TrashTD.Core.GameLoop
                     float dx = (x + 0.5f) / size * 2f - 1f;
                     float dy = (y + 0.5f) / size * 2f - 1f;
                     float r = Mathf.Sqrt(dx * dx + dy * dy);
-                    float wobble = Mathf.Sin(dx * 6f + dy * 4f) * 0.08f + Mathf.Sin(dx * 11f - dy * 9f) * 0.04f;
-                    float edge = 0.85f + wobble;
-                    if (r < edge)
-                    {
-                        float alpha = Mathf.Pow(1f - (r / edge), 1.8f);
-                        pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
-                    }
-                    else
+
+                    // Three octaves of noise
+                    float n = 0.55f * Mathf.PerlinNoise(dx * 1.7f + 4.3f, dy * 1.7f + 9.1f)
+                            + 0.30f * Mathf.PerlinNoise(dx * 3.6f + 1.7f, dy * 3.6f + 5.3f)
+                            + 0.15f * Mathf.PerlinNoise(dx * 7.4f + 8.2f, dy * 7.4f + 2.6f);
+
+                    float edge = 0.80f + (n - 0.5f) * 0.55f;
+                    if (r >= edge)
                     {
                         pixels[y * size + x] = Color.clear;
+                        continue;
                     }
-                }
-            }
 
-            texture.SetPixels(pixels);
-            texture.Apply();
-            return texture;
-        }
-
-        private static Material heatHazeMaterial;
-        private static Material GetHeatHazeMaterial()
-        {
-            if (heatHazeMaterial == null)
-            {
-                Shader shader = Shader.Find("Particles/Standard Unlit");
-                if (shader == null) shader = Shader.Find("Sprites/Default");
-                heatHazeMaterial = new Material(shader);
-                heatHazeMaterial.mainTexture = CreateHeatHazeTexture();
-                // Fade blending for transparent heat shimmer
-                heatHazeMaterial.SetFloat("_Mode", 2); // Fade
-                heatHazeMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                heatHazeMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                heatHazeMaterial.SetInt("_ZWrite", 0);
-                heatHazeMaterial.DisableKeyword("_ALPHATEST_ON");
-                heatHazeMaterial.EnableKeyword("_ALPHABLEND_ON");
-                heatHazeMaterial.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                heatHazeMaterial.renderQueue = 3000;
-            }
-            return heatHazeMaterial;
-        }
-
-        private static Texture2D CreateHeatHazeTexture()
-        {
-            const int w = 64;
-            const int h = 16;
-            var texture = new Texture2D(w, h, TextureFormat.RGBA32, false);
-            texture.filterMode = FilterMode.Bilinear;
-            texture.wrapMode = TextureWrapMode.Clamp;
-
-            Color[] pixels = new Color[w * h];
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    float nx = (x + 0.5f) / w * 2f - 1f;
-                    float ny = (y + 0.5f) / h * 2f - 1f;
-                    float xFalloff = Mathf.Max(0f, 1f - nx * nx);
-                    float yFalloff = Mathf.Max(0f, 1f - ny * ny);
-                    float alpha = xFalloff * yFalloff;
-                    pixels[y * w + x] = new Color(1f, 1f, 1f, alpha);
+                    float falloff = Mathf.Pow(1f - r / edge, 1.35f);
+                    float density = Mathf.Lerp(0.45f, 1.15f, n);
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(falloff * density));
                 }
             }
 

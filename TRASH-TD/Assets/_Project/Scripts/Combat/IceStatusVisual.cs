@@ -38,7 +38,7 @@ namespace TrashTD.Combat
         private static readonly Dictionary<Sprite, Silhouette> SilhouetteCache = new Dictionary<Sprite, Silhouette>();
         private static readonly Dictionary<(Sprite source, int kind), Sprite> SpriteCache = new Dictionary<(Sprite source, int kind), Sprite>();
 
-        private sealed class Silhouette
+        internal sealed class Silhouette
         {
             public int Width;
             public int Height;
@@ -224,7 +224,7 @@ namespace TrashTD.Combat
         /// The opaque pixels of a sprite frame. Read back through a render texture, so it works on sprites whose
         /// textures are not marked readable. Cached per sprite; null only if the sprite has no texture.
         /// </summary>
-        private static Silhouette GetSilhouette(Sprite sprite)
+        internal static Silhouette GetSilhouette(Sprite sprite)
         {
             if (sprite == null || sprite.texture == null) return null;
 

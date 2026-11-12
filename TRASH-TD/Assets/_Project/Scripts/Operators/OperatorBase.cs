@@ -132,7 +132,19 @@ namespace TrashTD.Operators
         public float BindTimer => bindTimer;
         public IReadOnlyList<EnemyBase> BlockedEnemies => blockedEnemies;
         public int HeatStacks { get; set; }
-        public bool IsBurning { get; set; }
+        private bool isBurning;
+
+        /// <summary>On fire (Stage 4 heat): burns for damage until retreated. Setting it starts or stops the burning visuals.</summary>
+        public bool IsBurning
+        {
+            get => isBurning;
+            set
+            {
+                if (isBurning == value) return;
+                isBurning = value;
+                Combat.BurningVisual.SetBurning(gameObject, value);
+            }
+        }
         // Operators are frozen whenever no wave is running (Card Pick and Preparation): no damage (from enemies,
         // traps or weather), no healing, no shields and no abilities. Sandbox stays in Preparation for its whole
         // session (so cards can be deployed mid-wave), so the lock must not apply there.
