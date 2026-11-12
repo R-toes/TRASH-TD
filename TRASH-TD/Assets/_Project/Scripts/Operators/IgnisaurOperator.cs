@@ -88,10 +88,101 @@ namespace TrashTD.Operators
             return physicalDamage > artsDamage ? DamageType.Physical : DamageType.Arts;
         }
 
+        private IgnisaurSpriteAnimation spriteAnimation;
+
+        public IgnisaurSpriteAnimation SpriteAnimation
+        {
+            get
+            {
+                if (spriteAnimation == null) spriteAnimation = GetComponentInChildren<IgnisaurSpriteAnimation>(true);
+                return spriteAnimation;
+            }
+        }
+
+        private bool HasAttackAnimations => SpriteAnimation != null && SpriteAnimation.enabled &&
+                                            SpriteAnimation.HasSwipeAnimation && SpriteAnimation.HasThrowAnimation &&
+                                            SpriteAnimation.HasFireballFrames;
+
+        protected override void Update()
+        {
+            // A stunned or bound Ignisaur drops the attack he was animating (its hit never lands)
+            if ((isStunned || isBound) && SpriteAnimation != null) SpriteAnimation.CancelAttack();
+            base.Update();
+        }
+
+        protected override void OnRetreated()
+        {
+            if (SpriteAnimation != null) SpriteAnimation.CancelAttack();
+            base.OnRetreated();
+        }
+
+        /// <summary>
+        /// Attacks play to completion before the next one can start, so the animation never restarts or overlaps.
+        /// The attack timer stays charged meanwhile, so the next attack starts the moment he is back on idle.
+        /// </summary>
+        public override bool CanAttackTarget(EnemyBase target)
+        {
+            if (SpriteAnimation != null && SpriteAnimation.IsAttacking) return false;
+            return base.CanAttackTarget(target);
+        }
+
         public override void Attack(EnemyBase target)
         {
-            if (target == null || !isDeployed) return;
+            if (target == null || !isDeployed || isStunned || isBound) return;
 
+            if (HasAttackAnimations)
+            {
+                // Distance picks the attack: his own tile (or a blocked enemy) gets the claw swipe, anything further
+                // in range gets the fireball. The damage and the fireball are released by the animation's event frames.
+                bool started = IsOwnTileTarget(target)
+                    ? SpriteAnimation.PlaySwipe(() => LandSwipe(target))
+                    : SpriteAnimation.PlayThrow(() => ReleaseFireball(target));
+                if (started)
+                {
+                    HasFoughtInWave = true;
+                    DeployedDuringCurrentPreparation = false;
+                    return;
+                }
+            }
+
+            AttackWithoutAnimation(target);
+        }
+
+        /// <summary>Swipe strike frame: the claw lands. The crescent is drawn in the swipe frames themselves.</summary>
+        private void LandSwipe(EnemyBase target)
+        {
+            if (this == null || !isDeployed || isStunned || isBound || target == null || target.IsDead) return;
+
+            DamageType chosenDamageType = HasSecondUpgrade ? DetermineBestDamageType(target) : DamageType.Physical;
+            PlayAttackSound(chosenDamageType == DamageType.Arts ? SfxId.GameplayMagicAttack : SfxId.GameplayMeleeAttack);
+            ApplyDamage(target, chosenDamageType);
+        }
+
+        /// <summary>Throw release frame: the fireball leaves his hand and flies to the target, which takes the hit on arrival.</summary>
+        private void ReleaseFireball(EnemyBase target)
+        {
+            if (this == null || !isDeployed || isStunned || isBound || target == null || target.IsDead) return;
+
+            DamageType chosenDamageType = HasSecondUpgrade ? DetermineBestDamageType(target) : DamageType.Arts;
+            PlayAttackSound(chosenDamageType == DamageType.Physical ? SfxId.GameplayRangedPhysicalAttack : SfxId.GameplayMagicAttack);
+
+            Vector2 offset = IgnisaurSpriteAnimation.FireballSpawnOffset;
+            if (facing == OperatorFacing.Right) offset.x = -offset.x; // the art faces left and is mirrored when facing right
+            Vector3 scale = transform.lossyScale;
+            Vector3 spawn = transform.position + new Vector3(offset.x * scale.x, offset.y * scale.y, 0f);
+
+            IgnisaurFireball.Fire(
+                spawn,
+                target,
+                SpriteAnimation.FireballFlyFrames,
+                SpriteAnimation.FireballImpactFrames,
+                10f,
+                () => ApplyDamage(target, chosenDamageType));
+        }
+
+        /// <summary>The original instant attack, used only when the prefab has no Ignisaur attack animations.</summary>
+        private void AttackWithoutAnimation(EnemyBase target)
+        {
             bool isOwnTile = IsOwnTileTarget(target);
             DamageType chosenDamageType = HasSecondUpgrade
                 ? DetermineBestDamageType(target)
@@ -120,7 +211,6 @@ namespace TrashTD.Operators
                     style: ProjectileStyle.FireOrb);
             }
         }
-
         public DamageType GetDamageTypeForTarget(EnemyBase target)
         {
             if (HasSecondUpgrade && target != null)

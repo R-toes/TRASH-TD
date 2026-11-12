@@ -113,10 +113,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 8120733290429841632}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 15730cd9b1a04c21b3c152b454d2f53a, type: 3}
+  m_Script: {fileID: 11500000, guid: 9e4c1b7a5d2f4a63b8c0f1d2e3a45b67, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.OperatorSpriteAnimation
-  frames:
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Operators.IgnisaurSpriteAnimation
+  idleFrames:
   - {fileID: -1820305707, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
   - {fileID: 1462731616, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
   - {fileID: 1842782019, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
@@ -125,4 +125,32 @@ MonoBehaviour:
   - {fileID: 1219869615, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
   - {fileID: 1543321420, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
   - {fileID: 1893294419, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
-  frameDuration: 0.125
+  throwFrames:
+  - {fileID: 1682988345957831492, guid: a1f203bd6fcaa8e48a72ba0b69f290ca, type: 3}
+  - {fileID: -7711258653185385749, guid: a1f203bd6fcaa8e48a72ba0b69f290ca, type: 3}
+  - {fileID: -8938671931642863289, guid: a1f203bd6fcaa8e48a72ba0b69f290ca, type: 3}
+  - {fileID: 6613091158014299904, guid: a1f203bd6fcaa8e48a72ba0b69f290ca, type: 3}
+  - {fileID: -5460439511010047709, guid: a1f203bd6fcaa8e48a72ba0b69f290ca, type: 3}
+  - {fileID: -3394934966559031605, guid: a1f203bd6fcaa8e48a72ba0b69f290ca, type: 3}
+  - {fileID: -3565373851449961201, guid: a1f203bd6fcaa8e48a72ba0b69f290ca, type: 3}
+  - {fileID: 9203526354163297631, guid: a1f203bd6fcaa8e48a72ba0b69f290ca, type: 3}
+  swipeFrames:
+  - {fileID: -7244579346757904931, guid: ddbf3f9d8a3125e42b2be78b02b25720, type: 3}
+  - {fileID: 5562820948268066486, guid: ddbf3f9d8a3125e42b2be78b02b25720, type: 3}
+  - {fileID: -2890547303221123001, guid: ddbf3f9d8a3125e42b2be78b02b25720, type: 3}
+  - {fileID: 7669320584566023073, guid: ddbf3f9d8a3125e42b2be78b02b25720, type: 3}
+  - {fileID: -2523870428441436948, guid: ddbf3f9d8a3125e42b2be78b02b25720, type: 3}
+  - {fileID: -1496879179091120955, guid: ddbf3f9d8a3125e42b2be78b02b25720, type: 3}
+  - {fileID: 2748698349571078422, guid: ddbf3f9d8a3125e42b2be78b02b25720, type: 3}
+  - {fileID: -3518614851631937998, guid: ddbf3f9d8a3125e42b2be78b02b25720, type: 3}
+  - {fileID: -2515666684770176201, guid: ddbf3f9d8a3125e42b2be78b02b25720, type: 3}
+  fireballFlyFrames:
+  - {fileID: -8810523444080358297, guid: 0d62e70be22841c4f9a17e5b529261c8, type: 3}
+  - {fileID: -2742189288829605404, guid: 0d62e70be22841c4f9a17e5b529261c8, type: 3}
+  - {fileID: 3199077438782349128, guid: 0d62e70be22841c4f9a17e5b529261c8, type: 3}
+  - {fileID: 6765074377711163697, guid: 0d62e70be22841c4f9a17e5b529261c8, type: 3}
+  fireballImpactFrames:
+  - {fileID: 1434935135915360583, guid: a115dba241811f84c8095e57b0ee53ab, type: 3}
+  - {fileID: -7331213509581698410, guid: a115dba241811f84c8095e57b0ee53ab, type: 3}
+  - {fileID: -194874915507443876, guid: a115dba241811f84c8095e57b0ee53ab, type: 3}
+  - {fileID: -7567879285255549068, guid: a115dba241811f84c8095e57b0ee53ab, type: 3}

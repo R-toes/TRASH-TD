@@ -1282,12 +1282,16 @@ namespace TrashTD.Editor
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (existing != null)
             {
-                var existingAnim = existing.GetComponent<OperatorSpriteAnimation>();
-                if (existingAnim == null)
+                // The shipped prefab uses IgnisaurSpriteAnimation (idle + throw + swipe); only a bare prefab gets the generic idle loop.
+                if (existing.GetComponent<IgnisaurSpriteAnimation>() == null)
                 {
-                    existingAnim = existing.AddComponent<OperatorSpriteAnimation>();
+                    var existingAnim = existing.GetComponent<OperatorSpriteAnimation>();
+                    if (existingAnim == null)
+                    {
+                        existingAnim = existing.AddComponent<OperatorSpriteAnimation>();
+                    }
+                    existingAnim.Configure(frames);
                 }
-                existingAnim.Configure(frames);
                 var existingSr = existing.GetComponent<SpriteRenderer>();
                 if (existingSr != null && frames != null && frames.Length > 0 && frames[0] != null)
                 {
