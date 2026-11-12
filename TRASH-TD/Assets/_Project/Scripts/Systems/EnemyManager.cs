@@ -259,7 +259,11 @@ namespace TrashTD.Systems
                 if (enemy.Data != null && enemy.Data.isUnblockable) continue;
 
                 Vector2Int gridPos = gridManager.WorldToGridPosition(enemy.transform.position);
-                GridCell cell = gridManager.GetCell(gridPos);
+                // Big enemies engage a blocker when their leading edge reaches its tile, not their centre.
+                Vector2Int engageGridPos = enemy.BlockStopBackoff > 0f
+                    ? gridManager.WorldToGridPosition(enemy.GetBlockProbePosition(gridManager.CellSize))
+                    : gridPos;
+                GridCell cell = gridManager.GetCell(engageGridPos);
                 bool blocked = false;
                 if (cell != null && cell.IsOccupied && cell.OccupantOperator != null)
                 {

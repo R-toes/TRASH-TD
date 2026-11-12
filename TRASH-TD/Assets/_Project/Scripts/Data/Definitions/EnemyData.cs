@@ -65,6 +65,10 @@ namespace TrashTD.Data
         [Tooltip("If true, this enemy cannot be blocked by operators")]
         public bool isUnblockable = false;
 
+        [Min(0f)]
+        [Tooltip("Large sprites: this enemy is blocked, and stops, this many tiles earlier than its centre would reach the operator's tile, so its body doesn't overlap the operator. 0 = normal.")]
+        public float blockStopBackoff = 0f;
+
         [Header("Special Abilities")]
         [Range(0f, 1f)]
         [Tooltip("Chance for an operator's attack to miss this enemy")]

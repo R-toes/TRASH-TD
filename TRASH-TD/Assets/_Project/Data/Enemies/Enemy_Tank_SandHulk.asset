@@ -27,6 +27,7 @@ MonoBehaviour:
   attackRange: 0
   frontAreaAttackTiles: 2
   isUnblockable: 0
+  blockStopBackoff: 0.4
   operatorAttackMissChance: 0.2
   blockWeight: 1
   lifePointCost: 1

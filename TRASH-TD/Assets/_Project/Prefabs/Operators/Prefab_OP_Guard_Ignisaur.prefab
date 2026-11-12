@@ -121,4 +121,8 @@ MonoBehaviour:
   - {fileID: 1462731616, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
   - {fileID: 1842782019, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
   - {fileID: -259241398, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
-
+  - {fileID: -1523306890, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
+  - {fileID: 1219869615, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
+  - {fileID: 1543321420, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
+  - {fileID: 1893294419, guid: 5f916e8f4d91062499ba93d080aec19d, type: 3}
+  frameDuration: 0.125

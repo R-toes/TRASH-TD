@@ -27,6 +27,7 @@ MonoBehaviour:
   attackRange: 3
   frontAreaAttackTiles: 0
   isUnblockable: 0
+  blockStopBackoff: 0.4
   operatorAttackMissChance: 0
   blockWeight: 2
   isAcidRainImmune: 0

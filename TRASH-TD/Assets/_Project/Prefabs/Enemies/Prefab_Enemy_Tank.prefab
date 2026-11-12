@@ -129,3 +129,14 @@ MonoBehaviour:
   - {fileID: -1156455748, guid: aff895bdd49e6c249b6888ca33a1a0c7, type: 3}
   - {fileID: -2041440753, guid: aff895bdd49e6c249b6888ca33a1a0c7, type: 3}
   frameDuration: 0.15
+  attackFrames:
+  - {fileID: 8923638262663224961, guid: c04559bbed8a4d94d870303d67acb783, type: 3}
+  - {fileID: 157492494458219780, guid: c04559bbed8a4d94d870303d67acb783, type: 3}
+  - {fileID: -4621928712385084727, guid: c04559bbed8a4d94d870303d67acb783, type: 3}
+  - {fileID: 848362326914155238, guid: c04559bbed8a4d94d870303d67acb783, type: 3}
+  - {fileID: 6320596083989938929, guid: c04559bbed8a4d94d870303d67acb783, type: 3}
+  - {fileID: -8309635108824529449, guid: c04559bbed8a4d94d870303d67acb783, type: 3}
+  - {fileID: 9165032079892935076, guid: c04559bbed8a4d94d870303d67acb783, type: 3}
+  - {fileID: -1725552416107953542, guid: c04559bbed8a4d94d870303d67acb783, type: 3}
+  attackFrameDuration: 0.08
+  attackHitFrame: 4

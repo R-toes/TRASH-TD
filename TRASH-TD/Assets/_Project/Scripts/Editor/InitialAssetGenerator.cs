@@ -601,13 +601,16 @@ namespace TrashTD.Editor
             }
 
             // 1e. Guard (Ignisaur)
-            var ignisaurFrame0 = LoadSprite("Ignisaur-Sheet.png", "Ignisaur-Sheet_0") ?? LoadSprite("Ignisaur-Sheet.png", "Ignisaur_0");
-            var ignisaurFrame1 = LoadSprite("Ignisaur-Sheet.png", "Ignisaur-Sheet_1") ?? LoadSprite("Ignisaur-Sheet.png", "Ignisaur_1");
-            var ignisaurFrame2 = LoadSprite("Ignisaur-Sheet.png", "Ignisaur-Sheet_2") ?? LoadSprite("Ignisaur-Sheet.png", "Ignisaur_2");
-            var ignisaurFrame3 = LoadSprite("Ignisaur-Sheet.png", "Ignisaur-Sheet_3") ?? LoadSprite("Ignisaur-Sheet.png", "Ignisaur_3");
-            if (ignisaurFrame0 != null && ignisaurFrame1 != null && ignisaurFrame2 != null && ignisaurFrame3 != null)
+            // Idle loop: 8 frames (Ignisaur-Sheet_0 .. _7)
+            var ignisaurFramesList = new System.Collections.Generic.List<Sprite>();
+            for (int ignisaurIndex = 0; ignisaurIndex < 8; ignisaurIndex++)
             {
-                var ignisaurFrames = new[] { ignisaurFrame0, ignisaurFrame1, ignisaurFrame2, ignisaurFrame3 };
+                var ignisaurSprite = LoadSprite("Ignisaur-Sheet.png", $"Ignisaur-Sheet_{ignisaurIndex}") ?? LoadSprite("Ignisaur-Sheet.png", $"Ignisaur_{ignisaurIndex}");
+                if (ignisaurSprite != null) ignisaurFramesList.Add(ignisaurSprite);
+            }
+            if (ignisaurFramesList.Count == 8)
+            {
+                var ignisaurFrames = ignisaurFramesList.ToArray();
                 var ignisaurPrefab = CreateIgnisaurPrefab(ignisaurFrames);
                 var ignisaur = CreateOperator(
                     "OP_Guard_Ignisaur",
@@ -629,7 +632,7 @@ namespace TrashTD.Editor
                         new Vector2Int(1, -1),
                         new Vector2Int(2, 0)
                     },
-                    ignisaurFrame0,
+                    ignisaurFrames[0],
                     ignisaurPrefab);
                 ignisaur.damageType = DamageType.Arts;
                 ignisaur.roleTags = new[] { "Arts", "Melee", "Anti-Air" };

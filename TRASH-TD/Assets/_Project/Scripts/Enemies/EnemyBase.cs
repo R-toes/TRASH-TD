@@ -141,6 +141,19 @@ namespace TrashTD.Enemies
         public float SluggishMoveSpeedMultiplier => sluggishMoveSpeedMultiplier;
         public float SluggishAttackIntervalMultiplier => sluggishAttackIntervalMultiplier;
         public bool IsInsideHole => isInsideHole;
+
+        /// <summary>Tiles a large enemy is blocked and stops short of the operator's tile boundary (EnemyData.blockStopBackoff).</summary>
+        public float BlockStopBackoff => data != null ? Mathf.Max(0f, data.blockStopBackoff) : 0f;
+
+        /// <summary>The point ahead of the enemy along its path that decides which tile it is blocked on.</summary>
+        public Vector3 GetBlockProbePosition(float cellSize)
+        {
+            float backoff = BlockStopBackoff * cellSize;
+            if (backoff <= 0f || path == null || currentPathIndex < 0 || currentPathIndex >= path.Count) return transform.position;
+            Vector3 toNext = path[currentPathIndex] - transform.position;
+            toNext.z = 0f;
+            return toNext.sqrMagnitude > 0.0001f ? transform.position + toNext.normalized * backoff : transform.position;
+        }
         public virtual bool CanBeTargetedBy(OperatorPosition opPosition) => true;
         public virtual bool HasTaunt => false;
 
@@ -1468,6 +1481,15 @@ namespace TrashTD.Enemies
                                 ? gridManager.WorldToGridPosition(path[bestIdx - 1])
                                 : blockerGridPos;
                             blockedPosition = normalStopPos;
+                            float backoff = BlockStopBackoff * (gridManager != null ? gridManager.CellSize : 1f);
+                            if (backoff > 0f)
+                            {
+                                // Large sprites stop short of the tile boundary. Never pull back an enemy already beyond that point.
+                                Vector3 backedStopPos = normalStopPos - incomingDir * backoff;
+                                blockedPosition = Vector3.Dot(transform.position - backedStopPos, incomingDir) > 0f
+                                    ? transform.position
+                                    : backedStopPos;
+                            }
                             currentPathIndex = bestIdx;
                         }
                     }
