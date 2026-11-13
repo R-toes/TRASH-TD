@@ -233,6 +233,14 @@ namespace TrashTD.UI
         private Coroutine stageEntranceRoutine;
         private Coroutine detailsEntranceRoutine;
         private Coroutine overlayRoutine;
+
+        // Title screen effects (TitleScreenFx): logo glow / sweep / glitch, boot + press-any-key intro, menu slide bars
+        private TitleScreenFx titleFx;
+        private bool titleIntroActive;
+        private readonly List<EntranceItem> titleSceneEntrance = new List<EntranceItem>(); // logo + viewfinder text, revealed after the boot
+        private readonly List<EntranceItem> menuRowsEntrance = new List<EntranceItem>();   // the menu rows + hint, revealed after the key press
+        private Coroutine titleSceneRoutine;
+        private Coroutine labelTypingRoutine;
         private readonly List<Mote> motes = new List<Mote>();
         private Image fadeOverlay;
         private AudioSource sfxSource;
@@ -267,6 +275,8 @@ namespace TrashTD.UI
             public CanvasGroup selectFrame;
             public Text caret;
             public RectTransform label;
+            public Text labelText;
+            public string fullLabel;
             public float hot;
         }
 
@@ -346,9 +356,14 @@ namespace TrashTD.UI
             RegisterEntranceItems();
             UpdateDifficultyDisplay();
 
+            // The boot + press-any-key intro plays once per session, and not when coming back from a stage
+            titleIntroActive = titleFx != null && !TitleScreenFx.IntroSeen && !returnToStageSelector;
+            if (!titleIntroActive) TitleScreenFx.MarkIntroSeen();
+
             overlayRoutine = StartCoroutine(FadeOverlayRoutine(1f, 0f, 0.4f));
             ShowMainMenu();
             menuInitialized = true;
+            if (titleIntroActive) StartCoroutine(RunTitleIntro());
         }
 
         private void Start()
@@ -846,6 +861,9 @@ namespace TrashTD.UI
             menuFeedCaption.horizontalOverflow = HorizontalWrapMode.Overflow;
             Place(menuFeedCaption.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -30f), new Vector2(720f, 20f));
 
+            titleFx = GetComponent<TitleScreenFx>();
+            if (titleFx == null) titleFx = gameObject.AddComponent<TitleScreenFx>();
+
             // ── Emblem with the wide title over it, centred near the top of the stack ──
             var topCenter = new Vector2(0.5f, 1f);
             var logoRoot = new GameObject("TinyReclaimersLogoRoot", typeof(RectTransform));
@@ -873,6 +891,8 @@ namespace TrashTD.UI
             }
 
             // The title is animated (16 frames of 320x79); the still PNG is the fallback if the sheet can't be loaded
+            RectTransform titleLogoRect = null;
+            Image titleLogoGraphic = null;
             Sprite[] logoFrames = LoadTitleLogoFrames();
             Sprite logo = logoFrames != null ? logoFrames[0] : LoadSpriteSafely(
                 "UI/Tiny Reclaimers Logo Wide",
@@ -888,8 +908,10 @@ namespace TrashTD.UI
                 logoObject.transform.SetParent(titleBlock, false);
                 var centre = new Vector2(0.5f, 0.5f);
                 float logoHeight = logoFrames != null ? TitleLogoAnimatedHeight : TitleLogoHeight;
-                Place(logoObject.GetComponent<RectTransform>(), centre, centre, new Vector2(0f, -TitleLogoDrop), new Vector2(TitleLogoWidth, logoHeight));
+                titleLogoRect = logoObject.GetComponent<RectTransform>();
+                Place(titleLogoRect, centre, centre, new Vector2(0f, -TitleLogoDrop), new Vector2(TitleLogoWidth, logoHeight));
                 var logoImage = logoObject.GetComponent<Image>();
+                titleLogoGraphic = logoImage;
                 logoImage.sprite = logo;
                 logoImage.preserveAspect = true;
                 logoImage.color = Color.white;
@@ -902,6 +924,12 @@ namespace TrashTD.UI
                     logoAnimation.Frames = logoFrames;
                 }
             }
+            // Glow behind the emblem and the occasional title glitch
+            if (titleLogoRect != null)
+                titleFx.BuildLogoEffects(titleBlock, titleLogoRect, titleLogoGraphic, TitleEmblemSize);
+            // Bars that glide beside whichever menu row is highlighted
+            titleFx.BuildSlideBars(panel, MenuButtonWidth * 0.5f);
+
             // ── Menu rows (INTEL is row 1 and SETTINGS row 2, added by ReclaimersIntelUI / AudioSettingsUI in Awake) ──
             if (startButton == null)
             {
@@ -994,7 +1022,9 @@ namespace TrashTD.UI
                 feedback = feedback,
                 selectFrame = frameGroup,
                 caret = caret,
-                label = labelText != null ? labelText.rectTransform : null
+                label = labelText != null ? labelText.rectTransform : null,
+                labelText = labelText,
+                fullLabel = label
             });
         }
 
@@ -1032,6 +1062,116 @@ namespace TrashTD.UI
 
                 if (view.label != null) view.label.offsetMin = new Vector2(MenuButtonLabelInset + 10f * view.hot, 0f);
             }
+
+            if (titleFx != null)
+            {
+                MainMenuButtonView hottest = null;
+                foreach (MainMenuButtonView view in mainMenuButtons)
+                {
+                    if (view.feedback != null && (hottest == null || view.hot > hottest.hot)) hottest = view;
+                }
+                titleFx.SetSlideTarget(hottest != null ? hottest.feedback.GetComponent<RectTransform>() : null, hottest != null ? hottest.hot : 0f);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────
+        //  Title intro, typed labels
+        // ─────────────────────────────────────────────────────
+
+        private static void SetEntranceAlpha(List<EntranceItem> items, float alpha)
+        {
+            foreach (EntranceItem item in items)
+            {
+                if (item.group != null) item.group.alpha = alpha;
+            }
+        }
+
+        private static void SetEntranceInteractive(List<EntranceItem> items, bool interactive)
+        {
+            foreach (EntranceItem item in items)
+            {
+                if (item.group == null) continue;
+                item.group.interactable = interactive;
+                item.group.blocksRaycasts = interactive;
+            }
+        }
+
+        private const float IntroPromptOffset = 150f; // PRESS ANY KEY sits this far below where the menu rows start
+
+        /// <summary>
+        /// First open of the title screen in a session: the logo comes in with a blinking PRESS ANY KEY, and the menu
+        /// rows only appear once a key or button is pressed.
+        /// </summary>
+        private IEnumerator RunTitleIntro()
+        {
+            SetEntranceAlpha(mainEntrance, 0f);
+            SetEntranceInteractive(mainEntrance, false);
+
+            // Bring the logo and viewfinder text in, then the prompt once they have settled
+            SetEntranceInteractive(titleSceneEntrance, true);
+            PlayEntrance(titleSceneEntrance, ref titleSceneRoutine);
+            yield return new WaitForSecondsRealtime(0.7f);
+
+            titleFx.ShowPrompt(mainMenuPanel.transform, MenuAreaTop + IntroPromptOffset);
+            float waited = 0f;
+            while (waited < 0.5f || !TitleScreenFx.AnyInputPressed())
+            {
+                waited += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            titleFx.HidePrompt();
+            PlayClick();
+            SetEntranceInteractive(mainEntrance, true);
+            titleIntroActive = false;
+            TitleScreenFx.MarkIntroSeen();
+            PlayEntrance(menuRowsEntrance, ref mainEntranceRoutine);
+            StartMenuLabelTyping();
+            FocusUi(startButton != null ? startButton.gameObject : null);
+        }
+
+        /// <summary>Types the menu row labels in, top row first, each a beat after the one above.</summary>
+        private void StartMenuLabelTyping()
+        {
+            if (!isActiveAndEnabled) return;
+            if (labelTypingRoutine != null) StopCoroutine(labelTypingRoutine);
+            labelTypingRoutine = StartCoroutine(TypeMenuLabels());
+        }
+
+        private IEnumerator TypeMenuLabels()
+        {
+            var views = new List<MainMenuButtonView>();
+            foreach (MainMenuButtonView view in mainMenuButtons)
+            {
+                if (view.labelText != null && !string.IsNullOrEmpty(view.fullLabel)) views.Add(view);
+            }
+            views.Sort((a, b) => b.feedback.GetComponent<RectTransform>().anchoredPosition.y
+                .CompareTo(a.feedback.GetComponent<RectTransform>().anchoredPosition.y));
+
+            foreach (MainMenuButtonView view in views) view.labelText.text = string.Empty;
+
+            const float StartDelay = 0.2f;
+            const float RowStagger = 0.09f;
+            const float CharsPerSecond = 40f;
+            float time = 0f;
+            bool done = false;
+            while (!done)
+            {
+                time += Time.unscaledDeltaTime;
+                done = true;
+                for (int i = 0; i < views.Count; i++)
+                {
+                    string full = views[i].fullLabel;
+                    int count = Mathf.Clamp(Mathf.FloorToInt((time - StartDelay - i * RowStagger) * CharsPerSecond), 0, full.Length);
+                    bool typing = count > 0 && count < full.Length;
+                    views[i].labelText.text = full.Substring(0, count) + (typing ? "_" : string.Empty);
+                    if (count < full.Length) done = false;
+                }
+                yield return null;
+            }
+
+            foreach (MainMenuButtonView view in views) view.labelText.text = view.fullLabel;
+            labelTypingRoutine = null;
         }
 
         // ─────────────────────────────────────────────────────
@@ -1049,7 +1189,10 @@ namespace TrashTD.UI
             SetPanelVisible(stageSelectionPanel, false, instant);
             SetPanelVisible(stageDetailsPanel, false, true, stageDetailsModal);
 
+            if (titleIntroActive) return; // the intro brings the logo and rows in itself (RunTitleIntro)
+
             PlayEntrance(mainEntrance, ref mainEntranceRoutine);
+            StartMenuLabelTyping();
             FocusUi(startButton != null ? startButton.gameObject : null);
         }
 
@@ -2341,6 +2484,18 @@ namespace TrashTD.UI
             RegisterEntrance(mainEntrance, menuHintText, Vector2.zero, 0.48f);
             RegisterEntrance(mainEntrance, mainVersion, new Vector2(0f, -20f), 0.30f);
             RegisterEntrance(mainEntrance, menuFeedStatus, new Vector2(0f, 20f), 0.30f);
+
+            // Intro: the logo and viewfinder text come in after the boot, the rows after the key press
+            titleSceneEntrance.Clear();
+            menuRowsEntrance.Clear();
+            RegisterEntrance(titleSceneEntrance, titleBlock, new Vector2(0f, 40f), 0.05f);
+            RegisterEntrance(titleSceneEntrance, mainVersion, new Vector2(0f, -20f), 0.20f);
+            RegisterEntrance(titleSceneEntrance, menuFeedStatus, new Vector2(0f, 20f), 0.20f);
+            RegisterEntrance(menuRowsEntrance, startButton, new Vector2(0f, -30f), 0.02f);
+            RegisterEntrance(menuRowsEntrance, intelUI != null ? intelUI.IntelButton : null, new Vector2(0f, -30f), 0.08f);
+            RegisterEntrance(menuRowsEntrance, audioSettingsUI != null ? audioSettingsUI.SettingsButton : null, new Vector2(0f, -30f), 0.14f);
+            RegisterEntrance(menuRowsEntrance, exitButton, new Vector2(0f, -30f), 0.20f);
+            RegisterEntrance(menuRowsEntrance, menuHintText, Vector2.zero, 0.28f);
 
             // Stage selector header (cards were registered in BuildStageButtons)
             RegisterEntrance(stageEntrance, stageSidePanel, new Vector2(-90f, 0f), 0.00f);
