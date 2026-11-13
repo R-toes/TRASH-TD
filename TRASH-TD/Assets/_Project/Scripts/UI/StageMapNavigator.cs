@@ -87,6 +87,9 @@ namespace TrashTD.UI
         private RectTransform minimapView;
         private Text coordsText;
         private Text zoomText;
+        private RectTransform hudBody;      // minimap, zoom bar and hint: everything that collapses
+        private Text hudToggleLabel;
+        private bool hudExpanded;           // the overview starts minimized
         private readonly List<Image> minimapDots = new List<Image>();
 
         private static Sprite frameSprite;
@@ -360,24 +363,38 @@ namespace TrashTD.UI
 
         private const float HudWidth = 256f;
         private const float MinimapHeight = 144f;
+        private const float MinimapTop = 40f; // below the label line and the coordinates line
 
         private void BuildHud(Sprite mapSprite, Transform hudParent, Action<Button> styleButton)
         {
             var hudGo = new GameObject("MapNavigatorHud", typeof(RectTransform));
             hudGo.transform.SetParent(hudParent, false);
             HudRoot = (RectTransform)hudGo.transform;
-            Place(HudRoot, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-60f, -88f), new Vector2(HudWidth, 240f));
+            Place(HudRoot, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-60f, -88f), new Vector2(HudWidth, 256f));
 
             // Header: label + cursor grid reference
             Text label = CreateText(HudRoot, "Label", "MAP OVERVIEW", 10, TextAnchor.MiddleLeft, TerminalText);
             Place(label.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero, new Vector2(HudWidth, 18f));
-            coordsText = CreateText(HudRoot, "Coords", string.Empty, 10, TextAnchor.MiddleRight, AccentBright);
-            Place(coordsText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), Vector2.zero, new Vector2(HudWidth, 18f));
+            coordsText = CreateText(HudRoot, "Coords", string.Empty, 10, TextAnchor.MiddleLeft, AccentBright);
+            // The coordinates get their own line under the label (they used to share it and collided with the label)
+            Place(coordsText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -22f), new Vector2(HudWidth, 14f));
+
+            // Minimize / expand button at the top-right corner of the HUD; it stays while the rest collapses
+            Button toggle = CreateButton(HudRoot, "MapOverviewToggle", "+", styleButton);
+            Place((RectTransform)toggle.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, 2f), ToggleSize);
+            hudToggleLabel = toggle.GetComponentInChildren<Text>();
+            toggle.onClick.AddListener(() => SetHudExpanded(!hudExpanded));
+
+            // Everything below the header lives in one body object, so it can be hidden together
+            var bodyGo = new GameObject("MapOverviewBody", typeof(RectTransform));
+            bodyGo.transform.SetParent(HudRoot, false);
+            hudBody = (RectTransform)bodyGo.transform;
+            Stretch(hudBody, 0f);
 
             // Minimap: the map art, stage dots and the visible-area frame; click or drag to jump
-            Image plate = CreateImage(HudRoot, "MinimapPlate", PlateColor);
+            Image plate = CreateImage(hudBody, "MinimapPlate", PlateColor);
             minimap = plate.rectTransform;
-            Place(minimap, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -24f), new Vector2(HudWidth, MinimapHeight));
+            Place(minimap, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -MinimapTop), new Vector2(HudWidth, MinimapHeight));
             plate.raycastTarget = true;
             AddCornerBrackets(minimap, 12f, 2f, TerminalLine, -5f);
             var input = plate.gameObject.AddComponent<StageMapMinimapInput>();
@@ -411,28 +428,44 @@ namespace TrashTD.UI
             Stretch(viewFill.rectTransform, 0f);
 
             // Zoom bar: [-] 1.0X [+] [RESET]
-            const float rowY = -24f - MinimapHeight - 12f;
-            Button zoomOut = CreateButton(HudRoot, "ZoomOut", "-", styleButton);
+            const float rowY = -MinimapTop - MinimapHeight - 12f;
+            Button zoomOut = CreateButton(hudBody, "ZoomOut", "-", styleButton);
             Place((RectTransform)zoomOut.transform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, rowY), new Vector2(40f, 40f));
             zoomOut.onClick.AddListener(() => ZoomAbout(Vector2.zero, targetZoom / 1.5f));
 
-            Image readout = CreateImage(HudRoot, "ZoomReadout", PlateColor);
+            Image readout = CreateImage(hudBody, "ZoomReadout", PlateColor);
             Place(readout.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(46f, rowY), new Vector2(80f, 40f));
             zoomText = CreateText(readout.rectTransform, "Zoom", "1.0X", 13, TextAnchor.MiddleCenter, AccentBright);
             Stretch(zoomText.rectTransform, 0f);
 
-            Button zoomIn = CreateButton(HudRoot, "ZoomIn", "+", styleButton);
+            Button zoomIn = CreateButton(hudBody, "ZoomIn", "+", styleButton);
             Place((RectTransform)zoomIn.transform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(132f, rowY), new Vector2(40f, 40f));
             zoomIn.onClick.AddListener(() => ZoomAbout(Vector2.zero, targetZoom * 1.5f));
 
-            Button reset = CreateButton(HudRoot, "ZoomReset", "RESET", styleButton);
+            Button reset = CreateButton(hudBody, "ZoomReset", "RESET", styleButton);
             Place((RectTransform)reset.transform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(178f, rowY), new Vector2(78f, 40f));
             reset.onClick.AddListener(() => ResetView(false));
 
-            Text hint = CreateText(HudRoot, "Hint", "SCROLL ZOOM / DRAG PAN / R RESET", 9, TextAnchor.MiddleRight,
+            Text hint = CreateText(hudBody, "Hint", "SCROLL ZOOM / DRAG PAN / R RESET", 9, TextAnchor.MiddleRight,
                 new Color(TerminalText.r, TerminalText.g, TerminalText.b, 0.6f));
             Place(hint.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, rowY - 52f), new Vector2(HudWidth, 16f));
+
+            SetHudExpanded(hudExpanded);
         }
+
+        private static readonly Vector2 ToggleSize = new Vector2(28f, 22f);
+
+        /// <summary>Shows or hides the minimap, zoom bar and hint (the header and its button always stay).</summary>
+        public void SetHudExpanded(bool expanded)
+        {
+            hudExpanded = expanded;
+            if (hudBody != null) hudBody.gameObject.SetActive(expanded);
+            if (coordsText != null) coordsText.gameObject.SetActive(expanded);
+            if (hudToggleLabel != null) hudToggleLabel.text = expanded ? "-" : "+";
+        }
+
+        /// <summary>True while the map overview is expanded (it starts minimized).</summary>
+        public bool IsHudExpanded => hudExpanded;
 
         private static Button CreateButton(Transform parent, string name, string label, Action<Button> style)
         {

@@ -13,7 +13,7 @@ namespace TrashTD.Operators
         public const int AttackFrameCount = 8;
         public const int FireFrame = 4;
         public const float WindupDuration = 0.47f;
-        private const float IdleFrameDuration = 0.25f;
+        private const float IdleFrameDuration = 0.125f; // 8 idle frames: a 1 s loop (0.25 s per frame made it a slow 2 s one)
 
         [SerializeField] private Sprite[] frames;
         [SerializeField] private Sprite[] attackFrames;

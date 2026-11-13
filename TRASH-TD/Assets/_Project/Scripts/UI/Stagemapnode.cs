@@ -29,6 +29,8 @@ namespace TrashTD.UI
         private static readonly Color CardFillHot = new Color(0.030f, 0.090f, 0.055f, 0.95f);
         private static readonly Color DarkInk = new Color(0.02f, 0.08f, 0.04f, 1f);
         private static readonly Color NameColor = new Color(0.90f, 0.97f, 0.92f, 1f);
+        private static readonly Color TagYellow = new Color32(255, 208, 32, 255);        // "STAGE 01" tag (#FFD020, the game's yellow)
+        private static readonly Color TagYellowBright = new Color(1f, 0.93f, 0.55f, 1f); // same tag while the stage is selected
 
         // Layout in native units (scaled by StageMapLayout through the visual root)
         private const float CoreSize = 56f;
@@ -490,7 +492,7 @@ namespace TrashTD.UI
             cardAccent.color = lineColor;
             foreach (Image bracket in cardBrackets) bracket.color = lineColor;
 
-            tagText.color = isLocked ? LockedGrey : Color.Lerp(Phosphor, SelectedGlow, selected);
+            tagText.color = isLocked ? LockedGrey : Color.Lerp(TagYellow, TagYellowBright, selected);
             nameText.color = isLocked ? new Color(0.50f, 0.55f, 0.62f, 0.75f) : Color.Lerp(NameColor, Color.white, hot);
 
             // Name types out during the intro

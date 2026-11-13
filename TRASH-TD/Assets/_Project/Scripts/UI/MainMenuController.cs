@@ -70,24 +70,27 @@ namespace TrashTD.UI
         private static readonly Color PrimaryLabel = new Color(0.02f, 0.10f, 0.05f, 1f);
         private static readonly Color RecRed = new Color(1f, 0.27f, 0.22f, 1f);
 
-        // Sidebar: the tall logo PNG (252x480: emblem, title plate, hazard stripes) sits on top of a full-height
-        // yellow bar, and the menu rows stack on the yellow underneath it. Sizes are canvas units (1920x1080).
-        private static readonly Color SidebarYellow = new Color32(255, 208, 32, 255); // same yellow as the logo PNG (#FFD020)
-        private static readonly Color SidebarInk = new Color32(12, 12, 12, 255);      // same black as the logo PNG (#0C0C0C)
-        private const float SidebarLeft = 96f;                                        // black margin left of the bar (0 = flush to the edge)
-        private const float SidebarLogoHeight = 640f;                                 // width follows the PNG's 252:480 shape
-        private const float SidebarWidth = SidebarLogoHeight * 252f / 480f;           // 336
-        private const float SidebarRight = SidebarLeft + SidebarWidth;
-        private const float MenuButtonInset = 40f;                                    // yellow margin either side of a row
-        private const float MenuButtonX = SidebarLeft + MenuButtonInset;
-        private const float MenuButtonWidth = SidebarWidth - 2f * MenuButtonInset;    // 256
-        private const float MenuAreaTop = SidebarLogoHeight + 36f;                    // first row starts just under the stripes
+        // Title screen: the dim emblem (214x214) with the wide title (320x73) centred over it, above a centred stack of menu rows.
+        // Both PNGs are drawn at exactly 2x so their pixels stay crisp. Sizes are canvas units (1920x1080).
+        private static readonly Color SidebarYellow = new Color32(255, 208, 32, 255); // the logo's old yellow (#FFD020); still the stage "ACT" title colour
+        private static readonly Color SidebarInk = new Color32(12, 12, 12, 255);      // near-black used for the secondary rows
+        private const float TitleEmblemSize = 428f;                                   // emblem, behind the title
+        private const float TitleLogoWidth = 640f;                                    // title lettering on top of it
+        private const float TitleLogoHeight = 146f;                                   // the still title (73 px tall)
+        private const float TitleLogoAnimatedHeight = 158f;                           // the animated title: 79 px frames, the extra rows leave room for its bob
+        private const float TitleLogoFrameSeconds = 0.1f;
+        private static readonly Color MenuBackdropTintColor = new Color(0.45f, 0.95f, 0.60f, 1f); // what the backdrop is multiplied towards at full strength
+        private const float MenuBackdropTintStrength = 0.4f;                          // 0 = no tint, 1 = the full colour above
+        private const float TitleLogoDrop = 12f;                                      // the lettering sits a little below the emblem's centre, as in the artwork
+        private const float TitleLogoTop = 150f;
+        private const float MenuButtonWidth = 360f;
+        private const float MenuAreaTop = TitleLogoTop + TitleEmblemSize + 28f;        // first row starts just under the emblem
         private const float MenuPlayHeight = 64f;
         private const float MenuRowHeight = 52f;
         private const float MenuRowGap = 10f;
         private const float MenuHintTop = MenuAreaTop + MenuPlayHeight + 3f * (MenuRowGap + MenuRowHeight) + 12f;
 
-        /// <summary>Row 0 = PLAY, 1 = INTEL, 2 = SETTINGS, 3 = EXIT, stacked under the logo on the yellow bar.</summary>
+        /// <summary>Row 0 = PLAY, 1 = INTEL, 2 = SETTINGS, 3 = EXIT, stacked in the horizontal centre under the logo.</summary>
         private static void PlaceMenuRow(RectTransform rect, int row)
         {
             float top = MenuAreaTop;
@@ -98,10 +101,9 @@ namespace TrashTD.UI
                 height = MenuRowHeight;
             }
 
-            var topLeft = new Vector2(0f, 1f);
-            Place(rect, topLeft, topLeft, new Vector2(MenuButtonX, -top), new Vector2(MenuButtonWidth, height));
+            var topCenter = new Vector2(0.5f, 1f);
+            Place(rect, topCenter, topCenter, new Vector2(0f, -top), new Vector2(MenuButtonWidth, height));
         }
-
         private const float MenuButtonLabelInset = 56f;
         private const string StageActTitle = "ACT 1";
         private const string StageZoneTitle = "NERC Development Zone";
@@ -180,8 +182,7 @@ namespace TrashTD.UI
         private RectTransform stageDetailsModal;
         private Image modalAccentImage;
         private Color modalAccentTarget = AccentColor;
-        private Text stageDetailsTag;
-        private Text stageProgressText;
+        private Image stageDetailsTitleRule; // short accent rule under the stage name, tinted like the stripe under the title bar
         private RectTransform mainVersion;
 
         // Title screen
@@ -426,6 +427,7 @@ namespace TrashTD.UI
             {
                 float k = 1f - Mathf.Exp(-12f * dt);
                 modalAccentImage.color = Color.Lerp(modalAccentImage.color, modalAccentTarget, k);
+                if (stageDetailsTitleRule != null) stageDetailsTitleRule.color = modalAccentImage.color;
             }
 
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
@@ -742,9 +744,6 @@ namespace TrashTD.UI
             tickerTextRect.anchoredPosition = Vector2.zero;
             tickerTextRect.sizeDelta = new Vector2(TickerViewportWidth, 0f);
 
-            stageProgressText = MakeText(stageSelectionPanel.transform, "StageProgressText", "", 14, TextAnchor.MiddleRight, TerminalText, FontStyle.Bold);
-            Place(stageProgressText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-60f, -48f), new Vector2(300f, 26f));
-
             if (sandboxButton == null)
             {
                 sandboxButton = CreateButtonChild(stageSelectionPanel.transform, "SandboxButton", "⚙  QA SANDBOX");
@@ -779,8 +778,8 @@ namespace TrashTD.UI
 
         /// <summary>
         /// The start screen: a live stage-art backdrop with an enemy parade (MainMenuBackdrop) inside a camera
-        /// viewfinder, a full-height yellow sidebar carrying the tall Tiny Reclaimers logo, and the terminal-style
-        /// menu rows on the yellow below it.
+        /// viewfinder, the wide Tiny Reclaimers logo centred on screen, and the terminal-style
+        /// menu rows centred under it.
         /// </summary>
         private void BuildTitleScreen()
         {
@@ -793,6 +792,26 @@ namespace TrashTD.UI
             menuBackdrop = backdropGo.AddComponent<MainMenuBackdrop>();
             CreateAmbientLayer(panel, 30);
             backdropGo.transform.SetAsFirstSibling();
+
+            // Faint terminal-green tint over the live backdrop (above it, below the motes, viewfinder and menu).
+            // It multiplies the picture instead of laying a translucent colour over it, so it adds a green cast
+            // without washing the backdrop out or lifting its blacks.
+            Shader multiplyShader = Shader.Find("TrashTD/UI/Multiply");
+            if (multiplyShader == null) multiplyShader = Resources.Load<Shader>("Shaders/UIMultiply");
+            Image greenTint = CreateBlock(panel, "BackdropGreenTint", Color.white);
+            if (multiplyShader != null)
+            {
+                greenTint.material = new Material(multiplyShader);
+                greenTint.color = Color.Lerp(Color.white, MenuBackdropTintColor, MenuBackdropTintStrength);
+            }
+            else
+            {
+                // No multiply shader available: a much fainter plain overlay
+                greenTint.color = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.06f);
+            }
+            StretchFill(greenTint.rectTransform);
+            greenTint.raycastTarget = false;
+            greenTint.transform.SetSiblingIndex(1);
 
             // Camera viewfinder: corner brackets, REC light + feed caption top-right
             var viewfinder = new GameObject("Viewfinder", typeof(RectTransform));
@@ -827,39 +846,62 @@ namespace TrashTD.UI
             menuFeedCaption.horizontalOverflow = HorizontalWrapMode.Overflow;
             Place(menuFeedCaption.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -30f), new Vector2(720f, 20f));
 
-            // ── Sidebar: full-height yellow bar, tall logo on top, menu rows on the yellow below ──
-            var sidebarGo = new GameObject("Sidebar", typeof(RectTransform));
-            sidebarGo.transform.SetParent(panel, false);
-            titleBlock = sidebarGo.GetComponent<RectTransform>();
-            titleBlock.anchorMin = new Vector2(0f, 0f);
-            titleBlock.anchorMax = new Vector2(0f, 1f);
-            titleBlock.pivot = new Vector2(0f, 0.5f);
-            titleBlock.sizeDelta = new Vector2(SidebarWidth, 0f);
-            titleBlock.anchoredPosition = new Vector2(SidebarLeft, 0f);
+            // ── Emblem with the wide title over it, centred near the top of the stack ──
+            var topCenter = new Vector2(0.5f, 1f);
+            var logoRoot = new GameObject("TinyReclaimersLogoRoot", typeof(RectTransform));
+            logoRoot.transform.SetParent(panel, false);
+            titleBlock = logoRoot.GetComponent<RectTransform>();
+            Place(titleBlock, topCenter, topCenter, new Vector2(0f, -TitleLogoTop), new Vector2(TitleEmblemSize, TitleEmblemSize));
 
-            // The logo PNG only covers the top of the bar, so this yellow rectangle runs behind it, top to bottom
-            Image sidebarBar = CreateBlock(titleBlock, "SidebarBar", SidebarYellow);
-            StretchFill(sidebarBar.rectTransform);
-
-            Sprite logo = LoadSpriteSafely(
-                "UI/Tiny Reclaimers Logo Tall",
-                "Assets/Resources/UI/Tiny Reclaimers Logo Tall.png");
-            if (logo == null)
+            Sprite emblem = LoadSpriteSafely(
+                "UI/Tiny Reclaimers Emblem Dim",
+                "Assets/Resources/UI/Tiny Reclaimers Emblem Dim.png");
+            if (emblem == null)
             {
-                Debug.LogError("Main menu logo sprite 'UI/Tiny Reclaimers Logo Tall' could not be loaded.");
+                Debug.LogError("Main menu emblem sprite 'UI/Tiny Reclaimers Emblem Dim' could not be loaded.");
             }
             else
             {
+                var emblemObject = new GameObject("TinyReclaimersEmblem", typeof(RectTransform), typeof(Image));
+                emblemObject.transform.SetParent(titleBlock, false);
+                StretchFill(emblemObject.GetComponent<RectTransform>());
+                var emblemImage = emblemObject.GetComponent<Image>();
+                emblemImage.sprite = emblem;
+                emblemImage.preserveAspect = true;
+                emblemImage.color = Color.white;
+                emblemImage.raycastTarget = false;
+            }
+
+            // The title is animated (16 frames of 320x79); the still PNG is the fallback if the sheet can't be loaded
+            Sprite[] logoFrames = LoadTitleLogoFrames();
+            Sprite logo = logoFrames != null ? logoFrames[0] : LoadSpriteSafely(
+                "UI/Tiny Reclaimers Logo Wide",
+                "Assets/Resources/UI/Tiny Reclaimers Logo Wide.png");
+            if (logo == null)
+            {
+                Debug.LogError("Main menu logo sprite 'UI/Tiny Reclaimers Logo Wide' could not be loaded.");
+            }
+            else
+            {
+                // Added after the emblem, so it draws on top of it
                 var logoObject = new GameObject("TinyReclaimersLogo", typeof(RectTransform), typeof(Image));
                 logoObject.transform.SetParent(titleBlock, false);
-                StretchTop(logoObject.GetComponent<RectTransform>(), 0f, 0f, 0f, SidebarLogoHeight);
+                var centre = new Vector2(0.5f, 0.5f);
+                float logoHeight = logoFrames != null ? TitleLogoAnimatedHeight : TitleLogoHeight;
+                Place(logoObject.GetComponent<RectTransform>(), centre, centre, new Vector2(0f, -TitleLogoDrop), new Vector2(TitleLogoWidth, logoHeight));
                 var logoImage = logoObject.GetComponent<Image>();
                 logoImage.sprite = logo;
                 logoImage.preserveAspect = true;
                 logoImage.color = Color.white;
                 logoImage.raycastTarget = false;
-            }
 
+                if (logoFrames != null)
+                {
+                    var logoAnimation = logoObject.AddComponent<UiSpriteAnimation>();
+                    logoAnimation.FrameDuration = TitleLogoFrameSeconds;
+                    logoAnimation.Frames = logoFrames;
+                }
+            }
             // ── Menu rows (INTEL is row 1 and SETTINGS row 2, added by ReclaimersIntelUI / AudioSettingsUI in Awake) ──
             if (startButton == null)
             {
@@ -875,11 +917,11 @@ namespace TrashTD.UI
             PlaceMenuRow(exitButton.GetComponent<RectTransform>(), 3);
             StyleMainMenuButton(exitButton, "EXIT", false);
 
-            // Hint sits at the foot of the bar, so it's dark ink on yellow
-            var topLeft = new Vector2(0f, 1f);
-            menuHintText = MakeText(panel, "MenuHint", "[ARROWS] SELECT    [ENTER] CONFIRM", 11, TextAnchor.MiddleLeft,
-                new Color(SidebarInk.r, SidebarInk.g, SidebarInk.b, 0.65f));
-            Place(menuHintText.rectTransform, topLeft, topLeft, new Vector2(MenuButtonX, -MenuHintTop), new Vector2(MenuButtonWidth, 20f));
+            // Hint sits centred under the last row
+            var hintAnchor = new Vector2(0.5f, 1f);
+            menuHintText = MakeText(panel, "MenuHint", "[ARROWS] SELECT    [ENTER] CONFIRM", 11, TextAnchor.MiddleCenter,
+                new Color(TerminalText.r, TerminalText.g, TerminalText.b, 0.7f));
+            Place(menuHintText.rectTransform, hintAnchor, hintAnchor, new Vector2(0f, -MenuHintTop), new Vector2(MenuButtonWidth, 20f));
         }
 
         /// <summary>
@@ -902,13 +944,13 @@ namespace TrashTD.UI
                 labelText.font = UIFontHelper.GetPixelFont();
                 labelText.fontSize = primary ? 26 : 18;
                 labelText.fontStyle = FontStyle.Normal;
-                labelText.alignment = TextAnchor.MiddleLeft;
+                labelText.alignment = TextAnchor.MiddleCenter;
                 labelText.color = primary ? PrimaryLabel : AccentColor;
                 RectTransform labelRect = labelText.rectTransform;
                 labelRect.anchorMin = Vector2.zero;
                 labelRect.anchorMax = Vector2.one;
                 labelRect.offsetMin = new Vector2(MenuButtonLabelInset, 0f);
-                labelRect.offsetMax = new Vector2(-64f, 0f);
+                labelRect.offsetMax = new Vector2(-MenuButtonLabelInset, 0f);
             }
 
             if (!primary)
@@ -934,7 +976,7 @@ namespace TrashTD.UI
             frame.transform.SetParent(button.transform, false);
             var frameRect = frame.GetComponent<RectTransform>();
             StretchFill(frameRect);
-            AddCornerBrackets(frameRect, 14f, 3f, SidebarInk, -6f);
+            AddCornerBrackets(frameRect, 14f, 3f, AccentBright, -6f);
             var frameGroup = frame.GetComponent<CanvasGroup>();
             frameGroup.alpha = 0f;
             frameGroup.blocksRaycasts = false;
@@ -1204,13 +1246,11 @@ namespace TrashTD.UI
                 if (child.name.StartsWith("StageNode_")) Destroy(child.gameObject);
             }
 
-            int unlocked = 0;
             int mapStageCount = Mathf.Min(6, availableStages.Count);
             for (int i = 0; i < mapStageCount; i++)
             {
                 var stage = availableStages[i];
                 bool isPlayable = IsStageOpen(stage);
-                if (isPlayable) unlocked++;
 
                 var node = CreateStageMapNode(stage, i + 1, isPlayable, StageNodePositions[i]);
                 stageMapNodes.Add(node);
@@ -1230,11 +1270,6 @@ namespace TrashTD.UI
 
             // Re-apply the layout to position everything
             if (stageMapLayout != null) stageMapLayout.Apply();
-
-            if (stageProgressText != null)
-            {
-                stageProgressText.text = $"{unlocked} / 6 UNLOCKED";
-            }
         }
 
         /// <summary>
@@ -1312,6 +1347,31 @@ namespace TrashTD.UI
             {
                 if (stageMapNodes[i] != null) stageMapNodes[i].PlayIntro(0.25f + stageMapNodes[i].StageNumber * 0.12f);
             }
+        }
+
+        private const string TitleLogoAnimationPath = "UI/Tiny Reclaimers Logo Wide animation";
+        private const int TitleLogoFrameCount = 16;
+
+        /// <summary>The title's animation frames in order, or null if the sheet is missing or not sliced into 16 frames.</summary>
+        private static Sprite[] LoadTitleLogoFrames()
+        {
+            Sprite[] loaded = Resources.LoadAll<Sprite>(TitleLogoAnimationPath);
+            if (loaded == null || loaded.Length != TitleLogoFrameCount)
+            {
+                if (loaded != null && loaded.Length > 0)
+                    Debug.LogWarning($"Title logo animation has {loaded.Length} sprites, expected {TitleLogoFrameCount}; using the still logo.");
+                return null;
+            }
+
+            System.Array.Sort(loaded, (a, b) => TrailingIndex(a.name).CompareTo(TrailingIndex(b.name)));
+            if (loaded[0] != null && loaded[0].texture != null) loaded[0].texture.filterMode = FilterMode.Point;
+            return loaded;
+        }
+
+        private static int TrailingIndex(string spriteName)
+        {
+            int underscore = spriteName.LastIndexOf('_');
+            return underscore >= 0 && int.TryParse(spriteName.Substring(underscore + 1), out int index) ? index : 0;
         }
 
         /// <summary>
@@ -1515,8 +1575,6 @@ namespace TrashTD.UI
             stageDetailsTitle.text = selectedStage.mapName;
             stageDetailsDescription.text = selectedStage.shortDescription;
             bool tutorial = IsTutorialStage(selectedStage);
-            int stageNumber = tutorial ? 0 : stageIndex + 1;
-            if (stageDetailsTag != null) stageDetailsTag.text = tutorial ? "◆ TUTORIAL" : "◆ STAGE " + stageNumber.ToString("00");
             if (!tutorial) selectedDifficulty = PickOpenDifficulty(selectedStage, selectedDifficulty);
             UpdateDifficultyDisplay();
 
@@ -1604,9 +1662,9 @@ namespace TrashTD.UI
             headerImage.raycastTarget = false;
 
             var headerLabel = MakeText(header.transform, "DossierHeaderLabel", "◆ STAGE DOSSIER", 15, TextAnchor.MiddleLeft, AccentBright, FontStyle.Bold);
-            headerLabel.rectTransform.offsetMin = new Vector2(24f, 0f);
+            headerLabel.rectTransform.offsetMin = new Vector2(DossierPadding, 0f);
             var headerStatus = MakeText(header.transform, "DossierHeaderStatus", "UPLINK STABLE  //  ROUTE SCAN ACTIVE", 12, TextAnchor.MiddleRight, TerminalText);
-            headerStatus.rectTransform.offsetMax = new Vector2(-24f, 0f);
+            headerStatus.rectTransform.offsetMax = new Vector2(-DossierPadding, 0f);
 
             // Accent stripe under the title bar, tinted by difficulty
             var modalAccent = new GameObject("ModalAccent", typeof(RectTransform), typeof(Image));
@@ -1657,22 +1715,28 @@ namespace TrashTD.UI
             stageDetailsColumn.offsetMin = new Vector2(DossierPadding + PreviewFrameWidth + 32f, DossierPadding);
             stageDetailsColumn.offsetMax = new Vector2(-DossierPadding, -(DossierHeaderHeight + 24f));
 
-            stageDetailsTag = MakeText(column.transform, "StageDetailsTag", "◆ STAGE 01", 15, TextAnchor.MiddleLeft, AccentBright, FontStyle.Bold);
-            StretchTop(stageDetailsTag.rectTransform, 0f, 0f, 0f, 22f);
-
             stageDetailsTitle = MakeText(column.transform, "StageDetailsTitle", "Select a stage", 38, TextAnchor.UpperLeft, Color.white, FontStyle.Bold);
             stageDetailsTitle.resizeTextForBestFit = true;
             stageDetailsTitle.resizeTextMinSize = 22;
-            stageDetailsTitle.resizeTextMaxSize = 38;
+            stageDetailsTitle.resizeTextMaxSize = 46;
             // Room for two lines (a long name wraps instead of shrinking to a sliver), with air between them
-            stageDetailsTitle.lineSpacing = 1.2f;
-            StretchTop(stageDetailsTitle.rectTransform, 0f, 0f, 26f, 82f);
+            stageDetailsTitle.lineSpacing = 1.1f;
+            StretchTop(stageDetailsTitle.rectTransform, 0f, 0f, 0f, DetailsTitleHeight);
 
-            // Column blocks (622 px tall) are spaced evenly, DetailsGap apart: name (0..76), description,
+            // Accent rule under the name, as wide as the divider further down (colour follows the difficulty,
+            // like the stripe under the title bar)
+            var titleRule = new GameObject("StageDetailsTitleRule", typeof(RectTransform), typeof(Image));
+            titleRule.transform.SetParent(column.transform, false);
+            StretchTop(titleRule.GetComponent<RectTransform>(), 0f, 0f, DetailsRuleTop, DetailsRuleHeight);
+            stageDetailsTitleRule = titleRule.GetComponent<Image>();
+            stageDetailsTitleRule.color = AccentColor;
+            stageDetailsTitleRule.raycastTarget = false;
+
+            // Column blocks (622 px tall) are spaced evenly, DetailsGap apart: name + accent rule, description,
             // divider, difficulty label + slider, info strip, and the Back / Play buttons at the bottom.
             stageDetailsDescription = MakeText(column.transform, "StageDetailsDescription", "", 18, TextAnchor.UpperLeft, new Color(0.78f, 0.90f, 0.83f, 1f));
             FitText(stageDetailsDescription, 13, 18);
-            stageDetailsDescription.lineSpacing = 1.35f;
+            stageDetailsDescription.lineSpacing = 1.4f;
             StretchTop(stageDetailsDescription.rectTransform, 0f, 0f, DetailsDescriptionTop, DetailsDescriptionHeight);
 
             var divider = new GameObject("DetailsDivider", typeof(RectTransform), typeof(Image));
@@ -1686,7 +1750,7 @@ namespace TrashTD.UI
             // Footer buttons
             stageDetailsBackButton = CreateButtonChild(column.transform, "StageDetailsBackButton", "◀  BACK");
             StyleTerminalButton(stageDetailsBackButton, TerminalText, 15);
-            Place(stageDetailsBackButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(0f, 0f), Vector2.zero, new Vector2(140f, 56f));
+            Place(stageDetailsBackButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(0f, 0f), Vector2.zero, new Vector2(140f, 62f));
 
             playStageButton = CreateButtonChild(column.transform, "PlayStageButton", "▶  PLAY");
             playStageButton.GetComponent<Image>().color = AccentColor;
@@ -1705,14 +1769,18 @@ namespace TrashTD.UI
         private const float DossierPadding = 28f;
 
         // Details column layout (column pixels from the top; the column is 622 px tall, Back / Play fill 560..622).
-        // Blocks: name 0..108, description 132 px, divider 2 px, difficulty label + slider 82 px, info strip
-        // 80 px, buttons 62 px; the description sits 20 px under the name, the other gaps are DetailsGap.
-        private const float DetailsGap = 34f;
-        private const float DetailsDescriptionTop = 108f + 20f;                                         // 128 (name block is 0..108)
-        private const float DetailsDescriptionHeight = 132f;
-        private const float DetailsDividerTop = DetailsDescriptionTop + DetailsDescriptionHeight + DetailsGap; // 294 (128 + 132 + 34)
-        private const float DifficultyLabelTop = DetailsDividerTop + 2f + DetailsGap;                  // 330
-        private const float DifficultyBriefingTop = DifficultyLabelTop + 82f + DetailsGap;             // 446
+        // Blocks, top to bottom: name 92 + full-width accent rule 3, description 146, divider 2, difficulty label 20 +
+        // slider 52, info strip 80. The rule sits 8 px under the name and the description 22 px under the rule; every
+        // block after that is exactly DetailsGap (32) from the one above, and 31 px of air remains above the buttons.
+        private const float DetailsGap = 32f;
+        private const float DetailsTitleHeight = 92f;
+        private const float DetailsRuleTop = DetailsTitleHeight + 8f;                                   // 100
+        private const float DetailsRuleHeight = 3f;
+        private const float DetailsDescriptionTop = DetailsRuleTop + DetailsRuleHeight + 22f;           // 125
+        private const float DetailsDescriptionHeight = 146f;
+        private const float DetailsDividerTop = DetailsDescriptionTop + DetailsDescriptionHeight + DetailsGap; // 303
+        private const float DifficultyLabelTop = DetailsDividerTop + 2f + DetailsGap;                  // 337
+        private const float DifficultyBriefingTop = DifficultyLabelTop + 80f + DetailsGap;             // 449 (label 20 + 8 + slider 52 = 80)
         private const float DifficultyBriefingHeight = 80f;
         private const float PreviewFrameWidth = 800f;
 
@@ -1840,7 +1908,7 @@ namespace TrashTD.UI
 
         // Difficulty slider geometry (column pixels): the slide area is inset so the knob and the end labels stay
         // inside the column; notches, labels and the knob all use the same 0 / 0.5 / 1 positions.
-        private const float DifficultySliderTop = DifficultyLabelTop + 30f;
+        private const float DifficultySliderTop = DifficultyLabelTop + 28f;
         private const float DifficultySliderInset = 46f;
         private const float DifficultyTrackHeight = 10f;
         private static readonly Color DifficultyTrackColor = new Color(0.020f, 0.050f, 0.034f, 1f);
@@ -2264,12 +2332,12 @@ namespace TrashTD.UI
             detailsEntrance.Clear();
 
             // Main menu
-            RegisterEntrance(mainEntrance, titleBlock, new Vector2(-70f, 0f), 0.05f);
+            RegisterEntrance(mainEntrance, titleBlock, new Vector2(0f, 40f), 0.05f);
             RegisterEntrance(mainEntrance, subtitleText, new Vector2(-50f, 0f), 0.12f);
-            RegisterEntrance(mainEntrance, startButton, new Vector2(-70f, 0f), 0.22f);
-            RegisterEntrance(mainEntrance, intelUI != null ? intelUI.IntelButton : null, new Vector2(-70f, 0f), 0.28f);
-            RegisterEntrance(mainEntrance, audioSettingsUI != null ? audioSettingsUI.SettingsButton : null, new Vector2(-70f, 0f), 0.34f);
-            RegisterEntrance(mainEntrance, exitButton, new Vector2(-70f, 0f), 0.40f);
+            RegisterEntrance(mainEntrance, startButton, new Vector2(0f, -30f), 0.22f);
+            RegisterEntrance(mainEntrance, intelUI != null ? intelUI.IntelButton : null, new Vector2(0f, -30f), 0.28f);
+            RegisterEntrance(mainEntrance, audioSettingsUI != null ? audioSettingsUI.SettingsButton : null, new Vector2(0f, -30f), 0.34f);
+            RegisterEntrance(mainEntrance, exitButton, new Vector2(0f, -30f), 0.40f);
             RegisterEntrance(mainEntrance, menuHintText, Vector2.zero, 0.48f);
             RegisterEntrance(mainEntrance, mainVersion, new Vector2(0f, -20f), 0.30f);
             RegisterEntrance(mainEntrance, menuFeedStatus, new Vector2(0f, 20f), 0.30f);
@@ -2281,14 +2349,13 @@ namespace TrashTD.UI
             RegisterEntrance(stageEntrance, stageHeaderTitle, new Vector2(-60f, 0f), 0.00f);
             RegisterEntrance(stageEntrance, stageZoneTitle, new Vector2(-60f, 0f), 0.03f);
             RegisterEntrance(stageEntrance, stageHeaderSubtitle, new Vector2(-40f, 0f), 0.06f);
-            RegisterEntrance(stageEntrance, stageProgressText, new Vector2(40f, 0f), 0.12f);
             RegisterEntrance(stageEntrance, backButton, new Vector2(-40f, 0f), 0.16f);
             RegisterEntrance(stageEntrance, stageHint, Vector2.zero, 0.30f);
             RegisterEntrance(stageEntrance, mapNavigator != null ? mapNavigator.HudRoot : null, new Vector2(40f, 0f), 0.18f);
 
             // Stage details modal
-            RegisterEntrance(detailsEntrance, stageDetailsTag, new Vector2(0f, 12f), 0.05f);
-            RegisterEntrance(detailsEntrance, stageDetailsTitle, new Vector2(0f, 12f), 0.08f);
+            RegisterEntrance(detailsEntrance, stageDetailsTitle, new Vector2(0f, 12f), 0.05f);
+            RegisterEntrance(detailsEntrance, stageDetailsTitleRule, new Vector2(0f, 12f), 0.08f);
             RegisterEntrance(detailsEntrance, stageDetailsDescription, new Vector2(0f, 12f), 0.12f);
             RegisterEntrance(detailsEntrance, stagePreviewFrame, new Vector2(-24f, 0f), 0.02f);
             RegisterEntrance(detailsEntrance, difficultyLabel, new Vector2(0f, 12f), 0.16f);

@@ -50,4 +50,4 @@ MonoBehaviour:
   portrait: {fileID: -1872746053690042025, guid: 525e95c0567c1734eab00f6c83fc2a88, type: 3}
   operatorPrefab: {fileID: 1724151342938439340, guid: 7e1c5a9d3b4f48a6c2e0d8f7b5a1c9e6, type: 3}
   intelQuote: "Hold still. It only hurts more if you run."
-  intelLore: "A lens crystal recovered from an abandoned NERC research complex, still humming with whatever they put into it. Castiel focuses light into a single beam that burns hotter the longer it holds a target. It speaks rarely, and always in the same calm, ringing tone."
+  intelLore: "Not built. Not born. Castiel is a relic of something cast down from the heavens: a shard of an unknown entity sent to burn away impurity, and it has found a great deal of it here. The NERC researchers who dug it from the crust called it a lens crystal. That is only the part of it that fits inside this world. Look too long and its shape stops agreeing with itself, too many edges, a face that is only ever the thing you just looked away from. It holds one beam on one target, and the light grows hotter the longer it is held. It speaks in a single calm, ringing tone. Those who stayed to listen were never counted."
