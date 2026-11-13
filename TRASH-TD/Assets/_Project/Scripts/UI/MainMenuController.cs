@@ -75,13 +75,13 @@ namespace TrashTD.UI
         private static readonly Color SidebarYellow = new Color32(255, 208, 32, 255); // the logo's old yellow (#FFD020); still the stage "ACT" title colour
         private static readonly Color SidebarInk = new Color32(12, 12, 12, 255);      // near-black used for the secondary rows
         private const float TitleEmblemSize = 428f;                                   // emblem, behind the title
-        private const float TitleLogoWidth = 640f;                                    // title lettering on top of it
-        private const float TitleLogoHeight = 146f;                                   // the still title (73 px tall)
-        private const float TitleLogoAnimatedHeight = 158f;                           // the animated title: 79 px frames, the extra rows leave room for its bob
+        private const float TitleLogoWidth = 960f;                                    // title lettering on top of it, at exactly 3x (320 px)
+        private const float TitleLogoHeight = 219f;                                   // the still title (73 px tall, 3x)
+        private const float TitleLogoAnimatedHeight = 237f;                           // the animated title: 79 px frames at 3x, the extra rows leave room for its bob
         private const float TitleLogoFrameSeconds = 0.1f;
         private static readonly Color MenuBackdropTintColor = new Color(0.45f, 0.95f, 0.60f, 1f); // what the backdrop is multiplied towards at full strength
         private const float MenuBackdropTintStrength = 0.4f;                          // 0 = no tint, 1 = the full colour above
-        private const float TitleLogoDrop = 12f;                                      // the lettering sits a little below the emblem's centre, as in the artwork
+        private const float TitleLogoDrop = 18f;                                      // the lettering sits a little below the emblem's centre, as in the artwork
         private const float TitleLogoTop = 150f;
         private const float MenuButtonWidth = 360f;
         private const float MenuAreaTop = TitleLogoTop + TitleEmblemSize + 28f;        // first row starts just under the emblem
