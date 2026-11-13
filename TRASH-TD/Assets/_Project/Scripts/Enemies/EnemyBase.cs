@@ -83,6 +83,7 @@ namespace TrashTD.Enemies
         private bool isFrozen;
         private Combat.IceStatusVisual iceVisual;
         private Combat.IceStatusState appliedIceState;
+        private Combat.SluggishGlueVisual glueVisual;
         private bool isStunned;
         private float sluggishTimer;
         private float sluggishMoveSpeedMultiplier = 1f;
@@ -104,6 +105,7 @@ namespace TrashTD.Enemies
                 ApplySluggish();
             }
             UpdateChillVisual();
+            UpdateGlueVisual();
         }
 
         public void ModifyATK(int delta)
@@ -289,6 +291,7 @@ namespace TrashTD.Enemies
             highestResicochetCharge = 0;
             IsEnraged = false;
             appliedIceState = Combat.IceStatusState.None;
+            if (glueVisual != null) glueVisual.Apply(false, 0, null);
             CacheChillRenderers();
             UpdateChillVisual();
 
@@ -1379,6 +1382,10 @@ namespace TrashTD.Enemies
                 iceVisual.Apply(Combat.IceStatusState.None, null);
                 appliedIceState = Combat.IceStatusState.None;
             }
+            if (glueVisual != null)
+            {
+                glueVisual.Apply(false, 0, null);
+            }
 
             // Release from blocker if blocked
             if (isBlocked && blockingOperator != null)
@@ -1690,7 +1697,14 @@ namespace TrashTD.Enemies
             sluggishAttackIntervalMultiplier = Mathf.Max(sluggishAttackIntervalMultiplier, Mathf.Max(1f, attackIntervalMultiplier));
             sluggishTimer = Mathf.Max(sluggishTimer, duration);
 
+            bool wasSluggish = isSluggish;
             isSluggish = true;
+
+            if (!wasSluggish)
+            {
+                UpdateGlueVisual();
+                if (glueVisual != null) glueVisual.PlaySplatBurst();
+            }
 
             if (!isFrozen && !isStunned)
             {
@@ -1837,6 +1851,13 @@ namespace TrashTD.Enemies
             iceVisual = Combat.IceStatusVisual.SetState(gameObject, desired, GetPrimaryVisualRenderer(), iceVisual);
         }
 
+        private void UpdateGlueVisual()
+        {
+            int effectiveCharge = resicochetCharge > 0 ? resicochetCharge : (isSluggish ? 1 : 0);
+            if (!isSluggish && glueVisual == null) return;
+            glueVisual = Combat.SluggishGlueVisual.SetState(gameObject, isSluggish, effectiveCharge, GetPrimaryVisualRenderer(), glueVisual);
+        }
+
         private void UpdateChillVisual()
         {
             if (chillRenderers == null || originalRendererColors == null)
@@ -1863,13 +1884,15 @@ namespace TrashTD.Enemies
                 tintAmount = 0.3f;
                 effectColor = new Color(0.1f, 0.6f, 1f);
             }
-            else if (resicochetCharge > 0 && isSluggish)
+            else if (isSluggish)
             {
-                tintAmount = 0.85f;
-                effectColor = GetResicochetChargeColor(resicochetCharge);
+                tintAmount = 0.35f;
+                int effectiveCharge = resicochetCharge > 0 ? resicochetCharge : 1;
+                effectColor = GetResicochetChargeColor(effectiveCharge);
             }
 
             UpdateIceVisual();
+            UpdateGlueVisual();
 
             for (int i = 0; i < chillRenderers.Length; i++)
             {
@@ -1877,7 +1900,8 @@ namespace TrashTD.Enemies
                 if (chillRenderers[i].gameObject.name == "AirShadow" ||
                     chillRenderers[i].gameObject.name.StartsWith("StunStars") ||
                     chillRenderers[i].gameObject.name.StartsWith("EnragedVisual") ||
-                    chillRenderers[i].gameObject.name.StartsWith(Combat.IceStatusVisual.ObjectName))
+                    chillRenderers[i].gameObject.name.StartsWith(Combat.IceStatusVisual.ObjectName) ||
+                    chillRenderers[i].gameObject.name.StartsWith(Combat.SluggishGlueVisual.ObjectName))
                     continue;
 
                 Color original = originalRendererColors[i];
