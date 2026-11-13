@@ -83,11 +83,11 @@ namespace TrashTD.UI
         private const float MenuBackdropTintStrength = 0.4f;                          // 0 = no tint, 1 = the full colour above
         private const float TitleLogoDrop = 18f;                                      // the lettering sits a little below the emblem's centre, as in the artwork
         private const float TitleLogoTop = 150f;
-        private const float MenuButtonWidth = 360f;
-        private const float MenuAreaTop = TitleLogoTop + TitleEmblemSize + 28f;        // first row starts just under the emblem
-        private const float MenuPlayHeight = 64f;
-        private const float MenuRowHeight = 52f;
-        private const float MenuRowGap = 10f;
+        private const float MenuButtonWidth = 300f;
+        private const float MenuAreaTop = TitleLogoTop + TitleEmblemSize + 52f;        // first row starts just under the emblem
+        private const float MenuPlayHeight = 54f;
+        private const float MenuRowHeight = 44f;
+        private const float MenuRowGap = 8f;
         private const float MenuHintTop = MenuAreaTop + MenuPlayHeight + 3f * (MenuRowGap + MenuRowHeight) + 12f;
 
         /// <summary>Row 0 = PLAY, 1 = INTEL, 2 = SETTINGS, 3 = EXIT, stacked in the horizontal centre under the logo.</summary>
@@ -104,7 +104,7 @@ namespace TrashTD.UI
             var topCenter = new Vector2(0.5f, 1f);
             Place(rect, topCenter, topCenter, new Vector2(0f, -top), new Vector2(MenuButtonWidth, height));
         }
-        private const float MenuButtonLabelInset = 56f;
+        private const float MenuButtonLabelInset = 46f;
         private const string StageActTitle = "ACT 1";
         private const string StageZoneTitle = "NERC Development Zone";
         private const string StageSubtitleText = "Choose deployment";
@@ -970,7 +970,7 @@ namespace TrashTD.UI
             {
                 labelText.text = label;
                 labelText.font = UIFontHelper.GetPixelFont();
-                labelText.fontSize = primary ? 26 : 18;
+                labelText.fontSize = primary ? 22 : 16;
                 labelText.fontStyle = FontStyle.Normal;
                 labelText.alignment = TextAnchor.MiddleCenter;
                 labelText.color = primary ? PrimaryLabel : AccentColor;
@@ -996,9 +996,9 @@ namespace TrashTD.UI
                 barImage.raycastTarget = false;
             }
 
-            Text caret = MakeText(button.transform, "Caret", ">", primary ? 26 : 18, TextAnchor.MiddleLeft,
+            Text caret = MakeText(button.transform, "Caret", ">", primary ? 22 : 16, TextAnchor.MiddleLeft,
                 new Color(primary ? PrimaryLabel.r : AccentBright.r, primary ? PrimaryLabel.g : AccentBright.g, primary ? PrimaryLabel.b : AccentBright.b, 0f));
-            caret.rectTransform.offsetMin = new Vector2(22f, 0f);
+            caret.rectTransform.offsetMin = new Vector2(18f, 0f);
 
             var frame = new GameObject("SelectFrame", typeof(RectTransform), typeof(CanvasGroup));
             frame.transform.SetParent(button.transform, false);
@@ -1096,7 +1096,7 @@ namespace TrashTD.UI
             }
         }
 
-        private const float IntroPromptOffset = 150f; // PRESS ANY KEY sits this far below where the menu rows start
+        private const float IntroPromptOffset = 126f; // PRESS ANY KEY sits this far below where the menu rows start
 
         /// <summary>
         /// First open of the title screen in a session: the logo comes in with a blinking PRESS ANY KEY, and the menu
@@ -1510,7 +1510,6 @@ namespace TrashTD.UI
             if (loaded[0] != null && loaded[0].texture != null) loaded[0].texture.filterMode = FilterMode.Point;
             return loaded;
         }
-
         private static int TrailingIndex(string spriteName)
         {
             int underscore = spriteName.LastIndexOf('_');

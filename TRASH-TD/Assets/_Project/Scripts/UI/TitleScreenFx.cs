@@ -19,8 +19,12 @@ namespace TrashTD.UI
 
         private const float GlitchMinGap = 6.5f;
         private const float GlitchMaxGap = 10f;
-        private const float GlitchLength = 0.28f;
-        private const float GlitchStep = 0.045f;
+        private const float GlitchLength = 0.2f;
+        private const float GlitchStep = 0.04f;
+
+        // Colours of the two split copies: the game's hazard yellow and a hot magenta, which stand out against the green UI
+        private static readonly Color GhostA = new Color(1f, 0.82f, 0.13f, 1f);
+        private static readonly Color GhostB = new Color(0.95f, 0.22f, 0.78f, 1f);
 
         private static bool introSeen;
 
@@ -174,25 +178,29 @@ namespace TrashTD.UI
             if (glitchStepLeft <= 0f)
             {
                 glitchStepLeft = GlitchStep;
-                float split = UnityEngine.Random.Range(3f, 8f);
-                float jitter = UnityEngine.Random.Range(-5f, 5f);
-                float alpha = UnityEngine.Random.value < 0.25f ? 0.5f : 1f; // the odd dropped frame
-                SetGlitch(jitter, split, alpha, 0.6f);
+                // Mostly small tears with the odd violent one, and a lot more dropped frames
+                bool hard = UnityEngine.Random.value < 0.3f;
+                float split = hard ? UnityEngine.Random.Range(18f, 34f) : UnityEngine.Random.Range(7f, 16f);
+                float jitter = hard ? UnityEngine.Random.Range(-26f, 26f) : UnityEngine.Random.Range(-10f, 10f);
+                float roll = UnityEngine.Random.value;
+                float alpha = roll < 0.18f ? 0.25f : (roll < 0.4f ? 0.6f : 1f);
+                SetGlitch(jitter, split, alpha, hard ? 0.85f : 0.7f);
             }
         }
 
         private void SetGlitch(float jitterX, float split, float titleAlpha, float ghostAlpha)
         {
-            titleRect.anchoredPosition = titleBase + new Vector2(jitterX, 0f);
+            float lift = ghostAlpha > 0f ? UnityEngine.Random.Range(-3f, 3f) : 0f; // the whole title also bobs vertically while glitching
+            titleRect.anchoredPosition = titleBase + new Vector2(jitterX, lift);
             titleImage.color = new Color(1f, 1f, 1f, titleAlpha);
 
             Sprite sprite = titleImage.sprite;
             ghostRed.sprite = sprite;
             ghostCyan.sprite = sprite;
-            ghostRed.color = new Color(1f, 0.25f, 0.25f, ghostAlpha);
-            ghostCyan.color = new Color(0.25f, 0.92f, 1f, ghostAlpha);
-            ghostRed.rectTransform.anchoredPosition = titleBase + new Vector2(jitterX - split, UnityEngine.Random.Range(-1.5f, 1.5f) * (ghostAlpha > 0f ? 1f : 0f));
-            ghostCyan.rectTransform.anchoredPosition = titleBase + new Vector2(jitterX + split, UnityEngine.Random.Range(-1.5f, 1.5f) * (ghostAlpha > 0f ? 1f : 0f));
+            ghostRed.color = new Color(GhostA.r, GhostA.g, GhostA.b, ghostAlpha);
+            ghostCyan.color = new Color(GhostB.r, GhostB.g, GhostB.b, ghostAlpha);
+            ghostRed.rectTransform.anchoredPosition = titleBase + new Vector2(jitterX - split, UnityEngine.Random.Range(-5f, 5f) * (ghostAlpha > 0f ? 1f : 0f));
+            ghostCyan.rectTransform.anchoredPosition = titleBase + new Vector2(jitterX + split, UnityEngine.Random.Range(-5f, 5f) * (ghostAlpha > 0f ? 1f : 0f));
         }
 
         // ─────────────────────────────────────────────────────
