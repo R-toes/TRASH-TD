@@ -260,5 +260,14 @@ namespace TrashTD.Operators
 
             return Mathf.RoundToInt(attack * (1f + bonus));
         }
+
+        public override void CollectStatEffects(System.Collections.Generic.List<StatEffect> effects)
+        {
+            base.CollectStatEffects(effects);
+
+            float airMultiplier = GetAirAttackIntervalMultiplier(HasAirTargetInRange(), currentRarity);
+            if (airMultiplier > 1.001f)
+                effects.Add(new StatEffect("AIR TARGET", $"Interval x{airMultiplier:0.##}", "ATK SPD", false));
+        }
     }
 }

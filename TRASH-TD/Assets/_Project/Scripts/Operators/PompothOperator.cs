@@ -469,5 +469,14 @@ namespace TrashTD.Operators
                 MaximumDefenseIgnore);
             return Mathf.Max(0, Mathf.RoundToInt(defense * (1f - ignore)));
         }
+
+        public override void CollectStatEffects(System.Collections.Generic.List<StatEffect> effects)
+        {
+            base.CollectStatEffects(effects);
+
+            effects.Add(new StatEffect("RAPID FIRE", $"Interval x{IntervalMultiplier:0.##}", "ATK SPD"));
+            if (CurrentAttackSpeedPassiveBonus > 0.001f)
+                effects.Add(new StatEffect("CROWD", $"Speed +{CurrentAttackSpeedPassiveBonus * 100f:0}%", "ATK SPD"));
+        }
     }
 }

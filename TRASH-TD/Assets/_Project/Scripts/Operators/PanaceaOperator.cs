@@ -334,5 +334,13 @@ namespace TrashTD.Operators
             var list = ChooseHealTargets(operators, 1);
             return list.Count > 0 ? list[0] : null;
         }
+
+        public override void CollectStatEffects(System.Collections.Generic.List<StatEffect> effects)
+        {
+            base.CollectStatEffects(effects);
+
+            if (HasFirstUpgrade && data != null)
+                effects.Add(new StatEffect("4\u2605 UPGRADE", $"Interval {data.attackInterval:0.#}s > 3s", "ATK SPD"));
+        }
     }
 }

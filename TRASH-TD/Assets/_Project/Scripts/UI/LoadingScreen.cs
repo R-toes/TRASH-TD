@@ -7,9 +7,9 @@ using TrashTD.Data;
 namespace TrashTD.UI
 {
     /// <summary>
-    /// Stage loading screen, styled as a squad uplink: the stage's map art drifts behind a dark tint inside
-    /// viewfinder corners, with the stage code, name, difficulty and 3★ goal, a segmented progress bar driven
-    /// by the async scene load, a terminal status line, and Coalesce with a tip.
+    /// Stage loading screen, kept deliberately plain: the stage's map art drifts behind a dark tint inside viewfinder
+    /// corners, with the stage name and difficulty, a segmented progress bar driven by the async scene load with its
+    /// percentage, a small tip, and Coalesce idling in the corner.
     /// It survives the scene change (DontDestroyOnLoad) and fades out once the new scene has started, so the
     /// stage appears from behind it instead of cutting in. The bar fills over at least <see cref="MinShowTime"/>
     /// so the stage name can be read even when loading is instant.
@@ -27,7 +27,7 @@ namespace TrashTD.UI
         private const float PlateRightMargin = 150f;
         // The bar, status line and tip stop this far from the right edge, clear of Coalesce's plate
         private const float ProgressRightInset = PlateRightMargin + PlateSize + 40f;
-        private const float BarHeight = 18f;
+        private const float BarHeight = 10f;
         private const int BarSegments = 59;
         private const string TutorialScriptPath = "Tutorial/TutorialScript";
 
@@ -41,16 +41,6 @@ namespace TrashTD.UI
         private static readonly Color TextDim = new Color(0.50f, 0.58f, 0.68f, 1f);
         private static readonly Color Plate = new Color(0.010f, 0.030f, 0.020f, 0.85f);
         private static readonly Color TrackColor = new Color(0.020f, 0.050f, 0.034f, 1f);
-        private static readonly Color RecRed = new Color(1f, 0.27f, 0.22f, 1f);
-
-        private static readonly string[] StatusLines =
-        {
-            "ESTABLISHING UPLINK",
-            "SCANNING TERRAIN",
-            "PLOTTING ENEMY ROUTES",
-            "PRIMING RECLAIMERS",
-            "SYNCING SQUAD DECK"
-        };
 
         private static readonly string[] Tips =
         {
@@ -73,9 +63,6 @@ namespace TrashTD.UI
         private Vector2 mapArtSize;
         private RectTransform barFill;
         private Text percentText;
-        private Text statusText;
-        private Image recDot;
-        private RectTransform scanLine;
         private Image coalesceImage;
         private Sprite[] coalesceFrames;
         private float coalesceFrameTime = 0.25f;
@@ -168,26 +155,8 @@ namespace TrashTD.UI
                 mapArt.anchoredPosition = new Vector2(Mathf.Sin(time * 0.11f) * 40f, Mathf.Cos(time * 0.09f) * 18f);
             }
 
-            if (scanLine != null)
-            {
-                float y = Mathf.Repeat(time * 260f, 1300f) - 650f;
-                scanLine.anchoredPosition = new Vector2(0f, -y);
-            }
-
-            if (recDot != null) recDot.enabled = Mathf.Repeat(time, 1f) < 0.6f;
-
             if (barFill != null) barFill.anchorMax = new Vector2(progress, 1f);
             if (percentText != null) percentText.text = Mathf.FloorToInt(progress * 100f).ToString("000") + "%";
-
-            if (statusText != null)
-            {
-                bool cursor = Mathf.Repeat(time, 0.8f) < 0.45f;
-                string line = locked
-                    ? "SIGNAL LOCKED // DEPLOYING"
-                    : StatusLines[Mathf.Min(StatusLines.Length - 1, Mathf.FloorToInt(progress * StatusLines.Length))] + "...";
-                statusText.text = "> " + line + (cursor ? " _" : "");
-                statusText.color = locked ? Accent : TerminalText;
-            }
 
             if (coalesceImage != null && coalesceFrames != null && coalesceFrames.Length > 0)
             {
@@ -226,15 +195,8 @@ namespace TrashTD.UI
             Image shade = CreateImage(root, "Shade", Shade);
             Stretch(shade.rectTransform);
 
-            Image scan = CreateImage(root, "ScanLine", new Color(Accent.r, Accent.g, Accent.b, 0.05f));
-            scanLine = scan.rectTransform;
-            scanLine.anchorMin = new Vector2(0f, 0.5f);
-            scanLine.anchorMax = new Vector2(1f, 0.5f);
-            scanLine.sizeDelta = new Vector2(0f, 6f);
-
             BuildCorners(root);
-            BuildHeader(root, stageTag);
-            BuildStageInfo(root, stage, stageTag, difficulty, difficultyColor);
+            BuildStageInfo(root, stage, difficulty, difficultyColor);
             BuildProgress(root);
             BuildCoalesce(root);
         }
@@ -281,79 +243,37 @@ namespace TrashTD.UI
             }
         }
 
-        private void BuildHeader(RectTransform root, string stageTag)
-        {
-            recDot = CreateImage(root, "RecDot", RecRed);
-            Place(recDot.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(84f, -78f), new Vector2(14f, 14f));
-
-            Text rec = CreateText(root, "RecLabel", "REC   UPLINK // SQUAD DEPLOYMENT", 20, TextAnchor.MiddleLeft, TerminalText);
-            Place(rec.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(110f, -78f), new Vector2(900f, 30f));
-            rec.rectTransform.pivot = new Vector2(0f, 0.5f);
-
-            Text tag = CreateText(root, "HeaderTag", stageTag + " FEED", 20, TextAnchor.MiddleRight, TerminalText);
-            Place(tag.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-84f, -78f), new Vector2(600f, 30f));
-            tag.rectTransform.pivot = new Vector2(1f, 0.5f);
-        }
-
-        private static void BuildStageInfo(RectTransform root, StageData stage, string stageTag, StageDifficulty difficulty, Color difficultyColor)
+        private static void BuildStageInfo(RectTransform root, StageData stage, StageDifficulty difficulty, Color difficultyColor)
         {
             string stageName = stage != null && !string.IsNullOrEmpty(stage.mapName) ? stage.mapName : "UNKNOWN SECTOR";
 
             RectTransform block = CreateRect("StageInfo", root);
-            Place(block, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(LeftMargin, 60f), new Vector2(StageInfoWidth, 380f));
+            Place(block, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(LeftMargin, 20f), new Vector2(StageInfoWidth, 130f));
             block.pivot = new Vector2(0f, 0.5f);
 
-            Text entering = CreateText(block, "Entering", "NOW ENTERING  //  " + stageTag, 22, TextAnchor.UpperLeft, TerminalText);
-            PlaceTop(entering.rectTransform, 0f, 32f);
-
-            Image rule = CreateImage(block, "Rule", AccentDim);
-            Place(rule.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -44f), new Vector2(460f, 3f));
-            rule.rectTransform.pivot = new Vector2(0f, 1f);
-
-            Text title = CreateText(block, "Title", stageName.ToUpperInvariant(), 64, TextAnchor.UpperLeft, TitleColor);
+            Text title = CreateText(block, "Title", stageName.ToUpperInvariant(), 44, TextAnchor.UpperLeft, TitleColor);
             title.horizontalOverflow = HorizontalWrapMode.Wrap;
             title.verticalOverflow = VerticalWrapMode.Overflow;
-            PlaceTop(title.rectTransform, 62f, 150f);
+            PlaceTop(title.rectTransform, 0f, 60f);
             var glow = title.gameObject.AddComponent<Shadow>();
             glow.effectColor = new Color(0f, 0f, 0f, 0.8f);
-            glow.effectDistance = new Vector2(4f, -4f);
+            glow.effectDistance = new Vector2(3f, -3f);
 
             // Difficulty chip
             RectTransform chip = CreateRect("DifficultyChip", block);
-            Place(chip, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -226f), new Vector2(190f, 40f));
+            Place(chip, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -78f), new Vector2(130f, 30f));
             chip.pivot = new Vector2(0f, 1f);
             Image chipBack = CreateImage(chip, "Back", new Color(difficultyColor.r * 0.18f, difficultyColor.g * 0.18f, difficultyColor.b * 0.18f, 0.95f));
             Stretch(chipBack.rectTransform);
             var chipOutline = chipBack.gameObject.AddComponent<Outline>();
             chipOutline.effectColor = difficultyColor;
             chipOutline.effectDistance = new Vector2(2f, -2f);
-            Text chipText = CreateText(chip, "Label", "◆ " + difficulty.ToString().ToUpperInvariant(), 22, TextAnchor.MiddleCenter, difficultyColor);
+            Text chipText = CreateText(chip, "Label", difficulty.ToString().ToUpperInvariant(), 15, TextAnchor.MiddleCenter, difficultyColor);
             Stretch(chipText.rectTransform);
-
-            const float descriptionTop = 286f;
-            float goalTop = 350f;
-            string description = stage != null ? stage.shortDescription : string.Empty;
-            if (!string.IsNullOrEmpty(description))
-            {
-                Text desc = CreateText(block, "Description", description, 22, TextAnchor.UpperLeft, TextDim);
-                desc.horizontalOverflow = HorizontalWrapMode.Wrap;
-                // Long descriptions (the tutorial's) wrap past two lines, so the goal line moves down under them.
-                float height = Mathf.Max(60f, MeasureWrappedHeight(desc, StageInfoWidth));
-                PlaceTop(desc.rectTransform, descriptionTop, height);
-                goalTop = Mathf.Max(goalTop, descriptionTop + height + 4f);
-            }
-
-            string goal = stage != null ? stage.threeStarCondition : string.Empty;
-            if (!string.IsNullOrEmpty(goal))
-            {
-                Text goalText = CreateText(block, "Goal", "★★★  " + goal.ToUpperInvariant(), 18, TextAnchor.UpperLeft, new Color(0.98f, 0.80f, 0.18f, 0.9f));
-                PlaceTop(goalText.rectTransform, goalTop, 30f);
-            }
         }
-
         /// <summary>
-        /// Status line and percentage over a segmented bar, with the tip underneath. All three stretch with the
-        /// screen width but stop short of Coalesce's plate, and the tip wraps onto a second line instead.
+        /// A segmented bar with a small percentage above its right end and a small tip underneath. They stretch with the
+        /// screen width but stop short of Coalesce's plate.
         /// </summary>
         private void BuildProgress(RectTransform root)
         {
@@ -378,21 +298,17 @@ namespace TrashTD.UI
                 float x = (float)i / BarSegments;
                 gap.rectTransform.anchorMin = new Vector2(x, 0f);
                 gap.rectTransform.anchorMax = new Vector2(x, 1f);
-                gap.rectTransform.sizeDelta = new Vector2(4f, 0f);
+                gap.rectTransform.sizeDelta = new Vector2(3f, 0f);
             }
 
-            statusText = CreateText(root, "Status", "> ", 22, TextAnchor.MiddleLeft, TerminalText);
-            PlaceBottomRow(statusText.rectTransform, 180f, 212f, ProgressRightInset + 160f);
-
-            percentText = CreateText(root, "Percent", "000%", 28, TextAnchor.MiddleRight, Accent);
-            Place(percentText.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-ProgressRightInset, 196f), new Vector2(160f, 36f));
+            percentText = CreateText(root, "Percent", "000%", 16, TextAnchor.MiddleRight, Accent);
+            Place(percentText.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-ProgressRightInset, 182f), new Vector2(120f, 24f));
             percentText.rectTransform.pivot = new Vector2(1f, 0.5f);
 
-            Text tip = CreateText(root, "Tip", "TIP  //  " + Tips[Random.Range(0, Tips.Length)], 20, TextAnchor.UpperLeft, TextDim);
+            Text tip = CreateText(root, "Tip", Tips[Random.Range(0, Tips.Length)], 14, TextAnchor.UpperLeft, TextDim);
             tip.horizontalOverflow = HorizontalWrapMode.Wrap;
-            PlaceBottomRow(tip.rectTransform, 64f, 124f, ProgressRightInset);
+            PlaceBottomRow(tip.rectTransform, 96f, 136f, ProgressRightInset);
         }
-
         /// <summary>From <see cref="LeftMargin"/> to <paramref name="rightInset"/> from the right edge, between two heights from the bottom.</summary>
         private static void PlaceBottomRow(RectTransform rect, float bottom, float top, float rightInset)
         {
@@ -424,25 +340,12 @@ namespace TrashTD.UI
             outline.effectDistance = new Vector2(2f, -2f);
 
             RectTransform rig = CreateRect("Rig", plate);
-            Place(rig, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 14f), new Vector2(224f, 224f));
+            Place(rig, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 0f), new Vector2(240f, 240f));
 
             coalesceImage = CreateImage(rig, "Coalesce", Color.white);
             coalesceImage.sprite = coalesceFrames[0];
             coalesceImage.preserveAspect = true;
             Stretch(coalesceImage.rectTransform);
-
-            // Shrinks to fit inside the plate rather than running past its edges
-            Text speakerLabel = CreateText(plate, "Name", script.speakerName + " // ONLINE", 16, TextAnchor.MiddleCenter, Accent);
-            speakerLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
-            speakerLabel.verticalOverflow = VerticalWrapMode.Truncate;
-            speakerLabel.resizeTextForBestFit = true;
-            speakerLabel.resizeTextMinSize = 10;
-            speakerLabel.resizeTextMaxSize = 16;
-            RectTransform labelRect = speakerLabel.rectTransform;
-            labelRect.anchorMin = new Vector2(0f, 0f);
-            labelRect.anchorMax = new Vector2(1f, 0f);
-            labelRect.offsetMin = new Vector2(14f, 10f);
-            labelRect.offsetMax = new Vector2(-14f, 36f);
         }
 
         // ─────────────────────────────────────────────────────

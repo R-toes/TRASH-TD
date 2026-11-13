@@ -40,7 +40,7 @@ namespace TrashTD.Combat
             effect.isFading = false;
             effect.isExpired = false;
 
-            target.ModifyBlockCount(-reduction);
+            target.ModifyBlockCount(-reduction, "OCULOID CARRIER");
             effect.statusText = PersistentStatusText.Show(
                 target.gameObject,
                 $"-{reduction} BLOCK",
@@ -102,7 +102,7 @@ namespace TrashTD.Combat
 
             if (targetOperator != null)
             {
-                targetOperator.ModifyBlockCount(blockReduction);
+                targetOperator.ModifyBlockCount(blockReduction, "OCULOID CARRIER");
             }
 
             SafeDestroy();

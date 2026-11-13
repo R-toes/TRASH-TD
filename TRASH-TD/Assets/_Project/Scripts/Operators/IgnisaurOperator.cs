@@ -330,5 +330,19 @@ namespace TrashTD.Operators
                 PlayImpactSound();
             }
         }
+
+        public override void CollectStatEffects(System.Collections.Generic.List<StatEffect> effects)
+        {
+            base.CollectStatEffects(effects);
+
+            if (HasSecondUpgrade || IsBlocking)
+            {
+                effects.Add(new StatEffect("PROTEAN", $"ATK +{(BlockedAtkMultiplier - 1f) * 100f:0}%", "ATK"));
+            }
+            if (HasSecondUpgrade || !IsBlocking)
+            {
+                effects.Add(new StatEffect("PROTEAN", $"Interval x{UnblockedIntervalMultiplier:0.##}", "ATK SPD"));
+            }
+        }
     }
 }

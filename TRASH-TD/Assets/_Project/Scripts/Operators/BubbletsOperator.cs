@@ -23,6 +23,7 @@ namespace TrashTD.Operators
     public class BubbletsOperator : MedicOperator
     {
         public const int AuraDefBonus = 20;
+        public const string AuraSourceName = "BUBBLETS";
         public const int AuraResBonus = 5;
 
         public bool HasFirstUpgrade => currentRarity >= OperatorRarity.Star4;
@@ -266,8 +267,8 @@ namespace TrashTD.Operators
                 {
                     if (op.IsDeployed && op.CurrentHP > 0)
                     {
-                        op.ModifyDEF(-AuraDefBonus);
-                        op.ModifyRES(-AuraResBonus);
+                        op.ModifyDEF(-AuraDefBonus, AuraSourceName);
+                        op.ModifyRES(-AuraResBonus, AuraSourceName);
                     }
                     appliedAuraAllies.Remove(op);
                 }
@@ -281,8 +282,8 @@ namespace TrashTD.Operators
                     OperatorBase op = currentInRange[i];
                     if (op != null && op.IsDeployed && op.CurrentHP > 0 && !appliedAuraAllies.Contains(op))
                     {
-                        op.ModifyDEF(AuraDefBonus);
-                        op.ModifyRES(AuraResBonus);
+                        op.ModifyDEF(AuraDefBonus, AuraSourceName);
+                        op.ModifyRES(AuraResBonus, AuraSourceName);
                         appliedAuraAllies.Add(op);
                     }
                 }
@@ -295,8 +296,8 @@ namespace TrashTD.Operators
             {
                 if (op != null && op.IsDeployed && op.CurrentHP > 0)
                 {
-                    op.ModifyDEF(-AuraDefBonus);
-                    op.ModifyRES(-AuraResBonus);
+                    op.ModifyDEF(-AuraDefBonus, AuraSourceName);
+                    op.ModifyRES(-AuraResBonus, AuraSourceName);
                 }
             }
             appliedAuraAllies.Clear();

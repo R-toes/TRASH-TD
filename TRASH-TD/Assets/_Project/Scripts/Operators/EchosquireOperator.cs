@@ -209,5 +209,14 @@ namespace TrashTD.Operators
             int healing = Mathf.FloorToInt(actualDamage * LifestealRatio);
             HealSelf(healing);
         }
+
+        public override void CollectStatEffects(System.Collections.Generic.List<StatEffect> effects)
+        {
+            base.CollectStatEffects(effects);
+
+            float bonus = LowHealthStatMultiplier - 1f;
+            if (bonus > 0.005f)
+                effects.Add(new StatEffect("WOUNDED", $"ATK DEF RES +{bonus * 100f:0}%", "ATK DEF RES"));
+        }
     }
 }

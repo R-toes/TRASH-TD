@@ -147,6 +147,27 @@ namespace TrashTD.UI
         private Text selectedOperatorDetailsRoles;
         private Text selectedOperatorDetailsSkillHeading;
         private Text selectedOperatorDetailsSkill;
+        private ScrollRect selectedOperatorDetailsSkillScroll;   // the ability text scrolls when it is longer than its box
+        private string detailsSkillShown;                         // so a live refresh does not jump the scroll back to the top
+        private Text[] selectedOperatorDetailsStatDeltas;         // "+23" / "-5" / "+25%" next to each stat, against the drafted rank
+        private RectTransform selectedOperatorEffectsRoot;       // active stat effects, a column of cards beside the panel
+        private Text selectedOperatorEffectsHeader;
+        private readonly List<EffectCardView> effectCards = new List<EffectCardView>();
+        private readonly List<StatEffect> statEffectsBuffer = new List<StatEffect>();
+        private float detailsLiveRefreshAt;
+
+        private sealed class EffectCardView
+        {
+            public GameObject root;
+            public RectTransform rect;
+            public Image accent;        // the buff / debuff coloured bar down the left edge
+            public Image icon;          // what the effect touches (sword, shield, heart...)
+            public CanvasGroup details; // source + description, shown while the badge is expanded
+            public Text source;
+            public Text description;
+            public float expand;        // 0 = square badge, 1 = fully widened
+            public bool hovered;
+        }
         private OperatorBase selectedOperatorDetailsTarget;
         // A clicked deck card shows the same info tab as a field operator, above its slot (-1 = none)
         private int deckInfoSlot = -1;
@@ -436,6 +457,7 @@ namespace TrashTD.UI
             }
             RefreshCounters();
             RefreshSelectedOperatorInfo();
+            AnimateEffectBadges();
             UpdateAnimations(Time.unscaledDeltaTime, Time.unscaledTime);
         }
 
@@ -615,6 +637,8 @@ namespace TrashTD.UI
             retreatOperatorButton.gameObject.SetActive(false);
         }
 
+        private const float DetailsPanelScale = 0.82f;
+
         private void CreateSelectedOperatorDetailsPanel(Transform root)
         {
             selectedOperatorDetailsPanel = new GameObject(
@@ -630,6 +654,8 @@ namespace TrashTD.UI
             panelRect.pivot = new Vector2(1f, 0.5f);
             panelRect.sizeDelta = new Vector2(500f, 640f);
             panelRect.anchoredPosition = new Vector2(-24f, 0f);
+            // The whole panel, effects column included, is drawn at this scale about its right edge
+            panelRect.localScale = Vector3.one * DetailsPanelScale;
 
             Image panelImage = selectedOperatorDetailsPanel.GetComponent<Image>();
             ApplyPanelContainer(selectedOperatorDetailsPanel, PanelContainerType.Metal);
@@ -732,7 +758,10 @@ namespace TrashTD.UI
             statsHeading.fontStyle = FontStyle.Bold;
             SetPosition(statsHeading.rectTransform, new Vector2(detailsMargin, -202f), new Vector2(0f, 1f), new Vector2(detailsInnerWidth, 18f), new Vector2(0f, 1f));
 
+            // Stats: three columns, two rows. They show the operator's current maximums (rank-ups, buffs, passives), with
+            // the change against the rank it was drafted at beside each one.
             selectedOperatorDetailsStatValues = new Text[6];
+            selectedOperatorDetailsStatDeltas = new Text[6];
             Color[] statColors =
             {
                 new Color(0.35f, 0.85f, 0.45f, 1f),
@@ -743,15 +772,16 @@ namespace TrashTD.UI
                 new Color(0.4f, 0.85f, 0.9f, 1f)
             };
             string[] statNames = { "HP", "ATK", "DEF", "RES", "BLOCK", "ATK SPD" };
-            float tileWidth = (detailsInnerWidth - 12f) / 2f;
-            float tileHeight = 62f;
+            const float tileGap = 10f;
+            float tileWidth = (detailsInnerWidth - tileGap * 2f) / 3f;
+            float tileHeight = 58f;
             float rowStep = tileHeight + 8f;
             float gridTop = 226f;
-            float rightX = detailsMargin + tileWidth + 12f;
             for (int i = 0; i < selectedOperatorDetailsStatValues.Length; i++)
             {
-                int row = i / 2;
-                float x = i % 2 == 0 ? detailsMargin : rightX;
+                int row = i / 3;
+                int col = i % 3;
+                float x = detailsMargin + (tileWidth + tileGap) * col;
                 selectedOperatorDetailsStatValues[i] = CreateOperatorDetailStatTile(
                     content,
                     statNames[i],
@@ -759,31 +789,53 @@ namespace TrashTD.UI
                     x,
                     gridTop + rowStep * row,
                     tileWidth,
-                    tileHeight);
+                    tileHeight,
+                    out selectedOperatorDetailsStatDeltas[i]);
             }
+
+            CreateOperatorDetailsDivider(content, detailsMargin, detailsInnerWidth, 362f);
 
             selectedOperatorDetailsSkillHeading = CreateText(content, "SkillHeading", "ABILITY", 11, TextAnchor.MiddleLeft);
             selectedOperatorDetailsSkillHeading.color = new Color(0.6f, 0.65f, 0.7f, 1f);
             selectedOperatorDetailsSkillHeading.raycastTarget = false;
             selectedOperatorDetailsSkillHeading.fontStyle = FontStyle.Bold;
-            SetPosition(selectedOperatorDetailsSkillHeading.rectTransform, new Vector2(detailsMargin, -450f), new Vector2(0f, 1f), new Vector2(detailsInnerWidth, 18f), new Vector2(0f, 1f));
+            SetPosition(selectedOperatorDetailsSkillHeading.rectTransform, new Vector2(detailsMargin, -372f), new Vector2(0f, 1f), new Vector2(detailsInnerWidth, 18f), new Vector2(0f, 1f));
 
-            selectedOperatorDetailsSkill = CreateText(content, "SkillDescription", string.Empty, 15, TextAnchor.UpperLeft);
+            // The skill text keeps one readable size and scrolls (wheel, drag or the thin bar) when it does not fit
+            var skillScrollObject = new GameObject("SkillScroll", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
+            skillScrollObject.transform.SetParent(content, false);
+            RectTransform skillScrollRect = skillScrollObject.GetComponent<RectTransform>();
+            SetPosition(skillScrollRect, new Vector2(detailsMargin, -396f), new Vector2(0f, 1f), new Vector2(detailsInnerWidth, 216f), new Vector2(0f, 1f));
+            skillScrollObject.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f); // invisible, but catches the mouse wheel
+
+            selectedOperatorDetailsSkill = CreateText(skillScrollRect, "SkillDescription", string.Empty, 15, TextAnchor.UpperLeft);
             selectedOperatorDetailsSkill.fontStyle = FontStyle.Normal;
-            selectedOperatorDetailsSkill.lineSpacing = 1.25f;
-            selectedOperatorDetailsSkill.resizeTextForBestFit = true;
-            selectedOperatorDetailsSkill.resizeTextMinSize = 11;
-            selectedOperatorDetailsSkill.resizeTextMaxSize = 15;
+            selectedOperatorDetailsSkill.lineSpacing = 1.3f;
             selectedOperatorDetailsSkill.horizontalOverflow = HorizontalWrapMode.Wrap;
-            selectedOperatorDetailsSkill.verticalOverflow = VerticalWrapMode.Truncate;
+            selectedOperatorDetailsSkill.verticalOverflow = VerticalWrapMode.Overflow;
             selectedOperatorDetailsSkill.color = new Color(0.88f, 0.92f, 0.96f, 1f);
             selectedOperatorDetailsSkill.raycastTarget = false;
-            SetPosition(selectedOperatorDetailsSkill.rectTransform, new Vector2(detailsMargin, -474f), new Vector2(0f, 1f), new Vector2(detailsInnerWidth, 134f), new Vector2(0f, 1f));
+            RectTransform skillTextRect = selectedOperatorDetailsSkill.rectTransform;
+            skillTextRect.anchorMin = new Vector2(0f, 1f);
+            skillTextRect.anchorMax = new Vector2(1f, 1f);
+            skillTextRect.pivot = new Vector2(0.5f, 1f);
+            skillTextRect.offsetMin = Vector2.zero;
+            skillTextRect.offsetMax = new Vector2(-12f, 0f); // right gutter so text never sits under the scroll bar
+            selectedOperatorDetailsSkill.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
+            selectedOperatorDetailsSkillScroll = skillScrollObject.GetComponent<ScrollRect>();
+            selectedOperatorDetailsSkillScroll.content = skillTextRect;
+            selectedOperatorDetailsSkillScroll.viewport = skillScrollRect;
+            selectedOperatorDetailsSkillScroll.horizontal = false;
+            selectedOperatorDetailsSkillScroll.movementType = ScrollRect.MovementType.Clamped;
+            selectedOperatorDetailsSkillScroll.scrollSensitivity = 30f;
+            AttachDetailsScrollbar(selectedOperatorDetailsSkillScroll);
+
+            BuildOperatorEffectsColumn(selectedOperatorDetailsPanel.transform);
             selectedOperatorDetailsPanel.SetActive(false);
         }
 
-        private Text CreateOperatorDetailStatTile(Transform parent, string label, Color accentColor, float x, float y, float width, float height)
+        private Text CreateOperatorDetailStatTile(Transform parent, string label, Color accentColor, float x, float y, float width, float height, out Text deltaText)
         {
             var tile = new GameObject($"Stat_{label}", typeof(RectTransform), typeof(Image));
             tile.transform.SetParent(parent, false);
@@ -807,16 +859,261 @@ namespace TrashTD.UI
             labelText.color = new Color(0.6f, 0.65f, 0.7f, 1f);
             labelText.raycastTarget = false;
             labelText.fontStyle = FontStyle.Bold;
-            SetPosition(labelText.rectTransform, new Vector2(18f, -8f), new Vector2(0f, 1f), new Vector2(width - 28f, 18f), new Vector2(0f, 1f));
+            SetPosition(labelText.rectTransform, new Vector2(18f, -6f), new Vector2(0f, 1f), new Vector2(width * 0.5f, 18f), new Vector2(0f, 1f));
+
+            // Change against the rank the operator was drafted at: green when higher, red when lower
+            deltaText = CreateText(tile.transform, "Delta", string.Empty, 11, TextAnchor.MiddleRight);
+            deltaText.raycastTarget = false;
+            deltaText.fontStyle = FontStyle.Bold;
+            SetPosition(deltaText.rectTransform, new Vector2(-8f, -6f), new Vector2(1f, 1f), new Vector2(width * 0.5f - 8f, 18f), new Vector2(1f, 1f));
 
             Text valueText = CreateText(tile.transform, "Value", "0", 26, TextAnchor.MiddleLeft);
             valueText.color = new Color(0.95f, 0.95f, 0.98f, 1f);
             valueText.raycastTarget = false;
             valueText.fontStyle = FontStyle.Bold;
-            SetPosition(valueText.rectTransform, new Vector2(18f, -26f), new Vector2(0f, 1f), new Vector2(width - 28f, 32f), new Vector2(0f, 1f));
+            valueText.resizeTextForBestFit = true;
+            valueText.resizeTextMinSize = 14;
+            valueText.resizeTextMaxSize = 26;
+            SetPosition(valueText.rectTransform, new Vector2(18f, -22f), new Vector2(0f, 1f), new Vector2(width - 28f, height - 26f), new Vector2(0f, 1f));
             return valueText;
         }
 
+        /// <summary>A thin scroll bar down the right edge of a scroll view; it hides itself when everything fits.</summary>
+        private static void AttachDetailsScrollbar(ScrollRect scroll)
+        {
+            const float width = 4f;
+            const float inset = 2f;
+            Color accent = new Color(0.18f, 0.82f, 0.45f, 1f);
+
+            var barObject = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+            barObject.transform.SetParent(scroll.transform, false);
+            var barRect = barObject.GetComponent<RectTransform>();
+            barRect.anchorMin = new Vector2(1f, 0f);
+            barRect.anchorMax = new Vector2(1f, 1f);
+            barRect.pivot = new Vector2(1f, 0.5f);
+            barRect.sizeDelta = new Vector2(width, -inset * 2f);
+            barRect.anchoredPosition = new Vector2(-inset, 0f);
+            barObject.GetComponent<Image>().color = new Color(accent.r, accent.g, accent.b, 0.12f);
+
+            var handleObject = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+            handleObject.transform.SetParent(barObject.transform, false);
+            handleObject.GetComponent<RectTransform>().sizeDelta = Vector2.zero;
+            var handle = handleObject.GetComponent<Image>();
+            handle.color = new Color(accent.r, accent.g, accent.b, 0.6f);
+
+            var bar = barObject.GetComponent<Scrollbar>();
+            bar.direction = Scrollbar.Direction.BottomToTop;
+            bar.handleRect = handleObject.GetComponent<RectTransform>();
+            bar.targetGraphic = handle;
+            scroll.verticalScrollbar = bar;
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        }
+
+        // ── Active stat effects: dark square badges down the left of the details panel; hover one to widen it into its details ──
+        private const float EffectsColumnWidth = 280f;
+        private const float EffectBadgeSize = 64f;
+        private const float EffectBadgeGap = 12f;
+        private const float EffectAccentWidth = 4f;
+        private const int MaxEffectCards = 7;
+        private const float EffectExpandSpeed = 9f;
+        private static readonly Color EffectPositiveColor = new Color(0.40f, 0.90f, 0.50f, 1f);
+        private static readonly Color EffectNegativeColor = new Color(0.95f, 0.42f, 0.36f, 1f);
+        private static readonly Color EffectFillColor = new Color(0.035f, 0.045f, 0.065f, 0.98f);
+
+        private void BuildOperatorEffectsColumn(Transform panel)
+        {
+            var rootObject = new GameObject("StatEffectsColumn", typeof(RectTransform));
+            rootObject.transform.SetParent(panel, false);
+            selectedOperatorEffectsRoot = rootObject.GetComponent<RectTransform>();
+            selectedOperatorEffectsRoot.anchorMin = new Vector2(0f, 1f);
+            selectedOperatorEffectsRoot.anchorMax = new Vector2(0f, 1f);
+            selectedOperatorEffectsRoot.pivot = new Vector2(1f, 1f);
+            selectedOperatorEffectsRoot.sizeDelta = new Vector2(EffectsColumnWidth, 640f);
+            selectedOperatorEffectsRoot.anchoredPosition = new Vector2(-14f, 0f); // just outside the panel's left edge
+
+            selectedOperatorEffectsHeader = CreateText(selectedOperatorEffectsRoot, "EffectsHeader", "EFFECTS", 10, TextAnchor.MiddleRight);
+            selectedOperatorEffectsHeader.color = new Color(0.6f, 0.65f, 0.7f, 0.9f);
+            selectedOperatorEffectsHeader.raycastTarget = false;
+            SetPosition(selectedOperatorEffectsHeader.rectTransform, new Vector2(0f, -4f), new Vector2(1f, 1f), new Vector2(EffectBadgeSize + 24f, 16f), new Vector2(1f, 1f));
+
+            for (int i = 0; i < MaxEffectCards; i++)
+            {
+                var view = new EffectCardView();
+
+                // Dark tile; everything inside is clipped to it, so nothing can spill out while it widens
+                view.root = new GameObject($"EffectBadge_{i}", typeof(RectTransform), typeof(Image), typeof(RectMask2D));
+                view.root.transform.SetParent(selectedOperatorEffectsRoot, false);
+                view.rect = view.root.GetComponent<RectTransform>();
+                // Anchored to the column's right edge, so widening grows the badge to the left, away from the panel
+                SetPosition(view.rect, new Vector2(0f, -(28f + i * (EffectBadgeSize + EffectBadgeGap))),
+                    new Vector2(1f, 1f), new Vector2(EffectBadgeSize, EffectBadgeSize), new Vector2(1f, 1f));
+                Image fill = view.root.GetComponent<Image>();
+                fill.color = EffectFillColor;
+                fill.raycastTarget = true; // hover target
+
+                // Buff / debuff colour bar down the left edge, like the stat tiles
+                var accentObject = new GameObject("Accent", typeof(RectTransform), typeof(Image));
+                accentObject.transform.SetParent(view.root.transform, false);
+                RectTransform accentRect = accentObject.GetComponent<RectTransform>();
+                accentRect.anchorMin = new Vector2(0f, 0f);
+                accentRect.anchorMax = new Vector2(0f, 1f);
+                accentRect.pivot = new Vector2(0f, 0.5f);
+                accentRect.sizeDelta = new Vector2(EffectAccentWidth, 0f);
+                accentRect.anchoredPosition = Vector2.zero;
+                view.accent = accentObject.GetComponent<Image>();
+                view.accent.raycastTarget = false;
+
+                // The icon stays in the square at the right-hand end (the whole badge while it is collapsed)
+                var iconObject = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+                iconObject.transform.SetParent(view.root.transform, false);
+                RectTransform iconRect = iconObject.GetComponent<RectTransform>();
+                iconRect.anchorMin = new Vector2(1f, 0.5f);
+                iconRect.anchorMax = new Vector2(1f, 0.5f);
+                iconRect.pivot = new Vector2(1f, 0.5f);
+                iconRect.sizeDelta = new Vector2(32f, 32f); // the 16 px art at exactly 2x
+                iconRect.anchoredPosition = new Vector2(-(EffectBadgeSize - 32f) * 0.5f, 0f); // centred in the right-hand square
+                view.icon = iconObject.GetComponent<Image>();
+                view.icon.preserveAspect = true;
+                view.icon.raycastTarget = false;
+
+                // Source and effect fill the space left of the icon; they follow the badge's width and fade in as it widens
+                var detailsObject = new GameObject("Details", typeof(RectTransform), typeof(CanvasGroup));
+                detailsObject.transform.SetParent(view.root.transform, false);
+                RectTransform detailsRect = detailsObject.GetComponent<RectTransform>();
+                detailsRect.anchorMin = Vector2.zero;
+                detailsRect.anchorMax = Vector2.one;
+                detailsRect.offsetMin = new Vector2(EffectAccentWidth + 16f, 0f);
+                detailsRect.offsetMax = new Vector2(-EffectBadgeSize, 0f);
+                view.details = detailsObject.GetComponent<CanvasGroup>();
+                view.details.alpha = 0f;
+                view.details.blocksRaycasts = false;
+
+                view.source = CreateText(detailsObject.transform, "Source", string.Empty, 11, TextAnchor.LowerLeft);
+                view.source.raycastTarget = false;
+                view.source.resizeTextForBestFit = true;
+                view.source.resizeTextMinSize = 8;
+                view.source.resizeTextMaxSize = 11;
+                view.source.horizontalOverflow = HorizontalWrapMode.Wrap;
+                view.source.verticalOverflow = VerticalWrapMode.Truncate;
+                StretchRow(view.source.rectTransform, 0.52f, 0.92f, 6f);
+
+                view.description = CreateText(detailsObject.transform, "Description", string.Empty, 13, TextAnchor.UpperLeft);
+                view.description.fontStyle = FontStyle.Normal;
+                view.description.color = new Color(0.9f, 0.93f, 0.97f, 1f);
+                view.description.raycastTarget = false;
+                view.description.resizeTextForBestFit = true;
+                view.description.resizeTextMinSize = 8;
+                view.description.resizeTextMaxSize = 13;
+                view.description.horizontalOverflow = HorizontalWrapMode.Wrap;
+                view.description.verticalOverflow = VerticalWrapMode.Truncate;
+                StretchRow(view.description.rectTransform, 0.08f, 0.48f, 6f);
+
+                var hover = view.root.AddComponent<EffectBadgeHover>();
+                hover.Changed = hovered =>
+                {
+                    view.hovered = hovered;
+                    if (hovered) view.root.transform.SetAsLastSibling(); // a widened badge draws over the others
+                };
+
+                view.root.SetActive(false);
+                effectCards.Add(view);
+            }
+        }
+
+        /// <summary>Fills a horizontal band of its parent (anchors as fractions of the height), with a little right padding.</summary>
+        private static void StretchRow(RectTransform rect, float yMin, float yMax, float padding)
+        {
+            rect.anchorMin = new Vector2(0f, yMin);
+            rect.anchorMax = new Vector2(1f, yMax);
+            rect.offsetMin = new Vector2(0f, 0f);
+            rect.offsetMax = new Vector2(-padding, 0f);
+        }
+
+        /// <summary>
+        /// The pixel icon for an effect, by what it touches: heart (HP), sword (ATK), shield (DEF; tinted violet for
+        /// RES), lightning (attack speed), squad (block), and an arrow (rank-ups and other mixed effects) or a warning
+        /// (mixed debuffs).
+        /// </summary>
+        private static Sprite GetEffectIcon(StatEffect effect, out Color tint)
+        {
+            tint = Color.white;
+            string stats = effect.Stats ?? string.Empty;
+            switch (stats)
+            {
+                case "HP": return LoadIconSprite("icon_heart");
+                case "ATK": return LoadIconSprite("icon_damage");
+                case "DEF": return LoadIconSprite("icon_armor");
+                case "RES":
+                    tint = new Color(0.82f, 0.62f, 1f, 1f);
+                    return LoadIconSprite("icon_armor");
+                case "ATK SPD": return LoadIconSprite("icon_speed");
+                case "BLOCK": return LoadIconSprite("icon_squad");
+            }
+
+            if (stats.IndexOf(' ') >= 0) return LoadIconSprite(effect.Positive ? "icon_upgrade" : "icon_warning");
+            return LoadIconSprite("icon_info");
+        }
+
+        private void ShowOperatorEffects(List<StatEffect> effects)
+        {
+            if (selectedOperatorEffectsRoot == null) return;
+
+            // Nothing is affecting the operator: no column at all
+            selectedOperatorEffectsRoot.gameObject.SetActive(effects.Count > 0);
+
+            int shown = Mathf.Min(effects.Count, MaxEffectCards);
+            for (int i = 0; i < effectCards.Count; i++)
+            {
+                EffectCardView view = effectCards[i];
+                bool active = i < shown;
+                if (view.root.activeSelf != active)
+                {
+                    view.root.SetActive(active);
+                    view.expand = 0f;
+                    view.hovered = false;
+                    ApplyEffectBadgeWidth(view);
+                }
+                if (!active) continue;
+
+                StatEffect effect = effects[i];
+                Color accent = effect.Positive ? EffectPositiveColor : EffectNegativeColor;
+                view.accent.color = accent;
+                Sprite icon = GetEffectIcon(effect, out Color iconTint);
+                view.icon.sprite = icon;
+                view.icon.color = iconTint;
+                view.icon.enabled = icon != null;
+                view.source.color = accent;
+                view.source.text = effect.Source;
+                view.description.text = effect.Description;
+            }
+
+            selectedOperatorEffectsHeader.text = effects.Count > MaxEffectCards ? $"EFFECTS +{effects.Count - MaxEffectCards}" : "EFFECTS";
+        }
+
+        private void ApplyEffectBadgeWidth(EffectCardView view)
+        {
+            float eased = view.expand * view.expand * (3f - 2f * view.expand); // smoothstep
+            view.rect.sizeDelta = new Vector2(Mathf.Lerp(EffectBadgeSize, EffectsColumnWidth, eased), EffectBadgeSize);
+            view.details.alpha = Mathf.Clamp01((eased - 0.5f) / 0.5f);
+        }
+
+        /// <summary>Eases every badge towards square (not hovered) or widened (hovered). Unscaled time, so it works while paused.</summary>
+        private void AnimateEffectBadges()
+        {
+            if (selectedOperatorEffectsRoot == null || !selectedOperatorEffectsRoot.gameObject.activeInHierarchy) return;
+
+            float step = Time.unscaledDeltaTime * EffectExpandSpeed;
+            for (int i = 0; i < effectCards.Count; i++)
+            {
+                EffectCardView view = effectCards[i];
+                if (!view.root.activeSelf) continue;
+
+                float target = view.hovered ? 1f : 0f;
+                if (Mathf.Approximately(view.expand, target)) continue;
+                view.expand = Mathf.MoveTowards(view.expand, target, step);
+                ApplyEffectBadgeWidth(view);
+            }
+        }
         private static void CreateOperatorDetailsDivider(Transform parent, float margin, float width, float top)
         {
             var divider = new GameObject("DetailsDivider", typeof(RectTransform), typeof(Image));
@@ -1136,6 +1433,14 @@ namespace TrashTD.UI
                 HideFramiliarCopyMenu();
             }
 
+            // The open details panel follows the operator: buffs come and go, so its stats and effects refresh live
+            if (selectedOperatorDetailsPanel != null && selectedOperatorDetailsPanel.activeSelf &&
+                selectedOperatorDetailsTarget == selectedOperator && Time.unscaledTime >= detailsLiveRefreshAt)
+            {
+                detailsLiveRefreshAt = Time.unscaledTime + 0.2f;
+                UpdateSelectedOperatorDetails(selectedOperator);
+            }
+
             selectedOperatorDetailsTarget = selectedOperator;
             Vector3 labelPosition = selectedOperator.DeployedCell.WorldPosition + Vector3.up * gridManager.CellSize * 0.7f;
             SetSelectedOperatorName(
@@ -1159,6 +1464,7 @@ namespace TrashTD.UI
             bool show = !selectedOperatorDetailsPanel.activeSelf;
             selectedOperatorDetailsPanel.SetActive(show);
             if (!show) return;
+            detailsSkillShown = null; // reopening starts at the top of the ability text
             if (hasOperator) UpdateSelectedOperatorDetails(selectedOperator);
             else UpdateDeckCardDetails(deckInfoCard);
         }
@@ -1167,8 +1473,9 @@ namespace TrashTD.UI
         {
             if (op == null || op.Data == null) return;
 
+            if (selectedOperatorDetailsTarget != op) detailsSkillShown = null; // a different operator starts at the top of its text
             selectedOperatorDetailsTarget = op;
-            UpdateOperatorDetails(op.Data, op.CurrentRarity, op.GetSkillDescription());
+            UpdateOperatorDetails(op.Data, op.CurrentRarity, op.GetSkillDescription(), op);
         }
 
         private void UpdateDeckCardDetails(DraftCard card)
@@ -1176,6 +1483,7 @@ namespace TrashTD.UI
             if (card == null || card.operatorData == null) return;
 
             selectedOperatorDetailsTarget = null;
+            detailsSkillShown = null;
             UpdateOperatorDetails(
                 card.operatorData,
                 card.rarity,
@@ -1183,7 +1491,7 @@ namespace TrashTD.UI
         }
 
         /// <summary>Fills the SHOW MORE panel. Shared by field operators and deck cards.</summary>
-        private void UpdateOperatorDetails(OperatorData data, OperatorRarity rarity, string skillDesc)
+        private void UpdateOperatorDetails(OperatorData data, OperatorRarity rarity, string skillDesc, OperatorBase op = null)
         {
             selectedOperatorDetailsPortrait.sprite = data.portrait;
             selectedOperatorDetailsPortrait.enabled = data.portrait != null;
@@ -1216,19 +1524,90 @@ namespace TrashTD.UI
             selectedOperatorDetailsAccent.color = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.35f);
             selectedOperatorDetailsRarity.color = rarityColor;
             selectedOperatorDetailsRarity.text = new string('★', stars) + "<color=#3C424D>" + new string('☆', 5 - stars) + "</color>";
-            selectedOperatorDetailsStatValues[0].text = data.GetScaledHP(rarity).ToString();
-            selectedOperatorDetailsStatValues[1].text = data.GetScaledATK(rarity).ToString();
-            selectedOperatorDetailsStatValues[2].text = data.GetScaledDEF(rarity).ToString();
-            selectedOperatorDetailsStatValues[3].text = data.GetScaledRES(rarity).ToString();
-            selectedOperatorDetailsStatValues[4].text = data.blockCount.ToString();
-            selectedOperatorDetailsStatValues[5].text = $"{data.attackInterval:0.##}s";
+            // Stats: a field operator shows its current maximums (rank-ups, auras, passives and skills included, but not
+            // damage taken); a deck card shows what it would have. Deltas compare with the rank it was drafted at.
+            OperatorRarity draftedRank = data.baseRarity;
+            int hp, atk, def, res, block;
+            float interval;
+            if (op != null)
+            {
+                hp = op.MaxHP;
+                atk = op.GetDisplayATK();
+                def = op.CurrentDEF;
+                res = op.CurrentRES;
+                block = op.GetMaxBlockCount();
+                interval = op.GetAttackInterval();
+            }
+            else
+            {
+                hp = data.GetScaledHP(rarity);
+                atk = data.GetScaledATK(rarity);
+                def = data.GetScaledDEF(rarity);
+                res = data.GetScaledRES(rarity);
+                block = data.blockCount;
+                interval = data.attackInterval;
+            }
+
+            SetDetailStat(0, hp, data.GetScaledHP(draftedRank));
+            SetDetailStat(1, atk, data.GetScaledATK(draftedRank));
+            SetDetailStat(2, def, data.GetScaledDEF(draftedRank));
+            SetDetailStat(3, res, data.GetScaledRES(draftedRank));
+            SetDetailStat(4, block, data.blockCount);
+            SetDetailSpeed(5, interval, data.attackInterval);
+
+            statEffectsBuffer.Clear();
+            if (op != null)
+            {
+                op.CollectStatEffects(statEffectsBuffer);
+            }
+            else
+            {
+                StatEffect? rankUp = OperatorBase.GetRankUpEffect(data, rarity);
+                if (rankUp.HasValue) statEffectsBuffer.Add(rankUp.Value);
+            }
+            ShowOperatorEffects(statEffectsBuffer);
             selectedOperatorDetailsRoles.text = data.roleTags != null && data.roleTags.Length > 0
                 ? string.Join(" / ", data.roleTags)
                 : GetOperatorDraftDescription(data.operatorClass);
             bool hasSkill = !string.IsNullOrWhiteSpace(skillDesc);
             selectedOperatorDetailsSkillHeading.gameObject.SetActive(hasSkill);
-            selectedOperatorDetailsSkill.gameObject.SetActive(hasSkill);
-            if (hasSkill) selectedOperatorDetailsSkill.text = skillDesc.Trim();
+            selectedOperatorDetailsSkillScroll.gameObject.SetActive(hasSkill);
+            if (hasSkill)
+            {
+                string skillText = skillDesc.Trim();
+                if (skillText != detailsSkillShown)
+                {
+                    // Only a new text goes back to the top, so the panel can refresh live without losing the reader's place
+                    detailsSkillShown = skillText;
+                    selectedOperatorDetailsSkill.text = skillText;
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(selectedOperatorDetailsSkill.rectTransform);
+                    selectedOperatorDetailsSkillScroll.verticalNormalizedPosition = 1f;
+                }
+            }
+        }
+
+        private static readonly Color StatNeutralColor = new Color(0.95f, 0.95f, 0.98f, 1f);
+        private static readonly Color StatUpColor = new Color(0.55f, 1f, 0.62f, 1f);
+        private static readonly Color StatDownColor = new Color(1f, 0.5f, 0.45f, 1f);
+
+        /// <summary>One whole-number stat tile: the value, and the change against <paramref name="baseline"/> beside it.</summary>
+        private void SetDetailStat(int index, int value, int baseline)
+        {
+            int diff = value - baseline;
+            selectedOperatorDetailsStatValues[index].text = value.ToString();
+            selectedOperatorDetailsStatValues[index].color = diff > 0 ? StatUpColor : diff < 0 ? StatDownColor : StatNeutralColor;
+            selectedOperatorDetailsStatDeltas[index].text = diff == 0 ? string.Empty : (diff > 0 ? "+" : string.Empty) + diff;
+            selectedOperatorDetailsStatDeltas[index].color = diff > 0 ? StatUpColor : StatDownColor;
+        }
+
+        /// <summary>The attack interval tile: a shorter interval is better, so the change is shown as a faster / slower percentage.</summary>
+        private void SetDetailSpeed(int index, float interval, float baseline)
+        {
+            selectedOperatorDetailsStatValues[index].text = $"{interval:0.##}s";
+            int percent = interval > 0.0001f ? Mathf.RoundToInt((baseline / interval - 1f) * 100f) : 0;
+            selectedOperatorDetailsStatValues[index].color = percent > 0 ? StatUpColor : percent < 0 ? StatDownColor : StatNeutralColor;
+            selectedOperatorDetailsStatDeltas[index].text = percent == 0 ? string.Empty : (percent > 0 ? "+" : string.Empty) + percent + "%";
+            selectedOperatorDetailsStatDeltas[index].color = percent > 0 ? StatUpColor : StatDownColor;
         }
 
         private static string GetOperatorDraftDescription(OperatorClass opClass)
@@ -1742,6 +2121,11 @@ namespace TrashTD.UI
         private const float TubeInnerBottom = 8f;
         private const float TubeInnerWidth = 14f;
         private const float TubeInnerHeight = 49f;
+        // The lives tube is drawn bigger than its screen on the top bar (it overflows the dark screen onto the bar art):
+        // LivesTubeScale times the usual art-pixel scale, nudged left so its far end stays on screen.
+        private const float LivesTubeScale = 1.5f;
+        private const float LivesTubeShiftLeft = 26f;
+        private const float LivesTubePixelScale = BarPixelScale * LivesTubeScale;
 
         private void CreateWaveProgressBar(Transform parent)
         {
@@ -1822,7 +2206,7 @@ namespace TrashTD.UI
             root.transform.SetParent(parent, false);
             livesTubeRect = root.GetComponent<RectTransform>();
             // Centred on the lives screen (the Top Panel BG's right-hand screen)
-            SetPosition(livesTubeRect, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(22f, 64f) * BarPixelScale, new Vector2(0.5f, 0.5f));
+            SetPosition(livesTubeRect, new Vector2(-LivesTubeShiftLeft, 0f), new Vector2(0.5f, 0.5f), new Vector2(22f, 64f) * LivesTubePixelScale, new Vector2(0.5f, 0.5f));
             livesTubeRect.localRotation = Quaternion.Euler(0f, 0f, -90f);
 
             livesTubeFrame = root.GetComponent<Image>();
@@ -1834,8 +2218,8 @@ namespace TrashTD.UI
             var liquid = new GameObject("Liquid", typeof(RectTransform), typeof(Image));
             liquid.transform.SetParent(root.transform, false);
             livesLiquidRect = liquid.GetComponent<RectTransform>();
-            SetPosition(livesLiquidRect, new Vector2(TubeInnerX, TubeInnerBottom) * BarPixelScale, Vector2.zero,
-                new Vector2(TubeInnerWidth, TubeInnerHeight) * BarPixelScale, Vector2.zero);
+            SetPosition(livesLiquidRect, new Vector2(TubeInnerX, TubeInnerBottom) * LivesTubePixelScale, Vector2.zero,
+                new Vector2(TubeInnerWidth, TubeInnerHeight) * LivesTubePixelScale, Vector2.zero);
             Image liquidImage = liquid.GetComponent<Image>();
             liquidImage.raycastTarget = false;
             Sprite liquidSprite = LoadWholeTextureSprite("UI/bars/tube_liquid");
@@ -1843,7 +2227,7 @@ namespace TrashTD.UI
             {
                 liquidImage.sprite = liquidSprite;
                 liquidImage.type = Image.Type.Tiled;
-                liquidImage.pixelsPerUnitMultiplier = 1f / BarPixelScale;
+                liquidImage.pixelsPerUnitMultiplier = 1f / LivesTubePixelScale;
             }
             else
             {
@@ -1857,7 +2241,7 @@ namespace TrashTD.UI
             surfaceRect.anchorMin = new Vector2(0f, 1f);
             surfaceRect.anchorMax = new Vector2(1f, 1f);
             surfaceRect.pivot = new Vector2(0.5f, 1f);
-            surfaceRect.sizeDelta = new Vector2(0f, 3f * BarPixelScale);
+            surfaceRect.sizeDelta = new Vector2(0f, 3f * LivesTubePixelScale);
             surfaceRect.anchoredPosition = Vector2.zero;
             Image surfaceImage = livesSurface.GetComponent<Image>();
             surfaceImage.raycastTarget = false;
@@ -1877,10 +2261,10 @@ namespace TrashTD.UI
         {
             if (livesLiquidRect == null) return;
 
-            float height = Mathf.Round(Mathf.Clamp01(ratio) * TubeInnerHeight) * BarPixelScale;
-            livesLiquidRect.sizeDelta = new Vector2(TubeInnerWidth * BarPixelScale, height);
+            float height = Mathf.Round(Mathf.Clamp01(ratio) * TubeInnerHeight) * LivesTubePixelScale;
+            livesLiquidRect.sizeDelta = new Vector2(TubeInnerWidth * LivesTubePixelScale, height);
             livesLiquidRect.gameObject.SetActive(height > 0f);
-            if (livesSurface != null) livesSurface.SetActive(height >= 3f * BarPixelScale);
+            if (livesSurface != null) livesSurface.SetActive(height >= 3f * LivesTubePixelScale);
         }
 
         private void CreateDeckBar(Transform root)
@@ -5908,5 +6292,16 @@ namespace TrashTD.UI
                 eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
             }
         }
+    }
+
+    /// <summary>Reports the pointer entering or leaving a UI element (the stat-effect badges widen on hover).</summary>
+    public sealed class EffectBadgeHover : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+    {
+        public System.Action<bool> Changed;
+
+        public void OnPointerEnter(PointerEventData eventData) => Changed?.Invoke(true);
+        public void OnPointerExit(PointerEventData eventData) => Changed?.Invoke(false);
+
+        private void OnDisable() => Changed?.Invoke(false);
     }
 }

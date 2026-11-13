@@ -266,5 +266,21 @@ namespace TrashTD.Operators
 
             return null;
         }
+
+        /// <summary>Operators with the isolation trait hit harder while no ally is adjacent.</summary>
+        public override int GetDisplayATK()
+        {
+            int atk = base.GetDisplayATK();
+            if (data != null && data.bonusWhenIsolated && IsIsolated)
+                atk = Mathf.RoundToInt(atk * Mathf.Max(1f, data.isolatedAttackMultiplier));
+            return atk;
+        }
+
+        public override void CollectStatEffects(System.Collections.Generic.List<StatEffect> effects)
+        {
+            base.CollectStatEffects(effects);
+            if (data != null && data.bonusWhenIsolated && IsIsolated)
+                effects.Add(new StatEffect("ISOLATED", $"ATK x{Mathf.Max(1f, data.isolatedAttackMultiplier):0.##}", "ATK"));
+        }
     }
 }

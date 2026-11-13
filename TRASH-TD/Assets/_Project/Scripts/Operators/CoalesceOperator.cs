@@ -23,6 +23,7 @@ namespace TrashTD.Operators
         public const float UpgradedExtraHealChance = 0.40f;
 
         public const float MaxHpBuffPercent = 0.10f;
+        public const string AuraSourceName = "COALESCE";
 
         public bool HasFirstUpgrade => currentRarity >= OperatorRarity.Star2;
         public bool HasSecondUpgrade => currentRarity >= OperatorRarity.Star3;
@@ -166,7 +167,7 @@ namespace TrashTD.Operators
                 {
                     if (op != null && op.IsDeployed && op.CurrentHP > 0)
                     {
-                        op.ModifyMaxHP(-bonus);
+                        op.ModifyMaxHP(-bonus, AuraSourceName);
                     }
                     appliedMaxHpBuffs.Remove(op);
                 }
@@ -181,7 +182,7 @@ namespace TrashTD.Operators
                     if (op != null && op.IsDeployed && op.CurrentHP > 0 && !appliedMaxHpBuffs.ContainsKey(op))
                     {
                         int bonus = Mathf.Max(1, Mathf.RoundToInt(op.MaxHP * MaxHpBuffPercent));
-                        op.ModifyMaxHP(bonus);
+                        op.ModifyMaxHP(bonus, AuraSourceName);
                         appliedMaxHpBuffs[op] = bonus;
                     }
                 }
@@ -196,7 +197,7 @@ namespace TrashTD.Operators
                 int bonus = kvp.Value;
                 if (op != null && op.IsDeployed && op.CurrentHP > 0)
                 {
-                    op.ModifyMaxHP(-bonus);
+                    op.ModifyMaxHP(-bonus, AuraSourceName);
                 }
             }
             appliedMaxHpBuffs.Clear();

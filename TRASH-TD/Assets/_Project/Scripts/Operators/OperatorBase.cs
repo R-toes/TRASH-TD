@@ -289,6 +289,7 @@ namespace TrashTD.Operators
                 }
             }
             blockCountModifier = 0;
+            externalStats.RemoveAll(e => e.Stat == OperatorStat.Block);
             ClearBoundStatusText();
 
             deployedCell?.Vacate();
@@ -482,9 +483,10 @@ namespace TrashTD.Operators
         /// Modifies this operator's maximum HP by delta (e.g. Coalesce aura, buffs).
         /// If delta > 0, current HP increases by the same amount. If delta < 0, current HP is clamped to new maxHP.
         /// </summary>
-        public void ModifyMaxHP(int delta)
+        public void ModifyMaxHP(int delta, string source = null)
         {
             if (delta == 0) return;
+            TrackExternalStat(source, OperatorStat.HP, delta);
             maxHP = Mathf.Max(1, maxHP + delta);
             if (currentHP > 0)
             {
@@ -496,18 +498,20 @@ namespace TrashTD.Operators
         /// <summary>
         /// Modifies this operator's DEF by delta (e.g. Bubblets aura, buffs).
         /// </summary>
-        public void ModifyDEF(int delta)
+        public void ModifyDEF(int delta, string source = null)
         {
             if (delta == 0) return;
+            TrackExternalStat(source, OperatorStat.DEF, delta);
             currentDEF += delta;
         }
 
         /// <summary>
         /// Modifies this operator's RES by delta (e.g. Bubblets aura, buffs).
         /// </summary>
-        public void ModifyRES(int delta)
+        public void ModifyRES(int delta, string source = null)
         {
             if (delta == 0) return;
+            TrackExternalStat(source, OperatorStat.RES, delta);
             currentRES += delta;
         }
         public DamageType GetDamageType() => data.damageType;
@@ -549,8 +553,9 @@ namespace TrashTD.Operators
         private int blockCountModifier = 0;
         public int BlockCountModifier => blockCountModifier;
 
-        public void ModifyBlockCount(int delta)
+        public void ModifyBlockCount(int delta, string source = null)
         {
+            TrackExternalStat(source, OperatorStat.Block, delta);
             blockCountModifier += delta;
             while (GetCurrentBlockCount() > GetBlockCount() && blockedEnemies.Count > 0)
             {
@@ -558,7 +563,13 @@ namespace TrashTD.Operators
             }
         }
 
-        public virtual int GetBlockCount() => (isStunned || isBound || data == null) ? 0 : Mathf.Max(0, data.blockCount + blockCountModifier);
+        public virtual int GetBlockCount() => (isStunned || isBound || data == null) ? 0 : GetMaxBlockCount();
+
+        /// <summary>
+        /// Block slots this operator has when it is not stunned or bound: the data value plus every modifier and rank
+        /// upgrade (operators with such upgrades override this, not <see cref="GetBlockCount"/>). The info panel shows it.
+        /// </summary>
+        public virtual int GetMaxBlockCount() => data == null ? 0 : Mathf.Max(0, data.blockCount + blockCountModifier);
 
         /// <summary>Block slots in use: each blocked enemy takes its EnemyData.blockWeight (heavy units take 2).</summary>
         public int GetCurrentBlockCount()
@@ -1042,6 +1053,110 @@ namespace TrashTD.Operators
             {
                 draftSystem.DrawRandomCardsToDeck(2, upgradeTiers: 0);
             }
+        }
+        // ========================
+        // Stat effects (the SHOW MORE panel)
+        // ========================
+
+        private struct ExternalStat
+        {
+            public string Source;
+            public OperatorStat Stat;
+            public int Amount;
+        }
+
+        // What other units have added to or taken from this operator's stats, per source (auras, hazards)
+        private readonly List<ExternalStat> externalStats = new List<ExternalStat>();
+
+        private void TrackExternalStat(string source, OperatorStat stat, int delta)
+        {
+            if (delta == 0) return;
+            if (string.IsNullOrEmpty(source)) source = "Buff";
+
+            for (int i = 0; i < externalStats.Count; i++)
+            {
+                if (externalStats[i].Source != source || externalStats[i].Stat != stat) continue;
+
+                ExternalStat entry = externalStats[i];
+                entry.Amount += delta;
+                if (entry.Amount == 0) externalStats.RemoveAt(i);
+                else externalStats[i] = entry;
+                return;
+            }
+
+            externalStats.Add(new ExternalStat { Source = source, Stat = stat, Amount = delta });
+        }
+
+        /// <summary>What a rank-up added over the rank the card was drafted at (null when it has not been upgraded).</summary>
+        public static StatEffect? GetRankUpEffect(OperatorData operatorData, OperatorRarity rarity)
+        {
+            if (operatorData == null || rarity <= operatorData.baseRarity) return null;
+
+            OperatorRarity from = operatorData.baseRarity;
+            int dHP = operatorData.GetScaledHP(rarity) - operatorData.GetScaledHP(from);
+            int dATK = operatorData.GetScaledATK(rarity) - operatorData.GetScaledATK(from);
+            int dDEF = operatorData.GetScaledDEF(rarity) - operatorData.GetScaledDEF(from);
+            int dRES = operatorData.GetScaledRES(rarity) - operatorData.GetScaledRES(from);
+            return new StatEffect(
+                $"RANK UP  {(int)from}\u2605 > {(int)rarity}\u2605",
+                $"+{dHP} HP  +{dATK} ATK  +{dDEF} DEF  +{dRES} RES",
+                "HP ATK DEF RES");
+        }
+
+        /// <summary>The ATK this operator hits with right now, including conditions on its own attack (e.g. being isolated).</summary>
+        public virtual int GetDisplayATK() => CurrentATK;
+
+        /// <summary>
+        /// Lists everything currently changing this operator's stats and where it comes from: a rank-up, Harmony, other
+        /// operators' auras, the stage's hazards, and (in overrides) the operator's own passives and skills. Only effects
+        /// that are active right now are listed. Overrides call base first, then add their own.
+        /// </summary>
+        public virtual void CollectStatEffects(List<StatEffect> effects)
+        {
+            if (data == null) return;
+
+            // Rank-up: what merging gained over the rank this card was drafted at
+            StatEffect? rankUp = GetRankUpEffect(data, currentRarity);
+            if (rankUp.HasValue) effects.Add(rankUp.Value);
+
+            // Harmony (Flurmonica)
+            if (harmonyStacks > 0)
+            {
+                string percent = (HarmonyBonus * 100f).ToString("0.#") + "%";
+                string description;
+                string stats;
+                switch (data.operatorClass)
+                {
+                    case OperatorClass.Guard: description = $"+{percent} RES"; stats = "RES"; break;
+                    case OperatorClass.Defender: description = $"+{percent} DEF"; stats = "DEF"; break;
+                    case OperatorClass.Specialist: description = $"+{percent} HP"; stats = "HP"; break;
+                    case OperatorClass.Sniper:
+                    case OperatorClass.Medic: description = $"+{percent} speed"; stats = "ATK SPD"; break;
+                    case OperatorClass.Caster: description = $"+{percent} Arts dmg"; stats = "ATK"; break;
+                    default: description = $"+{percent}"; stats = ""; break;
+                }
+                effects.Add(new StatEffect($"HARMONY x{harmonyStacks}", description, stats));
+            }
+
+            // Auras and hazards from other units: Bubblets (DEF/RES), Coalesce (max HP), Oculoid Carrier (block)
+            foreach (ExternalStat external in externalStats)
+            {
+                string label = external.Stat switch
+                {
+                    OperatorStat.HP => "HP",
+                    OperatorStat.DEF => "DEF",
+                    OperatorStat.RES => "RES",
+                    OperatorStat.Block => "block",
+                    OperatorStat.ATK => "ATK",
+                    _ => "ATK SPD"
+                };
+                string signed = external.Amount > 0 ? $"+{external.Amount}" : external.Amount.ToString();
+                effects.Add(new StatEffect(external.Source, $"{signed} {label}", label.ToUpperInvariant(), external.Amount > 0));
+            }
+
+            // Stage hazards
+            if (Combat.StageCombatModifiers.IsSandstormActive)
+                effects.Add(new StatEffect("SANDSTORM", "Interval x0.95", "ATK SPD"));
         }
     }
 }

@@ -379,5 +379,13 @@ namespace TrashTD.Operators
                 _ => Vector3.right
             };
         }
+
+        public override void CollectStatEffects(System.Collections.Generic.List<StatEffect> effects)
+        {
+            base.CollectStatEffects(effects);
+
+            if (camouflageDefenseTimer > 0f)
+                effects.Add(new StatEffect("CAMOUFLAGE", $"DEF +{CamouflageDefenseBonus * 100f:0}%  ({CamouflageDefenseTimeRemaining:0.#}s)", "DEF"));
+        }
     }
 }

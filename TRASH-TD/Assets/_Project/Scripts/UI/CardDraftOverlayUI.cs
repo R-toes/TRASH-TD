@@ -105,7 +105,7 @@ namespace TrashTD.UI
 
         // Range preview box (bottom-left of the detail panel)
         private const float RangeBoxWidth = 156f;
-        private const float RangeBoxHeight = 140f;
+        private const float RangeBoxHeight = 156f;
         private const float RangeBoxPadding = 10f;
         private const float RangeTileGap = 2f;
         private const float MaxRangeTileSize = 28f;
@@ -262,6 +262,7 @@ namespace TrashTD.UI
         private Text detailIntervalText;
         private Text detailPassiveLabel;
         private Text detailPassiveText;
+        private ScrollRect detailPassiveScroll;     // the ability text scrolls when it is longer than its box
         private RectTransform detailRangeGrid;
         private Sprite rangeTileSprite;
         private Coroutine detailsRoutine;
@@ -1535,11 +1536,22 @@ namespace TrashTD.UI
             string passive = FindStringMember(op, PassiveMemberNames);
             bool hasPassive = !string.IsNullOrWhiteSpace(passive);
             detailPassiveLabel.gameObject.SetActive(hasPassive);
-            detailPassiveText.gameObject.SetActive(hasPassive);
             if (hasPassive)
             {
                 detailPassiveLabel.color = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.9f);
                 detailPassiveText.text = passive.Trim();
+
+                // A newly selected card starts at the top of its text
+                if (detailPassiveScroll != null)
+                {
+                    detailPassiveScroll.gameObject.SetActive(true);
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(detailPassiveText.rectTransform);
+                    detailPassiveScroll.verticalNormalizedPosition = 1f;
+                }
+            }
+            else if (detailPassiveScroll != null)
+            {
+                detailPassiveScroll.gameObject.SetActive(false);
             }
 
             if (animate) PlayDetailsAnimation();
@@ -3712,45 +3724,102 @@ namespace TrashTD.UI
 
             CreateDivider(content, 190f, margin);
 
-            // Stats
+            // Stats: three columns, two rows (this leaves the bottom half of the panel for the ability text)
             var statsLabel = MakeText(content, "StatsLabel", "STATS", 11, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
             statsLabel.fontStyle = FontStyle.Bold;
             StretchTopRT(statsLabel, margin, margin, 202f, 18f);
 
-            float tileWidth = (innerWidth - 12f) / 2f;
-            float tileHeight = 62f;
+            const float tileGap = 10f;
+            float tileWidth = (innerWidth - tileGap * 2f) / 3f;
+            float tileHeight = 58f;
             float rowStep = tileHeight + 8f;
             float gridTop = 226f;
-            float rightX = margin + tileWidth + 12f;
+            float colX1 = margin + tileWidth + tileGap;
+            float colX2 = margin + (tileWidth + tileGap) * 2f;
 
             detailHpText = CreateStatTile(content, "HP", new Color(0.35f, 0.85f, 0.45f, 1f), margin, gridTop, tileWidth, tileHeight);
-            detailAtkText = CreateStatTile(content, "ATK", new Color(0.95f, 0.40f, 0.35f, 1f), rightX, gridTop, tileWidth, tileHeight);
-            detailDefText = CreateStatTile(content, "DEF", new Color(0.35f, 0.60f, 1.00f, 1f), margin, gridTop + rowStep, tileWidth, tileHeight);
-            detailResText = CreateStatTile(content, "RES", new Color(0.70f, 0.45f, 1.00f, 1f), rightX, gridTop + rowStep, tileWidth, tileHeight);
-            detailBlockText = CreateStatTile(content, "BLOCK", new Color(1.00f, 0.80f, 0.30f, 1f), margin, gridTop + rowStep * 2f, tileWidth, tileHeight);
-            detailIntervalText = CreateStatTile(content, "ATK SPD", new Color(0.40f, 0.85f, 0.90f, 1f), rightX, gridTop + rowStep * 2f, tileWidth, tileHeight);
+            detailAtkText = CreateStatTile(content, "ATK", new Color(0.95f, 0.40f, 0.35f, 1f), colX1, gridTop, tileWidth, tileHeight);
+            detailDefText = CreateStatTile(content, "DEF", new Color(0.35f, 0.60f, 1.00f, 1f), colX2, gridTop, tileWidth, tileHeight);
+            detailResText = CreateStatTile(content, "RES", new Color(0.70f, 0.45f, 1.00f, 1f), margin, gridTop + rowStep, tileWidth, tileHeight);
+            detailBlockText = CreateStatTile(content, "BLOCK", new Color(1.00f, 0.80f, 0.30f, 1f), colX1, gridTop + rowStep, tileWidth, tileHeight);
+            detailIntervalText = CreateStatTile(content, "ATK SPD", new Color(0.40f, 0.85f, 0.90f, 1f), colX2, gridTop + rowStep, tileWidth, tileHeight);
 
-            // Bottom section: range preview (left) + ability (right)
-            const float sectionLabelTop = 446f;
-            const float sectionBodyTop = 470f;
-            CreateDivider(content, 436f, margin);
+            // Bottom section: range preview (left) + ability (right, scrolls)
+            const float sectionLabelTop = 372f;
+            const float sectionBodyTop = 396f;
+            CreateDivider(content, 362f, margin);
             BuildRangePreview(content, margin, sectionLabelTop, sectionBodyTop);
 
-            float abilityX = margin + RangeBoxWidth + 16f;
+            float abilityX = margin + RangeBoxWidth + 20f;
+            float abilityBodyHeight = CardHeight - sectionBodyTop - 28f;
 
             // Passive / ability (hidden when the operator has none)
             detailPassiveLabel = MakeText(content, "PassiveLabel", "ABILITY", 11, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
             detailPassiveLabel.fontStyle = FontStyle.Bold;
             StretchTopRT(detailPassiveLabel, abilityX, margin, sectionLabelTop, 18f);
 
-            detailPassiveText = MakeText(content, "PassiveText", "", 15, TextAnchor.UpperLeft,
-                new Color(0.88f, 0.92f, 0.96f, 1f));
-            detailPassiveText.resizeTextForBestFit = true;
-            detailPassiveText.resizeTextMinSize = 11;
-            detailPassiveText.resizeTextMaxSize = 15;
-            StretchTopRT(detailPassiveText, abilityX, margin, sectionBodyTop, RangeBoxHeight);
+            // The text keeps one readable size and scrolls (wheel, drag or the thin bar) when it doesn't fit
+            var scrollObject = new GameObject("PassiveScroll", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
+            scrollObject.transform.SetParent(content, false);
+            RectTransform scrollRect = scrollObject.GetComponent<RectTransform>();
+            PlaceTopLeft(scrollRect, abilityX, sectionBodyTop, PanelWidth - abilityX - margin, abilityBodyHeight);
+            var scrollBackground = scrollObject.GetComponent<Image>();
+            scrollBackground.color = new Color(0f, 0f, 0f, 0f); // invisible, but catches the mouse wheel
 
+            detailPassiveText = MakeText(scrollRect, "PassiveText", "", 14, TextAnchor.UpperLeft,
+                new Color(0.88f, 0.92f, 0.96f, 1f));
+            detailPassiveText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            detailPassiveText.verticalOverflow = VerticalWrapMode.Overflow;
+            detailPassiveText.lineSpacing = 1.3f;
+            RectTransform passiveRect = detailPassiveText.rectTransform;
+            passiveRect.anchorMin = new Vector2(0f, 1f);
+            passiveRect.anchorMax = new Vector2(1f, 1f);
+            passiveRect.pivot = new Vector2(0.5f, 1f);
+            passiveRect.offsetMin = Vector2.zero;
+            passiveRect.offsetMax = new Vector2(-12f, 0f); // right gutter so text never sits under the scroll bar
+            detailPassiveText.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            detailPassiveScroll = scrollObject.GetComponent<ScrollRect>();
+            detailPassiveScroll.content = passiveRect;
+            detailPassiveScroll.viewport = scrollRect;
+            detailPassiveScroll.horizontal = false;
+            detailPassiveScroll.movementType = ScrollRect.MovementType.Clamped;
+            detailPassiveScroll.scrollSensitivity = 30f;
+            AttachDetailScrollbar(detailPassiveScroll);
             detailContentRoot.SetActive(false);
+        }
+
+        /// <summary>A thin scroll bar down the right edge of a scroll view; it hides itself when everything fits.</summary>
+        private static void AttachDetailScrollbar(ScrollRect scroll)
+        {
+            const float width = 4f;
+            const float inset = 2f;
+
+            var barObject = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+            barObject.transform.SetParent(scroll.transform, false);
+            var barRect = barObject.GetComponent<RectTransform>();
+            barRect.anchorMin = new Vector2(1f, 0f);
+            barRect.anchorMax = new Vector2(1f, 1f);
+            barRect.pivot = new Vector2(1f, 0.5f);
+            barRect.sizeDelta = new Vector2(width, -inset * 2f);
+            barRect.anchoredPosition = new Vector2(-inset, 0f);
+
+            var track = barObject.GetComponent<Image>();
+            track.color = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.12f);
+
+            var handleObject = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+            handleObject.transform.SetParent(barObject.transform, false);
+            handleObject.GetComponent<RectTransform>().sizeDelta = Vector2.zero;
+            var handle = handleObject.GetComponent<Image>();
+            handle.color = new Color(ACCENT_COLOR.r, ACCENT_COLOR.g, ACCENT_COLOR.b, 0.6f);
+
+            var bar = barObject.GetComponent<Scrollbar>();
+            bar.direction = Scrollbar.Direction.BottomToTop;
+            bar.handleRect = handleObject.GetComponent<RectTransform>();
+            bar.targetGraphic = handle;
+
+            scroll.verticalScrollbar = bar;
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
         }
 
         private void BuildRangePreview(Transform parent, float x, float labelTop, float boxTop)
@@ -3791,6 +3860,24 @@ namespace TrashTD.UI
             detailRangeGrid.pivot = new Vector2(0.5f, 0.5f);
             detailRangeGrid.sizeDelta = Vector2.zero;
             detailRangeGrid.anchoredPosition = Vector2.zero;
+
+            // Colour key under the box
+            BuildRangeLegendEntry(parent, x, boxTop + RangeBoxHeight + 10f, SELF_TILE_COLOR, "OPERATOR");
+            BuildRangeLegendEntry(parent, x, boxTop + RangeBoxHeight + 32f, RANGE_TILE_COLOR, "IN RANGE");
+        }
+
+        private void BuildRangeLegendEntry(Transform parent, float x, float y, Color color, string label)
+        {
+            var swatch = new GameObject("RangeLegendSwatch", typeof(RectTransform), typeof(Image));
+            swatch.transform.SetParent(parent, false);
+            PlaceTopLeft(swatch.transform, x + 2f, y + 4f, 10f, 10f);
+            var swatchImage = swatch.GetComponent<Image>();
+            swatchImage.color = color;
+            swatchImage.raycastTarget = false;
+
+            var text = MakeText(parent, "RangeLegendLabel", label, 11, TextAnchor.MiddleLeft,
+                new Color(STAT_LABEL_COLOR.r, STAT_LABEL_COLOR.g, STAT_LABEL_COLOR.b, 0.9f));
+            PlaceTopLeft(text.transform, x + 20f, y, RangeBoxWidth - 20f, 18f);
         }
 
         /// <summary>
@@ -4005,11 +4092,14 @@ namespace TrashTD.UI
 
             var labelText = MakeText(tile.transform, "Label", label, 11, TextAnchor.MiddleLeft, STAT_LABEL_COLOR);
             labelText.fontStyle = FontStyle.Bold;
-            PlaceTopLeft(labelText.transform, 22f, 8f, width - 30f, 18f);
+            PlaceTopLeft(labelText.transform, 22f, 6f, width - 30f, 18f);
 
             var valueText = MakeText(tile.transform, "Value", "0", 26, TextAnchor.MiddleLeft, STAT_VALUE_COLOR);
             valueText.fontStyle = FontStyle.Bold;
-            PlaceTopLeft(valueText.transform, 22f, 26f, width - 30f, 32f);
+            valueText.resizeTextForBestFit = true;
+            valueText.resizeTextMinSize = 14;
+            valueText.resizeTextMaxSize = 26;
+            PlaceTopLeft(valueText.transform, 22f, 22f, width - 30f, height - 26f);
 
             return valueText;
         }

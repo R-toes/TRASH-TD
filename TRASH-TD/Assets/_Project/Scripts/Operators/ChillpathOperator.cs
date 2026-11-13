@@ -237,5 +237,13 @@ namespace TrashTD.Operators
             LastUpgradeShardTarget = null;
             base.OnRetreated();
         }
+
+        public override void CollectStatEffects(System.Collections.Generic.List<StatEffect> effects)
+        {
+            base.CollectStatEffects(effects);
+
+            if (IsHasteActive)
+                effects.Add(new StatEffect("HASTE", $"Interval x{AttackIntervalMultiplier:0.##}  ({hasteTimer:0.#}s)", "ATK SPD"));
+        }
     }
 }

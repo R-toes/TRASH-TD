@@ -45,9 +45,9 @@ namespace TrashTD.Operators
         public bool HasKillHealUpgrade => currentRarity >= OperatorRarity.Star4;
         public bool HasPullUpgrade => currentRarity >= OperatorRarity.Star4;
 
-        public override int GetBlockCount()
+        public override int GetMaxBlockCount()
         {
-            int blockCount = base.GetBlockCount();
+            int blockCount = base.GetMaxBlockCount();
             return blockCount > 0 && HasExtraBlockUpgrade ? blockCount + ExtraBlockCount : blockCount;
         }
 
@@ -573,6 +573,18 @@ namespace TrashTD.Operators
             }
 
             hasDodgeAtkBuff = false;
+        }
+
+        public override int GetDisplayATK() => hasDodgeAtkBuff ? Mathf.RoundToInt(base.GetDisplayATK() * 1.5f) : base.GetDisplayATK();
+
+        public override void CollectStatEffects(System.Collections.Generic.List<StatEffect> effects)
+        {
+            base.CollectStatEffects(effects);
+
+            if (HasExtraBlockUpgrade)
+                effects.Add(new StatEffect("3\u2605 UPGRADE", $"Block +{ExtraBlockCount}", "BLOCK"));
+            if (hasDodgeAtkBuff)
+                effects.Add(new StatEffect("DODGE", "Next hit ATK +50%", "ATK"));
         }
     }
 }

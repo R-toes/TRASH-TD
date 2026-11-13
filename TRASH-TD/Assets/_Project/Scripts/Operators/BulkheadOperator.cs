@@ -47,9 +47,9 @@ namespace TrashTD.Operators
             HitsSinceShockwave = 0;
         }
 
-        public override int GetBlockCount()
+        public override int GetMaxBlockCount()
         {
-            int blockCount = base.GetBlockCount();
+            int blockCount = base.GetMaxBlockCount();
             return blockCount > 0 && HasIncreasedBlockUpgrade ? blockCount + UpgradedBlockBonus : blockCount;
         }
 
@@ -143,6 +143,16 @@ namespace TrashTD.Operators
 
             SpriteAnimation?.Strike();
             base.Attack(target);
+        }
+
+        public override void CollectStatEffects(System.Collections.Generic.List<StatEffect> effects)
+        {
+            base.CollectStatEffects(effects);
+
+            if (IsFrenzyActive)
+                effects.Add(new StatEffect("FRENZY", $"ATK +{(AtkMultiplier - 1f) * 100f:0}%  DEF +{(DefMultiplier - 1f) * 100f:0}%", "ATK DEF"));
+            if (HasIncreasedBlockUpgrade)
+                effects.Add(new StatEffect("3\u2605 UPGRADE", $"Block +{UpgradedBlockBonus}", "BLOCK"));
         }
     }
 }
