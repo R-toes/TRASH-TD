@@ -14,7 +14,9 @@ namespace TrashTD.Enemies
     /// - Then it sprays fire for 3.5 s, sweeping side to side, creeping forward at 15% speed. Each sweep is one
     ///   damage tick of ATK Arts damage to every operator in the cone (5 ticks per burst). A 1.5 s cooldown
     ///   follows, when it walks at 75% speed; then it flames again if anyone is in the cone.
-    /// - Stage 4: every 2nd tick that lands on the same operator adds 1 heat stack to it.
+    /// - Stage 4: when a burst runs to its end it adds 1 heat stack to each operator it hit during that burst, and a
+    ///   given Roboflame adds heat to a given operator only once, ever. A burst that is cut short (the cone empties
+    ///   because everyone left or died) adds none.
     /// </summary>
     public class RoboflameEnemy : EnemyCaster
     {
@@ -23,7 +25,6 @@ namespace TrashTD.Enemies
         public const float BurstDuration = TicksPerBurst * SweepDuration; // 3.5 s
         public const float CooldownDuration = 1.5f;
         public const float SweepHalfAngle = 28f;
-        public const int TicksPerHeatStack = 2;
         public const float BurstMoveSpeedMultiplier = 0.15f;
         public const float CooldownMoveSpeedMultiplier = 0.75f;
         private const float FlameReachTiles = 2.4f;
@@ -40,7 +41,8 @@ namespace TrashTD.Enemies
 
         [SerializeField] private Vector2 flameOriginOffset = new Vector2(0.3f, -0.05f);
 
-        private readonly Dictionary<OperatorBase, int> ticksTaken = new Dictionary<OperatorBase, int>();
+        private readonly HashSet<OperatorBase> hitThisBurst = new HashSet<OperatorBase>();
+        private readonly HashSet<OperatorBase> heatedOperators = new HashSet<OperatorBase>(); // already given their one stack
         private float burstElapsed = -1f;
         private int ticksDealt;
         private float cooldownTimer;
@@ -134,6 +136,7 @@ namespace TrashTD.Enemies
             flameDirection = direction;
             burstElapsed = 0f;
             ticksDealt = 0;
+            hitThisBurst.Clear();
             emitCarry = 0f;
             if (direction.x != 0)
                 UpdateFacing(direction.x);
@@ -155,14 +158,14 @@ namespace TrashTD.Enemies
             {
                 if (!DealTick())
                 {
-                    EndBurst();
+                    EndBurst(finished: false);
                     return;
                 }
             }
 
             if (burstElapsed >= BurstDuration)
             {
-                EndBurst();
+                EndBurst(finished: true);
                 return;
             }
 
@@ -182,30 +185,34 @@ namespace TrashTD.Enemies
                 if (!op.TryTakeAttackDamage(currentATK, data.damageType, this)) continue;
                 PlayImpactSound();
                 FlamethrowerVisual.Ignite(op.transform.position);
-                RegisterHeatTick(op);
+                hitThisBurst.Add(op);
             }
 
             return true;
         }
 
-        private void RegisterHeatTick(OperatorBase op)
-        {
-            if (op == null || !op.IsDeployed || op.CurrentHP <= 0) return;
-
-            ticksTaken.TryGetValue(op, out int ticks);
-            ticks++;
-            ticksTaken[op] = ticks;
-
-            if (StageCombatModifiers.IsHeatHazardActive && ticks % TicksPerHeatStack == 0)
-                Stage4HeatHazard.AddHeatStack(op);
-        }
-
-        private void EndBurst()
+        /// <summary>
+        /// Ends the burst. Only a burst that ran its full length (<paramref name="finished"/>) heats anyone: each
+        /// operator it hit gets 1 stack, unless this Roboflame has heated that operator before.
+        /// </summary>
+        private void EndBurst(bool finished)
         {
             burstElapsed = -1f;
             cooldownTimer = CooldownDuration;
-        }
 
+            if (finished && StageCombatModifiers.IsHeatHazardActive)
+            {
+                foreach (OperatorBase op in hitThisBurst)
+                {
+                    if (op == null || !op.IsDeployed || op.CurrentHP <= 0) continue;
+                    if (!heatedOperators.Add(op)) continue;
+
+                    Stage4HeatHazard.AddHeatStack(op);
+                }
+            }
+
+            hitThisBurst.Clear();
+        }
         private void EmitFlame(float deltaTime)
         {
             float cellSize = CurrentGrid != null ? CurrentGrid.CellSize : 1f;

@@ -296,6 +296,10 @@ namespace TrashTD.Core.GameLoop
                 op.IsBurning = true;
                 AudioManager.Instance?.PlaySfx(SfxId.Stage4Ignite);
             }
+
+            // The gauge only used to refresh at the start of a round, so heat from an enemy attack showed up late
+            if (Application.isPlaying && op.HeatStacks != previousStacks)
+                OperatorHeatBar.ShowFor(op);
         }
 
         private void HandleOperatorRetreated(OperatorBase op)

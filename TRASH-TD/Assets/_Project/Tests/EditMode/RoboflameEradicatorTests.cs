@@ -287,22 +287,62 @@ namespace TrashTD.Tests
             Assert.IsTrue(roboflame.IsFlaming);
         }
 
+        /// <summary>Runs one full burst: the opening tick, then sweeps until it ends.</summary>
+        private static void RunBurstToEnd(RoboflameEnemy roboflame)
+        {
+            roboflame.Step(0f);
+            for (int i = 0; i < RoboflameEnemy.TicksPerBurst - 1; i++) roboflame.Step(Sweep);
+            roboflame.Step(RoboflameEnemy.BurstDuration);
+        }
+
         [Test]
-        public void Roboflame_OnStage4_AddsOneHeatStackPerTwoTicks()
+        public void Roboflame_OnStage4_AddsOneHeatStackWhenItsBurstEnds()
         {
             StageCombatModifiers.ConfigureForEnvironment("STAGE_04");
             RoboflameEnemy roboflame = CreateRoboflame(new Vector2Int(1, 2));
             GuardOperator op = CreateOperatorAt(new Vector2Int(3, 2));
 
             roboflame.Step(0f);
-            Assert.AreEqual(0, op.HeatStacks, "One tick isn't enough.");
-            roboflame.Step(Sweep);
+            for (int i = 0; i < RoboflameEnemy.TicksPerBurst - 1; i++) roboflame.Step(Sweep);
+            Assert.IsTrue(roboflame.IsFlaming);
+            Assert.AreEqual(0, op.HeatStacks, "No heat while it is still flaming.");
+
+            roboflame.Step(RoboflameEnemy.BurstDuration);
+            Assert.IsFalse(roboflame.IsFlaming);
             Assert.AreEqual(1, op.HeatStacks);
-            roboflame.Step(Sweep);
-            roboflame.Step(Sweep);
-            Assert.AreEqual(2, op.HeatStacks);
         }
 
+        [Test]
+        public void Roboflame_HeatsAGivenOperatorOnlyOnce()
+        {
+            StageCombatModifiers.ConfigureForEnvironment("STAGE_04");
+            RoboflameEnemy roboflame = CreateRoboflame(new Vector2Int(1, 2));
+            GuardOperator op = CreateOperatorAt(new Vector2Int(3, 2));
+
+            RunBurstToEnd(roboflame);
+            Assert.AreEqual(1, op.HeatStacks);
+
+            // A second finished burst on the same operator adds nothing
+            roboflame.Step(RoboflameEnemy.CooldownDuration);
+            Assert.IsTrue(roboflame.IsFlaming);
+            RunBurstToEnd(roboflame);
+            Assert.AreEqual(1, op.HeatStacks);
+        }
+
+        [Test]
+        public void Roboflame_AddsNoHeat_WhenItsBurstIsCutShort()
+        {
+            StageCombatModifiers.ConfigureForEnvironment("STAGE_04");
+            RoboflameEnemy roboflame = CreateRoboflame(new Vector2Int(1, 2));
+            GuardOperator op = CreateOperatorAt(new Vector2Int(3, 2));
+
+            roboflame.Step(0f);
+            op.Retreat(); // leaves the cone before the burst finishes
+            roboflame.Step(Sweep);
+
+            Assert.IsFalse(roboflame.IsFlaming, "The empty cone ends the burst early.");
+            Assert.AreEqual(0, op.HeatStacks);
+        }
         [Test]
         public void Roboflame_OffStage4_AddsNoHeat()
         {
