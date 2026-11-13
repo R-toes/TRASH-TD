@@ -221,11 +221,16 @@ namespace TrashTD.Systems
                    (opData.operatorName == "Castiel" && !(opComp is CastielOperator)) ||
                    (opData.operatorName == "Echosquire" && !(opComp is EchosquireOperator)) ||
                    (opData.operatorName == "QiFu" && !(opComp is QiFuOperator)) ||
-                   (opData.operatorName == "Framiliar" && !(opComp is FramiliarOperator));
+                   (opData.operatorName == "Framiliar" && !(opComp is FramiliarOperator)) ||
+                   (opData.operatorName == "Panacea" && !(opComp is PanaceaOperator));
         }
 
         private OperatorBase AddClassComponent(GameObject obj, OperatorData opData)
         {
+            if (opData != null && opData.operatorName == "Panacea")
+            {
+                return obj.AddComponent<PanaceaOperator>();
+            }
             if (opData != null && opData.operatorName == "Mossmo")
             {
                 return obj.AddComponent<MossmoOperator>();

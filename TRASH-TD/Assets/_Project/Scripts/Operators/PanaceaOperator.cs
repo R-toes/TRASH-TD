@@ -71,7 +71,11 @@ namespace TrashTD.Operators
             {
                 DestroyImmediate(opAnim);
             }
-            if (GetComponent<PanaceaSpriteAnimation>() == null && Application.isPlaying)
+            if (spriteAnimation == null)
+            {
+                spriteAnimation = GetComponent<PanaceaSpriteAnimation>();
+            }
+            if (spriteAnimation == null && Application.isPlaying)
             {
                 spriteAnimation = gameObject.AddComponent<PanaceaSpriteAnimation>();
             }
@@ -234,7 +238,6 @@ namespace TrashTD.Operators
         {
             if (targets == null || targets.Count == 0 || isStunned || isBound) return;
 
-            UnitSfx.Play(data, UnitSfxEvent.Attack);
             EnsureVialFramesLoaded();
 
             float cooldown = GetAttackInterval();
@@ -242,6 +245,7 @@ namespace TrashTD.Operators
 
             if (!Application.isPlaying || anim == null)
             {
+                UnitSfx.Play(data, UnitSfxEvent.Attack);
                 for (int i = 0; i < targets.Count; i++)
                 {
                     SpawnVialForTarget(targets[i]);
@@ -251,6 +255,7 @@ namespace TrashTD.Operators
 
             anim.PlayHealAnimation(cooldown, onThrow: () =>
             {
+                UnitSfx.Play(data, UnitSfxEvent.Attack);
                 for (int i = 0; i < targets.Count; i++)
                 {
                     if (targets[i] != null && targets[i].IsDeployed && targets[i].CurrentHP > 0)
@@ -269,14 +274,14 @@ namespace TrashTD.Operators
             return transform.position + new Vector3(dir * 0.42f, 0.08f, 0f);
         }
 
-        private void SpawnVialForTarget(OperatorBase target)
+        public PanaceaVialProjectile SpawnVialForTarget(OperatorBase target)
         {
-            if (target == null) return;
+            if (target == null) return null;
             Vector3 startPos = GetThrowOrigin();
             Vector3 targetPos = target.transform.position + new Vector3(0f, 0.25f, 0f);
             int healAmount = GetHealAmount();
 
-            PanaceaVialProjectile.Spawn(startPos, target, targetPos, healAmount, vialFrames);
+            return PanaceaVialProjectile.Spawn(startPos, target, targetPos, healAmount, vialFrames);
         }
 
         public override void Heal(OperatorBase target)

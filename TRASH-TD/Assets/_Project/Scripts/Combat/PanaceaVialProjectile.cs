@@ -15,9 +15,9 @@ namespace TrashTD.Combat
     /// </summary>
     public sealed class PanaceaVialProjectile : MonoBehaviour
     {
-        private const float DefaultSpeed = 12f;
-        private const float MinDuration = 0.22f;
-        private const float MaxDuration = 0.65f;
+        private const float DefaultSpeed = 7.5f;
+        private const float MinDuration = 0.35f;
+        private const float MaxDuration = 0.75f;
         private const float FrameRate = 0.05f; // ~20 fps for 8-frame swirl animation
         private const float SpinSpeed = 720f;   // 2 rotations per second
 
@@ -134,7 +134,12 @@ namespace TrashTD.Combat
 
         private void Update()
         {
-            elapsed += Time.deltaTime;
+            Tick(Time.deltaTime);
+        }
+
+        public void Tick(float dt)
+        {
+            elapsed += dt;
             float t = Mathf.Clamp01(elapsed / duration);
 
             // Calculate current trajectory position
@@ -150,7 +155,7 @@ namespace TrashTD.Combat
             // Vial 8-frame swirl animation
             if (frames != null && frames.Length > 0)
             {
-                animTimer += Time.deltaTime;
+                animTimer += dt;
                 if (animTimer >= FrameRate)
                 {
                     animTimer -= FrameRate;
@@ -165,7 +170,7 @@ namespace TrashTD.Combat
             // Spinning rotation
             if (visualRoot != null)
             {
-                spinAngle += spinDirection * SpinSpeed * Time.deltaTime;
+                spinAngle += spinDirection * SpinSpeed * dt;
                 visualRoot.transform.localRotation = Quaternion.Euler(0f, 0f, spinAngle);
             }
 
