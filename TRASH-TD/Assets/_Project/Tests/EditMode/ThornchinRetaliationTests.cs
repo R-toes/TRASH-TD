@@ -83,6 +83,62 @@ namespace TrashTD.Tests
             Assert.AreEqual(attackerStartHP, attacker.CurrentHP, "Attacker should not be damaged when damage is environmental.");
             Assert.AreEqual(bystanderStartHP, bystander.CurrentHP, "Bystander should not be damaged when damage is environmental.");
         }
+
+        [Test]
+        public void ThornchinStar3_AppliesDOTAndPoisonVisualToAttacker()
+        {
+            thornchin.Initialize(operatorData, OperatorRarity.Star3);
+
+            thornchin.TakeDamage(30, DamageType.Physical, attacker);
+
+            var dot = attacker.GetComponent<TrashTD.Combat.ThornchinSpikeDOT>();
+            Assert.IsNotNull(dot, "Star3 Thornchin retaliation should apply ThornchinSpikeDOT to attacker.");
+            Assert.AreEqual(1, dot.CurrentStacks);
+
+            var visual = attacker.GetComponent<TrashTD.Combat.ThornchinPoisonVisual>();
+            Assert.IsNotNull(visual, "ThornchinSpikeDOT must attach ThornchinPoisonVisual to afflicted enemy.");
+            Assert.AreEqual(1, visual.CurrentStacks);
+
+            var overlay = visual.transform.Find(TrashTD.Combat.ThornchinPoisonVisual.GlowOverlayName);
+            Assert.IsNotNull(overlay, "ThornchinPoisonVisual must create the poison glow overlay.");
+        }
+
+        [Test]
+        public void ThornchinPoisonVisual_TracksStacks_AndCleansUpOnExpire()
+        {
+            TrashTD.Combat.ThornchinSpikeDOT.Apply(attacker, thornchin);
+            var dot = attacker.GetComponent<TrashTD.Combat.ThornchinSpikeDOT>();
+            var visual = attacker.GetComponent<TrashTD.Combat.ThornchinPoisonVisual>();
+            Assert.IsNotNull(visual);
+            Assert.AreEqual(1, visual.CurrentStacks);
+
+            // Add stacks up to 4
+            dot.AddStack();
+            dot.AddStack();
+            dot.AddStack();
+            Assert.AreEqual(4, visual.CurrentStacks);
+
+            // Trigger damage tick
+            visual.OnDamageTick(visual.CurrentStacks);
+
+            // Tick down until expiration
+            dot.Tick(6.0f);
+            Assert.IsNull(attacker.GetComponent<TrashTD.Combat.ThornchinSpikeDOT>(), "DOT should expire and be destroyed.");
+            Assert.IsNull(attacker.GetComponent<TrashTD.Combat.ThornchinPoisonVisual>(), "Poison visual should be removed upon expiration.");
+        }
+
+        [Test]
+        public void PoisonBubbleSprites_AreGeneratedWithoutError()
+        {
+            Color testColor = TrashTD.Combat.ThornchinPoisonVisual.PoisonViolet;
+            var lg = TrashTD.Combat.CombatFxArt.PoisonBubbleLarge(testColor);
+            var md = TrashTD.Combat.CombatFxArt.PoisonBubbleMedium(testColor);
+            var sm = TrashTD.Combat.CombatFxArt.PoisonBubbleSmall(testColor);
+
+            Assert.IsNotNull(lg, "Large poison bubble sprite must be generated.");
+            Assert.IsNotNull(md, "Medium poison bubble sprite must be generated.");
+            Assert.IsNotNull(sm, "Small poison bubble sprite must be generated.");
+        }
     }
 }
 

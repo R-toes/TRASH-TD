@@ -277,6 +277,37 @@ namespace TrashTD.Combat
         }
 
         /// <summary>
+        /// A burst of rising poison bubbles and purple sparkle motes popping outward (e.g. Thornchin's DoT Arts tick).
+        /// </summary>
+        public static void PoisonBubbleBurst(Vector2 position, Color color, int count = 4)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                Vector2 offset = Random.insideUnitCircle * 0.22f;
+                Sprite sprite = (i % 3) switch
+                {
+                    0 => CombatFxArt.PoisonBubbleLarge(color),
+                    1 => CombatFxArt.PoisonBubbleMedium(color),
+                    _ => CombatFxArt.PoisonBubbleSmall(color)
+                };
+                PixelParticles.Emit(new PixelParticle
+                {
+                    Position = position + offset,
+                    Velocity = new Vector2(Random.Range(-0.25f, 0.25f), Random.Range(0.55f, 1.15f)),
+                    Life = Random.Range(0.42f, 0.68f),
+                    Gravity = -0.5f,
+                    Drag = 0.8f,
+                    StartColor = Color.white,
+                    EndColor = new Color(1f, 1f, 1f, 0f),
+                    Sprite = sprite,
+                    SortingOrder = ImpactSortingOrder + 2
+                });
+            }
+            Pop(position, color);
+            Crosses(position, color, 3, 0.35f, false, 0.4f);
+        }
+
+        /// <summary>
         /// Bubblets' protective bubble pop: a multi-frame pixel pop flipbook bursting into droplets,
         /// radial pixel spray (1x1 dots, 2x2 beads, hollow 3x3 foam bits), floating rising micro-bubbles,
         /// twinkling sparkle crosses, and a bright central flash.

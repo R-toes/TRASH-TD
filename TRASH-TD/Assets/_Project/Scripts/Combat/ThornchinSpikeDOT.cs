@@ -71,6 +71,13 @@ namespace TrashTD.Combat
                 }
                 stacks[oldestIdx].remainingTime = Duration;
             }
+
+            ThornchinPoisonVisual.Apply(enemy, stacks.Count);
+        }
+
+        private void OnDestroy()
+        {
+            ThornchinPoisonVisual.Remove(enemy);
         }
 
         private void Update()
@@ -100,9 +107,12 @@ namespace TrashTD.Combat
 
             if (stacks.Count == 0)
             {
+                ThornchinPoisonVisual.Remove(enemy);
                 Destroy(this);
                 return;
             }
+
+            ThornchinPoisonVisual.Apply(enemy, stacks.Count);
 
             // Tick damage every 1.0 second
             tickTimer += dt;
@@ -112,7 +122,15 @@ namespace TrashTD.Combat
                 int rawDamage = DamagePerSecond * stacks.Count;
                 int calculatedDamage = DamageCalculator.CalculateDamage(rawDamage, enemy.CurrentRES);
                 enemy.TryTakeAttackDamage(calculatedDamage, DamageType.Arts, sourceOperator, canHitAir: true);
-                CombatFx.Sparks(enemy.VisualPosition, new Color(0.75f, 0.2f, 0.85f), 2, 0.8f, 0.15f);
+                var visual = enemy != null ? enemy.GetComponent<ThornchinPoisonVisual>() : null;
+                if (visual != null)
+                {
+                    visual.OnDamageTick(stacks.Count);
+                }
+                else
+                {
+                    CombatFx.Sparks(enemy.VisualPosition, new Color(0.75f, 0.2f, 0.85f), 2, 0.8f, 0.15f);
+                }
             }
         }
     }

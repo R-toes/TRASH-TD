@@ -192,6 +192,33 @@ namespace TrashTD.Combat
             ".CCbbbCC.",
             "...CCC...");
 
+        /// <summary>8x8 spherical poison/venom bubble with bright specular glint and deep shaded rim.</summary>
+        public static Sprite PoisonBubbleLarge(Color color) => Shaded("poisonbubblelg", color,
+            "..OOOO..",
+            ".OwwLCO.",
+            "OwwbCCDO",
+            "OLbCCCDO",
+            "OLCCDDDO",
+            "OLCDDDDO",
+            ".ODDDDO.",
+            "..OOOO..");
+
+        /// <summary>6x6 medium spherical poison bubble.</summary>
+        public static Sprite PoisonBubbleMedium(Color color) => Shaded("poisonbubblemd", color,
+            ".OOOO.",
+            "OwwLCO",
+            "OwCCDO",
+            "OLCDDO",
+            "ODDDDO",
+            ".OOOO.");
+
+        /// <summary>4x4 small poison bubble / droplet.</summary>
+        public static Sprite PoisonBubbleSmall(Color color) => Shaded("poisonbubblesm", color,
+            ".OO.",
+            "OwCO",
+            "OCDO",
+            ".OO.");
+
         /// <summary>A junk rocket: a soda-can body with a red nose, dark fins and a flame at the back. Untinted.</summary>
         public static Sprite Rocket() => Shaded("rocket", Color.white,
             "...nn......",
