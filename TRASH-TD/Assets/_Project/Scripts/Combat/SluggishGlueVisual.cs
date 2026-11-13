@@ -17,11 +17,11 @@ namespace TrashTD.Combat
     /// <summary>
     /// Pixel-art Bloons TD style "glue effect" for the Sluggish status effect (applied by Resicochet and sluggish effects).
     /// Displays a thick, viscous glue splatter cap covering the top of the enemy's silhouette with hanging gooey
-    /// teardrop drips, swollen bulbous tips, glossy specular liquid highlights, and falling pixel droplets.
+    /// teardrop drips, swollen bulbous tips, glossy specular liquid highlights, crisp 1-pixel black outlines, and falling pixel droplets.
     /// The glue color adapts dynamically based on Resicochet's charge level:
-    /// - Charge 1 (Orange / Default): Classic yellow-orange Bloons glue.
-    /// - Charge 2 (Green): Corrosive/acid lime-green glue.
-    /// - Charge 3 (Blue): Super glue / frozen cyan-cobalt glue.
+    /// - Charge 1 (Orange / Default): Classic yellow-orange Bloons glue with black outline.
+    /// - Charge 2 (Green): Corrosive/acid lime-green glue with black outline.
+    /// - Charge 3 (Blue): Super glue / frozen cyan-cobalt glue with black outline.
     /// Built procedurally from the enemy sprite's silhouette (following IceStatusVisual), matching pixel resolution,
     /// sorting order, walk animation, and mirroring (flipX).
     /// </summary>
@@ -31,7 +31,8 @@ namespace TrashTD.Combat
 
         private const int SortingOffset = 11; // Above enemy body (+0), below stun stars (+15)
         private const float WobbleInterval = 0.35f;
-        private const int Pad = 2; // Padding around sprite for glue dome and teardrop bulbs
+        private const int Pad = 3; // Padding around sprite for glue dome, teardrop bulbs, and black outline
+        private const float CapHeightFraction = 0.25f; // Viscous glue cap covers top ~25% of enemy height
 
         private static readonly Dictionary<(Sprite source, int charge, int wobble), Sprite> SpriteCache =
             new Dictionary<(Sprite source, int charge, int wobble), Sprite>();
@@ -225,7 +226,7 @@ namespace TrashTD.Combat
                     Highlight = new Color(0.78f, 1.00f, 0.68f, 0.95f),
                     Body = ResicochetOperator.Charge2ProjectileColor, // (0.2f, 0.95f, 0.35f)
                     Shadow = new Color(0.08f, 0.60f, 0.18f, 0.95f),
-                    Outline = new Color(0.03f, 0.32f, 0.08f, 0.95f),
+                    Outline = new Color(0f, 0f, 0f, 1f),
                     Droplet = new Color(0.25f, 0.95f, 0.40f)
                 },
                 // Charge 3: Super Glue Cyan-Blue (Bloons super glue)
@@ -234,7 +235,7 @@ namespace TrashTD.Combat
                     Highlight = new Color(0.80f, 0.96f, 1.00f, 0.95f),
                     Body = ResicochetOperator.Charge3ProjectileColor, // (0.2f, 0.65f, 1f)
                     Shadow = new Color(0.08f, 0.36f, 0.72f, 0.95f),
-                    Outline = new Color(0.03f, 0.18f, 0.45f, 0.95f),
+                    Outline = new Color(0f, 0f, 0f, 1f),
                     Droplet = new Color(0.25f, 0.70f, 1.00f)
                 },
                 // Charge 1 (Default): Classic Orange (Bloons glue)
@@ -243,7 +244,7 @@ namespace TrashTD.Combat
                     Highlight = new Color(1.00f, 0.94f, 0.65f, 0.95f),
                     Body = ResicochetOperator.Charge1ProjectileColor, // (1f, 0.55f, 0.12f)
                     Shadow = new Color(0.72f, 0.32f, 0.05f, 0.95f),
-                    Outline = new Color(0.40f, 0.15f, 0.02f, 0.95f),
+                    Outline = new Color(0f, 0f, 0f, 1f),
                     Droplet = new Color(1.00f, 0.65f, 0.15f)
                 }
             };
@@ -362,8 +363,8 @@ namespace TrashTD.Combat
                 int dome = (x > minX + 1 && x < maxX - 1) ? 1 : 0;
                 int colTop = topY[x] + dome;
 
-                // Wavy cap bottom edge
-                int capDepth = Mathf.Max(3, Mathf.RoundToInt(bodyHeight * 0.42f) + Mathf.RoundToInt(Mathf.Sin(x * 0.75f + seed) * 1.5f));
+                // Wavy cap bottom edge (~25% height)
+                int capDepth = Mathf.Max(2, Mathf.RoundToInt(bodyHeight * CapHeightFraction) + Mathf.RoundToInt(Mathf.Sin(x * 0.75f + seed) * 0.8f));
                 int colBot = Mathf.Max(botY[x], topY[x] - capDepth);
 
                 for (int y = colBot; y <= colTop; y++)
@@ -381,9 +382,9 @@ namespace TrashTD.Combat
                 int dx = dripCols[d];
                 if (!colHasSolid[dx]) continue;
 
-                int capDepth = Mathf.Max(3, Mathf.RoundToInt(bodyHeight * 0.42f) + Mathf.RoundToInt(Mathf.Sin(dx * 0.75f + seed) * 1.5f));
+                int capDepth = Mathf.Max(2, Mathf.RoundToInt(bodyHeight * CapHeightFraction) + Mathf.RoundToInt(Mathf.Sin(dx * 0.75f + seed) * 0.8f));
                 int startY = topY[dx] - capDepth;
-                int endY = Mathf.Max(botY[dx] - 1, startY - dripLengths[d]);
+                int endY = Mathf.Min(startY, Mathf.Max(botY[dx] - 1, startY - dripLengths[d]));
 
                 // Track lowest drip tip for falling droplet particles
                 if (endY < lowestDripY)
@@ -407,7 +408,7 @@ namespace TrashTD.Combat
                 }
 
                 // Bulbous Droplet Tip (rounded surface tension bulb)
-                int bulbHeight = Mathf.Min(3, startY - endY + 1);
+                int bulbHeight = Mathf.Min(3, Mathf.Max(1, startY - endY + 1));
                 for (int by = endY; by < endY + bulbHeight; by++)
                 {
                     if (by >= 0 && by < h)
@@ -433,10 +434,32 @@ namespace TrashTD.Combat
             float tipLy = (lowestDripY + 0.5f - (sil.Pivot.y + pad)) / sil.PixelsPerUnit;
             DripTipCache[sprite] = new Vector2(tipLx, tipLy);
 
-            // 3. Shading the Viscous Glue (Highlight, Body, Shadow, Outline)
+            // 3. Shading the Viscous Glue (Highlight, Body, Shadow, Black Border Outline)
             GluePalette palette = GetPalette(charge);
             Color[] pixels = new Color[w * h];
             for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.clear;
+
+            // Generate Black Outline strictly on the outer border of the glue effect
+            bool[] borderOutline = new bool[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    int i = y * w + x;
+                    if (glue[i]) continue; // Glue body is interior, not outer border
+
+                    bool touchesGlue =
+                        (x > 0 && glue[i - 1]) ||
+                        (x < w - 1 && glue[i + 1]) ||
+                        (y > 0 && glue[i - w]) ||
+                        (y < h - 1 && glue[i + w]);
+
+                    if (touchesGlue)
+                    {
+                        borderOutline[i] = true;
+                    }
+                }
+            }
 
             float cx = (minX + maxX) * 0.5f;
 
@@ -445,6 +468,12 @@ namespace TrashTD.Combat
                 for (int x = 0; x < w; x++)
                 {
                     int i = y * w + x;
+                    if (borderOutline[i])
+                    {
+                        pixels[i] = palette.Outline; // Crisp black outline on the border of the effect
+                        continue;
+                    }
+
                     if (!glue[i]) continue;
 
                     bool topAir = (y + 1 >= h) || !glue[(y + 1) * w + x];
@@ -456,19 +485,14 @@ namespace TrashTD.Combat
                     // - On the upper-left curve of the main cap (matching stage top-left light source)
                     // - A bright glossy dot on the upper-left of each drip bulb
                     bool isCapHighlight = (topAir || leftAir) && (x <= cx + 1 && y >= maxY - 2);
-                    bool isBulbHighlight = isBulb[i] && (leftAir || topAir) && !botAir && (x <= dxOrBulb(x, isBulb, w, h));
+                    bool isBulbHighlight = isBulb[i] && (leftAir || topAir) && !botAir;
 
                     if (isCapHighlight || isBulbHighlight)
                     {
                         pixels[i] = palette.Highlight;
                     }
-                    // Dark viscous border / outline on bottom edges and shaded outer contours
-                    else if (botAir || (rightAir && y < maxY - 1))
-                    {
-                        pixels[i] = palette.Outline;
-                    }
                     // Mid-dark shadow in lower drip bulbs and lower body of cap
-                    else if ((y - 2 >= 0 && !glue[(y - 2) * w + x]) || isBulb[i])
+                    else if ((y - 2 >= 0 && !glue[(y - 2) * w + x]) || isBulb[i] || botAir || (rightAir && y < maxY - 1))
                     {
                         pixels[i] = palette.Shadow;
                     }
@@ -487,11 +511,6 @@ namespace TrashTD.Combat
                 h,
                 sil.Pivot + new Vector2(pad, pad),
                 sil.PixelsPerUnit);
-        }
-
-        private static int dxOrBulb(int x, bool[] isBulb, int w, int h)
-        {
-            return x;
         }
 
         private static int StableHash(string text)
