@@ -29,6 +29,77 @@ namespace TrashTD.Operators
     {
         public static readonly Color BrightRedColor = ProgenyHealTetherVisual.BrightRed;
 
+        [Header("Audio")]
+        [Tooltip("Custom sound played when casting heal. If null, loads from SFX/Operators/Medic/Progeny/Attack (or Heal), falling back to MagicAttack.")]
+        [SerializeField] private AudioClip healSound;
+        [Tooltip("Optional array of heal sounds to randomize between in Inspector.")]
+        [SerializeField] private AudioClip[] healSounds;
+        [Tooltip("Optional custom override sound played on chain heal bounce. If null, replays the heal sound quieter and quieter per bounce.")]
+        [SerializeField] private AudioClip bounceSound;
+        [SerializeField] private AudioClip[] bounceSounds;
+
+        private AudioClip currentVolleyHealClip;
+        private AudioSource currentVolleyVoice;
+        private AudioClip currentVolleyVoiceClip;
+
+        public AudioClip CurrentVolleyHealClip => currentVolleyHealClip;
+        public AudioClip CurrentVolleyAttackClip => currentVolleyHealClip;
+        public AudioSource CurrentVolleyVoice => currentVolleyVoice;
+        public AudioClip CurrentVolleyVoiceClip => currentVolleyVoiceClip;
+
+        public void SetCurrentVolleyHealClipForTesting(AudioClip clip) => currentVolleyHealClip = clip;
+        public void SetCurrentVolleyVoiceForTesting(AudioSource voice, AudioClip clip)
+        {
+            currentVolleyVoice = voice;
+            currentVolleyVoiceClip = clip;
+        }
+
+        private void StopPreviousVolleyVoice()
+        {
+            if (currentVolleyVoice != null && currentVolleyVoiceClip != null)
+            {
+                AudioManager.Instance?.StopSfx(currentVolleyVoice, currentVolleyVoiceClip);
+                currentVolleyVoice = null;
+                currentVolleyVoiceClip = null;
+            }
+        }
+
+        public AudioClip HealSound
+        {
+            get => healSound;
+            set => healSound = value;
+        }
+
+        public AudioClip[] HealSounds
+        {
+            get => healSounds;
+            set => healSounds = value;
+        }
+
+        public AudioClip AttackSound
+        {
+            get => healSound;
+            set => healSound = value;
+        }
+
+        public AudioClip[] AttackSounds
+        {
+            get => healSounds;
+            set => healSounds = value;
+        }
+
+        public AudioClip BounceSound
+        {
+            get => bounceSound;
+            set => bounceSound = value;
+        }
+
+        public AudioClip[] BounceSounds
+        {
+            get => bounceSounds;
+            set => bounceSounds = value;
+        }
+
         /// <summary>
         /// Local offsets of the 6 red floating pods relative to Progeny's center when facing left.
         /// Mirrored horizontally when facing right.
@@ -160,12 +231,177 @@ namespace TrashTD.Operators
             public bool IsSelf;
         }
 
+        private static readonly string[] ProgenyHealNames = new[] { "Attack", "Heal", "Laser", "Beam" };
+        private static readonly string[] ProgenyBounceNames = new[] { "Ability_Bounce", "Bounce", "Ability" };
+
+        protected override void OnDeployed()
+        {
+            base.OnDeployed();
+            // If no Deploy.wav exists in folder, check if Cry exists for Progeny
+            if (data != null && !UnitSfx.HasClip(data, UnitSfxEvent.Deploy))
+            {
+                UnitSfx.PlayFromFolder(UnitSfx.GetFolder(data), "Cry");
+            }
+        }
+
+        /// <summary>
+        /// Calculates the volume multiplier for chain heal bounces.
+        /// Volume becomes progressively quieter per bounce (e.g. 1.0x -> 0.50x -> 0.25x -> 0.125x -> 0.0625x).
+        /// </summary>
+        public static float GetBounceVolumeMultiplier(int bounceIndex)
+        {
+            if (bounceIndex <= 0) return 1.0f;
+            return Mathf.Clamp(Mathf.Pow(0.5f, bounceIndex), 0.05f, 1.0f);
+        }
+
+        /// <summary>
+        /// Plays heal sound. Randomizes among available Attack / Heal / Laser files (Attack, Attack_2... or Heal, Laser...)
+        /// or inspector healSounds. When bouncing, replays the exact same heal sound progressively quieter per bounce.
+        /// Fades out the previous bounce voice so sounds never stack into an overwhelming volume spike.
+        /// </summary>
+        public void PlayProgenyHealSound(int bounceIndex = 0)
+        {
+            float volume = GetBounceVolumeMultiplier(bounceIndex);
+
+            // If bouncing (bounceIndex > 0), replay the chosen clip or fallback quieter
+            if (bounceIndex > 0)
+            {
+                StopPreviousVolleyVoice();
+
+                // If somehow currentVolleyHealClip was not captured, try to pick one from folder
+                if (currentVolleyHealClip == null && data != null)
+                {
+                    string folder = UnitSfx.GetFolder(data);
+                    for (int i = 0; i < ProgenyHealNames.Length; i++)
+                    {
+                        var clip = UnitSfx.GetRandomClip(folder, ProgenyHealNames[i]);
+                        if (clip != null)
+                        {
+                            currentVolleyHealClip = clip;
+                            break;
+                        }
+                    }
+                }
+
+                if (currentVolleyHealClip != null)
+                {
+                    currentVolleyVoice = AudioManager.Instance?.PlaySfx(currentVolleyHealClip, volume, 1.0f);
+                    currentVolleyVoiceClip = currentVolleyHealClip;
+                    return;
+                }
+
+                var fbVoice = AudioManager.Instance?.PlaySfx(SfxId.GameplayMagicAttack, volume, 1.0f);
+                currentVolleyVoice = fbVoice;
+                currentVolleyVoiceClip = AudioManager.Instance?.GetClip(SfxId.GameplayMagicAttack);
+                return;
+            }
+
+            // --- Initial Heal Cast (bounceIndex == 0) ---
+            StopPreviousVolleyVoice();
+
+            // 1. Inspector healSounds array (randomized)
+            if (healSounds != null && healSounds.Length > 0)
+            {
+                AudioClip clip = healSounds[UnityEngine.Random.Range(0, healSounds.Length)];
+                if (clip != null)
+                {
+                    currentVolleyHealClip = clip;
+                    currentVolleyVoiceClip = clip;
+                    var voice = AudioManager.Instance?.PlaySfx(clip, volume, 1.0f);
+                    currentVolleyVoice = voice;
+                    TrackAttackSound(voice);
+                    return;
+                }
+            }
+
+            // 2. Single inspector healSound slot
+            if (healSound != null)
+            {
+                currentVolleyHealClip = healSound;
+                currentVolleyVoiceClip = healSound;
+                var voice = AudioManager.Instance?.PlaySfx(healSound, volume, 1.0f);
+                currentVolleyVoice = voice;
+                TrackAttackSound(voice);
+                return;
+            }
+
+            // 3. Conventional resource lookup (SFX/Operators/Medic/Progeny/Attack, Attack_2, Attack_3...)
+            if (data != null && UnitSfx.Play(data, UnitSfxEvent.Attack, out AudioSource audioVoice, out AudioClip audioClip, volume, ignoreThrottle: false))
+            {
+                currentVolleyHealClip = audioClip;
+                currentVolleyVoiceClip = audioClip;
+                currentVolleyVoice = audioVoice;
+                TrackAttackSound(audioVoice);
+                return;
+            }
+
+            // Also check Heal / Laser / Beam files in folder
+            if (data != null && UnitSfx.PlayRandomFromFolder(UnitSfx.GetFolder(data), ProgenyHealNames, out AudioSource healVoice, out AudioClip healClip, volume, ignoreThrottle: false))
+            {
+                currentVolleyHealClip = healClip;
+                currentVolleyVoiceClip = healClip;
+                currentVolleyVoice = healVoice;
+                TrackAttackSound(healVoice);
+                return;
+            }
+
+            // 4. Shared Arts/Magic attack sound fallback
+            var fallbackVoice = AudioManager.Instance?.PlaySfx(SfxId.GameplayMagicAttack, volume, 1.0f);
+            currentVolleyVoice = fallbackVoice;
+            currentVolleyVoiceClip = AudioManager.Instance?.GetClip(SfxId.GameplayMagicAttack);
+            TrackAttackSound(fallbackVoice);
+        }
+
+        /// <summary>
+        /// When bouncing, plays the bounce sound (or replays the heal sound), progressively quieter per bounce.
+        /// Fades out the previous bounce voice so sounds never stack into an overwhelming volume spike.
+        /// </summary>
+        public void PlayBounceSound(int bounceIndex = 0)
+        {
+            float vol = GetBounceVolumeMultiplier(bounceIndex + 1);
+
+            // 1. Inspector bounceSounds array
+            if (bounceSounds != null && bounceSounds.Length > 0)
+            {
+                AudioClip clip = bounceSounds[UnityEngine.Random.Range(0, bounceSounds.Length)];
+                if (clip != null)
+                {
+                    StopPreviousVolleyVoice();
+                    currentVolleyVoice = AudioManager.Instance?.PlaySfx(clip, vol, 1f);
+                    currentVolleyVoiceClip = clip;
+                    return;
+                }
+            }
+
+            // 2. Inspector bounceSound single slot
+            if (bounceSound != null)
+            {
+                StopPreviousVolleyVoice();
+                currentVolleyVoice = AudioManager.Instance?.PlaySfx(bounceSound, vol, 1f);
+                currentVolleyVoiceClip = bounceSound;
+                return;
+            }
+
+            // 3. Conventional resource lookup (Ability_Bounce, Bounce, or Ability in folder)
+            string folder = data != null ? UnitSfx.GetFolder(data) : "SFX/Operators/Medic/Progeny";
+            if (UnitSfx.PlayRandomFromFolder(folder, ProgenyBounceNames, out AudioSource bounceVoice, out AudioClip bClip, vol, ignoreThrottle: true))
+            {
+                StopPreviousVolleyVoice();
+                currentVolleyVoice = bounceVoice;
+                currentVolleyVoiceClip = bClip;
+                return;
+            }
+
+            // 4. Replays the heal sound, but quieter with each bounce
+            PlayProgenyHealSound(bounceIndex + 1);
+        }
+
         public override void Heal(OperatorBase target)
         {
             if (target == null || !isDeployed) return;
 
             int primaryHeal = GetHealAmount();
-            Audio.UnitSfx.Play(data, Audio.UnitSfxEvent.Attack);
+            PlayProgenyHealSound(bounceIndex: 0);
 
             // Resolve the full chain of targets and bounce amounts (including self-heal as a bounce/target)
             var hops = ResolveChain(target, primaryHeal);
@@ -194,6 +430,10 @@ namespace TrashTD.Operators
                     {
                         hop.Target.Heal(hop.HealAmount);
                         CombatFx.HealCrossSplash(hop.Target.transform.position, BrightRedColor);
+                        if (i > 0)
+                        {
+                            PlayBounceSound(i - 1);
+                        }
                     }
                 }
                 else
@@ -201,13 +441,17 @@ namespace TrashTD.Operators
                     // Allied operator: connected into the single seamless multi-segment line
                     linePoints.Add(hop.Target.transform.position);
                     var capturedHop = hop;
+                    int hopIndex = i;
                     callbacks.Add((pointIndex) =>
                     {
                         if (capturedHop.Target != null && capturedHop.Target.IsDeployed)
                         {
                             capturedHop.Target.Heal(capturedHop.HealAmount);
                             CombatFx.HealCrossSplash(capturedHop.Target.transform.position, BrightRedColor);
-                            PlayAbilitySound();
+                            if (hopIndex > 0)
+                            {
+                                PlayBounceSound(hopIndex - 1);
+                            }
                         }
                     });
                 }
@@ -271,8 +515,23 @@ namespace TrashTD.Operators
                 {
                     hop.Target.Heal(hop.HealAmount);
                     CombatFx.HealCrossSplash(hop.Target.transform.position, BrightRedColor);
+                    if (i > 0)
+                    {
+                        PlayBounceSound(i - 1);
+                    }
                 }
             }
+        }
+
+        protected override void OnRetreated()
+        {
+            StopPreviousVolleyVoice();
+            base.OnRetreated();
+        }
+
+        private void OnDisable()
+        {
+            StopPreviousVolleyVoice();
         }
 
         /// <summary>

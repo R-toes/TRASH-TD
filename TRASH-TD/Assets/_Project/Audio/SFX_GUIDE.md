@@ -130,7 +130,7 @@ SFX/
 | `Medic/Bubblets` | shield cast | | `Ability`: bubble pop. *Fallback: Combat/MagicAttack.* |
 | `Medic/Coalesce` | heal | | `Ability`: bonus heal (20% on low-HP allies) |
 | `Medic/Panacea` | vial throw | vial shatter / heal | |
-| `Medic/Progeny` | heal | | `Ability`: chain-heal bounce |
+| `Medic/Progeny` | heal (`Attack`, `Heal`, `Laser`, or `Beam`) | | replays heal sound, quieter per bounce (or `Ability_Bounce` / `Bounce` / `Ability`); `Deploy` (or `Cry`) |
 
 ## Enemies — `Enemies/{Archetype}/{Name}/`
 
