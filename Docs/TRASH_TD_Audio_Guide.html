@@ -171,7 +171,9 @@ Death       dies</pre>
 Guard/Stagger      Ability_Dodge
                    Ability_Empowered
 Caster/Chillpath   Ability_Freeze
-                   Ability_ExtraHit</pre>
+                   Ability_ExtraHit
+Caster/Resicochet  Ability_Bounce
+Specialist/Framiliar Ability_Transform</pre>
     <div class="ex">Example: <code>SFX/Operators/Guard/Stagger/Ability_Dodge.wav</code>. Each falls back to that operator's plain <code>Ability</code>.</div>
   </div>
 
@@ -203,10 +205,12 @@ Operators/Guard/Ignisaur        Operators/Sniper/Proxishot        Enemies/Rusher
 Operators/Guard/Scrapper        Operators/Caster/Castiel          Enemies/Tank/PollutionTank
 Operators/Guard/Shadeslice      Operators/Caster/Chillpath        Enemies/Tank/SandHulk
 Operators/Guard/Stagger         Operators/Caster/Pyrolite         Enemies/Caster/SandPoncho
-Operators/Defender/Bulkhead     Operators/Medic/Bubblets          Enemies/Caster/SmogCaster
-Operators/Defender/Drawgoo      Operators/Medic/Coalesce          Enemies/Flyer/TalonRat
-Operators/Defender/Mossmo       Operators/Medic/Progeny           Enemies/Flyer/Skyshard
-Operators/Defender/Thornchin                                      Enemies/Flyer/AcidFlyer</pre>
+Operators/Defender/Bulkhead     Operators/Caster/Resicochet       Enemies/Caster/SmogCaster
+Operators/Defender/Drawgoo      Operators/Specialist/Framiliar    Enemies/Flyer/TalonRat
+Operators/Defender/Mossmo       Operators/Medic/Bubblets          Enemies/Flyer/Skyshard
+Operators/Defender/Thornchin    Operators/Medic/Coalesce          Enemies/Flyer/AcidFlyer
+                                Operators/Medic/Panacea
+                                Operators/Medic/Progeny</pre>
   </div>
 
   <div class="card">
@@ -464,8 +468,11 @@ Ability_Dodge.wav   Ability_Dodge_2.wav</pre>
     <tr><td><code>Caster/Castiel</code></td><td>beam cast</td><td>beam tick</td><td>—</td></tr>
     <tr><td><code>Caster/Chillpath</code></td><td>frost cast</td><td>frost hit</td><td><code>Ability_Freeze</code>: freezes an enemy (and gains haste)<br><code>Ability_ExtraHit</code>: every 4th attack's bonus bolt</td></tr>
     <tr><td><code>Caster/Pyrolite</code></td><td>fire cast</td><td>fire burst</td><td>—</td></tr>
+    <tr><td><code>Caster/Resicochet</code></td><td>crystal laser fire</td><td>crystal hit</td><td><code>Ability_Bounce</code>: plays on every ricochet bounce (Inspector slot or file)</td></tr>
+    <tr><td><code>Specialist/Framiliar</code></td><td>attack</td><td>hit</td><td><code>Ability_Transform</code>: plays when morphing into another operator (Inspector slot or file)</td></tr>
     <tr><td><code>Medic/Bubblets</code></td><td>shield cast</td><td>—</td><td><code>Ability</code>: bubble pop <span class="tag">fallback: Combat/MagicAttack</span></td></tr>
     <tr><td><code>Medic/Coalesce</code></td><td>heal</td><td>—</td><td><code>Ability</code>: bonus heal (20% chance on low-HP allies)</td></tr>
+    <tr><td><code>Medic/Panacea</code></td><td>vial throw</td><td>vial shatter / heal</td><td>—</td></tr>
     <tr><td><code>Medic/Progeny</code></td><td>heal</td><td>—</td><td><code>Ability</code>: chain-heal bounce</td></tr>
   </tbody>
 </table>

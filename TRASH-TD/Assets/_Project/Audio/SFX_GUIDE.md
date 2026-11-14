@@ -125,8 +125,11 @@ SFX/
 | `Caster/Castiel` | beam cast | beam tick | |
 | `Caster/Chillpath` | frost cast | frost hit | `Ability_Freeze`: freezes an enemy (and gains haste) · `Ability_ExtraHit`: every 4th attack's bonus bolt |
 | `Caster/Pyrolite` | fire cast | fire burst | |
+| `Caster/Resicochet` | crystal laser fire | crystal hit | `Ability_Bounce`: plays on every ricochet bounce (slot or file) |
+| `Specialist/Framiliar` | attack | hit | `Ability_Transform`: plays when morphing into another operator (slot or file) |
 | `Medic/Bubblets` | shield cast | | `Ability`: bubble pop. *Fallback: Combat/MagicAttack.* |
 | `Medic/Coalesce` | heal | | `Ability`: bonus heal (20% on low-HP allies) |
+| `Medic/Panacea` | vial throw | vial shatter / heal | |
 | `Medic/Progeny` | heal | | `Ability`: chain-heal bounce |
 
 ## Enemies — `Enemies/{Archetype}/{Name}/`

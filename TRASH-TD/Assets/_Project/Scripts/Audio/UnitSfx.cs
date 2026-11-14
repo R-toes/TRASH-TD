@@ -63,41 +63,51 @@ namespace TrashTD.Audio
         }
 
         /// <summary>Plays the operator's clip for the event. Returns false if it has none (throttled repeats count as played).</summary>
-        public static bool Play(OperatorData data, UnitSfxEvent sfxEvent, float volume = 1f)
+        public static bool Play(OperatorData data, UnitSfxEvent sfxEvent, float volume = 1f, bool ignoreThrottle = false)
         {
-            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out _);
+            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out _, ignoreThrottle);
         }
 
         /// <summary>
         /// As Play, also giving the voice now playing the clip (null if it was throttled), so the caller can stop it
         /// early with AudioManager.StopSfx.
         /// </summary>
-        public static bool Play(OperatorData data, UnitSfxEvent sfxEvent, out AudioSource voice, float volume = 1f)
+        public static bool Play(OperatorData data, UnitSfxEvent sfxEvent, out AudioSource voice, float volume = 1f, bool ignoreThrottle = false)
         {
-            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out voice);
+            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out voice, ignoreThrottle);
         }
 
         /// <summary>Plays the enemy's clip for the event. Returns false if it has none (throttled repeats count as played).</summary>
-        public static bool Play(EnemyData data, UnitSfxEvent sfxEvent, float volume = 1f)
+        public static bool Play(EnemyData data, UnitSfxEvent sfxEvent, float volume = 1f, bool ignoreThrottle = false)
         {
-            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out _);
+            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out _, ignoreThrottle);
         }
 
         /// <summary>As Play, also giving the voice now playing the clip (null if it was throttled).</summary>
-        public static bool Play(EnemyData data, UnitSfxEvent sfxEvent, out AudioSource voice, float volume = 1f)
+        public static bool Play(EnemyData data, UnitSfxEvent sfxEvent, out AudioSource voice, float volume = 1f, bool ignoreThrottle = false)
         {
-            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out voice);
+            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out voice, ignoreThrottle);
         }
 
         /// <summary>
-        /// Plays one of the operator's named ability clips ("Dodge" -> Ability_Dodge), falling back to its plain
+        /// Plays one of the operator's named ability clips ("Dodge" -> Ability_Dodge or Dodge), falling back to its plain
         /// Ability clip, so a unit with a single Ability file uses it for every trigger.
         /// </summary>
-        public static bool PlayAbility(OperatorData data, string abilityName, float volume = 1f)
+        public static bool PlayAbility(OperatorData data, string abilityName, float volume = 1f, bool ignoreThrottle = false)
         {
             string folder = GetFolder(data);
-            if (!string.IsNullOrEmpty(abilityName) && PlayFrom(folder, AbilityClipName(abilityName), volume, out _)) return true;
-            return PlayFrom(folder, nameof(UnitSfxEvent.Ability), volume, out _);
+            if (!string.IsNullOrEmpty(abilityName))
+            {
+                if (PlayFrom(folder, AbilityClipName(abilityName), volume, out _, ignoreThrottle)) return true;
+                if (PlayFrom(folder, abilityName, volume, out _, ignoreThrottle)) return true;
+            }
+            return PlayFrom(folder, nameof(UnitSfxEvent.Ability), volume, out _, ignoreThrottle);
+        }
+
+        /// <summary>Plays a sound directly from an audio folder by event or file name (e.g. "SFX/Operators/Medic/Panacea", "Impact").</summary>
+        public static bool PlayFromFolder(string folder, string eventName, float volume = 1f, bool ignoreThrottle = false)
+        {
+            return PlayFrom(folder, eventName, volume, out _, ignoreThrottle);
         }
 
         public static string AbilityClipName(string abilityName) => $"{nameof(UnitSfxEvent.Ability)}_{abilityName}";
@@ -126,7 +136,7 @@ namespace TrashTD.Audio
             return builder.Length > 0 ? builder.ToString() : "Unnamed";
         }
 
-        private static bool PlayFrom(string folder, string eventName, float volume, out AudioSource voice)
+        private static bool PlayFrom(string folder, string eventName, float volume, out AudioSource voice, bool ignoreThrottle = false)
         {
             voice = null;
             List<AudioClip> clips = GetClips(folder, eventName);
@@ -135,7 +145,7 @@ namespace TrashTD.Audio
             // A throttled repeat still counts as handled, so callers don't fall back to the generic sound.
             string key = folder + "/" + eventName;
             float now = Time.unscaledTime;
-            if (LastPlayed.TryGetValue(key, out float last) && now - last < MinRepeatSeconds) return true;
+            if (!ignoreThrottle && LastPlayed.TryGetValue(key, out float last) && now - last < MinRepeatSeconds) return true;
             LastPlayed[key] = now;
 
             AudioClip clip = clips[Random.Range(0, clips.Count)];

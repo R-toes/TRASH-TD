@@ -429,10 +429,20 @@ namespace TrashTD.Systems
                 TrashTD.UI.OperatorHeatBar.ShowFor(newOp);
             }
 
+            AudioClip customSound = framiliar != null ? framiliar.TransformSound : null;
+            AudioClip[] customSounds = framiliar != null ? framiliar.TransformSounds : null;
+
             Destroy(framiliar.gameObject);
 
             // Play Framiliar transformation transition (Normal -> White Framiliar / White Copied alternating -> Monochrome Copied)
-            FramiliarTransformTransition.Play(newOp, framiliarSprite, copiedSprite);
+            FramiliarTransformTransition.Play(
+                newOp,
+                framiliarSprite,
+                copiedSprite,
+                FramiliarTransformTransition.DefaultStepDuration,
+                customSound,
+                customSounds,
+                originalData);
 
             OnOperatorDeployed?.Invoke(newOp);
             return newOp;

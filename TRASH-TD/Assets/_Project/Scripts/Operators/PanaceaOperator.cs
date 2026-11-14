@@ -21,6 +21,58 @@ namespace TrashTD.Operators
         [Header("Panacea 16x16 Vial Frames (8 frames)")]
         [SerializeField] private Sprite[] vialFrames;
 
+        [Header("Audio")]
+        [Tooltip("Custom sound played when throwing a heal vial. If null, conventional resource SFX/Operators/Medic/Panacea/Attack is used with fallback.")]
+        [SerializeField] private AudioClip throwSound;
+        [Tooltip("Custom sound played when vial shatters and heals target. If null, conventional resource SFX/Operators/Medic/Panacea/Impact is used with fallback.")]
+        [SerializeField] private AudioClip impactSound;
+
+        public AudioClip ThrowSound
+        {
+            get => throwSound;
+            set => throwSound = value;
+        }
+
+        public AudioClip ImpactSound
+        {
+            get => impactSound;
+            set => impactSound = value;
+        }
+
+        public void PlayThrowSound()
+        {
+            if (throwSound != null)
+            {
+                TrashTD.Audio.AudioManager.Instance?.PlaySfx(throwSound);
+                return;
+            }
+
+            PlayAttackSound(TrashTD.Audio.SfxId.GameplayRangedPhysicalAttack);
+        }
+
+        public void PlayVialImpactSound()
+        {
+            if (impactSound != null)
+            {
+                TrashTD.Audio.AudioManager.Instance?.PlaySfx(impactSound);
+                return;
+            }
+
+            if (data != null && TrashTD.Audio.UnitSfx.HasClip(data, TrashTD.Audio.UnitSfxEvent.Impact))
+            {
+                PlayImpactSound();
+                return;
+            }
+
+            if (TrashTD.Audio.UnitSfx.PlayFromFolder("SFX/Operators/Medic/Panacea", "Impact"))
+            {
+                return;
+            }
+
+            // Subtle gentle potion shatter fallback
+            TrashTD.Audio.AudioManager.Instance?.PlaySfx(TrashTD.Audio.SfxId.GameplayMagicAttack, 0.65f, 1.3f);
+        }
+
         private static Sprite[] cachedVialFrames;
         private PanaceaSpriteAnimation spriteAnimation;
         private float globalRegenTimer = 0f;
@@ -245,7 +297,7 @@ namespace TrashTD.Operators
 
             if (!Application.isPlaying || anim == null)
             {
-                UnitSfx.Play(data, UnitSfxEvent.Attack);
+                PlayThrowSound();
                 for (int i = 0; i < targets.Count; i++)
                 {
                     SpawnVialForTarget(targets[i]);
@@ -255,7 +307,7 @@ namespace TrashTD.Operators
 
             anim.PlayHealAnimation(cooldown, onThrow: () =>
             {
-                UnitSfx.Play(data, UnitSfxEvent.Attack);
+                PlayThrowSound();
                 for (int i = 0; i < targets.Count; i++)
                 {
                     if (targets[i] != null && targets[i].IsDeployed && targets[i].CurrentHP > 0)
@@ -281,7 +333,7 @@ namespace TrashTD.Operators
             Vector3 targetPos = target.transform.position + new Vector3(0f, 0.25f, 0f);
             int healAmount = GetHealAmount();
 
-            return PanaceaVialProjectile.Spawn(startPos, target, targetPos, healAmount, vialFrames);
+            return PanaceaVialProjectile.Spawn(startPos, target, targetPos, healAmount, vialFrames, this);
         }
 
         public override void Heal(OperatorBase target)

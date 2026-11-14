@@ -65,6 +65,23 @@ namespace TrashTD.Operators
         public float SluggishSpeedMultiplier => sluggishSpeedMultiplier;
         public float SluggishAttackIntervalMultiplier => sluggishAttackIntervalMultiplier;
 
+        [Header("Audio")]
+        [Tooltip("Custom sound played on each bounce. If null, loads from SFX/Operators/Caster/Resicochet/Ability_Bounce (or Bounce / Ability), falling back to MagicAttack.")]
+        [SerializeField] private AudioClip bounceSound;
+        [SerializeField] private AudioClip[] bounceSounds;
+
+        public AudioClip BounceSound
+        {
+            get => bounceSound;
+            set => bounceSound = value;
+        }
+
+        public AudioClip[] BounceSounds
+        {
+            get => bounceSounds;
+            set => bounceSounds = value;
+        }
+
         public static readonly Color Charge1ProjectileColor = new Color(1f, 0.55f, 0.12f); // Orange (1 charge)
         public static readonly Color Charge2ProjectileColor = new Color(0.2f, 0.95f, 0.35f); // Green (2 charges)
         public static readonly Color Charge3ProjectileColor = new Color(0.2f, 0.65f, 1f);   // Blue (3 charges)
@@ -1009,6 +1026,42 @@ namespace TrashTD.Operators
             FireChargeAttack(target, 1, chargeMultiplier, color);
         }
 
+        /// <summary>
+        /// Plays a sound effect for each ricochet bounce.
+        /// Priority:
+        /// 1. Inspector assigned bounceSounds / bounceSound clip.
+        /// 2. Conventional Resource sound (SFX/Operators/Caster/Resicochet/Ability_Bounce or Bounce or Ability).
+        /// 3. Shared MagicAttack sound fallback with slight pitch scale per bounce index.
+        /// </summary>
+        public void PlayBounceSound(int bounceIndex = 0)
+        {
+            float pitch = Mathf.Clamp(1.0f + (bounceIndex * 0.05f), 0.85f, 1.4f);
+
+            if (bounceSounds != null && bounceSounds.Length > 0)
+            {
+                AudioClip clip = bounceSounds[Random.Range(0, bounceSounds.Length)];
+                if (clip != null)
+                {
+                    AudioManager.Instance?.PlaySfx(clip, 1f, pitch);
+                    return;
+                }
+            }
+
+            if (bounceSound != null)
+            {
+                AudioManager.Instance?.PlaySfx(bounceSound, 1f, pitch);
+                return;
+            }
+
+            if (data != null && (UnitSfx.PlayAbility(data, "Bounce", 1f, ignoreThrottle: true) ||
+                                 UnitSfx.Play(data, UnitSfxEvent.Ability, 1f, ignoreThrottle: true)))
+            {
+                return;
+            }
+
+            AudioManager.Instance?.PlaySfx(SfxId.GameplayMagicAttack, 0.85f, pitch);
+        }
+
         public void HandleHitAndBounce(EnemyBase primaryTarget, EnemyBase currentTarget, int bounceIndex, HashSet<EnemyBase> hitEnemies, float chargeMultiplier = 1.0f, Color? projectileColor = null)
         {
             HandleHitAndBounce(primaryTarget, currentTarget, bounceIndex, hitEnemies, 1, chargeMultiplier, projectileColor);
@@ -1057,6 +1110,9 @@ namespace TrashTD.Operators
 
                     // Play flashy parallel bounce lines matching charge
                     ResicochetAttackBeamVisual.PlayParallel(bounceStart, bounceEnd, chargeLevel, color);
+
+                    // Sound effect for every ricochet bounce
+                    PlayBounceSound(bounceIndex);
 
                     CombatProjectileVisual.Fire(
                         bounceStart,

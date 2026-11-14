@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using TrashTD.Data;
 
 namespace TrashTD.Operators
 {
@@ -60,6 +61,23 @@ namespace TrashTD.Operators
         private Material whiteSilhouetteMaterial;
         private Material grayscaleMaterial;
 
+        [Header("Audio")]
+        [Tooltip("Custom sound played during transformation. If null, checks caller parameter, FramiliarOperator slot, conventional SFX/Operators/Specialist/Framiliar/Ability_Transform, or card upgrade fallback.")]
+        [SerializeField] private AudioClip transformSound;
+        [SerializeField] private AudioClip[] transformSounds;
+
+        public AudioClip TransformSound
+        {
+            get => transformSound;
+            set => transformSound = value;
+        }
+
+        public AudioClip[] TransformSounds
+        {
+            get => transformSounds;
+            set => transformSounds = value;
+        }
+
         private float stepDuration = DefaultStepDuration;
         private float elapsed = 0f;
         private int currentStep = 0;
@@ -72,13 +90,28 @@ namespace TrashTD.Operators
         public Sprite CopiedSprite => copiedSprite;
         public SpriteRenderer PrimaryRenderer => primaryRenderer;
 
-        public static FramiliarTransformTransition Play(OperatorBase targetOperator, Sprite framiliarSprite, Sprite copiedSprite, float stepDuration = DefaultStepDuration)
+        public static FramiliarTransformTransition Play(
+            OperatorBase targetOperator,
+            Sprite framiliarSprite,
+            Sprite copiedSprite,
+            float stepDuration = DefaultStepDuration,
+            AudioClip customSound = null,
+            AudioClip[] customSounds = null,
+            OperatorData sourceData = null)
         {
             if (targetOperator == null) return null;
-            return Play(targetOperator.gameObject, framiliarSprite, copiedSprite, stepDuration);
+            return Play(targetOperator.gameObject, framiliarSprite, copiedSprite, stepDuration, customSound, customSounds, sourceData, targetOperator);
         }
 
-        public static FramiliarTransformTransition Play(GameObject targetObject, Sprite framiliarSprite, Sprite copiedSprite, float stepDuration = DefaultStepDuration)
+        public static FramiliarTransformTransition Play(
+            GameObject targetObject,
+            Sprite framiliarSprite,
+            Sprite copiedSprite,
+            float stepDuration = DefaultStepDuration,
+            AudioClip customSound = null,
+            AudioClip[] customSounds = null,
+            OperatorData sourceData = null,
+            OperatorBase targetOperator = null)
         {
             if (targetObject == null) return null;
 
@@ -90,11 +123,18 @@ namespace TrashTD.Operators
             }
 
             var transition = targetObject.AddComponent<FramiliarTransformTransition>();
-            transition.Initialize(framiliarSprite, copiedSprite, stepDuration);
+            transition.Initialize(framiliarSprite, copiedSprite, stepDuration, customSound, customSounds, sourceData, targetOperator);
             return transition;
         }
 
-        public void Initialize(Sprite fSprite, Sprite cSprite, float duration = DefaultStepDuration)
+        public void Initialize(
+            Sprite fSprite,
+            Sprite cSprite,
+            float duration = DefaultStepDuration,
+            AudioClip customSound = null,
+            AudioClip[] customSounds = null,
+            OperatorData sourceData = null,
+            OperatorBase targetOperator = null)
         {
             framiliarSprite = fSprite;
             copiedSprite = cSprite;
@@ -153,11 +193,80 @@ namespace TrashTD.Operators
             }
             pausedAnimators = animList.ToArray();
 
-            // Play transition sound
-            TrashTD.Audio.AudioManager.Instance?.PlaySfx(TrashTD.Audio.SfxId.GameplayCardUpgrade);
+            // Play transition sound (custom slot -> UnitSfx convention -> fallback)
+            PlayTransformSound(customSound, customSounds, sourceData, targetOperator ?? GetComponent<OperatorBase>());
 
             // Apply starting frame (NormalFramiliar)
             ApplyStep(0);
+        }
+
+        public void PlayTransformSound(
+            AudioClip customSound = null,
+            AudioClip[] customSounds = null,
+            OperatorData sourceData = null,
+            OperatorBase targetOperator = null)
+        {
+            if (customSounds != null && customSounds.Length > 0)
+            {
+                AudioClip clip = customSounds[Random.Range(0, customSounds.Length)];
+                if (clip != null)
+                {
+                    TrashTD.Audio.AudioManager.Instance?.PlaySfx(clip);
+                    return;
+                }
+            }
+
+            if (customSound != null)
+            {
+                TrashTD.Audio.AudioManager.Instance?.PlaySfx(customSound);
+                return;
+            }
+
+            if (transformSounds != null && transformSounds.Length > 0)
+            {
+                AudioClip clip = transformSounds[Random.Range(0, transformSounds.Length)];
+                if (clip != null)
+                {
+                    TrashTD.Audio.AudioManager.Instance?.PlaySfx(clip);
+                    return;
+                }
+            }
+
+            if (transformSound != null)
+            {
+                TrashTD.Audio.AudioManager.Instance?.PlaySfx(transformSound);
+                return;
+            }
+
+            if (sourceData != null && (TrashTD.Audio.UnitSfx.PlayAbility(sourceData, "Transform") ||
+                                       TrashTD.Audio.UnitSfx.Play(sourceData, TrashTD.Audio.UnitSfxEvent.Ability)))
+            {
+                return;
+            }
+
+            if (targetOperator != null && targetOperator.OriginalFramiliarData != null &&
+                (TrashTD.Audio.UnitSfx.PlayAbility(targetOperator.OriginalFramiliarData, "Transform") ||
+                 TrashTD.Audio.UnitSfx.Play(targetOperator.OriginalFramiliarData, TrashTD.Audio.UnitSfxEvent.Ability)))
+            {
+                return;
+            }
+
+            if (targetOperator != null && targetOperator.Data != null &&
+                (TrashTD.Audio.UnitSfx.PlayAbility(targetOperator.Data, "Transform") ||
+                 TrashTD.Audio.UnitSfx.Play(targetOperator.Data, TrashTD.Audio.UnitSfxEvent.Ability)))
+            {
+                return;
+            }
+
+            // Check conventional folder SFX/Operators/Specialist/Framiliar directly
+            if (TrashTD.Audio.UnitSfx.PlayFromFolder("SFX/Operators/Specialist/Framiliar", "Ability_Transform") ||
+                TrashTD.Audio.UnitSfx.PlayFromFolder("SFX/Operators/Specialist/Framiliar", "Transform") ||
+                TrashTD.Audio.UnitSfx.PlayFromFolder("SFX/Operators/Specialist/Framiliar", "Ability"))
+            {
+                return;
+            }
+
+            TrashTD.Audio.AudioManager.Instance?.PlaySfx(TrashTD.Audio.SfxId.GameplayCardUpgrade);
         }
 
         public void ApplyStep(int stepIndex)

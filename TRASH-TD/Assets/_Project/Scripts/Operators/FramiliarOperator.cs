@@ -22,6 +22,23 @@ namespace TrashTD.Operators
         [Header("Framiliar Animation Frames")]
         [SerializeField] private Sprite[] framiliarFrames;
 
+        [Header("Audio")]
+        [Tooltip("Custom sound played when Framiliar transforms into another operator. If null, conventional resource SFX/Operators/Specialist/Framiliar/Ability_Transform is used with card upgrade fallback.")]
+        [SerializeField] private AudioClip transformSound;
+        [SerializeField] private AudioClip[] transformSounds;
+
+        public AudioClip TransformSound
+        {
+            get => transformSound;
+            set => transformSound = value;
+        }
+
+        public AudioClip[] TransformSounds
+        {
+            get => transformSounds;
+            set => transformSounds = value;
+        }
+
         private bool isCopied = false;
         private DraftCard copiedCard = null;
         private OperatorSpriteAnimation spriteAnim;
@@ -375,7 +392,14 @@ namespace TrashTD.Operators
             SetHarmonyStacks(harmonyStacks); // Re-applied for the copied class
 
             IsCopiedFromFramiliar = true;
-            FramiliarTransformTransition.Play(this, framiliarSprite, copiedSprite);
+            FramiliarTransformTransition.Play(
+                this,
+                framiliarSprite,
+                copiedSprite,
+                FramiliarTransformTransition.DefaultStepDuration,
+                transformSound,
+                transformSounds,
+                OriginalFramiliarData != null ? OriginalFramiliarData : data);
             return this;
         }
     }

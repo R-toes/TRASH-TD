@@ -24,6 +24,7 @@ namespace TrashTD.Combat
         private Vector3 startPos;
         private Vector3 targetPos;
         private OperatorBase targetOperator;
+        private PanaceaOperator sourceOperator;
         private int healAmount;
         private Sprite[] frames;
 
@@ -53,11 +54,12 @@ namespace TrashTD.Combat
             OperatorBase target,
             Vector3 targetPosition,
             int heal,
-            Sprite[] vialAnimationFrames)
+            Sprite[] vialAnimationFrames,
+            PanaceaOperator source = null)
         {
             var obj = new GameObject("PanaceaVialProjectile");
             var proj = obj.AddComponent<PanaceaVialProjectile>();
-            proj.Initialize(start, target, targetPosition, heal, vialAnimationFrames);
+            proj.Initialize(start, target, targetPosition, heal, vialAnimationFrames, source);
             return proj;
         }
 
@@ -66,13 +68,15 @@ namespace TrashTD.Combat
             OperatorBase target,
             Vector3 targetPosition,
             int heal,
-            Sprite[] vialAnimationFrames)
+            Sprite[] vialAnimationFrames,
+            PanaceaOperator source = null)
         {
             startPos = start;
             targetOperator = target;
             targetPos = targetPosition;
             healAmount = heal;
             frames = vialAnimationFrames;
+            sourceOperator = source;
 
             transform.position = startPos;
             prevPos = startPos;
@@ -248,6 +252,19 @@ namespace TrashTD.Combat
             if (targetOperator != null && targetOperator.IsDeployed && targetOperator.CurrentHP > 0)
             {
                 targetOperator.Heal(healAmount);
+            }
+
+            // Play vial impact sound effect (custom slot -> UnitSfx convention -> fallback)
+            if (sourceOperator != null)
+            {
+                sourceOperator.PlayVialImpactSound();
+            }
+            else
+            {
+                if (!TrashTD.Audio.UnitSfx.PlayFromFolder("SFX/Operators/Medic/Panacea", "Impact"))
+                {
+                    TrashTD.Audio.AudioManager.Instance?.PlaySfx(TrashTD.Audio.SfxId.GameplayMagicAttack, 0.65f, 1.3f);
+                }
             }
 
             // Green potion splash and cross sparkles
