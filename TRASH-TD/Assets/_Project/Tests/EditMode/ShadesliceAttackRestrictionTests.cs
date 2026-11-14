@@ -123,7 +123,7 @@ namespace TrashTD.Tests
         [Test]
         public void PerfectParry_ReducesDirectDamageAndReflectsWithPerAttackerCooldown()
         {
-            SetRarity(OperatorRarity.Star4);
+            SetRarity(OperatorRarity.Star5);
             TankEnemy firstAttacker = CreateEnemy<TankEnemy>(EnemyArchetype.Tank);
             TankEnemy secondAttacker = CreateEnemy<TankEnemy>(EnemyArchetype.Tank);
             int startingHP = shadeslice.CurrentHP;
@@ -147,7 +147,7 @@ namespace TrashTD.Tests
         [Test]
         public void PerfectParry_DoesNotReduceOrReflectAreaOrEnvironmentalDamage()
         {
-            SetRarity(OperatorRarity.Star4);
+            SetRarity(OperatorRarity.Star5);
             TankEnemy attacker = CreateEnemy<TankEnemy>(EnemyArchetype.Tank);
             int attackerHP = attacker.CurrentHP;
             int startingHP = shadeslice.CurrentHP;
@@ -195,7 +195,7 @@ namespace TrashTD.Tests
         [Test]
         public void PhantomPursuit_CounterPersistsAcrossTargetsAndResetsEveryThirdSuccessfulHit()
         {
-            SetRarity(OperatorRarity.Star5);
+            SetRarity(OperatorRarity.Star4);
             TankEnemy attacker = CreateEnemy<TankEnemy>(EnemyArchetype.Tank);
             int startingHP = shadeslice.CurrentHP;
             int attackerHP = attacker.CurrentHP;

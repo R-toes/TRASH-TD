@@ -82,17 +82,17 @@ namespace TrashTD.Data
 
         public IReadOnlyList<Step> Steps => steps;
 
-        /// <summary>Team-approved table (2026-11-04): 1★ drops 8 points every 5 waves, ending at 40/35/25.</summary>
+        /// <summary>Table (re-tuned 2026-11-14 to make 3★ rarer): 1★ drops 6 points every 5 waves, ending at 52/36/12.</summary>
         public static List<Step> CreateDefaultSteps()
         {
             return new List<Step>
             {
-                new Step(0, 80f, 17f, 3f),
-                new Step(5, 72f, 21f, 7f),
-                new Step(10, 64f, 24f, 12f),
-                new Step(15, 56f, 28f, 16f),
-                new Step(20, 48f, 31f, 21f),
-                new Step(25, 40f, 35f, 25f)
+                new Step(0, 82f, 16f, 2f),
+                new Step(5, 76f, 20f, 4f),
+                new Step(10, 70f, 24f, 6f),
+                new Step(15, 64f, 28f, 8f),
+                new Step(20, 58f, 32f, 10f),
+                new Step(25, 52f, 36f, 12f)
             };
         }
 

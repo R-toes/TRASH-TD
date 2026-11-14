@@ -53,8 +53,11 @@ namespace TrashTD.Operators
 
         public float TimeSinceLastAttacked => timeSinceLastAttacked;
         public bool IsRegenerating => isDeployed && !IsCombatPaused && timeSinceLastAttacked >= OutOfCombatDuration && currentHP < maxHP;
+        // 1st upgrade (4 star): the phantom pursuit. 2nd upgrade (5 star): the perfect parry (damage reduction + reflect).
         public bool HasFirstUpgrade => currentRarity >= OperatorRarity.Star4;
         public bool HasSecondUpgrade => currentRarity >= OperatorRarity.Star5;
+        private bool HasParry => HasSecondUpgrade;
+        private bool HasPhantomPursuit => HasFirstUpgrade;
         public int SuccessfulNormalAttackCount => successfulNormalAttackCount;
 
         private ShadesliceSpriteAnimation SpriteAnimation
@@ -230,14 +233,14 @@ namespace TrashTD.Operators
 
         protected override int ModifyDamageAfterMitigation(int damage, DamageType damageType, EnemyBase attacker)
         {
-            return HasFirstUpgrade && processingDirectAttack && attacker != null
+            return HasParry && processingDirectAttack && attacker != null
                 ? Mathf.RoundToInt(damage * (1f - ParryDamageReduction))
                 : damage;
         }
 
         protected override void OnDamageApplied(int calculatedDamage, int actualDamage, DamageType damageType, EnemyBase attacker)
         {
-            if (!HasFirstUpgrade || !processingDirectAttack || attacker == null) return;
+            if (!HasParry || !processingDirectAttack || attacker == null) return;
 
             processingDirectAttack = false;
             try
@@ -358,7 +361,7 @@ namespace TrashTD.Operators
 
         private void RegisterSuccessfulNormalAttack()
         {
-            if (!HasSecondUpgrade) return;
+            if (!HasPhantomPursuit) return;
 
             successfulNormalAttackCount++;
             if (successfulNormalAttackCount < AttacksPerPhantomPursuit) return;

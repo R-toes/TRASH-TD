@@ -228,6 +228,7 @@ namespace TrashTD.Systems
         /// Draw random eligible operator cards directly into the player's deck.
         /// Cards can be queued by PlayerDeck when all deck slots are occupied.
         /// If targetRarity is specified, draws only operators matching that base rarity.
+        /// Without a targetRarity, each card rolls its rarity (1★ to 3★) with the draft odds table, like a draft card.
         /// upgradeTiers adds bonus upgrade levels to the drawn cards (e.g. 1 = 1x upgraded card, 2 = 2x upgraded card).
         /// </summary>
         public int DrawRandomCardsToDeck(int count, int upgradeTiers = 0, OperatorRarity? targetRarity = null)
@@ -273,10 +274,25 @@ namespace TrashTD.Systems
                 return 0;
             }
 
+            // Each card rolls its rarity with the draft odds table (the row for the waves cleared so far), then picks an
+            // operator of that rarity, so Drawgoo's cards are as rare as the draft's.
+            var eligibleByRarity = new Dictionary<OperatorRarity, List<OperatorData>>();
+            foreach (OperatorData op in eligibleOperators)
+            {
+                if (!eligibleByRarity.TryGetValue(op.baseRarity, out var group))
+                {
+                    group = new List<OperatorData>();
+                    eligibleByRarity.Add(op.baseRarity, group);
+                }
+                group.Add(op);
+            }
+            var eligibleRarities = new List<OperatorRarity>(eligibleByRarity.Keys);
+
             int drawnCount = 0;
             for (int i = 0; i < count; i++)
             {
-                OperatorData chosenOperator = eligibleOperators[UnityEngine.Random.Range(0, eligibleOperators.Count)];
+                List<OperatorData> rarityGroup = eligibleByRarity[RollDraftRarity(eligibleRarities)];
+                OperatorData chosenOperator = rarityGroup[UnityEngine.Random.Range(0, rarityGroup.Count)];
                 OperatorRarity cardRarity = (OperatorRarity)Mathf.Clamp((int)chosenOperator.baseRarity + upgradeTiers, 1, 5);
                 var card = new DraftCard(chosenOperator, cardRarity);
                 if (!PlayerDeck.Instance.AddReturnedCard(card))

@@ -158,15 +158,15 @@ namespace TrashTD.Tests
         {
             DraftOddsTable table = DraftOddsTable.GetBuiltInDefault();
 
-            AssertOdds(table.GetOdds(0), 80f, 17f, 3f, "after 0 waves");
-            AssertOdds(table.GetOdds(4), 80f, 17f, 3f, "after 4 waves");
-            AssertOdds(table.GetOdds(5), 72f, 21f, 7f, "after 5 waves");
-            AssertOdds(table.GetOdds(9), 72f, 21f, 7f, "after 9 waves");
-            AssertOdds(table.GetOdds(10), 64f, 24f, 12f, "after 10 waves");
-            AssertOdds(table.GetOdds(15), 56f, 28f, 16f, "after 15 waves");
-            AssertOdds(table.GetOdds(20), 48f, 31f, 21f, "after 20 waves");
-            AssertOdds(table.GetOdds(25), 40f, 35f, 25f, "after 25 waves");
-            AssertOdds(table.GetOdds(40), 40f, 35f, 25f, "after 40 waves (last step holds)");
+            AssertOdds(table.GetOdds(0), 82f, 16f, 2f, "after 0 waves");
+            AssertOdds(table.GetOdds(4), 82f, 16f, 2f, "after 4 waves");
+            AssertOdds(table.GetOdds(5), 76f, 20f, 4f, "after 5 waves");
+            AssertOdds(table.GetOdds(9), 76f, 20f, 4f, "after 9 waves");
+            AssertOdds(table.GetOdds(10), 70f, 24f, 6f, "after 10 waves");
+            AssertOdds(table.GetOdds(15), 64f, 28f, 8f, "after 15 waves");
+            AssertOdds(table.GetOdds(20), 58f, 32f, 10f, "after 20 waves");
+            AssertOdds(table.GetOdds(25), 52f, 36f, 12f, "after 25 waves");
+            AssertOdds(table.GetOdds(40), 52f, 36f, 12f, "after 40 waves (last step holds)");
         }
 
         [Test]
@@ -213,7 +213,7 @@ namespace TrashTD.Tests
 
             draftSystem.SetWavesCleared(10);
             draftSystem.GenerateDraftOffer();
-            AssertOdds(draftSystem.GetCurrentOdds(), 64f, 24f, 12f, "after 10 waves");
+            AssertOdds(draftSystem.GetCurrentOdds(), 70f, 24f, 6f, "after 10 waves");
 
             draftSystem.ResetForNewStage();
             Assert.AreEqual(0, draftSystem.WavesCleared, "A new stage starts from 0 waves cleared");
@@ -239,7 +239,7 @@ namespace TrashTD.Tests
             draftSystem.SetOperatorPool(pool);
             draftSystem.SetOddsTable(DraftOddsTable.GetBuiltInDefault());
             draftSystem.GenerateDraftOffer(); // opening draft
-            draftSystem.SetWavesCleared(25);  // 40 / 35 / 25
+            draftSystem.SetWavesCleared(25);  // 52 / 36 / 12
 
             UnityEngine.Random.InitState(1234);
             var counts = new Dictionary<OperatorRarity, int>
@@ -253,9 +253,9 @@ namespace TrashTD.Tests
             }
 
             float total = offers * 3f;
-            Assert.AreEqual(0.40f, counts[OperatorRarity.Star1] / total, 0.03f, "1★ share");
-            Assert.AreEqual(0.35f, counts[OperatorRarity.Star2] / total, 0.03f, "2★ share");
-            Assert.AreEqual(0.25f, counts[OperatorRarity.Star3] / total, 0.03f, "3★ share");
+            Assert.AreEqual(0.52f, counts[OperatorRarity.Star1] / total, 0.03f, "1★ share");
+            Assert.AreEqual(0.36f, counts[OperatorRarity.Star2] / total, 0.03f, "2★ share");
+            Assert.AreEqual(0.12f, counts[OperatorRarity.Star3] / total, 0.03f, "3★ share");
 
             foreach (OperatorData op in pool) Object.DestroyImmediate(op);
         }

@@ -32,7 +32,7 @@ MonoBehaviour:
   drawTwoCardsOnDeath: 0
   bonusWhenIsolated: 1
   isolatedAttackMultiplier: 2
-  skillDescription: "<color=#FFD700>Base (3★):</color> Only enemies he blocks and Tanks can target him directly. Deals 2.0x damage while isolated and restores 2.5% max HP every second after 5 seconds without damage.\n<color=#FFD700>1st upgrade (4★):</color> Direct enemy attacks deal 35% less damage and reflect 20% of their original damage, once per attacker every 0.6 seconds.\n<color=#FFD700>2nd upgrade (5★):</color> Every third successful attack sends a phantom after the enemy closest to the exit, regardless of range. It deals 300% ATK, including the isolation multiplier when active."
+  skillDescription: "<color=#FFD700>Base (3★):</color> Only enemies he blocks and Tanks can target him directly. Deals 2.0x damage while isolated and restores 2.5% max HP every second after 5 seconds without damage.\n<color=#FFD700>1st upgrade (4★):</color> Every third successful attack sends a phantom after the enemy closest to the exit, regardless of range. It deals 300% ATK, including the isolation multiplier when active.\n<color=#FFD700>2nd upgrade (5★):</color> Direct enemy attacks deal 35% less damage and reflect 20% of their original damage, once per attacker every 0.6 seconds."
   chillPerHit: 0
   chillSlowMultiplier: 0.65
   chillSlowDuration: 2.5

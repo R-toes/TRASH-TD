@@ -14,26 +14,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   steps:
   - afterWavesCleared: 0
-    star1: 80
-    star2: 17
-    star3: 3
+    star1: 82
+    star2: 16
+    star3: 2
   - afterWavesCleared: 5
-    star1: 72
-    star2: 21
-    star3: 7
+    star1: 76
+    star2: 20
+    star3: 4
   - afterWavesCleared: 10
-    star1: 64
+    star1: 70
     star2: 24
-    star3: 12
+    star3: 6
   - afterWavesCleared: 15
-    star1: 56
+    star1: 64
     star2: 28
-    star3: 16
+    star3: 8
   - afterWavesCleared: 20
-    star1: 48
-    star2: 31
-    star3: 21
+    star1: 58
+    star2: 32
+    star3: 10
   - afterWavesCleared: 25
-    star1: 40
-    star2: 35
-    star3: 25
+    star1: 52
+    star2: 36
+    star3: 12
