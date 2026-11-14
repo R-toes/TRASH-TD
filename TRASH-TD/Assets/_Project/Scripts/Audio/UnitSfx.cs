@@ -282,23 +282,24 @@ namespace TrashTD.Audio
             list.Add(clip);
         }
 
-        /// <summary>"Attack_2" -> "Attack", "Charge 1_2" -> "Charge 1", "Attack (2)" -> "Attack"; names without a numeric suffix are unchanged.</summary>
+        /// <summary>"Attack_2" -> "Attack", "Charge 1_2" -> "Charge 1", "Attack (2)" -> "Attack", "Ability2" -> "Ability"; names without a numeric suffix are unchanged.</summary>
         public static string StripVariant(string clipName)
         {
             if (string.IsNullOrEmpty(clipName)) return "";
 
-            int underscore = clipName.LastIndexOf('_');
-            if (underscore > 0 && underscore < clipName.Length - 1)
+            // 1. Underscore or hyphen syntax: "Ability_2", "Ability-2", "Attack_03"
+            int sep = Mathf.Max(clipName.LastIndexOf('_'), clipName.LastIndexOf('-'));
+            if (sep > 0 && sep < clipName.Length - 1)
             {
                 bool allDigits = true;
-                for (int i = underscore + 1; i < clipName.Length; i++)
+                for (int i = sep + 1; i < clipName.Length; i++)
                 {
                     if (!char.IsDigit(clipName[i])) { allDigits = false; break; }
                 }
-                if (allDigits) return clipName.Substring(0, underscore);
+                if (allDigits) return clipName.Substring(0, sep);
             }
 
-            // Also support parentheses variant syntax like "Attack (2)" or "Charge 1 (2)"
+            // 2. Parentheses syntax: "Attack (2)", "Ability (3)"
             if (clipName.EndsWith(")") && clipName.Contains("("))
             {
                 int openParen = clipName.LastIndexOf('(');
@@ -311,6 +312,44 @@ namespace TrashTD.Audio
                         if (!char.IsDigit(inside[i])) { allDigits = false; break; }
                     }
                     if (allDigits) return clipName.Substring(0, openParen).TrimEnd();
+                }
+            }
+
+            // 3. Trailing space + digits: "Ability 2", "Attack 3" (except for "Charge 1", "Charge 2", "Charge 3")
+            int lastSpace = clipName.LastIndexOf(' ');
+            if (lastSpace > 0 && lastSpace < clipName.Length - 1)
+            {
+                string baseName = clipName.Substring(0, lastSpace);
+                if (!baseName.Equals("Charge", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    bool allDigits = true;
+                    for (int i = lastSpace + 1; i < clipName.Length; i++)
+                    {
+                        if (!char.IsDigit(clipName[i])) { allDigits = false; break; }
+                    }
+                    if (allDigits) return baseName;
+                }
+            }
+
+            // 4. Direct trailing digits on known event names: "Ability2" -> "Ability", "Deploy2" -> "Deploy", "Attack2" -> "Attack"
+            for (int i = clipName.Length - 1; i >= 1; i--)
+            {
+                if (!char.IsDigit(clipName[i]))
+                {
+                    if (i < clipName.Length - 1)
+                    {
+                        string prefix = clipName.Substring(0, i + 1);
+                        if (prefix.Equals("Ability", System.StringComparison.OrdinalIgnoreCase) ||
+                            prefix.Equals("Deploy", System.StringComparison.OrdinalIgnoreCase) ||
+                            prefix.Equals("Attack", System.StringComparison.OrdinalIgnoreCase) ||
+                            prefix.Equals("Impact", System.StringComparison.OrdinalIgnoreCase) ||
+                            prefix.Equals("Death", System.StringComparison.OrdinalIgnoreCase) ||
+                            prefix.Equals("Heal", System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            return prefix;
+                        }
+                    }
+                    break;
                 }
             }
 

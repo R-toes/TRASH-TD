@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using TrashTD.Audio;
 using TrashTD.Combat;
 using TrashTD.Core.Grid;
 using TrashTD.Data;
@@ -21,6 +22,60 @@ namespace TrashTD.Operators
     /// </summary>
     public class MossmoOperator : DefenderOperator, IHealer
     {
+        [Header("Audio")]
+        [Tooltip("Custom sound played when Mossmo triggers his reactive heal pulse. If null, loads from SFX/Operators/Defender/Mossmo/Ability (supports Ability, Ability_2, Ability_3...), falling back to MagicAttack.")]
+        [SerializeField] private AudioClip abilitySound;
+        [Tooltip("Optional array of ability sounds to randomize between in Inspector.")]
+        [SerializeField] private AudioClip[] abilitySounds;
+
+        public AudioClip AbilitySound
+        {
+            get => abilitySound;
+            set => abilitySound = value;
+        }
+
+        public AudioClip[] AbilitySounds
+        {
+            get => abilitySounds;
+            set => abilitySounds = value;
+        }
+
+        public void PlayMossmoAbilitySound()
+        {
+            // 1. Inspector array (randomized)
+            if (abilitySounds != null && abilitySounds.Length > 0)
+            {
+                AudioClip clip = abilitySounds[Random.Range(0, abilitySounds.Length)];
+                if (clip != null)
+                {
+                    AudioManager.Instance?.PlaySfx(clip, 1.0f, Random.Range(0.96f, 1.04f));
+                    return;
+                }
+            }
+
+            // 2. Inspector single slot
+            if (abilitySound != null)
+            {
+                AudioManager.Instance?.PlaySfx(abilitySound, 1.0f, Random.Range(0.96f, 1.04f));
+                return;
+            }
+
+            // 3. Conventional resource lookup (SFX/Operators/Defender/Mossmo/Ability, Ability_2, Ability_3... or Pulse, Heal)
+            if (data != null && UnitSfx.Play(data, UnitSfxEvent.Ability, 1.0f))
+            {
+                return;
+            }
+
+            if (data != null && (UnitSfx.PlayFromFolder(UnitSfx.GetFolder(data), "Pulse") ||
+                                 UnitSfx.PlayFromFolder(UnitSfx.GetFolder(data), "HealPulse")))
+            {
+                return;
+            }
+
+            // 4. Fallback shared sound
+            AudioManager.Instance?.PlaySfx(SfxId.GameplayMagicAttack, 0.8f, Random.Range(0.96f, 1.04f));
+        }
+
         public const float EnemyHealCooldownDuration = 1.0f;
         public const float EnvironmentHealCooldownDuration = 3.0f;
         public const float StallEnrageDuration = 20.0f;
@@ -472,7 +527,7 @@ namespace TrashTD.Operators
             Vector3 visualOrigin = originCell != null ? originCell.WorldPosition : transform.position;
             float blastRadius = HasSecondUpgrade ? 1.75f : 1.25f;
             AoeBlastVisual.PlayCircle(visualOrigin, blastRadius, new Color(0.25f, 0.95f, 0.45f, 0.6f), AoeStyle.Heal);
-            PlayAbilitySound();
+            PlayMossmoAbilitySound();
 
             for (int i = 0; i < targetsToHeal.Count; i++)
             {
