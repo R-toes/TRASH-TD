@@ -74,7 +74,12 @@ namespace TrashTD.Audio
         /// </summary>
         public static bool Play(OperatorData data, UnitSfxEvent sfxEvent, out AudioSource voice, float volume = 1f, bool ignoreThrottle = false)
         {
-            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out voice, ignoreThrottle);
+            return Play(data, sfxEvent, out voice, out _, volume, ignoreThrottle);
+        }
+
+        public static bool Play(OperatorData data, UnitSfxEvent sfxEvent, out AudioSource voice, out AudioClip clip, float volume = 1f, bool ignoreThrottle = false)
+        {
+            return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out voice, out clip, ignoreThrottle);
         }
 
         /// <summary>Plays the enemy's clip for the event. Returns false if it has none (throttled repeats count as played).</summary>
@@ -88,6 +93,40 @@ namespace TrashTD.Audio
         {
             return PlayFrom(GetFolder(data), sfxEvent.ToString(), volume, out voice, ignoreThrottle);
         }
+
+        /// <summary>
+        /// Plays a named attack clip (e.g. "Charge1" -> Attack_Charge1, Charge1, or "Charge 1"), falling back to the plain
+        /// Attack clip, so a unit with a single Attack file uses it for every charge level.
+        /// </summary>
+        public static bool PlayAttack(OperatorData data, string attackVariant, out AudioSource voice, float volume = 1f, bool ignoreThrottle = false)
+        {
+            return PlayAttack(data, attackVariant, out voice, out _, volume, ignoreThrottle);
+        }
+
+        public static bool PlayAttack(OperatorData data, string attackVariant, out AudioSource voice, out AudioClip clip, float volume = 1f, bool ignoreThrottle = false)
+        {
+            voice = null;
+            clip = null;
+            string folder = GetFolder(data);
+            if (!string.IsNullOrEmpty(attackVariant))
+            {
+                if (PlayFrom(folder, AttackClipName(attackVariant), volume, out voice, out clip, ignoreThrottle)) return true;
+                if (PlayFrom(folder, attackVariant, volume, out voice, out clip, ignoreThrottle)) return true;
+                if (attackVariant.StartsWith("Charge") && attackVariant.Length > 6)
+                {
+                    string spaced = "Charge " + attackVariant.Substring(6);
+                    if (PlayFrom(folder, spaced, volume, out voice, out clip, ignoreThrottle)) return true;
+                }
+            }
+            return PlayFrom(folder, nameof(UnitSfxEvent.Attack), volume, out voice, out clip, ignoreThrottle);
+        }
+
+        public static bool PlayAttack(OperatorData data, string attackVariant, float volume = 1f, bool ignoreThrottle = false)
+        {
+            return PlayAttack(data, attackVariant, out _, volume, ignoreThrottle);
+        }
+
+        public static string AttackClipName(string variantName) => $"{nameof(UnitSfxEvent.Attack)}_{variantName}";
 
         /// <summary>
         /// Plays one of the operator's named ability clips ("Dodge" -> Ability_Dodge or Dodge), falling back to its plain
@@ -107,7 +146,57 @@ namespace TrashTD.Audio
         /// <summary>Plays a sound directly from an audio folder by event or file name (e.g. "SFX/Operators/Medic/Panacea", "Impact").</summary>
         public static bool PlayFromFolder(string folder, string eventName, float volume = 1f, bool ignoreThrottle = false)
         {
-            return PlayFrom(folder, eventName, volume, out _, ignoreThrottle);
+            return PlayFrom(folder, eventName, volume, out _, out _, ignoreThrottle);
+        }
+
+        public static bool PlayFromFolder(string folder, string eventName, out AudioSource voice, float volume = 1f, bool ignoreThrottle = false)
+        {
+            return PlayFrom(folder, eventName, volume, out voice, out _, ignoreThrottle);
+        }
+
+        public static bool PlayFromFolder(string folder, string eventName, out AudioSource voice, out AudioClip clip, float volume = 1f, bool ignoreThrottle = false)
+        {
+            return PlayFrom(folder, eventName, volume, out voice, out clip, ignoreThrottle);
+        }
+
+        /// <summary>
+        /// Plays a random clip matching any of the candidate event names in the folder.
+        /// Pools all matching clips so multiple event names (e.g. "Charge 1", "Charge 2", "Charge 3") can be randomized together.
+        /// </summary>
+        public static bool PlayRandomFromFolder(string folder, string[] eventNames, out AudioSource voice, out AudioClip clip, float volume = 1f, bool ignoreThrottle = false)
+        {
+            voice = null;
+            clip = null;
+            if (folder == null || eventNames == null || eventNames.Length == 0) return false;
+
+            var pool = new List<AudioClip>();
+            for (int i = 0; i < eventNames.Length; i++)
+            {
+                List<AudioClip> clips = GetClips(folder, eventNames[i]);
+                if (clips != null)
+                {
+                    for (int j = 0; j < clips.Count; j++)
+                    {
+                        if (!pool.Contains(clips[j])) pool.Add(clips[j]);
+                    }
+                }
+            }
+
+            if (pool.Count == 0) return false;
+
+            string key = folder + "/pooled_" + string.Join("_", eventNames);
+            float now = Time.unscaledTime;
+            if (!ignoreThrottle && LastPlayed.TryGetValue(key, out float last) && now - last < MinRepeatSeconds) return true;
+            LastPlayed[key] = now;
+
+            clip = pool[Random.Range(0, pool.Count)];
+            voice = AudioManager.Instance?.PlaySfx(clip, volume, Random.Range(0.96f, 1.04f));
+            return true;
+        }
+
+        public static bool PlayRandomFromFolder(string folder, string[] eventNames, out AudioSource voice, float volume = 1f, bool ignoreThrottle = false)
+        {
+            return PlayRandomFromFolder(folder, eventNames, out voice, out _, volume, ignoreThrottle);
         }
 
         public static string AbilityClipName(string abilityName) => $"{nameof(UnitSfxEvent.Ability)}_{abilityName}";
@@ -138,9 +227,15 @@ namespace TrashTD.Audio
 
         private static bool PlayFrom(string folder, string eventName, float volume, out AudioSource voice, bool ignoreThrottle = false)
         {
+            return PlayFrom(folder, eventName, volume, out voice, out _, ignoreThrottle);
+        }
+
+        private static bool PlayFrom(string folder, string eventName, float volume, out AudioSource voice, out AudioClip clip, bool ignoreThrottle = false)
+        {
             voice = null;
+            clip = null;
             List<AudioClip> clips = GetClips(folder, eventName);
-            if (clips == null) return false;
+            if (clips == null || clips.Count == 0) return false;
 
             // A throttled repeat still counts as handled, so callers don't fall back to the generic sound.
             string key = folder + "/" + eventName;
@@ -148,7 +243,7 @@ namespace TrashTD.Audio
             if (!ignoreThrottle && LastPlayed.TryGetValue(key, out float last) && now - last < MinRepeatSeconds) return true;
             LastPlayed[key] = now;
 
-            AudioClip clip = clips[Random.Range(0, clips.Count)];
+            clip = clips[Random.Range(0, clips.Count)];
             voice = AudioManager.Instance?.PlaySfx(clip, volume, Random.Range(0.96f, 1.04f));
             return true;
         }
@@ -159,29 +254,67 @@ namespace TrashTD.Audio
 
             if (!FolderCache.TryGetValue(folder, out Dictionary<string, List<AudioClip>> byEvent))
             {
-                byEvent = new Dictionary<string, List<AudioClip>>();
+                byEvent = new Dictionary<string, List<AudioClip>>(System.StringComparer.OrdinalIgnoreCase);
                 foreach (AudioClip clip in Resources.LoadAll<AudioClip>(folder))
                 {
                     string clipEvent = StripVariant(clip.name);
-                    if (!byEvent.TryGetValue(clipEvent, out List<AudioClip> list))
-                        byEvent[clipEvent] = list = new List<AudioClip>();
-                    list.Add(clip);
+                    AddClipToMap(byEvent, clipEvent, clip);
+
+                    // Also index with spaces stripped so "Charge 1" matches "Charge1" and vice-versa
+                    string noSpaces = clipEvent.Replace(" ", "");
+                    if (!string.Equals(noSpaces, clipEvent, System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        AddClipToMap(byEvent, noSpaces, clip);
+                    }
                 }
                 FolderCache[folder] = byEvent;
             }
 
-            return byEvent.TryGetValue(eventName, out List<AudioClip> clips) ? clips : null;
+            if (byEvent.TryGetValue(eventName, out List<AudioClip> clips)) return clips;
+            string cleanEvent = eventName.Replace(" ", "");
+            return byEvent.TryGetValue(cleanEvent, out clips) ? clips : null;
         }
 
-        /// <summary>"Attack_2" -> "Attack", "Ability_Dodge_2" -> "Ability_Dodge"; names without a numeric suffix are unchanged.</summary>
-        private static string StripVariant(string clipName)
+        private static void AddClipToMap(Dictionary<string, List<AudioClip>> map, string key, AudioClip clip)
         {
-            int underscore = clipName.LastIndexOf('_');
-            if (underscore <= 0 || underscore == clipName.Length - 1) return clipName;
+            if (!map.TryGetValue(key, out List<AudioClip> list))
+                map[key] = list = new List<AudioClip>();
+            list.Add(clip);
+        }
 
-            for (int i = underscore + 1; i < clipName.Length; i++)
-                if (!char.IsDigit(clipName[i])) return clipName;
-            return clipName.Substring(0, underscore);
+        /// <summary>"Attack_2" -> "Attack", "Charge 1_2" -> "Charge 1", "Attack (2)" -> "Attack"; names without a numeric suffix are unchanged.</summary>
+        public static string StripVariant(string clipName)
+        {
+            if (string.IsNullOrEmpty(clipName)) return "";
+
+            int underscore = clipName.LastIndexOf('_');
+            if (underscore > 0 && underscore < clipName.Length - 1)
+            {
+                bool allDigits = true;
+                for (int i = underscore + 1; i < clipName.Length; i++)
+                {
+                    if (!char.IsDigit(clipName[i])) { allDigits = false; break; }
+                }
+                if (allDigits) return clipName.Substring(0, underscore);
+            }
+
+            // Also support parentheses variant syntax like "Attack (2)" or "Charge 1 (2)"
+            if (clipName.EndsWith(")") && clipName.Contains("("))
+            {
+                int openParen = clipName.LastIndexOf('(');
+                if (openParen > 0)
+                {
+                    string inside = clipName.Substring(openParen + 1, clipName.Length - openParen - 2).Trim();
+                    bool allDigits = inside.Length > 0;
+                    for (int i = 0; i < inside.Length; i++)
+                    {
+                        if (!char.IsDigit(inside[i])) { allDigits = false; break; }
+                    }
+                    if (allDigits) return clipName.Substring(0, openParen).TrimEnd();
+                }
+            }
+
+            return clipName;
         }
     }
 }

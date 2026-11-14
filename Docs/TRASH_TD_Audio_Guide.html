@@ -172,7 +172,6 @@ Guard/Stagger      Ability_Dodge
                    Ability_Empowered
 Caster/Chillpath   Ability_Freeze
                    Ability_ExtraHit
-Caster/Resicochet  Ability_Bounce
 Specialist/Framiliar Ability_Transform</pre>
     <div class="ex">Example: <code>SFX/Operators/Guard/Stagger/Ability_Dodge.wav</code>. Each falls back to that operator's plain <code>Ability</code>.</div>
   </div>
@@ -468,7 +467,7 @@ Ability_Dodge.wav   Ability_Dodge_2.wav</pre>
     <tr><td><code>Caster/Castiel</code></td><td>beam cast</td><td>beam tick</td><td>—</td></tr>
     <tr><td><code>Caster/Chillpath</code></td><td>frost cast</td><td>frost hit</td><td><code>Ability_Freeze</code>: freezes an enemy (and gains haste)<br><code>Ability_ExtraHit</code>: every 4th attack's bonus bolt</td></tr>
     <tr><td><code>Caster/Pyrolite</code></td><td>fire cast</td><td>fire burst</td><td>—</td></tr>
-    <tr><td><code>Caster/Resicochet</code></td><td>crystal laser fire</td><td>crystal hit</td><td><code>Ability_Bounce</code>: plays on every ricochet bounce (Inspector slot or file)</td></tr>
+    <tr><td><code>Caster/Resicochet</code></td><td>crystal laser fire (<code>Attack</code>, <code>Attack_2</code>, <code>Attack_3</code>...)</td><td>crystal hit</td><td>replays attack sound, quieter per bounce</td></tr>
     <tr><td><code>Specialist/Framiliar</code></td><td>attack</td><td>hit</td><td><code>Ability_Transform</code>: plays when morphing into another operator (Inspector slot or file)</td></tr>
     <tr><td><code>Medic/Bubblets</code></td><td>shield cast</td><td>—</td><td><code>Ability</code>: bubble pop <span class="tag">fallback: Combat/MagicAttack</span></td></tr>
     <tr><td><code>Medic/Coalesce</code></td><td>heal</td><td>—</td><td><code>Ability</code>: bonus heal (20% chance on low-HP allies)</td></tr>

@@ -355,6 +355,17 @@ namespace TrashTD.Operators
             TrackAttackSound(voice);
         }
 
+        /// <summary>Attack sound: the operator's named attack variant (e.g. "Charge1" -> Attack_Charge1), falling back to Attack, then fallback.</summary>
+        protected void PlayAttackSound(string variantName, SfxId fallback, float pitch = 1f)
+        {
+            if (data == null || AudioManager.Instance == null) return;
+
+            AudioSource voice;
+            if (!UnitSfx.PlayAttack(data, variantName, out voice))
+                voice = AudioManager.Instance.PlaySfx(fallback, 1f, pitch);
+            TrackAttackSound(voice);
+        }
+
         /// <summary>
         /// The operator's own Impact clip (projectile landing, explosion), if it has one. Called whenever one of its
         /// hits lands; repeats within a moment are throttled, so an AoE hit plays it once. When the impact plays, the
@@ -374,7 +385,7 @@ namespace TrashTD.Operators
         private AudioClip attackVoiceClip;
         private float attackVoiceStartTime;
 
-        private void TrackAttackSound(AudioSource voice)
+        protected void TrackAttackSound(AudioSource voice)
         {
             attackVoice = voice;
             attackVoiceClip = voice != null ? voice.clip : null;

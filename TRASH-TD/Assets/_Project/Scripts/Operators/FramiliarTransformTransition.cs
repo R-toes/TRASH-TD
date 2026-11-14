@@ -391,6 +391,8 @@ namespace TrashTD.Operators
             if (TryGetComponent<ResicochetOperator>(out var resiOp) && resiOp != null)
             {
                 resiOp.UpdateChargeVisuals();
+                resiOp.SetCrystalAuraEnabled(true);
+                resiOp.UpdateCrystalAuras();
             }
             if (TryGetComponent<PompothOperator>(out var pompothOp) && pompothOp != null)
             {

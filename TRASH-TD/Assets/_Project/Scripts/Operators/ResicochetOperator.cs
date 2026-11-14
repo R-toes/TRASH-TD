@@ -66,9 +66,30 @@ namespace TrashTD.Operators
         public float SluggishAttackIntervalMultiplier => sluggishAttackIntervalMultiplier;
 
         [Header("Audio")]
-        [Tooltip("Custom sound played on each bounce. If null, loads from SFX/Operators/Caster/Resicochet/Ability_Bounce (or Bounce / Ability), falling back to MagicAttack.")]
+        [Tooltip("Custom sound played on attack. If null, loads from SFX/Operators/Caster/Resicochet/Attack (supports Attack, Attack_2, Attack_3, etc.), falling back to MagicAttack.")]
+        [SerializeField] private AudioClip attackSound;
+        [Tooltip("Optional array of attack sounds to randomize between in Inspector.")]
+        [SerializeField] private AudioClip[] attackSounds;
+        [Tooltip("Optional custom override sound played on bounce. If null, replays the attack sound quieter and quieter per bounce.")]
         [SerializeField] private AudioClip bounceSound;
         [SerializeField] private AudioClip[] bounceSounds;
+
+        private AudioClip currentVolleyAttackClip;
+
+        public AudioClip CurrentVolleyAttackClip => currentVolleyAttackClip;
+        public void SetCurrentVolleyAttackClipForTesting(AudioClip clip) => currentVolleyAttackClip = clip;
+
+        public AudioClip AttackSound
+        {
+            get => attackSound;
+            set => attackSound = value;
+        }
+
+        public AudioClip[] AttackSounds
+        {
+            get => attackSounds;
+            set => attackSounds = value;
+        }
 
         public AudioClip BounceSound
         {
@@ -81,6 +102,14 @@ namespace TrashTD.Operators
             get => bounceSounds;
             set => bounceSounds = value;
         }
+
+        // Backwards compatibility properties
+        public AudioClip Charge1AttackSound { get => attackSound; set => attackSound = value; }
+        public AudioClip[] Charge1AttackSounds { get => attackSounds; set => attackSounds = value; }
+        public AudioClip Charge2AttackSound { get => attackSound; set => attackSound = value; }
+        public AudioClip[] Charge2AttackSounds { get => attackSounds; set => attackSounds = value; }
+        public AudioClip Charge3AttackSound { get => attackSound; set => attackSound = value; }
+        public AudioClip[] Charge3AttackSounds { get => attackSounds; set => attackSounds = value; }
 
         public static readonly Color Charge1ProjectileColor = new Color(1f, 0.55f, 0.12f); // Orange (1 charge)
         public static readonly Color Charge2ProjectileColor = new Color(0.2f, 0.95f, 0.35f); // Green (2 charges)
@@ -208,6 +237,29 @@ namespace TrashTD.Operators
         private static Sprite[] cachedCharge2Frames;
         private static Sprite[] cachedCharge3Frames;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticCrystalCache()
+        {
+            cachedCrystalTexture = null;
+            cachedCrystal1Frames = null;
+            cachedCrystal2Frames = null;
+            cachedCrystal3Frames = null;
+            cachedCharge1Frames = null;
+            cachedCharge2Frames = null;
+            cachedCharge3Frames = null;
+            s_CrystalAuraMaterial = null;
+        }
+
+        private static bool AreFramesValid(Sprite[] frames)
+        {
+            if (frames == null || frames.Length == 0) return false;
+            for (int i = 0; i < frames.Length; i++)
+            {
+                if (frames[i] == null || frames[i].texture == null) return false;
+            }
+            return true;
+        }
+
         /// <summary>
         /// Identifies whether a 32x32 frame pixel belongs to the floating crystals.
         /// Evaluated in Unity texture coordinates where localY=0 is bottom and localY=31 is top.
@@ -227,10 +279,9 @@ namespace TrashTD.Operators
                 if (yTop == 8 && localX >= 3 && localX <= 5) return true;
             }
 
-            // Crystal 3 (Top): present at charge 3 only
-            if (chargeLevel >= 3 && localX >= 9 && localX <= 14 && yTop >= 1 && yTop <= 6)
+            // Crystal 3 (Top): present at charge 3 only (x=10..13 strictly avoids any head flame overlap)
+            if (chargeLevel >= 3 && localX >= 10 && localX <= 13 && yTop >= 1 && yTop <= 6)
             {
-                if (localX == 14 && yTop == 6) return false; // Head flame edge
                 return true;
             }
 
@@ -244,13 +295,22 @@ namespace TrashTD.Operators
                 spriteAnim = GetComponent<OperatorSpriteAnimation>();
             }
 
-            if (cachedCharge1Frames != null && cachedCharge1Frames.Length > 0 &&
-                cachedCharge2Frames != null && cachedCharge2Frames.Length > 0 &&
-                cachedCharge3Frames != null && cachedCharge3Frames.Length > 0)
+            if (AreFramesValid(cachedCharge1Frames) &&
+                AreFramesValid(cachedCharge2Frames) &&
+                AreFramesValid(cachedCharge3Frames))
             {
                 charge1Frames = cachedCharge1Frames;
                 charge2Frames = cachedCharge2Frames;
                 charge3Frames = cachedCharge3Frames;
+            }
+
+            if (AreFramesValid(cachedCrystal1Frames) &&
+                AreFramesValid(cachedCrystal2Frames) &&
+                AreFramesValid(cachedCrystal3Frames))
+            {
+                crystalCharge1Frames = cachedCrystal1Frames;
+                crystalCharge2Frames = cachedCrystal2Frames;
+                crystalCharge3Frames = cachedCrystal3Frames;
             }
 
             var sr = GetComponent<SpriteRenderer>();
@@ -324,14 +384,17 @@ namespace TrashTD.Operators
 
         private void EnsureCrystalFramesLoaded(Texture2D sourceTex)
         {
-            if (crystalCharge1Frames != null && crystalCharge1Frames.Length > 0 &&
-                crystalCharge2Frames != null && crystalCharge2Frames.Length > 0 &&
-                crystalCharge3Frames != null && crystalCharge3Frames.Length > 0)
+            if (AreFramesValid(crystalCharge1Frames) &&
+                AreFramesValid(crystalCharge2Frames) &&
+                AreFramesValid(crystalCharge3Frames))
             {
                 return;
             }
 
-            if (cachedCrystal1Frames != null && cachedCrystal1Frames.Length > 0)
+            if (AreFramesValid(cachedCrystal1Frames) &&
+                AreFramesValid(cachedCrystal2Frames) &&
+                AreFramesValid(cachedCrystal3Frames) &&
+                cachedCrystalTexture != null)
             {
                 crystalCharge1Frames = cachedCrystal1Frames;
                 crystalCharge2Frames = cachedCrystal2Frames;
@@ -340,11 +403,25 @@ namespace TrashTD.Operators
             }
 
             Texture2D readable = null;
+
+            // 1. First prioritize sourceTex (sr.sprite.texture) directly, as it matches Unity's sprite UV coordinates exactly.
             if (sourceTex != null && sourceTex.isReadable)
             {
                 readable = sourceTex;
             }
-            else
+
+#if UNITY_EDITOR
+            // 2. In editor, load the texture asset directly via AssetDatabase
+            if (readable == null)
+            {
+                readable = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_Project/Art/Operators/Resicochet-Sheet.png");
+            }
+#endif
+
+            bool isRawBytes = false;
+
+            // 3. Fall back to reading file bytes if not yet loaded
+            if (readable == null)
             {
                 string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Resicochet-Sheet.png");
                 if (System.IO.File.Exists(path))
@@ -355,6 +432,7 @@ namespace TrashTD.Operators
                         readable = new Texture2D(128, 96, TextureFormat.RGBA32, false);
                         readable.filterMode = FilterMode.Point;
                         readable.LoadImage(raw);
+                        isRawBytes = true;
                     }
                     catch (System.Exception ex)
                     {
@@ -365,8 +443,11 @@ namespace TrashTD.Operators
 
             if (readable == null) return;
 
-            cachedCrystalTexture = new Texture2D(128, 96, TextureFormat.RGBA32, false);
-            cachedCrystalTexture.filterMode = FilterMode.Point;
+            cachedCrystalTexture = new Texture2D(128, 96, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Point,
+                hideFlags = HideFlags.DontSave
+            };
 
             Color32[] clearColors = new Color32[128 * 96];
             cachedCrystalTexture.SetPixels32(clearColors);
@@ -391,10 +472,11 @@ namespace TrashTD.Operators
                     {
                         int texX = xOffset + x;
                         int texY = y;
+                        int srcTexY = isRawBytes ? (95 - y) : y;
 
                         if (IsCrystalPixelInUnityCoords(chargeLevel, x, localY))
                         {
-                            Color srcPixel = readable.GetPixel(texX, texY);
+                            Color srcPixel = readable.GetPixel(texX, srcTexY);
                             if (srcPixel.a > 0.05f)
                             {
                                 cachedCrystalTexture.SetPixel(texX, texY, Color.white);
@@ -416,8 +498,13 @@ namespace TrashTD.Operators
             for (int col = 0; col < 4; col++)
             {
                 cachedCrystal1Frames[col] = Sprite.Create(cachedCrystalTexture, new Rect(col * 32, 64, 32, 32), pivot, ppu);
+                cachedCrystal1Frames[col].hideFlags = HideFlags.DontSave;
+
                 cachedCrystal2Frames[col] = Sprite.Create(cachedCrystalTexture, new Rect(col * 32, 32, 32, 32), pivot, ppu);
+                cachedCrystal2Frames[col].hideFlags = HideFlags.DontSave;
+
                 cachedCrystal3Frames[col] = Sprite.Create(cachedCrystalTexture, new Rect(col * 32, 0, 32, 32), pivot, ppu);
+                cachedCrystal3Frames[col].hideFlags = HideFlags.DontSave;
             }
 
             crystalCharge1Frames = cachedCrystal1Frames;
@@ -505,23 +592,46 @@ namespace TrashTD.Operators
 
         #region Shadeslice-Style Crystal Aura & Outline Effect
 
-        private void CreateCrystalAuras()
+        private static Material s_CrystalAuraMaterial;
+        public static Material GetCrystalAuraMaterial()
         {
-            if (crystalAuraOuter != null) return;
+            if (s_CrystalAuraMaterial == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+                if (shader == null) shader = Shader.Find("TrashTD/SpriteFlash");
+                if (shader == null) shader = Shader.Find("Sprites/Default");
+                if (shader != null)
+                {
+                    s_CrystalAuraMaterial = new Material(shader) { hideFlags = HideFlags.DontSave };
+                }
+            }
+            return s_CrystalAuraMaterial;
+        }
 
+        public void CreateCrystalAuras()
+        {
             if (opSpriteRenderer == null)
             {
                 opSpriteRenderer = GetComponent<SpriteRenderer>();
             }
             if (opSpriteRenderer == null) return;
 
-            int baseOrder = opSpriteRenderer.sortingOrder;
+            // Ensure SortingGroup exists on the unit root so child order offsets sort strictly within this unit
+            var sg = GetComponent<UnityEngine.Rendering.SortingGroup>();
+            if (sg == null)
+            {
+                sg = gameObject.AddComponent<UnityEngine.Rendering.SortingGroup>();
+                sg.sortingLayerID = GridSorting.UnitsLayerId;
+            }
 
-            // Shadeslice outer & inner aura layers (strictly behind body sprite)
-            crystalAuraOuter = CreateAuraLayer("CrystalAuraOuter", baseOrder - 3, Charge1ProjectileColor);
-            crystalAuraInner = CreateAuraLayer("CrystalAuraInner", baseOrder - 2, Charge1ProjectileColor);
+            int baseOrder = Mathf.Max(5, opSpriteRenderer.sortingOrder);
+            opSpriteRenderer.sortingOrder = baseOrder;
 
-            // 1-pixel cardinal outline layers (strictly behind body sprite)
+            // Shadeslice outer & inner aura layers (strictly behind body sprite: -2, -1)
+            crystalAuraOuter = CreateAuraLayer("CrystalAuraOuter", baseOrder - 2, Charge1ProjectileColor);
+            crystalAuraInner = CreateAuraLayer("CrystalAuraInner", baseOrder - 1, Charge1ProjectileColor);
+
+            // 1-pixel cardinal outline layers (strictly behind body sprite: -1)
             crystalOutlineLeft = CreateAuraLayer("CrystalOutlineLeft", baseOrder - 1, Charge1ProjectileColor);
             crystalOutlineRight = CreateAuraLayer("CrystalOutlineRight", baseOrder - 1, Charge1ProjectileColor);
             crystalOutlineUp = CreateAuraLayer("CrystalOutlineUp", baseOrder - 1, Charge1ProjectileColor);
@@ -530,11 +640,24 @@ namespace TrashTD.Operators
 
         private SpriteRenderer CreateAuraLayer(string objectName, int sortingOrder, Color color)
         {
-            var auraObj = new GameObject(objectName);
-            auraObj.transform.SetParent(transform, false);
-            auraObj.transform.localPosition = new Vector3(0f, 0f, 0.01f);
+            Transform existing = transform.Find(objectName);
+            GameObject auraObj;
+            SpriteRenderer sr;
 
-            var sr = auraObj.AddComponent<SpriteRenderer>();
+            if (existing != null)
+            {
+                auraObj = existing.gameObject;
+                sr = auraObj.GetComponent<SpriteRenderer>();
+                if (sr == null) sr = auraObj.AddComponent<SpriteRenderer>();
+            }
+            else
+            {
+                auraObj = new GameObject(objectName);
+                auraObj.transform.SetParent(transform, false);
+                auraObj.transform.localPosition = Vector3.zero;
+                sr = auraObj.AddComponent<SpriteRenderer>();
+            }
+
             sr.color = color;
             sr.sortingOrder = sortingOrder;
             if (opSpriteRenderer != null)
@@ -543,7 +666,9 @@ namespace TrashTD.Operators
                 sr.flipX = opSpriteRenderer.flipX;
                 sr.flipY = opSpriteRenderer.flipY;
             }
-            sr.sharedMaterial = IsCopiedFromFramiliar ? FramiliarOperator.GetGrayscaleMaterial() : FramiliarOperator.GetDefaultSpriteMaterial();
+            var auraMat = GetCrystalAuraMaterial();
+            if (auraMat != null) sr.sharedMaterial = auraMat;
+            else if (opSpriteRenderer != null && opSpriteRenderer.sharedMaterial != null) sr.sharedMaterial = opSpriteRenderer.sharedMaterial;
             sr.enabled = isDeployed;
             return sr;
         }
@@ -568,11 +693,19 @@ namespace TrashTD.Operators
             }
             if (crystalAuraOuter == null) return;
 
+            // Don't show while Framiliar's glitch transition is actively playing
+            if (TryGetComponent<FramiliarTransformTransition>(out var trans) && trans != null && !trans.IsFinished) return;
+
             if (opSpriteRenderer == null)
             {
                 opSpriteRenderer = GetComponent<SpriteRenderer>();
             }
             if (opSpriteRenderer == null) return;
+
+            if (!AreFramesValid(crystalCharge1Frames) || !AreFramesValid(crystalCharge2Frames) || !AreFramesValid(crystalCharge3Frames))
+            {
+                EnsureCrystalFramesLoaded(opSpriteRenderer.sprite != null ? opSpriteRenderer.sprite.texture : null);
+            }
 
             float time = Time.time;
             float pulse = 0.5f + 0.5f * Mathf.Sin(time * 5f);
@@ -609,9 +742,9 @@ namespace TrashTD.Operators
                 _ => crystalCharge1Frames
             };
 
-            Sprite crystalSprite = (activeCrystalFrames != null && frameIndex < activeCrystalFrames.Length)
+            Sprite crystalSprite = (AreFramesValid(activeCrystalFrames) && frameIndex < activeCrystalFrames.Length)
                 ? activeCrystalFrames[frameIndex]
-                : null;
+                : (AreFramesValid(activeCrystalFrames) ? activeCrystalFrames[0] : null);
 
             bool isFlipped = opSpriteRenderer.flipX;
 
@@ -623,75 +756,82 @@ namespace TrashTD.Operators
                 // Vibrant Pulsing Amber/Orange (Charge 1)
                 outerColor = new Color(
                     1.0f,
-                    Mathf.Lerp(0.35f, 0.65f, pulse),
+                    Mathf.Lerp(0.40f, 0.70f, pulse),
                     0.05f,
-                    0.38f + pulse * 0.16f + flicker);
+                    0.45f + pulse * 0.20f + flicker);
                 innerColor = new Color(
                     1.0f,
-                    Mathf.Lerp(0.55f, 0.85f, pulse),
-                    0.12f,
-                    0.70f + pulse * 0.20f);
+                    Mathf.Lerp(0.60f, 0.90f, pulse),
+                    0.15f,
+                    0.75f + pulse * 0.20f);
             }
             else if (charges == 2)
             {
                 // Vibrant Emerald Green (Charge 2)
                 outerColor = new Color(
                     0.08f,
-                    Mathf.Lerp(0.75f, 1.0f, pulse),
-                    0.20f,
-                    0.38f + pulse * 0.16f + flicker);
+                    Mathf.Lerp(0.80f, 1.0f, pulse),
+                    0.25f,
+                    0.45f + pulse * 0.20f + flicker);
                 innerColor = new Color(
-                    0.30f,
+                    0.35f,
                     1.0f,
-                    Mathf.Lerp(0.45f, 0.75f, pulse),
-                    0.70f + pulse * 0.20f);
+                    Mathf.Lerp(0.50f, 0.80f, pulse),
+                    0.75f + pulse * 0.20f);
             }
             else
             {
                 // Radiant Azure/Blue (Charge 3)
                 outerColor = new Color(
-                    0.12f,
-                    Mathf.Lerp(0.50f, 0.80f, pulse),
+                    0.15f,
+                    Mathf.Lerp(0.55f, 0.85f, pulse),
                     1.0f,
-                    0.38f + pulse * 0.16f + flicker);
+                    0.45f + pulse * 0.20f + flicker);
                 innerColor = new Color(
-                    0.35f,
-                    Mathf.Lerp(0.75f, 0.95f, pulse),
+                    0.40f,
+                    Mathf.Lerp(0.80f, 1.0f, pulse),
                     1.0f,
-                    0.70f + pulse * 0.20f);
+                    0.75f + pulse * 0.20f);
             }
 
             if (IsCopiedFromFramiliar)
             {
-                // Grayscale / monochrome aura when copied by Framiliar
-                float grayOuter = outerColor.r * 0.299f + outerColor.g * 0.587f + outerColor.b * 0.114f;
-                float grayInner = innerColor.r * 0.299f + innerColor.g * 0.587f + innerColor.b * 0.114f;
-                outerColor = new Color(grayOuter, grayOuter, grayOuter, outerColor.a);
-                innerColor = new Color(grayInner, grayInner, grayInner, innerColor.a);
+                // Radiant ethereal silver crystal aura when copied by Framiliar
+                float grayOuter = Mathf.Clamp01((outerColor.r * 0.299f + outerColor.g * 0.587f + outerColor.b * 0.114f) * 1.3f + 0.25f);
+                float grayInner = Mathf.Clamp01((innerColor.r * 0.299f + innerColor.g * 0.587f + innerColor.b * 0.114f) * 1.2f + 0.35f);
+                outerColor = new Color(grayOuter, grayOuter, grayOuter, 0.55f + pulse * 0.25f + flicker);
+                innerColor = new Color(grayInner, grayInner, grayInner, 0.85f + pulse * 0.15f);
             }
 
-            // Sync sprite, flip and colors (strictly behind body sprite: -3, -2, -1)
-            SyncAuraRenderer(crystalAuraOuter, crystalSprite, isFlipped, outerColor, -3);
-            SyncAuraRenderer(crystalAuraInner, crystalSprite, isFlipped, innerColor, -2);
+            // Sync sprite, flip and colors (strictly behind body sprite: -2, -1)
+            SyncAuraRenderer(crystalAuraOuter, crystalSprite, isFlipped, outerColor, -2);
+            SyncAuraRenderer(crystalAuraInner, crystalSprite, isFlipped, innerColor, -1);
             SyncAuraRenderer(crystalOutlineLeft, crystalSprite, isFlipped, innerColor, -1);
             SyncAuraRenderer(crystalOutlineRight, crystalSprite, isFlipped, innerColor, -1);
             SyncAuraRenderer(crystalOutlineUp, crystalSprite, isFlipped, innerColor, -1);
             SyncAuraRenderer(crystalOutlineDown, crystalSprite, isFlipped, innerColor, -1);
 
-            // Shadeslice-style pulsing outer & inner scale and float (behind body in Z)
-            crystalAuraOuter.transform.localScale = Vector3.one * (1.22f + pulse * 0.035f + flicker);
-            crystalAuraInner.transform.localScale = Vector3.one * (1.11f + pulse * 0.025f - flicker * 0.5f);
-            crystalAuraOuter.transform.localPosition = new Vector3(0f, Mathf.Sin(time * 7f) * 0.012f, 0.03f);
-            crystalAuraInner.transform.localPosition = new Vector3(0f, Mathf.Sin(time * 9f + 1f) * 0.008f, 0.02f);
+            // crystalAuraInner sits directly on the crystals (0 offset)
+            crystalAuraInner.transform.localScale = Vector3.one;
+            crystalAuraInner.transform.localPosition = Vector3.zero;
 
-            // Outline 1-pixel cardinal offsets (strictly behind body in Z)
-            float pixelOffset = (1.0f + pulse * 0.3f) / 32f;
+            // crystalAuraOuter ("the other one") has a small, clean offset (~1px)
+            crystalAuraOuter.transform.localScale = Vector3.one * (1.08f + pulse * 0.015f);
+            crystalAuraOuter.transform.localPosition = Vector3.zero;
+
+            // 1-pixel cardinal outline offsets (1 / 32 = 0.03125 world units)
+            crystalOutlineLeft.transform.localScale = Vector3.one;
+            crystalOutlineRight.transform.localScale = Vector3.one;
+            crystalOutlineUp.transform.localScale = Vector3.one;
+            crystalOutlineDown.transform.localScale = Vector3.one;
+
+            float pixelOffset = 1.0f / 32f;
             float flipDir = isFlipped ? -1f : 1f;
 
-            crystalOutlineLeft.transform.localPosition = new Vector3(-pixelOffset * flipDir, 0f, 0.01f);
-            crystalOutlineRight.transform.localPosition = new Vector3(pixelOffset * flipDir, 0f, 0.01f);
-            crystalOutlineUp.transform.localPosition = new Vector3(0f, pixelOffset, 0.01f);
-            crystalOutlineDown.transform.localPosition = new Vector3(0f, -pixelOffset, 0.01f);
+            crystalOutlineLeft.transform.localPosition = new Vector3(-pixelOffset * flipDir, 0f, 0f);
+            crystalOutlineRight.transform.localPosition = new Vector3(pixelOffset * flipDir, 0f, 0f);
+            crystalOutlineUp.transform.localPosition = new Vector3(0f, pixelOffset, 0f);
+            crystalOutlineDown.transform.localPosition = new Vector3(0f, -pixelOffset, 0f);
         }
 
         private void SyncAuraRenderer(SpriteRenderer r, Sprite s, bool flipX, Color c, int orderOffset)
@@ -704,15 +844,17 @@ namespace TrashTD.Operators
             if (opSpriteRenderer != null)
             {
                 r.sortingLayerID = opSpriteRenderer.sortingLayerID;
-                r.sortingOrder = opSpriteRenderer.sortingOrder + orderOffset;
+                int baseOrder = Mathf.Max(5, opSpriteRenderer.sortingOrder);
+                r.sortingOrder = baseOrder + orderOffset;
             }
-            if (IsCopiedFromFramiliar)
+            var auraMat = GetCrystalAuraMaterial();
+            if (auraMat != null)
             {
-                r.sharedMaterial = FramiliarOperator.GetGrayscaleMaterial();
+                if (r.sharedMaterial != auraMat) r.sharedMaterial = auraMat;
             }
-            else
+            else if (opSpriteRenderer != null && opSpriteRenderer.sharedMaterial != null)
             {
-                r.sharedMaterial = FramiliarOperator.GetDefaultSpriteMaterial();
+                if (r.sharedMaterial != opSpriteRenderer.sharedMaterial) r.sharedMaterial = opSpriteRenderer.sharedMaterial;
             }
         }
 
@@ -982,12 +1124,13 @@ namespace TrashTD.Operators
             chargeTimer = 0f;
             UpdateChargeVisuals();
 
-            PlayAttackSound();
+            PlayResicochetAttackSound(0);
             FireChargeAttack(target, chargeLevel, chargeMultiplier, projectileColor);
         }
 
         protected override void FireAttackProjectile(EnemyBase target, Vector3 startOffset = default)
         {
+            PlayResicochetAttackSound(0);
             FireChargeAttack(target, charges, GetChargeDamageMultiplier(charges), GetProjectileColorForCharges(charges));
         }
 
@@ -1023,43 +1166,115 @@ namespace TrashTD.Operators
         public void FireSingleBouncingProjectile(EnemyBase target, float chargeMultiplier = 1.0f, Color? projectileColor = null)
         {
             Color color = projectileColor ?? GetProjectileColorForCharges(1);
+            PlayResicochetAttackSound(0);
             FireChargeAttack(target, 1, chargeMultiplier, color);
         }
 
         /// <summary>
-        /// Plays a sound effect for each ricochet bounce.
-        /// Priority:
-        /// 1. Inspector assigned bounceSounds / bounceSound clip.
-        /// 2. Conventional Resource sound (SFX/Operators/Caster/Resicochet/Ability_Bounce or Bounce or Ability).
-        /// 3. Shared MagicAttack sound fallback with slight pitch scale per bounce index.
+        /// Calculates the volume multiplier for ricochet bounces.
+        /// Volume becomes progressively quieter per bounce (e.g. 1.0x -> 0.75x -> 0.56x -> 0.42x).
         /// </summary>
-        public void PlayBounceSound(int bounceIndex = 0)
+        public static float GetBounceVolumeMultiplier(int bounceIndex)
         {
-            float pitch = Mathf.Clamp(1.0f + (bounceIndex * 0.05f), 0.85f, 1.4f);
+            if (bounceIndex <= 0) return 1.0f;
+            return Mathf.Clamp(Mathf.Pow(0.75f, bounceIndex), 0.2f, 1.0f);
+        }
 
+        private static readonly string[] ResicochetChargeNames = new[]
+        {
+            "Charge 1", "Charge 2", "Charge 3",
+            "Charge1", "Charge2", "Charge3",
+            "Charge"
+        };
+
+        /// <summary>
+        /// Plays attack sound. Randomizes among available Attack files (Attack, Attack_2, Attack_3...)
+        /// or inspector attackSounds. When bouncing, replays the exact same attack sound progressively quieter per bounce.
+        /// </summary>
+        public void PlayResicochetAttackSound(int bounceIndex = 0)
+        {
+            float volume = GetBounceVolumeMultiplier(bounceIndex);
+
+            // If bouncing (bounceIndex > 0) and we already selected a clip for this attack volley, replay it quieter
+            if (bounceIndex > 0 && currentVolleyAttackClip != null)
+            {
+                AudioManager.Instance?.PlaySfx(currentVolleyAttackClip, volume, 1.0f);
+                return;
+            }
+
+            // 1. Inspector attackSounds array (randomized)
+            if (attackSounds != null && attackSounds.Length > 0)
+            {
+                AudioClip clip = attackSounds[Random.Range(0, attackSounds.Length)];
+                if (clip != null)
+                {
+                    currentVolleyAttackClip = clip;
+                    var voice = AudioManager.Instance?.PlaySfx(clip, volume, 1.0f);
+                    if (bounceIndex == 0) TrackAttackSound(voice);
+                    return;
+                }
+            }
+
+            // 2. Single inspector attackSound slot
+            if (attackSound != null)
+            {
+                currentVolleyAttackClip = attackSound;
+                var voice = AudioManager.Instance?.PlaySfx(attackSound, volume, 1.0f);
+                if (bounceIndex == 0) TrackAttackSound(voice);
+                return;
+            }
+
+            // 3. Conventional resource lookup (SFX/Operators/Caster/Resicochet/Attack, Attack_2, Attack_3...)
+            if (data != null && UnitSfx.Play(data, UnitSfxEvent.Attack, out AudioSource audioVoice, out AudioClip audioClip, volume, ignoreThrottle: bounceIndex > 0))
+            {
+                currentVolleyAttackClip = audioClip;
+                if (bounceIndex == 0) TrackAttackSound(audioVoice);
+                return;
+            }
+
+            // Also check Charge 1 / Charge 2 / Charge 3 files (randomized among them) if user placed Charge files
+            if (UnitSfx.PlayRandomFromFolder("SFX/Operators/Caster/Resicochet", ResicochetChargeNames, out AudioSource chargeVoice, out AudioClip chargeClip, volume, ignoreThrottle: bounceIndex > 0))
+            {
+                currentVolleyAttackClip = chargeClip;
+                if (bounceIndex == 0) TrackAttackSound(chargeVoice);
+                return;
+            }
+
+            // 4. Shared Arts attack sound fallback with volume decay per bounce
+            var fallbackVoice = AudioManager.Instance?.PlaySfx(SfxId.GameplayMagicAttack, volume, 1.0f);
+            if (bounceIndex == 0) TrackAttackSound(fallbackVoice);
+        }
+
+        public void PlayChargeAttackSound(int chargeLevel, int bounceIndex = 0)
+        {
+            PlayResicochetAttackSound(bounceIndex);
+        }
+
+        /// <summary>
+        /// When bouncing, plays the attack sound again, progressively quieter per bounce.
+        /// </summary>
+        public void PlayBounceSound(int bounceIndex = 0, int chargeLevel = 1)
+        {
             if (bounceSounds != null && bounceSounds.Length > 0)
             {
                 AudioClip clip = bounceSounds[Random.Range(0, bounceSounds.Length)];
                 if (clip != null)
                 {
-                    AudioManager.Instance?.PlaySfx(clip, 1f, pitch);
+                    float vol = GetBounceVolumeMultiplier(bounceIndex + 1);
+                    AudioManager.Instance?.PlaySfx(clip, vol, 1f);
                     return;
                 }
             }
 
             if (bounceSound != null)
             {
-                AudioManager.Instance?.PlaySfx(bounceSound, 1f, pitch);
+                float vol = GetBounceVolumeMultiplier(bounceIndex + 1);
+                AudioManager.Instance?.PlaySfx(bounceSound, vol, 1f);
                 return;
             }
 
-            if (data != null && (UnitSfx.PlayAbility(data, "Bounce", 1f, ignoreThrottle: true) ||
-                                 UnitSfx.Play(data, UnitSfxEvent.Ability, 1f, ignoreThrottle: true)))
-            {
-                return;
-            }
-
-            AudioManager.Instance?.PlaySfx(SfxId.GameplayMagicAttack, 0.85f, pitch);
+            // Replays the attack sound, but quieter with each bounce
+            PlayResicochetAttackSound(bounceIndex + 1);
         }
 
         public void HandleHitAndBounce(EnemyBase primaryTarget, EnemyBase currentTarget, int bounceIndex, HashSet<EnemyBase> hitEnemies, float chargeMultiplier = 1.0f, Color? projectileColor = null)
@@ -1111,8 +1326,8 @@ namespace TrashTD.Operators
                     // Play flashy parallel bounce lines matching charge
                     ResicochetAttackBeamVisual.PlayParallel(bounceStart, bounceEnd, chargeLevel, color);
 
-                    // Sound effect for every ricochet bounce
-                    PlayBounceSound(bounceIndex);
+                    // Replay the charge attack sound, but quieter and quieter per bounce
+                    PlayBounceSound(bounceIndex, chargeLevel);
 
                     CombatProjectileVisual.Fire(
                         bounceStart,
