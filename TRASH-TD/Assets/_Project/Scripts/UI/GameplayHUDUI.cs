@@ -4055,7 +4055,7 @@ namespace TrashTD.UI
 #if UNITY_EDITOR
                 if (itemSprites == null || itemSprites.Length == 0)
                 {
-                    var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 2 thrown-items.png");
+                    var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 2/Level 2 thrown-items.png");
                     if (assets != null)
                     {
                         var list = new List<Sprite>();
@@ -4131,10 +4131,10 @@ namespace TrashTD.UI
 #if UNITY_EDITOR
                 if (vehicleSprites == null || vehicleSprites.Length == 0)
                 {
-                    var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5 vehicles.png");
+                    var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5/Level 5 vehicles.png");
                     if (assets == null || assets.Length == 0)
                     {
-                        assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 5 vehicles.png");
+                        assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5/level 5 vehicles.png");
                     }
                     if (assets != null)
                     {

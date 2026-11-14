@@ -65,7 +65,7 @@ namespace TrashTD.Operators
             if (idleFrames == null || idleFrames.Length == 0)
             {
 #if UNITY_EDITOR
-                var idleAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Stag-ger-Sheet.png");
+                var idleAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Stag-ger/Stag-ger-Sheet.png");
                 if (idleAssets != null && idleAssets.Length > 0)
                 {
                     var list = new List<Sprite>();
@@ -90,7 +90,7 @@ namespace TrashTD.Operators
             if (attackFrames == null || attackFrames.Length == 0)
             {
 #if UNITY_EDITOR
-                var attackAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Stag-ger Attack.png");
+                var attackAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Stag-ger/Stag-ger Attack.png");
                 if (attackAssets != null && attackAssets.Length > 0)
                 {
                     var list = new List<Sprite>();
@@ -124,11 +124,11 @@ namespace TrashTD.Operators
         {
             Texture2D tex = null;
 #if UNITY_EDITOR
-            tex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_Project/Art/Operators/Stag-ger Attack.png");
+            tex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_Project/Art/Operators/Stag-ger/Stag-ger Attack.png");
 #endif
             if (tex == null)
             {
-                string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Stag-ger Attack.png");
+                string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Stag-ger/Stag-ger Attack.png");
                 if (System.IO.File.Exists(path))
                 {
                     try

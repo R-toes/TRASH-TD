@@ -8,8 +8,8 @@ namespace TrashTD.Tests
     public class DeadeyeAttackAnimationTests
     {
         private const string PrefabPath = "Assets/_Project/Prefabs/Operators/Prefab_OP_Deadeye.prefab";
-        private const string IdleSheetPath = "Assets/_Project/Art/Operators/Deadeye-Sheet.png";
-        private const string AttackSheetPath = "Assets/_Project/Art/Operators/Deadeye Attack Sheet.png";
+        private const string IdleSheetPath = "Assets/_Project/Art/Operators/Deadeye/Deadeye-Sheet.png";
+        private const string AttackSheetPath = "Assets/_Project/Art/Operators/Deadeye/Deadeye Attack Sheet.png";
 
         [Test]
         public void Prefab_UsesScriptAnimationAndAlignedPointFilteredFrames()

@@ -339,12 +339,12 @@ namespace TrashTD.Operators
 #if UNITY_EDITOR
             if (tex == null)
             {
-                tex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_Project/Art/Operators/Resicochet-Sheet.png");
+                tex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_Project/Art/Operators/Resicochet/Resicochet-Sheet.png");
             }
 #endif
             if (tex == null)
             {
-                string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Resicochet-Sheet.png");
+                string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Resicochet/Resicochet-Sheet.png");
                 if (System.IO.File.Exists(path))
                 {
                     try
@@ -366,7 +366,7 @@ namespace TrashTD.Operators
                 charge3Frames == null || charge3Frames.Length == 0)
             {
 #if UNITY_EDITOR
-                var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Resicochet-Sheet.png");
+                var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Resicochet/Resicochet-Sheet.png");
                 if (assets != null && assets.Length > 0)
                 {
                     var subSprites = new Dictionary<string, Sprite>();
@@ -434,7 +434,7 @@ namespace TrashTD.Operators
             // 2. In editor, load the texture asset directly via AssetDatabase
             if (readable == null)
             {
-                readable = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_Project/Art/Operators/Resicochet-Sheet.png");
+                readable = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_Project/Art/Operators/Resicochet/Resicochet-Sheet.png");
             }
 #endif
 
@@ -443,7 +443,7 @@ namespace TrashTD.Operators
             // 3. Fall back to reading file bytes if not yet loaded
             if (readable == null)
             {
-                string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Resicochet-Sheet.png");
+                string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Resicochet/Resicochet-Sheet.png");
                 if (System.IO.File.Exists(path))
                 {
                     try

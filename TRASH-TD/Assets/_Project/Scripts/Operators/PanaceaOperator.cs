@@ -144,7 +144,7 @@ namespace TrashTD.Operators
             }
 
 #if UNITY_EDITOR
-            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Panacea-Vials.png");
+            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Panacea/Panacea-Vials.png");
             if (assets != null && assets.Length > 0)
             {
                 var list = new List<Sprite>();
@@ -163,7 +163,7 @@ namespace TrashTD.Operators
 #endif
 
             // Fallback: load raw bytes from PNG
-            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Panacea-Vials.png");
+            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Panacea/Panacea-Vials.png");
             if (System.IO.File.Exists(path))
             {
                 try

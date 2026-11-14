@@ -16,7 +16,7 @@ namespace TrashTD.Combat
         // Solid black outline for all wire types as requested
         public static readonly Color BlackOutline = Color.black;
 
-        // Sampled directly from Hextension pixel art (Assets/_Project/Art/Enemies/Hextension Sheet.png):
+        // Sampled directly from Hextension pixel art (Assets/_Project/Art/Enemies/Hextension/Hextension Sheet.png):
         // Red wire: vibrant red-orange highlight (#F53D07), rich crimson core (#A31403), deep dark red shade (#811006)
         public static readonly Color RedHighlight = new Color(245f / 255f, 61f / 255f, 7f / 255f, 1f);
         public static readonly Color RedCore = new Color(163f / 255f, 20f / 255f, 3f / 255f, 1f);

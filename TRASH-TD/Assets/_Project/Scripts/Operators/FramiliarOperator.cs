@@ -132,7 +132,7 @@ namespace TrashTD.Operators
             }
 
 #if UNITY_EDITOR
-            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Framiliar-Sheet.png");
+            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Framiliar/Framiliar-Sheet.png");
             if (assets != null && assets.Length > 0)
             {
                 var frames = new List<Sprite>();
@@ -162,7 +162,7 @@ namespace TrashTD.Operators
 #if UNITY_EDITOR
             if (tex == null)
             {
-                tex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_Project/Art/Operators/Framiliar-Sheet.png");
+                tex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_Project/Art/Operators/Framiliar/Framiliar-Sheet.png");
             }
 #endif
             if (tex != null && tex.width >= 32 && tex.height >= 32)

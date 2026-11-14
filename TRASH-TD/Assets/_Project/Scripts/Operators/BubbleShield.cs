@@ -298,10 +298,10 @@ namespace TrashTD.Operators
             if (sharedBubbleSprite != null) return sharedBubbleSprite;
 
 #if UNITY_EDITOR
-            sharedBubbleSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/Operators/Bubblets-bubbles.png");
+            sharedBubbleSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/Operators/Bubblets/Bubblets-bubbles.png");
             if (sharedBubbleSprite == null)
             {
-                var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Bubblets-bubbles.png");
+                var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Bubblets/Bubblets-bubbles.png");
                 if (assets != null)
                 {
                     foreach (var a in assets)
@@ -318,7 +318,7 @@ namespace TrashTD.Operators
 
             if (sharedBubbleSprite == null)
             {
-                string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Bubblets-bubbles.png");
+                string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Bubblets/Bubblets-bubbles.png");
                 if (System.IO.File.Exists(path))
                 {
                     try

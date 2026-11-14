@@ -158,13 +158,25 @@ namespace TrashTD.Editor
             }
         }
 
-        // Resolves a bare art filename to its path in the Art folder or one of its category subfolders.
+        // Resolves a bare art filename to its path in the Art folder or one of its category subfolders. Operator and
+        // enemy art lives in a folder per unit (Art/Operators/Chillpath/...), so if the direct lookups miss, the Art
+        // folder is searched recursively for the file name.
         private static string ResolveArtPath(string filename)
         {
             foreach (string folder in ArtSearchFolders)
             {
                 string path = $"{folder}/{filename}";
                 if (!string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(path, AssetPathToGUIDOptions.OnlyExistingAssets)))
+                {
+                    return path;
+                }
+            }
+
+            string nameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(filename);
+            foreach (string guid in AssetDatabase.FindAssets(nameWithoutExtension, new[] { ArtFolder }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (path.EndsWith("/" + filename, System.StringComparison.OrdinalIgnoreCase))
                 {
                     return path;
                 }
@@ -1606,9 +1618,9 @@ namespace TrashTD.Editor
             stage.gridWidth = 12;
             stage.gridHeight = 6;
 
-            var levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level1 complete.png");
+            var levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 1/level1 complete.png");
             if (levelSprites == null || levelSprites.Length == 0)
-                levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level1 complete.png");
+                levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 1/Level1 complete.png");
 
             if (levelSprites != null)
             {
@@ -1624,7 +1636,7 @@ namespace TrashTD.Editor
             stage.visualTilePixelSize = 32;
             stage.visualTileOffset = Vector2.zero;
 
-            var fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 1 bottom.png");
+            var fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 1/level 1 bottom.png");
             if (fgSprites != null)
             {
                 foreach (var obj in fgSprites)
@@ -1796,9 +1808,9 @@ namespace TrashTD.Editor
             stage.gridWidth = 11;
             stage.gridHeight = 7;
 
-            var levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level2 complete.png");
+            var levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 2/level2 complete.png");
             if (levelSprites == null || levelSprites.Length == 0)
-                levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level2 complete.png");
+                levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 2/Level2 complete.png");
 
             if (levelSprites != null)
             {
@@ -1814,9 +1826,9 @@ namespace TrashTD.Editor
             stage.visualTilePixelSize = 32;
             stage.visualTileOffset = Vector2.zero;
 
-            var fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level2 bottom.png");
+            var fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 2/level2 bottom.png");
             if (fgSprites == null || fgSprites.Length == 0)
-                fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level2 bottom.png");
+                fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 2/Level2 bottom.png");
 
             if (fgSprites != null)
             {
@@ -1980,7 +1992,7 @@ namespace TrashTD.Editor
             stage.gridWidth = 14;
             stage.gridHeight = 7;
 
-            var backgroundSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level3-Backgroundt.png");
+            var backgroundSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 3/Level3-Backgroundt.png");
             stage.backgroundVisualSprite = null;
             if (backgroundSprites != null)
             {
@@ -1994,7 +2006,7 @@ namespace TrashTD.Editor
                 }
             }
 
-            var mainGroundSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level3-MainGroundt.png");
+            var mainGroundSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 3/Level3-MainGroundt.png");
             stage.mapVisualSprite = null;
             if (mainGroundSprites != null)
             {
@@ -2009,9 +2021,9 @@ namespace TrashTD.Editor
             }
 
             stage.loadingScreenMapSprite = AssetDatabase.LoadAssetAtPath<Sprite>(
-                "Assets/_Project/Art/Levels/Level3 Complete.png");
+                "Assets/_Project/Art/Levels/Level 3/Level3 Complete.png");
 
-            var upperBackgroundSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level3-UpperBackgroundt.png");
+            var upperBackgroundSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 3/Level3-UpperBackgroundt.png");
             var upperBackgroundLayers = new List<Sprite>();
             if (upperBackgroundSprites != null)
             {
@@ -2143,9 +2155,9 @@ namespace TrashTD.Editor
             stage.gridWidth = 13;
             stage.gridHeight = 8;
 
-            var levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5 complete.png");
+            var levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5/Level 5 complete.png");
             if (levelSprites == null || levelSprites.Length == 0)
-                levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 5 complete.png");
+                levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5/level 5 complete.png");
 
             if (levelSprites != null)
             {
@@ -2161,9 +2173,9 @@ namespace TrashTD.Editor
             stage.visualTilePixelSize = 32;
             stage.visualTileOffset = new Vector2(0, -1);
 
-            var fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5 bottom.png");
+            var fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5/Level 5 bottom.png");
             if (fgSprites == null || fgSprites.Length == 0)
-                fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 5 bottom.png");
+                fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5/level 5 bottom.png");
 
             if (fgSprites != null)
             {
@@ -2177,9 +2189,9 @@ namespace TrashTD.Editor
                 }
             }
 
-            var vehicleAssets = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5 vehicles.png");
+            var vehicleAssets = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5/Level 5 vehicles.png");
             if (vehicleAssets == null || vehicleAssets.Length == 0)
-                vehicleAssets = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 5 vehicles.png");
+                vehicleAssets = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5/level 5 vehicles.png");
 
             var vList = new List<Sprite>();
             if (vehicleAssets != null)
@@ -2502,9 +2514,9 @@ namespace TrashTD.Editor
             stage.gridWidth = 12;
             stage.gridHeight = 5;
 
-            var levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 6 complete.png");
+            var levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 6/level 6 complete.png");
             if (levelSprites == null || levelSprites.Length == 0)
-                levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 6 complete.png");
+                levelSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 6/Level 6 complete.png");
 
             if (levelSprites != null)
             {
@@ -2520,9 +2532,9 @@ namespace TrashTD.Editor
             stage.visualTilePixelSize = 32;
             stage.visualTileOffset = new Vector2(0, -1);
 
-            var fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 6 bottom.png");
+            var fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 6/level 6 bottom.png");
             if (fgSprites == null || fgSprites.Length == 0)
-                fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 6 bottom.png");
+                fgSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 6/Level 6 bottom.png");
 
             if (fgSprites != null)
             {
@@ -2536,9 +2548,9 @@ namespace TrashTD.Editor
                 }
             }
 
-            var midSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 6 Sign-Barrel.png");
+            var midSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 6/Level 6 Sign-Barrel.png");
             if (midSprites == null || midSprites.Length == 0)
-                midSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 6 Sign-Barrel.png");
+                midSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 6/level 6 Sign-Barrel.png");
 
             if (midSprites != null)
             {

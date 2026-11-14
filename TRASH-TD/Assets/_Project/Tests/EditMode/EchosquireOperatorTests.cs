@@ -11,8 +11,8 @@ namespace TrashTD.Tests
     public class EchosquireOperatorTests
     {
         private const string PrefabPath = "Assets/_Project/Prefabs/Operators/Prefab_OP_Echosquire.prefab";
-        private const string IdleSheetPath = "Assets/_Project/Art/Operators/Echosquire_Idle_Aligned_64x32.png";
-        private const string AttackSheetPath = "Assets/_Project/Art/Operators/Echosquire_Attack_Aligned_64x32.png";
+        private const string IdleSheetPath = "Assets/_Project/Art/Operators/Echosquire/Echosquire_Idle_Aligned_64x32.png";
+        private const string AttackSheetPath = "Assets/_Project/Art/Operators/Echosquire/Echosquire_Attack_Aligned_64x32.png";
 
         [Test]
         public void Prefab_UsesAlignedIdleAndAttackSheets()

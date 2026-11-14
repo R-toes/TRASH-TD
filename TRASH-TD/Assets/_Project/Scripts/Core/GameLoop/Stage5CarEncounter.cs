@@ -104,10 +104,10 @@ namespace TrashTD.Core.GameLoop
         private void LoadVehicleSprites()
         {
 #if UNITY_EDITOR
-            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5 vehicles.png");
+            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5/Level 5 vehicles.png");
             if (assets == null || assets.Length == 0)
             {
-                assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/level 5 vehicles.png");
+                assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 5/level 5 vehicles.png");
             }
 
             if (assets != null)

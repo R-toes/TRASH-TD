@@ -89,7 +89,7 @@ namespace TrashTD.Operators
             }
 
 #if UNITY_EDITOR
-            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Panacea Sheet.png");
+            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Panacea/Panacea Sheet.png");
             if (assets != null && assets.Length > 0)
             {
                 var list = new List<Sprite>();
@@ -106,7 +106,7 @@ namespace TrashTD.Operators
             }
 #endif
 
-            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Panacea Sheet.png");
+            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Panacea/Panacea Sheet.png");
             if (System.IO.File.Exists(path))
             {
                 try
@@ -137,7 +137,7 @@ namespace TrashTD.Operators
                 reloadFrames != null && reloadFrames.Length >= ReloadFrameCount) return;
 
 #if UNITY_EDITOR
-            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Panacea-Throw-Reload.png");
+            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Panacea/Panacea-Throw-Reload.png");
             if (assets != null && assets.Length > 0)
             {
                 var allSprites = new List<Sprite>();
@@ -161,7 +161,7 @@ namespace TrashTD.Operators
             }
 #endif
 
-            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Panacea-Throw-Reload.png");
+            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Panacea/Panacea-Throw-Reload.png");
             if (System.IO.File.Exists(path))
             {
                 try

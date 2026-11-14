@@ -107,7 +107,7 @@ namespace TrashTD.Combat
         {
             if (thornchinSpikeSprite != null) return thornchinSpikeSprite;
 #if UNITY_EDITOR
-            var all = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Thornchin-Spike.png");
+            var all = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Thornchin/Thornchin-Spike.png");
             if (all != null)
             {
                 for (int i = 0; i < all.Length; i++)
@@ -120,7 +120,7 @@ namespace TrashTD.Combat
                 }
             }
 #endif
-            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Thornchin-Spike.png");
+            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Thornchin/Thornchin-Spike.png");
             if (System.IO.File.Exists(path))
             {
                 byte[] raw = System.IO.File.ReadAllBytes(path);
@@ -137,7 +137,7 @@ namespace TrashTD.Combat
         {
             if (spoilcupineSpikeSprite != null) return spoilcupineSpikeSprite;
 #if UNITY_EDITOR
-            var all = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Enemies/Spoilcupine-Spike.png");
+            var all = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Enemies/Spoilcupine/Spoilcupine-Spike.png");
             if (all != null)
             {
                 for (int i = 0; i < all.Length; i++)
@@ -150,7 +150,7 @@ namespace TrashTD.Combat
                 }
             }
 #endif
-            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Enemies/Spoilcupine-Spike.png");
+            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Enemies/Spoilcupine/Spoilcupine-Spike.png");
             if (System.IO.File.Exists(path))
             {
                 byte[] raw = System.IO.File.ReadAllBytes(path);
@@ -370,7 +370,7 @@ namespace TrashTD.Combat
             return CachedFrames("bubblepop", () =>
             {
 #if UNITY_EDITOR
-                var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Bubble-pop.png");
+                var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Operators/Bubblets/Bubble-pop.png");
                 if (assets != null)
                 {
                     var list = new System.Collections.Generic.List<Sprite>();
@@ -391,7 +391,7 @@ namespace TrashTD.Combat
 
         private static Sprite[] BuildProceduralBubblePopFrames()
         {
-            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Bubble-pop.png");
+            string path = System.IO.Path.Combine(Application.dataPath, "_Project/Art/Operators/Bubblets/Bubble-pop.png");
             if (System.IO.File.Exists(path))
             {
                 try

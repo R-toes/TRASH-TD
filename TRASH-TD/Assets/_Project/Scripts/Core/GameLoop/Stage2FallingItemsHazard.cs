@@ -98,7 +98,7 @@ namespace TrashTD.Core.GameLoop
         private void LoadItemSprites()
         {
 #if UNITY_EDITOR
-            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 2 thrown-items.png");
+            var assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/_Project/Art/Levels/Level 2/Level 2 thrown-items.png");
             if (assets != null && assets.Length > 0)
             {
                 var list = new List<Sprite>();
