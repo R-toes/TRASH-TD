@@ -63,7 +63,7 @@ namespace TrashTD.Enemies
         protected override void Die()
         {
             TriggerSlipperyFading();
-            SpawnOculiteChildren();
+            if (!DeathEffectsSuppressed) SpawnOculiteChildren();
             base.Die();
         }
 

@@ -418,7 +418,7 @@ namespace TrashTD.Systems
         /// <summary>Whether an enemy counts as inside the cells loaded by FillQueryCellSet.</summary>
         private bool MatchesQueryCells(EnemyBase enemy, bool canTargetAir)
         {
-            if (enemy == null || enemy.IsDead || enemy.IsInsideHole) return false;
+            if (enemy == null || enemy.IsDead || enemy.IsInsideHole || enemy.IsBeingDevoured) return false;
             if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air && !enemy.IsWithinMeleeReach) return false;
 
             // 1. Direct discrete grid position check
@@ -511,7 +511,7 @@ namespace TrashTD.Systems
 
         private static bool IsInRadius(EnemyBase enemy, Vector3 center, float sqrRadius, bool canTargetAir)
         {
-            if (enemy == null || enemy.IsDead || enemy.IsInsideHole) return false;
+            if (enemy == null || enemy.IsDead || enemy.IsInsideHole || enemy.IsBeingDevoured) return false;
             if (!canTargetAir && enemy.MovementType == EnemyMovementType.Air && !enemy.IsWithinMeleeReach) return false;
             return (enemy.transform.position - center).sqrMagnitude <= sqrRadius;
         }

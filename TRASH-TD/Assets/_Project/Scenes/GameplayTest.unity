@@ -224,6 +224,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 0c2ec63bcde3474680d3ed11681c2930, type: 2}
   - {fileID: 11400000, guid: 2bfcfc948f564f62914e074d454f095d, type: 2}
   - {fileID: 11400000, guid: caba9035929447538e02d1a565e39c44, type: 2}
+  - {fileID: 11400000, guid: f3a5958b93ce438bb0a2af5a0aeba0a7, type: 2}
   lowGroundSprite: {fileID: 21300000, guid: c3333333333333333333333333333301, type: 3}
   highGroundSprite: {fileID: 21300000, guid: c3333333333333333333333333333302, type: 3}
   blockedSprite: {fileID: 21300000, guid: c3333333333333333333333333333303, type: 3}

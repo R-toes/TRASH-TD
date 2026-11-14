@@ -207,6 +207,7 @@ namespace TrashTD.Systems
                    (opData.operatorName == "Basurocket" && !(opComp is BasurocketOperator)) ||
                    ((opData.operatorName == "Stag-ger" || opData.operatorName == "Stagger") && !(opComp is StaggerOperator)) ||
                    (opData.operatorName == "Thornchin" && !(opComp is ThornchinOperator)) ||
+                   (opData.operatorName == "Mlem" && !(opComp is MlemOperator)) ||
                    (opData.operatorName == "Scrapper" && !(opComp is ScrapperOperator)) ||
                    (opData.operatorName == "Bulkhead" && !(opComp is BulkheadOperator)) ||
                    (opData.operatorName == "Pyrolite" && !(opComp is PyroliteOperator)) ||
@@ -254,6 +255,10 @@ namespace TrashTD.Systems
             if (opData != null && opData.operatorName == "Thornchin")
             {
                 return obj.AddComponent<ThornchinOperator>();
+            }
+            if (opData != null && opData.operatorName == "Mlem")
+            {
+                return obj.AddComponent<MlemOperator>();
             }
             if (opData != null && opData.operatorName == "Scrapper")
             {

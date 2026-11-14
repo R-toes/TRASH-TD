@@ -125,7 +125,7 @@ Per GDD section 1.10 and the course's software-reuse objective:
   - Since 2026-11-06, `OperatorData.GetRangePatternForRarity` also checks `operatorName` to return the upgraded range shapes of Pyrolite, Ignisaur, Mossmo, Progeny, Proxishot (also `"Proxyshot"`) and Thornchin. Placement previews, draft cards and Intel read range through it, so a new operator whose range grows with an upgrade needs an entry there (or, better, a data field).
   - The checks compare `operatorName`, not the file name. Two checks never match: `OP_Guard_QiFu.asset` is named **Chi Paw** (the check is `"QiFu"`), and `OP_Sniper_Deadeye.asset` is named **Dead Eye** (the check is `"Deadeye"`). Both rely on their prefab already having `QiFuOperator` / `DeadeyeOperator`.
 - **Draft pool:** `StageBootstrapper` fills `operatorPool` from `Assets/_Project/Data/Operators` **in the Editor only**. A player build only offers operators serialized in the scene's `operatorPool` — add new operators there before building.
-  - `GameplayTest.unity`'s pool lists all 24 operators (Ignisaur, Stag-ger, Thornchin, Resicochet, Progeny, Framiliar and Pompoth were added on 2026-10-30; Flurmonica and Panacea on 2026-11-02).
+  - `GameplayTest.unity`'s pool lists all 25 operators (Mlem was added on 2026-11-14; Ignisaur, Stag-ger, Thornchin, Resicochet, Progeny, Framiliar and Pompoth were added on 2026-10-30; Flurmonica and Panacea on 2026-11-02).
 
 ---
 
@@ -191,18 +191,24 @@ Use clearly marked `// TODO:` comments and placeholder implementations instead.
 - **An Image with no sprite draws a solid white rectangle.** Hide (`enabled = false`) any Image whose sprite failed to load. The stage map's radar overlay covered the map in white this way.
 - **Prefabs must point at real script GUIDs.** A hand-written `m_Script` guid shows up as "The referenced script on this Behaviour is missing" (Shadeslice's prefab had one until 2026-10-30; `OperatorManager`'s name check had been adding a second component to cover it).
 
+**Art folder layout (2026-11-14).** Operator, enemy and level art sits in a folder per unit or level, and the file names did not change:
+- `Art/Operators/<Operator>/` (e.g. `Ignisaur/` holds its idle, throw, swipe and fireball sheets, `Flurmonica/` holds her sheet and the music notes), `Art/Enemies/<Enemy>/` (e.g. `Pollution Tank/`, `Spoilcupine/` with its spike) and `Art/Levels/Level N/`.
+- General sprites stay where they were: `Art/Levels/Stage Selector Map.png`, `Art/class-icons.png`, `Art/enemy-class-icons.png`, `Art/Tiles`, `Art/Placeholders`, `Art/StageNodes`, `Art/Status Effects`, `Art/UI`.
+- Moving a file in Unity (or `git mv` with its `.meta`) keeps every prefab, scene and data asset reference, because those use GUIDs. Only the hard-coded `Assets/_Project/Art/...` strings in code (editor fallbacks such as `AssetDatabase.LoadAllAssetsAtPath`, and the EditMode tests) need the new path. `InitialAssetGenerator` finds art by bare file name, with a recursive search under `Art/`, so new files can go in any subfolder.
+- Add new art to the unit's folder (create it if the unit is new) and keep its `.meta` with it.
+
 ---
 
 ## 7. Current Implementation Notes (as of 2026-11-07)
 
 ### 7.1 Roster
 
-**Operators (24)** — draft rarity in brackets:
+**Operators (25)** — draft rarity in brackets:
 
 | Class | Operators |
 |---|---|
 | Guard | Chi Paw (1★), Scrapper (1★), Echosquire (2★), Ignisaur (2★), Stag-ger (2★), Shadeslice (3★) |
-| Defender | Bulkhead (1★), Thornchin (2★), Mossmo (3★) |
+| Defender | Bulkhead (1★), Thornchin (2★), Mlem (2★), Mossmo (3★) |
 | Sniper | Deadeye (1★), Pompoth (1★), Proxishot (2★), Basurocket (3★) |
 | Caster | Chillpath (1★), Pyrolite (1★), Castiel (2★), Resicochet (3★) |
 | Medic | Coalesce (1★), Progeny (2★), Bubblets (3★), Panacea (3★) |
@@ -248,6 +254,17 @@ Each asset's `skillDescription` is the authoritative description of that operato
   - **Timing:** combat timing is unchanged. `DeadeyeOperator.StartAttackWindup` starts the wind-up once the next shot is due within `WindupTime` (0.35 s) and the last target is still on a range tile, so frame 5 lands on the shot. A shot with no warning (an enemy walking into range of a charged attack) jumps straight to frame 5 (`ShotFired`). Retreating cancels it.
   - **Speed limit:** the whole attack (0.7 s) fits inside the 0.75 s attack interval. If Deadeye gets faster than that, shorten `AttackFrameInterval`.
 - **Bulkhead** (Defender): `BulkheadSpriteAnimation` plays the 8-frame `Bulkhead-Sheet` (256×32) at 0.125 s per frame (1 s loop) and the 10-frame `Bulkhead Attack Sheet` at 0.07 s per frame. The wind-up begins within the final 0.35 s of its attack interval; attack frame 5 is shown when the actual attack fires, and frames 6–9 recover. If a valid target disappears during wind-up, it cancels; if an attack is already charged when a target appears, it jumps to the strike frame. Retreating cancels the animation. Combat cadence and damage timing are unchanged. Keep both sprite lists assigned in the prefab; EditMode tests verify all frames and strike-frame display.
+- **Mlem** (Defender, 2★, added 2026-11-14; `OP_Defender_Mlem.asset`, `MlemOperator : DefenderOperator`, `MlemSpriteAnimation`, art in `Art/Operators/Mlem/`): blocks 4, **ground enemies only**, range = his own tile + 2 in front (`rangePattern` (0,0) (1,0) (2,0); the tongue reaches 59 px, about 1.85 tiles). He keeps blocking the whole time.
+  - **Attack (tongue devour):** he lashes at one enemy in range, drags it to his mouth and swallows it: an **instant kill** whatever its HP, through `EnemyBase.Die()`, so it is a normal kill for rewards and score. Target priority **Tank > Caster > Rusher > Grunt** (`EnemyData.archetype`; Flyers are never eaten), then the enemy closest to the exit (`DistanceToGoal`, the same tiebreak the Snipers use). If the target dies or leaves range before the tongue grabs it, the attack **whiffs**: nothing is swallowed, no digestion, and he can attack again at once. Enemies behind a Gooelist-style duel lock are skipped like any other attack (`CanAttackTarget`).
+  - **Digestion (the cooldown):** after a swallow he can't attack until it ends: Rusher 3 s, Grunt 4.5 s, Caster 6 s, Tank 12 s (lengthened on 2026-11-14 as Mlem was too strong; it was 2 / 3 / 4 / 6). While digesting he has **+15% DEF** (was 40%, which made grunts do 1 damage) and **+30% max HP**, which only raises his cap: eating does not heal him (`ModifyMaxHP(..., healByDelta: false)`) (applied with `ModifyDEF` / `ModifyMaxHP` under the source `DIGESTING`, so the SHOW MORE panel lists them). When it ends the bonus goes away and current HP is clamped to the normal max, and he can attack again right away.
+  - **1st upgrade (3★):** digestion 20% shorter and **4% max HP recovered per second** while digesting (the bonus DEF / HP stay). **2nd upgrade (4★):** one tongue attack swallows up to **3** enemies (picked by the same priority); they digest together over the **average** of their times, and the 20% reduction still applies on top.
+  - **Tunable data** (all on the `OperatorData` asset under "Devour (Mlem)", nothing is hard-coded): `digestSecondsRusher/Grunt/Caster/Tank`, `digestDefBonusFraction` (0.15), `digestMaxHpBonusFraction`, `digestRegenFractionPerSecond` (base, 0) and `...Upgrade1`, `digestTimeReductionUpgrade1`, `devourMaxSwallowBase` / `devourMaxSwallowUpgrade2`, and the flag **`devourTriggersDeathEffects`** (off: a swallowed Exploding Bug, Robozombie, Oculoid Carrier or OFO doesn't explode or spawn). The upgrades are relative to the card's base rarity (`baseRarity` + 1 and + 2).
+  - **Enemy side:** `EnemyBase.BeginDevour()` (grabbed: released from its blocker, frozen, can't be targeted, blocked or damaged; `EnemyManager` area queries and `BlockingSystem.CanBlock` skip it), `CancelDevour()` (let go: Mlem was stunned, bound or retreated mid-lash) and `CompleteDevour(triggerDeathEffects)` (the kill). Death overrides that have an effect of their own check `DeathEffectsSuppressed`; add the same check to any new enemy with an on-death effect.
+  - **Animation (2026-11-14):** idle `Mlem_Sheet` 16 frames at 100 ms (loop, all 16, the mouth-open part is frames 8-15), `Mlem_Digest_Sheet` 8 frames at 120 ms (loop), `Mlem_Attack_Sheet` 12 frames of 80x40 at 90 ms (1.08 s, fixed speed, not scaled by attack speed) with `Mlem_Attack_FX_Sheet` as a child overlay in sync (above Mlem and above enemies; transparent on the frames without effects; hidden outside the attack). All pivots are on his body centre, the convention of the other operators (idle / digest 0.5, 0.5; attack and fx 0.8, 0.4), so his feet stay put between animations and he sits on the tile like the rest of the squad; a bottom pivot (0.5, 0) would draw him half a tile too high. The art faces left and is mirrored for right, grip offsets included.
+  - **Attack flow:** `MlemSpriteAnimation` fires `GrabFrameReached` (F5, 0.36 s: each target is re-checked, the ones still alive and in range are latched, none = whiff and `EndAfterRetract` skips the chewing frames), `ChompFrameReached` (F8, 0.63 s: the swallowed enemies die, digestion and the DEF / max HP bonus start) and `AttackFinished` (after F12). The 0.45 s of F8-F12 count toward the digestion time; afterwards the digest loop plays until the timer ends and switches to idle at the next frame boundary, and he can attack again at once.
+  - **Dragging:** latched enemies follow `MlemSpriteAnimation.GripPixels` (pixels from his feet: F5 (-59, 15.5), F6 (-42, 22.5), F7 (-26, 18.5), F8 (-13, 16) = mouth) with `GripScales` (100%, 85%, 65%, then gone): they are pulled onto the F5 point in 45 ms, then move smoothly between grip points over each 90 ms frame. Extra enemies (2nd upgrade) cluster at `ClusterPixels` offsets (about 4 px) and go together. Caught enemies are drawn one sorting step behind Mlem (`MlemOperator` runs after `GridSpriteSorter` via `DefaultExecutionOrder(100)` and sets their `SortingGroup` to his order minus 1). Pixels convert at 32 per unit.
+  - With no attack art the whole sequence runs at once (that is how the EditMode tests drive it, plus `AdvanceDigestion`). Facing Up or Down still draws the tongue sideways (the sprite is only mirrored for Right).
+  - Tests: `MlemOperatorTests`.
 - **Pompoth** (Sniper, `PompothOperator : SniperOperator`, `OP_Sniper_Pompoth.asset`, added 2026-10-28): a rapid-fire sniper (asset attack interval 0.35 s). Each shot deals 80% ATK at 80% of the interval (`DamageMultiplier` / `IntervalMultiplier`), so its DPS matches its stat line.
   - **Passive:** +10% attack speed per enemy in its range pattern, capped at +100% (double speed) from 10 enemies (`GetAttackInterval` divides the interval by `1 + bonus`). Until 2026-10-30 the bonus was subtracted from the interval instead, so 10+ enemies brought it to 0 and Pompoth fired every frame.
   - **Look:** purple `ProjectileStyle.Bullet` from `projectileOrigin` (0, 0.05). `PompothSpriteAnimation` plays the 6-frame `Pompoth-Sheet` (192×32) at 0.125 s per frame.
@@ -897,6 +914,7 @@ Added by the team between 2026-11-04 and 2026-11-07 (Chester and R-toes, one com
 | Shadeslice | 3★ | every 3rd successful attack sends a phantom to the enemy closest to the exit, anywhere, for 300% ATK (isolation bonus included) | direct attacks deal 35% less and reflect 20% (once per attacker every 0.6 s, shown as PARRY) |
 | Bulkhead | 1★ | every 8 hits, a shockwave stuns everything it blocks for 1.5 s | block count 6 |
 | Thornchin | 2★ | retaliation spines add a 5 Arts/s DoT for 5 s (`ThornchinSpikeDOT`, stacks to 4) and splash the adjacent tiles | splash covers all 8 surrounding tiles |
+| Mlem | 2★ | digestion is 20% shorter and he recovers 4% max HP per second while digesting | one tongue attack swallows up to 3 enemies; they digest together over the average of their times (the 20% still applies) |
 | Mossmo | 3★ | auto-heals allies in range below 50% HP; taunt range +1 tile | larger heal range; Enrage ATK bonus 25% instead of 35% |
 | Deadeye | 1★ | no attack-interval penalty against flyers; +2% ATK per hit on the same target (up to +100%, resets on switch) | the shot after a kill deals +100% (CRIT!) |
 | Pompoth | 1★ | each hit on the same enemy ignores 1% more of its DEF (up to 100%, resets on switch) | +30% attack speed per enemy in range, capped at +300% |

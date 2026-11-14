@@ -92,6 +92,43 @@ namespace TrashTD.Data
         [Tooltip("Freeze duration in seconds")]
         public float chillFreezeDuration = 1.5f;
 
+        [Header("Devour (Mlem)")]
+        [Tooltip("Seconds Mlem spends digesting a swallowed Rusher before he can attack again")]
+        [Min(0f)] public float digestSecondsRusher = 3f;
+
+        [Tooltip("Seconds Mlem spends digesting a swallowed Grunt")]
+        [Min(0f)] public float digestSecondsGrunt = 4.5f;
+
+        [Tooltip("Seconds Mlem spends digesting a swallowed Caster")]
+        [Min(0f)] public float digestSecondsCaster = 6f;
+
+        [Tooltip("Seconds Mlem spends digesting a swallowed Tank")]
+        [Min(0f)] public float digestSecondsTank = 12f;
+
+        [Tooltip("Bonus DEF while digesting, as a fraction of his DEF (0.15 = +15%)")]
+        [Min(0f)] public float digestDefBonusFraction = 0.15f;
+
+        [Tooltip("Bonus max HP while digesting, as a fraction of his max HP (0.3 = +30%). It raises the cap only; eating doesn't heal him")]
+        [Min(0f)] public float digestMaxHpBonusFraction = 0.3f;
+
+        [Tooltip("HP recovered per second while digesting, as a fraction of max HP (base)")]
+        [Min(0f)] public float digestRegenFractionPerSecond = 0f;
+
+        [Tooltip("1st upgrade: digestion time is shortened by this fraction (0.2 = 20% faster)")]
+        [Range(0f, 1f)] public float digestTimeReductionUpgrade1 = 0.2f;
+
+        [Tooltip("1st upgrade: HP recovered per second while digesting, as a fraction of max HP")]
+        [Min(0f)] public float digestRegenFractionPerSecondUpgrade1 = 0.04f;
+
+        [Tooltip("Enemies swallowed by one tongue attack (base)")]
+        [Min(1)] public int devourMaxSwallowBase = 1;
+
+        [Tooltip("Enemies swallowed by one tongue attack with the 2nd upgrade")]
+        [Min(1)] public int devourMaxSwallowUpgrade2 = 3;
+
+        [Tooltip("Whether a swallowed enemy's on-death effect (an exploding enemy's blast, a carrier's spawn) still triggers")]
+        public bool devourTriggersDeathEffects = false;
+
         [Header("Visuals")]
         [Tooltip("Sprite for card-draft UI and info panels")]
         public Sprite portrait;

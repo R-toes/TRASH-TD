@@ -492,16 +492,17 @@ namespace TrashTD.Operators
 
         /// <summary>
         /// Modifies this operator's maximum HP by delta (e.g. Coalesce aura, buffs).
-        /// If delta > 0, current HP increases by the same amount. If delta < 0, current HP is clamped to new maxHP.
+        /// If delta > 0, current HP increases by the same amount (unless <paramref name="healByDelta"/> is off, which
+        /// only raises the cap). If delta < 0, current HP is clamped to new maxHP.
         /// </summary>
-        public void ModifyMaxHP(int delta, string source = null)
+        public void ModifyMaxHP(int delta, string source = null, bool healByDelta = true)
         {
             if (delta == 0) return;
             TrackExternalStat(source, OperatorStat.HP, delta);
             maxHP = Mathf.Max(1, maxHP + delta);
             if (currentHP > 0)
             {
-                currentHP = delta > 0 ? currentHP + delta : Mathf.Max(1, Mathf.Min(currentHP, maxHP));
+                currentHP = delta > 0 ? (healByDelta ? currentHP + delta : currentHP) : Mathf.Max(1, Mathf.Min(currentHP, maxHP));
                 TrashTD.Combat.WorldHealthBar.UpdateFor(gameObject, currentHP, maxHP);
             }
         }

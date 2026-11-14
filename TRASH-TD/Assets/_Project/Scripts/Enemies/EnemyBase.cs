@@ -146,6 +146,21 @@ namespace TrashTD.Enemies
         public float SluggishAttackIntervalMultiplier => sluggishAttackIntervalMultiplier;
         public bool IsInsideHole => isInsideHole;
 
+        // --- Devoured (Mlem's tongue) ---
+        private bool isDevoured;
+
+        /// <summary>
+        /// True from the moment Mlem's tongue grabs this enemy until it is swallowed (or let go). It stands still,
+        /// can't be blocked, targeted or damaged, and Mlem moves it.
+        /// </summary>
+        public bool IsBeingDevoured => isDevoured;
+
+        /// <summary>
+        /// True while a swallow is killing this enemy and its on-death effects are switched off (an exploding
+        /// enemy doesn't explode, a carrier doesn't spawn). Death overrides check it before their own effect.
+        /// </summary>
+        protected bool DeathEffectsSuppressed { get; private set; }
+
         /// <summary>Tiles a large enemy is blocked and stops short of the operator's tile boundary (EnemyData.blockStopBackoff).</summary>
         public float BlockStopBackoff => data != null ? Mathf.Max(0f, data.blockStopBackoff) : 0f;
 
@@ -345,7 +360,7 @@ namespace TrashTD.Enemies
 
         protected virtual void Update()
         {
-            if (isDead) return;
+            if (isDead || isDevoured) return;
 
             if (isInsideHole)
             {
@@ -402,7 +417,7 @@ namespace TrashTD.Enemies
         /// </summary>
         protected bool TickStatusEffects(float deltaTime)
         {
-            if (isDead) return false;
+            if (isDead || isDevoured) return false;
 
             if (isInsideHole)
             {
@@ -1243,7 +1258,7 @@ namespace TrashTD.Enemies
         /// </summary>
         public virtual void TakeDamage(int damage, DamageType damageType)
         {
-            if (isDead || isInsideHole || damage <= 0) return;
+            if (isDead || isInsideHole || isDevoured || damage <= 0) return;
 
             int previousHP = currentHP;
             currentHP = Mathf.Max(0, currentHP - damage);
@@ -1295,7 +1310,7 @@ namespace TrashTD.Enemies
 
         public virtual bool TryTakeAttackDamage(int damage, DamageType damageType, OperatorBase attacker = null, bool canHitAir = false)
         {
-            if (isDead || isInsideHole) return false;
+            if (isDead || isInsideHole || isDevoured) return false;
 
             if (!CanReceiveDamageFrom(attacker))
             {
@@ -1360,6 +1375,45 @@ namespace TrashTD.Enemies
         /// Read by the QA sandbox's damage meter; nothing subscribes in normal play.
         /// </summary>
         public static event System.Action<OperatorBase, int> OperatorDamageDealt;
+
+        /// <summary>
+        /// Mlem's tongue grabs this enemy: it is released from its blocker and stops where it is (no moving,
+        /// attacking or taking hits) until <see cref="CompleteDevour"/> or <see cref="CancelDevour"/>.
+        /// Returns false if it can't be grabbed (dead, in a hole, already grabbed).
+        /// </summary>
+        public bool BeginDevour()
+        {
+            if (isDead || isInsideHole || isDevoured) return false;
+
+            if (isBlocked && blockingOperator != null)
+            {
+                blockingOperator.ReleaseBlock(this);
+            }
+
+            isPushingBack = false;
+            isDevoured = true;
+            Combat.StunStarsVisual.Hide(gameObject);
+            return true;
+        }
+
+        /// <summary>Lets a grabbed enemy go (Mlem was stunned, retreated or died before the swallow).</summary>
+        public void CancelDevour()
+        {
+            isDevoured = false;
+        }
+
+        /// <summary>
+        /// The swallow: kills this enemy outright, whatever its HP. It goes through the normal death path, so it
+        /// counts as a kill for rewards and score. With <paramref name="triggerDeathEffects"/> off, death overrides
+        /// skip their own effect (see <see cref="DeathEffectsSuppressed"/>).
+        /// </summary>
+        public void CompleteDevour(bool triggerDeathEffects)
+        {
+            if (isDead) return;
+
+            DeathEffectsSuppressed = !triggerDeathEffects;
+            Die();
+        }
 
         /// <summary>
         /// Kill immediately without going through damage (sandbox wave clears).

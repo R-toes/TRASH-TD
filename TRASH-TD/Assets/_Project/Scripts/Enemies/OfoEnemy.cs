@@ -349,7 +349,7 @@ namespace TrashTD.Enemies
             if (!hasDeathSpawned)
             {
                 hasDeathSpawned = true;
-                EnemyData oculite = ResolveOculiteData();
+                EnemyData oculite = DeathEffectsSuppressed ? null : ResolveOculiteData();
                 if (oculite != null)
                 {
                     for (int i = 0; i < deathSpawnCount; i++)

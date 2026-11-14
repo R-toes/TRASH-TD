@@ -35,7 +35,7 @@ namespace TrashTD.Enemies
 
         protected override void Die()
         {
-            if (Random.value <= explosionChance)
+            if (!DeathEffectsSuppressed && Random.value <= explosionChance)
             {
                 Explode();
             }

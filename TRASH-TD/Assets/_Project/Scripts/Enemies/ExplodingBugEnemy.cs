@@ -27,7 +27,7 @@ namespace TrashTD.Enemies
 
         protected override void Die()
         {
-            Explode();
+            if (!DeathEffectsSuppressed) Explode();
             base.Die();
         }
 

@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a39c1d6279a27546b8d12bee9c374ad, type: 3}
+  m_Name: OP_Defender_Mlem
+  m_EditorClassIdentifier: TrashTD.Runtime::TrashTD.Data.OperatorData
+  operatorName: Mlem
+  operatorClass: 1
+  baseRarity: 2
+  position: 0
+  roleTags:
+  - Defense
+  - Execute
+  baseHP: 160
+  baseATK: 30
+  baseDEF: 34
+  baseRES: 0
+  blockCount: 4
+  attackRange: 0
+  attackInterval: 1
+  rangePattern:
+  - {x: 0, y: 0}
+  - {x: 1, y: 0}
+  - {x: 2, y: 0}
+  damageType: 0
+  drawTwoCardsOnDeath: 0
+  cannotBeHealed: 0
+  bonusWhenIsolated: 0
+  isolatedAttackMultiplier: 1.5
+  skillDescription: "<color=#FFD700>Base (2★):</color> Lashes his tongue at a ground enemy within 2 tiles, drags it to his mouth and swallows it whole: an instant kill, whatever its HP. Targets Tanks first, then Casters, Rushers and Grunts. He can't attack while he digests (Rusher 3s, Grunt 4.5s, Caster 6s, Tank 12s), but gains +15% DEF and +30% max HP (without healing) and keeps blocking.\n<color=#FFD700>1st upgrade (3★):</color> Digestion is 20% faster, and he recovers 4% of his max HP per second while digesting.\n<color=#FFD700>2nd upgrade (4★):</color> One tongue attack swallows up to 3 enemies. They are digested together over the average of their digestion times."
+  chillPerHit: 0
+  chillSlowMultiplier: 0.65
+  chillSlowDuration: 2.5
+  chillFreezeThreshold: 100
+  chillFreezeDuration: 1.5
+  digestSecondsRusher: 3
+  digestSecondsGrunt: 4.5
+  digestSecondsCaster: 6
+  digestSecondsTank: 12
+  digestDefBonusFraction: 0.15
+  digestMaxHpBonusFraction: 0.3
+  digestRegenFractionPerSecond: 0
+  digestTimeReductionUpgrade1: 0.2
+  digestRegenFractionPerSecondUpgrade1: 0.04
+  devourMaxSwallowBase: 1
+  devourMaxSwallowUpgrade2: 3
+  devourTriggersDeathEffects: 0
+  portrait: {fileID: 7922998346082580627, guid: b7651dc7fe981a14687ad8671656eb35, type: 3}
+  operatorPrefab: {fileID: 5112186219150287747, guid: 28399e51acb54168b40a47bc3c2fd3c9, type: 3}
+  projectileOrigin: {x: -0.4, y: -0.05}
+  intelQuote: "Mlem."
+  intelLore: "A squat, slick-skinned scavenger with a tongue far longer than he is. Mlem lets the wave come to him, then swallows whatever looks most dangerous in one wet gulp and sits very still while it settles. He does not chew. He does not apologise."
