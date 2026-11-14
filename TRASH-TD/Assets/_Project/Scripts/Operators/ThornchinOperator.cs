@@ -18,6 +18,142 @@ namespace TrashTD.Operators
     /// </summary>
     public class ThornchinOperator : DefenderOperator
     {
+        [Header("Audio")]
+        [Tooltip("Custom sound played when retaliating directly against an attacker. If null, loads from SFX/Operators/Defender/Thornchin/Ability_Retaliate (supports Ability_Retaliate, Retaliate, Ability...), falling back to MeleeAttack.")]
+        [SerializeField] private AudioClip retaliateSound;
+        [Tooltip("Optional array of retaliate sounds to randomize between in Inspector.")]
+        [SerializeField] private AudioClip[] retaliateSounds;
+
+        [Tooltip("Custom sound played when adjacent/surrounding spikes burst into neighboring tiles. If null, loads from SFX/Operators/Defender/Thornchin/Ability_Surrounding (supports Surrounding, Adjacent, AoE...), falling back to retaliate sound.")]
+        [SerializeField] private AudioClip surroundingSound;
+        [Tooltip("Optional array of surrounding/adjacent sounds to randomize between in Inspector.")]
+        [SerializeField] private AudioClip[] surroundingSounds;
+
+        public AudioClip RetaliateSound
+        {
+            get => retaliateSound;
+            set => retaliateSound = value;
+        }
+
+        public AudioClip[] RetaliateSounds
+        {
+            get => retaliateSounds;
+            set => retaliateSounds = value;
+        }
+
+        public AudioClip SurroundingSound
+        {
+            get => surroundingSound;
+            set => surroundingSound = value;
+        }
+
+        public AudioClip[] SurroundingSounds
+        {
+            get => surroundingSounds;
+            set => surroundingSounds = value;
+        }
+
+        public AudioClip AbilitySound
+        {
+            get => retaliateSound;
+            set => retaliateSound = value;
+        }
+
+        public AudioClip[] AbilitySounds
+        {
+            get => retaliateSounds;
+            set => retaliateSounds = value;
+        }
+
+        public AudioClip AdjacentSound
+        {
+            get => surroundingSound;
+            set => surroundingSound = value;
+        }
+
+        public AudioClip[] AdjacentSounds
+        {
+            get => surroundingSounds;
+            set => surroundingSounds = value;
+        }
+
+        public AudioClip AoESound
+        {
+            get => surroundingSound;
+            set => surroundingSound = value;
+        }
+
+        public AudioClip[] AoESounds
+        {
+            get => surroundingSounds;
+            set => surroundingSounds = value;
+        }
+
+        private static readonly string[] RetaliateSoundNames = new[] { "Ability_Retaliate", "Retaliate", "Ability" };
+        private static readonly string[] SurroundingSoundNames = new[] { "Ability_Surrounding", "Surrounding", "Ability_Adjacent", "Adjacent", "Ability_AoE", "AoE" };
+
+        public void PlayRetaliateSound()
+        {
+            // 1. Inspector array (randomized)
+            if (retaliateSounds != null && retaliateSounds.Length > 0)
+            {
+                AudioClip clip = retaliateSounds[Random.Range(0, retaliateSounds.Length)];
+                if (clip != null)
+                {
+                    AudioManager.Instance?.PlaySfx(clip, 1.0f, Random.Range(0.96f, 1.04f));
+                    return;
+                }
+            }
+
+            // 2. Inspector single slot
+            if (retaliateSound != null)
+            {
+                AudioManager.Instance?.PlaySfx(retaliateSound, 1.0f, Random.Range(0.96f, 1.04f));
+                return;
+            }
+
+            // 3. Conventional resource lookup (SFX/Operators/Defender/Thornchin/Ability_Retaliate, Retaliate, Ability...)
+            string folder = data != null ? UnitSfx.GetFolder(data) : "SFX/Operators/Defender/Thornchin";
+            if (UnitSfx.PlayRandomFromFolder(folder, RetaliateSoundNames, out AudioSource voice, out AudioClip resClip, 1.0f))
+            {
+                return;
+            }
+
+            // 4. Shared melee/spikes sound fallback
+            AudioManager.Instance?.PlaySfx(SfxId.GameplayMeleeAttack, 0.9f, Random.Range(0.96f, 1.04f));
+        }
+
+        public void PlaySurroundingSound()
+        {
+            // 1. Inspector array (randomized)
+            if (surroundingSounds != null && surroundingSounds.Length > 0)
+            {
+                AudioClip clip = surroundingSounds[Random.Range(0, surroundingSounds.Length)];
+                if (clip != null)
+                {
+                    AudioManager.Instance?.PlaySfx(clip, 1.0f, Random.Range(0.96f, 1.04f));
+                    return;
+                }
+            }
+
+            // 2. Inspector single slot
+            if (surroundingSound != null)
+            {
+                AudioManager.Instance?.PlaySfx(surroundingSound, 1.0f, Random.Range(0.96f, 1.04f));
+                return;
+            }
+
+            // 3. Conventional resource lookup (SFX/Operators/Defender/Thornchin/Ability_Surrounding, Surrounding, Ability_Adjacent, Adjacent, Ability_AoE, AoE...)
+            string folder = data != null ? UnitSfx.GetFolder(data) : "SFX/Operators/Defender/Thornchin";
+            if (UnitSfx.PlayRandomFromFolder(folder, SurroundingSoundNames, out AudioSource voice, out AudioClip resClip, 1.0f))
+            {
+                return;
+            }
+
+            // 4. Fall back to retaliate sound if no dedicated surrounding sound exists
+            PlayRetaliateSound();
+        }
+
         private static readonly Color SpineColor = new Color(0.75f, 0.2f, 0.85f, 1f);
 
         private static readonly Vector2Int[] BaseRangePattern = new[]
@@ -167,11 +303,13 @@ namespace TrashTD.Operators
 
         private void TriggerAdjacentSpikes(EnemyBase directAttacker)
         {
+            PlaySurroundingSound();
             TriggerSpikesInDirections(AdjacentDirs, directAttacker);
         }
 
         private void TriggerSurroundingSpikes(EnemyBase directAttacker)
         {
+            PlaySurroundingSound();
             TriggerSpikesInDirections(SurroundingDirs, directAttacker);
         }
 
@@ -254,16 +392,12 @@ namespace TrashTD.Operators
                 if (enemy == null || enemy.IsDead) continue;
                 if (enemy == directAttacker) continue; // Direct attacker already hit
 
-                ApplyRetaliationDamage(enemy);
+                ApplySpikeDamageAndDot(enemy);
             }
         }
 
-        public void ApplyRetaliationDamage(EnemyBase target)
+        private void ApplySpikeDamageAndDot(EnemyBase target)
         {
-            if (target == null || target.IsDead) return;
-
-            PlayAbilitySound(SfxId.GameplayMeleeAttack);
-
             int damage = DamageCalculator.CalculateDamage(currentATK, target.CurrentDEF);
             target.TryTakeAttackDamage(damage, data != null ? data.damageType : DamageType.Physical, this, canHitAir: true);
 
@@ -272,6 +406,14 @@ namespace TrashTD.Operators
             {
                 ThornchinSpikeDOT.Apply(target, this);
             }
+        }
+
+        public void ApplyRetaliationDamage(EnemyBase target)
+        {
+            if (target == null || target.IsDead) return;
+
+            PlayRetaliateSound();
+            ApplySpikeDamageAndDot(target);
         }
     }
 }

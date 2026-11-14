@@ -118,7 +118,7 @@ SFX/
 | `Defender/Bulkhead` | bash | hit | `Ability`: ATK/DEF buff switches on (blocking 3+) |
 | `Defender/Drawgoo` | attack | hit | `Ability`: draws cards on death (plays after `Death`) |
 | `Defender/Mossmo` | | | `Ability`: reactive heal pulse |
-| `Defender/Thornchin` | attack | hit | `Ability`: spine retaliation. *Fallback: Combat/MeleeAttack.* |
+| `Defender/Thornchin` | attack | hit | `Ability_Retaliate` (direct counter-spike) · `Ability_Surrounding` (AoE spikes in adjacent/surrounding tiles). *Fallback: Ability or Combat/MeleeAttack.* |
 | `Sniper/Basurocket` | rocket launch | **explosion** | |
 | `Sniper/Deadeye` | rifle shot | bullet hit | |
 | `Sniper/Proxishot` | shotgun blast | pellets hit | `Ability`: turns camouflaged |
