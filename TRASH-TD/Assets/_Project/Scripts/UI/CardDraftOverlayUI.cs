@@ -102,6 +102,7 @@ namespace TrashTD.UI
         private const float OddsStopStagger = 0.3f;    // then the 2★, then the 3★
 
         private const string SkipCardAnimationKey = "TrashTD.SkipCardAnimation";
+        private const string HideDraftOddsKey = "TrashTD.HideDraftOdds";
 
         // Range preview box (bottom-left of the detail panel)
         private const float RangeBoxWidth = 156f;
@@ -289,6 +290,8 @@ namespace TrashTD.UI
         private RectTransform oddsCabinet;
         private readonly OddsReel[] oddsReels = new OddsReel[3];
         private Text oddsNextText;
+        private RectTransform oddsToggleRect;
+        private Image oddsToggleCheck;
         private RectTransform oddsUpTag;
         private Image oddsFlash;
         private RectTransform oddsLever; // stick, pivot at the bottom; flipped (scale y -1) while pulled
@@ -374,6 +377,20 @@ namespace TrashTD.UI
             set
             {
                 PlayerPrefs.SetInt(SkipCardAnimationKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>
+        /// Player option (the "DRAFT ODDS" checkbox next to SKIP CARD ANIMATION, saved in PlayerPrefs, hidden by
+        /// default): hides the whole slot machine and skips its spin.
+        /// </summary>
+        public static bool HideDraftOdds
+        {
+            get => PlayerPrefs.GetInt(HideDraftOddsKey, 1) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(HideDraftOddsKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }
@@ -682,6 +699,7 @@ namespace TrashTD.UI
             if (skipButton != null) skipButton.gameObject.SetActive(extras);
             if (minimizeButton != null) minimizeButton.gameObject.SetActive(extras);
             if (skipAnimationToggleRect != null) skipAnimationToggleRect.gameObject.SetActive(extras);
+            if (oddsToggleRect != null) oddsToggleRect.gameObject.SetActive(extras);
 #if UNITY_EDITOR || DEBUG
             if (developerPickButton != null) developerPickButton.gameObject.SetActive(extras);
 #endif
@@ -1225,10 +1243,15 @@ namespace TrashTD.UI
         private void RefreshSkipAnimationToggle()
         {
             if (skipAnimationCheck == null) return;
-            bool skip = SkipCardAnimation;
-            Sprite sprite = LoadUiSprite(skip ? "UI/controls/checkbox_on" : "UI/controls/checkbox_off", Vector4.zero);
-            skipAnimationCheck.sprite = sprite;
-            skipAnimationCheck.color = sprite != null ? Color.white : (skip ? ACCENT_COLOR : new Color(1f, 1f, 1f, 0.25f));
+            SetCheckboxSprite(skipAnimationCheck, SkipCardAnimation);
+        }
+
+        private void SetCheckboxSprite(Image check, bool on)
+        {
+            if (check == null) return;
+            Sprite sprite = LoadUiSprite(on ? "UI/controls/checkbox_on" : "UI/controls/checkbox_off", Vector4.zero);
+            check.sprite = sprite;
+            check.color = sprite != null ? Color.white : (on ? ACCENT_COLOR : new Color(1f, 1f, 1f, 0.25f));
         }
 
         private void RevealCard(int index)
@@ -1888,8 +1911,12 @@ namespace TrashTD.UI
 
             StopOddsAnimation();
             bool show = draftSystem != null && !IsTutorialDraft;
-            oddsRoot.gameObject.SetActive(show);
-            if (!show) return;
+            if (!show)
+            {
+                oddsRoot.gameObject.SetActive(false);
+                return;
+            }
+            RefreshOddsVisibility();
 
             DraftOddsTable table = draftSystem.OddsTable;
             int cleared = draftSystem.WavesCleared;
@@ -1920,7 +1947,7 @@ namespace TrashTD.UI
                 Mathf.RoundToInt(oddsTarget.Star2 + oddsTarget.Star3) > Mathf.RoundToInt(from.Star2 + from.Star3));
             oddsUpTag.gameObject.SetActive(oddsUp);
             oddsUpTag.localScale = Vector3.one;
-            if (!changed || SkipCardAnimation || !isActiveAndEnabled)
+            if (!changed || SkipCardAnimation || HideDraftOdds || !isActiveAndEnabled)
             {
                 ApplyOdds(oddsTarget);
                 return;
@@ -1929,6 +1956,22 @@ namespace TrashTD.UI
             ApplyOdds(from);
             oddsUpTag.localScale = Vector3.zero;
             oddsRoutine = StartCoroutine(OddsSpinRoutine(oddsTarget, oddsUp));
+        }
+
+        /// <summary>Shows or hides the whole slot machine to match <see cref="HideDraftOdds"/>, and ticks the checkbox.</summary>
+        private void RefreshOddsVisibility()
+        {
+            bool hidden = HideDraftOdds;
+            if (oddsRoot != null) oddsRoot.gameObject.SetActive(!hidden && draftSystem != null && !IsTutorialDraft);
+            SetCheckboxSprite(oddsToggleCheck, !hidden);
+        }
+
+        private void ToggleDraftOdds()
+        {
+            StopOddsAnimation(); // a running spin ends at rest on the final odds
+            HideDraftOdds = !HideDraftOdds;
+            RefreshOddsVisibility();
+            PlayClick();
         }
 
         /// <summary>True if both odds read the same on the reels (whole percentages).</summary>
@@ -2671,7 +2714,8 @@ namespace TrashTD.UI
                 buttonsRect,
                 confirmButton.GetComponent<RectTransform>(),
                 hintText.rectTransform,
-                oddsRoot
+                oddsRoot,
+                oddsToggleRect
             };
             introTargets = new Vector2[introRects.Length];
             for (int i = 0; i < introRects.Length; i++) introTargets[i] = introRects[i].anchoredPosition;
@@ -2679,9 +2723,9 @@ namespace TrashTD.UI
             {
                 new Vector2(0f, 40f), new Vector2(0f, 40f), new Vector2(0f, 40f), new Vector2(0f, 40f),
                 new Vector2(90f, 0f), new Vector2(0f, -60f), new Vector2(0f, -60f), new Vector2(0f, -30f),
-                new Vector2(0f, 40f)
+                new Vector2(0f, 40f), new Vector2(0f, 40f)
             };
-            introDelays = new[] { 0f, 0.06f, 0.1f, 0.1f, 0.15f, 0.25f, 0.3f, 0.35f, 0.12f };
+            introDelays = new[] { 0f, 0.06f, 0.1f, 0.1f, 0.15f, 0.25f, 0.3f, 0.35f, 0.12f, 0.1f };
         }
 
         /// <summary>
@@ -2817,28 +2861,29 @@ namespace TrashTD.UI
             StretchFill(oddsFlash.rectTransform);
 
             ApplyOdds(new DraftOdds(100f, 0f, 0f));
+            RefreshOddsVisibility();
         }
 
-        /// <summary>Checkbox "SKIP CARD ANIMATION" under the deck count (top-right). See <see cref="SkipCardAnimation"/>.</summary>
-        private RectTransform BuildSkipAnimationToggle(Transform parent)
+        /// <summary>
+        /// Checkbox + label in the top-right header, <paramref name="y"/> from the top. Its right edge is
+        /// <paramref name="rightInset"/> from the screen's right edge, and it is only as wide as its label.
+        /// </summary>
+        private RectTransform BuildCheckboxToggle(Transform parent, string objName, string label, float rightInset,
+            float y, Action onClick, out Image check, out float width)
         {
             const float boxSize = 24f;
             const int fontSize = 12;
-            const string label = "SKIP CARD ANIMATION";
-            float width = boxSize + 10f + label.Length * fontSize + 8f;
 
-            var toggleObj = new GameObject("SkipAnimationToggle", typeof(RectTransform), typeof(Image), typeof(Button));
+            var toggleObj = new GameObject(objName, typeof(RectTransform), typeof(Image), typeof(Button));
             toggleObj.transform.SetParent(parent, false);
             toggleObj.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f); // invisible hit area over box + label
             var toggleRect = toggleObj.GetComponent<RectTransform>();
-            PositionRT(toggleRect, new Vector2(-28f, -92f), new Vector2(1f, 1f), new Vector2(width, 32f));
-            toggleRect.pivot = new Vector2(1f, 1f);
 
             var boxObj = new GameObject("Box", typeof(RectTransform), typeof(Image));
             boxObj.transform.SetParent(toggleObj.transform, false);
-            skipAnimationCheck = boxObj.GetComponent<Image>();
-            skipAnimationCheck.raycastTarget = false;
-            skipAnimationCheck.preserveAspect = true;
+            check = boxObj.GetComponent<Image>();
+            check.raycastTarget = false;
+            check.preserveAspect = true;
             var boxRect = boxObj.GetComponent<RectTransform>();
             boxRect.anchorMin = boxRect.anchorMax = new Vector2(0f, 0.5f);
             boxRect.pivot = new Vector2(0f, 0.5f);
@@ -2852,11 +2897,36 @@ namespace TrashTD.UI
             textRect.offsetMin = new Vector2(boxSize + 10f, 0f);
             textRect.offsetMax = Vector2.zero;
 
+            // Just wide enough for the label, so toggles in a row sit at an even distance from each other
+            float textWidth = text.preferredWidth > 1f ? Mathf.Ceil(text.preferredWidth) + 4f : label.Length * fontSize * 0.7f;
+            width = boxSize + 10f + textWidth;
+            PositionRT(toggleRect, new Vector2(-rightInset, y), new Vector2(1f, 1f), new Vector2(width, 32f));
+            toggleRect.pivot = new Vector2(1f, 1f);
+
             var button = toggleObj.GetComponent<Button>();
-            button.onClick.AddListener(ToggleSkipCardAnimation);
+            button.onClick.AddListener(() => onClick());
             AttachFeedback(button, ACCENT_BRIGHT, 1.04f);
-            RefreshSkipAnimationToggle();
             return toggleRect;
+        }
+
+        /// <summary>
+        /// Two checkboxes under the deck count (top-right): "SKIP CARD ANIMATION" (see <see cref="SkipCardAnimation"/>)
+        /// at the edge and "DRAFT ODDS" (see <see cref="HideDraftOdds"/>) just left of it, on the same line.
+        /// </summary>
+        private RectTransform BuildSkipAnimationToggle(Transform parent)
+        {
+            const float rightInset = 28f;
+            const float rowY = -92f;
+            const float gap = 28f;
+
+            RectTransform skipRect = BuildCheckboxToggle(parent, "SkipAnimationToggle", "SKIP CARD ANIMATION", rightInset,
+                rowY, ToggleSkipCardAnimation, out skipAnimationCheck, out float skipWidth);
+            RefreshSkipAnimationToggle();
+
+            oddsToggleRect = BuildCheckboxToggle(parent, "DraftOddsToggle", "DRAFT ODDS", rightInset + skipWidth + gap,
+                rowY, ToggleDraftOdds, out oddsToggleCheck, out _);
+            RefreshOddsVisibility();
+            return skipRect;
         }
 
         /// <summary>
