@@ -75,9 +75,29 @@ namespace TrashTD.Operators
         [SerializeField] private AudioClip[] bounceSounds;
 
         private AudioClip currentVolleyAttackClip;
+        private AudioSource currentVolleyVoice;
+        private AudioClip currentVolleyVoiceClip;
 
         public AudioClip CurrentVolleyAttackClip => currentVolleyAttackClip;
+        public AudioSource CurrentVolleyVoice => currentVolleyVoice;
+        public AudioClip CurrentVolleyVoiceClip => currentVolleyVoiceClip;
+
         public void SetCurrentVolleyAttackClipForTesting(AudioClip clip) => currentVolleyAttackClip = clip;
+        public void SetCurrentVolleyVoiceForTesting(AudioSource voice, AudioClip clip)
+        {
+            currentVolleyVoice = voice;
+            currentVolleyVoiceClip = clip;
+        }
+
+        private void StopPreviousVolleyVoice()
+        {
+            if (currentVolleyVoice != null && currentVolleyVoiceClip != null)
+            {
+                AudioManager.Instance?.StopSfx(currentVolleyVoice, currentVolleyVoiceClip);
+                currentVolleyVoice = null;
+                currentVolleyVoiceClip = null;
+            }
+        }
 
         public AudioClip AttackSound
         {
@@ -1172,12 +1192,12 @@ namespace TrashTD.Operators
 
         /// <summary>
         /// Calculates the volume multiplier for ricochet bounces.
-        /// Volume becomes progressively quieter per bounce (e.g. 1.0x -> 0.75x -> 0.56x -> 0.42x).
+        /// Volume becomes progressively quieter per bounce (e.g. 1.0x -> 0.50x -> 0.25x -> 0.125x -> 0.0625x).
         /// </summary>
         public static float GetBounceVolumeMultiplier(int bounceIndex)
         {
             if (bounceIndex <= 0) return 1.0f;
-            return Mathf.Clamp(Mathf.Pow(0.75f, bounceIndex), 0.2f, 1.0f);
+            return Mathf.Clamp(Mathf.Pow(0.5f, bounceIndex), 0.05f, 1.0f);
         }
 
         private static readonly string[] ResicochetChargeNames = new[]
@@ -1190,17 +1210,38 @@ namespace TrashTD.Operators
         /// <summary>
         /// Plays attack sound. Randomizes among available Attack files (Attack, Attack_2, Attack_3...)
         /// or inspector attackSounds. When bouncing, replays the exact same attack sound progressively quieter per bounce.
+        /// Fades out the previous bounce voice so sounds never stack into an overwhelming volume spike.
         /// </summary>
         public void PlayResicochetAttackSound(int bounceIndex = 0)
         {
             float volume = GetBounceVolumeMultiplier(bounceIndex);
 
-            // If bouncing (bounceIndex > 0) and we already selected a clip for this attack volley, replay it quieter
-            if (bounceIndex > 0 && currentVolleyAttackClip != null)
+            // If bouncing (bounceIndex > 0), replay the chosen clip or fallback quieter
+            if (bounceIndex > 0)
             {
-                AudioManager.Instance?.PlaySfx(currentVolleyAttackClip, volume, 1.0f);
+                StopPreviousVolleyVoice();
+
+                // If somehow currentVolleyAttackClip was not captured, try to pick one from folder
+                if (currentVolleyAttackClip == null && data != null)
+                {
+                    currentVolleyAttackClip = UnitSfx.GetRandomClip(UnitSfx.GetFolder(data), nameof(UnitSfxEvent.Attack));
+                }
+
+                if (currentVolleyAttackClip != null)
+                {
+                    currentVolleyVoice = AudioManager.Instance?.PlaySfx(currentVolleyAttackClip, volume, 1.0f);
+                    currentVolleyVoiceClip = currentVolleyAttackClip;
+                    return;
+                }
+
+                var fbVoice = AudioManager.Instance?.PlaySfx(SfxId.GameplayMagicAttack, volume, 1.0f);
+                currentVolleyVoice = fbVoice;
+                currentVolleyVoiceClip = AudioManager.Instance?.GetClip(SfxId.GameplayMagicAttack);
                 return;
             }
+
+            // --- Initial Attack (bounceIndex == 0) ---
+            StopPreviousVolleyVoice();
 
             // 1. Inspector attackSounds array (randomized)
             if (attackSounds != null && attackSounds.Length > 0)
@@ -1209,8 +1250,10 @@ namespace TrashTD.Operators
                 if (clip != null)
                 {
                     currentVolleyAttackClip = clip;
+                    currentVolleyVoiceClip = clip;
                     var voice = AudioManager.Instance?.PlaySfx(clip, volume, 1.0f);
-                    if (bounceIndex == 0) TrackAttackSound(voice);
+                    currentVolleyVoice = voice;
+                    TrackAttackSound(voice);
                     return;
                 }
             }
@@ -1219,30 +1262,38 @@ namespace TrashTD.Operators
             if (attackSound != null)
             {
                 currentVolleyAttackClip = attackSound;
+                currentVolleyVoiceClip = attackSound;
                 var voice = AudioManager.Instance?.PlaySfx(attackSound, volume, 1.0f);
-                if (bounceIndex == 0) TrackAttackSound(voice);
+                currentVolleyVoice = voice;
+                TrackAttackSound(voice);
                 return;
             }
 
             // 3. Conventional resource lookup (SFX/Operators/Caster/Resicochet/Attack, Attack_2, Attack_3...)
-            if (data != null && UnitSfx.Play(data, UnitSfxEvent.Attack, out AudioSource audioVoice, out AudioClip audioClip, volume, ignoreThrottle: bounceIndex > 0))
+            if (data != null && UnitSfx.Play(data, UnitSfxEvent.Attack, out AudioSource audioVoice, out AudioClip audioClip, volume, ignoreThrottle: false))
             {
                 currentVolleyAttackClip = audioClip;
-                if (bounceIndex == 0) TrackAttackSound(audioVoice);
+                currentVolleyVoiceClip = audioClip;
+                currentVolleyVoice = audioVoice;
+                TrackAttackSound(audioVoice);
                 return;
             }
 
             // Also check Charge 1 / Charge 2 / Charge 3 files (randomized among them) if user placed Charge files
-            if (UnitSfx.PlayRandomFromFolder("SFX/Operators/Caster/Resicochet", ResicochetChargeNames, out AudioSource chargeVoice, out AudioClip chargeClip, volume, ignoreThrottle: bounceIndex > 0))
+            if (UnitSfx.PlayRandomFromFolder("SFX/Operators/Caster/Resicochet", ResicochetChargeNames, out AudioSource chargeVoice, out AudioClip chargeClip, volume, ignoreThrottle: false))
             {
                 currentVolleyAttackClip = chargeClip;
-                if (bounceIndex == 0) TrackAttackSound(chargeVoice);
+                currentVolleyVoiceClip = chargeClip;
+                currentVolleyVoice = chargeVoice;
+                TrackAttackSound(chargeVoice);
                 return;
             }
 
-            // 4. Shared Arts attack sound fallback with volume decay per bounce
+            // 4. Shared Arts attack sound fallback
             var fallbackVoice = AudioManager.Instance?.PlaySfx(SfxId.GameplayMagicAttack, volume, 1.0f);
-            if (bounceIndex == 0) TrackAttackSound(fallbackVoice);
+            currentVolleyVoice = fallbackVoice;
+            currentVolleyVoiceClip = AudioManager.Instance?.GetClip(SfxId.GameplayMagicAttack);
+            TrackAttackSound(fallbackVoice);
         }
 
         public void PlayChargeAttackSound(int chargeLevel, int bounceIndex = 0)
@@ -1252,24 +1303,29 @@ namespace TrashTD.Operators
 
         /// <summary>
         /// When bouncing, plays the attack sound again, progressively quieter per bounce.
+        /// Fades out the previous bounce voice so sounds never stack into an overwhelming volume spike.
         /// </summary>
         public void PlayBounceSound(int bounceIndex = 0, int chargeLevel = 1)
         {
+            float vol = GetBounceVolumeMultiplier(bounceIndex + 1);
+
             if (bounceSounds != null && bounceSounds.Length > 0)
             {
                 AudioClip clip = bounceSounds[Random.Range(0, bounceSounds.Length)];
                 if (clip != null)
                 {
-                    float vol = GetBounceVolumeMultiplier(bounceIndex + 1);
-                    AudioManager.Instance?.PlaySfx(clip, vol, 1f);
+                    StopPreviousVolleyVoice();
+                    currentVolleyVoice = AudioManager.Instance?.PlaySfx(clip, vol, 1f);
+                    currentVolleyVoiceClip = clip;
                     return;
                 }
             }
 
             if (bounceSound != null)
             {
-                float vol = GetBounceVolumeMultiplier(bounceIndex + 1);
-                AudioManager.Instance?.PlaySfx(bounceSound, vol, 1f);
+                StopPreviousVolleyVoice();
+                currentVolleyVoice = AudioManager.Instance?.PlaySfx(bounceSound, vol, 1f);
+                currentVolleyVoiceClip = bounceSound;
                 return;
             }
 
@@ -1434,6 +1490,7 @@ namespace TrashTD.Operators
 
         protected override void OnRetreated()
         {
+            StopPreviousVolleyVoice();
             if (burstCoroutine != null)
             {
                 StopCoroutine(burstCoroutine);
